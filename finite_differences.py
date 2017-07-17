@@ -1,3 +1,7 @@
+"""
+Finite difference class to support numpy (FD_np) and pyTorch (FD_torch)
+"""
+
 from abc import ABCMeta, abstractmethod
 
 import torch

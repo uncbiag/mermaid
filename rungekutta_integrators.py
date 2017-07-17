@@ -1,3 +1,6 @@
+"""
+Simple (explicit) Runge-Kutta integrators to forward integrate dynamic forward models
+"""
 from abc import ABCMeta, abstractmethod
 
 import torch

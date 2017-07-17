@@ -1,10 +1,10 @@
-'''
+"""
 This is a test implementation to see if we can use pyTorch to solve
 LDDMM-style registration problems via automatic differentiation.
 
 Contributors:
   Marc Niethammer: mn@cs.unc.edu
-'''
+"""
 
 # first do the torch imports
 from __future__ import print_function
@@ -14,33 +14,39 @@ from torch.nn.parameter import Parameter
 import torch.nn as nn
 import torch.nn.functional as F
 
-import finitedifferences as fd
+import finite_differences as fd
 import rungekutta_integrators as RK
 import forward_models as FM
+import utils
+import registration_networks as RN
 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as img
 
-# create a default image size
-sz = 20
-c = sz/2
-len_s = sz/6
-len_l = sz/3
+# create a default image size with two sample squares
+sz = 30         # size of the 2D image: sz x sz
+c = sz/2        # center coordinates
+len_s = sz/6    # half of side-length for small square
+len_l = sz/3    # half of side-length for large square
 
-# create an example image
+# create two example square images
 I0 = np.zeros([sz,sz], dtype='float32' )
 I1 = np.zeros([sz,sz], dtype='float32' )
 
-# create small and large squares and show them
+# create small and large squares
 I0[c-len_s:c+len_s,c-len_s:c+len_s] = 1
 I1[c-len_l:c+len_l,c-len_l:c+len_l] = 1
 
+# spacing so that everything is in [0,1]^2 for now
+# TODO: change to support arbitrary spacing
 hx = 1./(sz-1)
 print ('Spacing = ' + str( hx ) )
-fdnp = fd.FD_np()
-fdnp.setspacing(hx,hx)
 
+fdnp = fd.FD_np()       # numpy finite differencing
+fdnp.setspacing(hx,hx)  # set spacing
+
+# some debugging output to show image gradients
 # compute gradients
 dx0 = fdnp.dXc( I0 )
 dy0 = fdnp.dYc( I0 )
@@ -71,61 +77,15 @@ plt.imshow( dy1 )
 plt.show( block=False )
 
 
-def t2np( v ):
-    return (v.data).cpu().numpy()
-
-def showI( I ):
-    plt.figure(2)
-    plt.imshow(t2np(I))
-    plt.colorbar()
-    plt.show()
-
-def showV( v ):
-    plt.figure(1)
-    plt.subplot(121)
-    plt.imshow(t2np(v[:, :, 0]))
-    plt.colorbar()
-    plt.title('v[0]')
-
-    plt.subplot(122)
-    plt.imshow(t2np(v[:, :, 1]))
-    plt.colorbar()
-    plt.title('v[1]')
-    plt.show()
-
-
-def showI(I):
-    plt.figure(2)
-    plt.setp(plt.gcf(), 'facecolor', 'white')
-    plt.style.use('bmh')
-
-    plt.imshow(t2np(I))
-    plt.colorbar()
-    plt.show()
-    plt.title('I')
-
-def showVandI(v,I):
-    plt.figure(1)
-    plt.setp(plt.gcf(), 'facecolor', 'white')
-    plt.style.use('bmh')
-
-    plt.subplot(131)
-    plt.imshow(t2np(I))
-    plt.colorbar()
-    plt.title('I')
-
-    plt.subplot(132)
-    plt.imshow(t2np(v[:, :, 0]))
-    plt.colorbar()
-    plt.title('v[0]')
-
-    plt.subplot(133)
-    plt.imshow(t2np(v[:, :, 1]))
-    plt.colorbar()
-    plt.title('v[1]')
-    plt.show()
-
 def showCurrentImages(iter,iS,iT,iW):
+    """
+    Show current 2D registration results in relation to the source and target images
+    :param iter: iteration number
+    :param iS: source image
+    :param iT: target image
+    :param iW: current warped image
+    :return: no return arguments
+    """
     plt.figure(1)
     plt.clf()
 
@@ -134,17 +94,17 @@ def showCurrentImages(iter,iS,iT,iW):
     plt.style.use('bmh')
 
     plt.subplot(131)
-    plt.imshow(t2np(iS))
+    plt.imshow(utils.t2np(iS))
     plt.colorbar()
     plt.title('source image')
 
     plt.subplot(132)
-    plt.imshow(t2np(iT))
+    plt.imshow(utils.t2np(iT))
     plt.colorbar()
     plt.title('target image')
 
     plt.subplot(133)
-    plt.imshow(t2np(iW))
+    plt.imshow(utils.t2np(iW))
     plt.colorbar()
     plt.title('warped image')
 
@@ -153,78 +113,25 @@ def showCurrentImages(iter,iS,iT,iW):
     plt.waitforbuttonpress()
 
 # some settings for the registration energy
+# Reg[\Phi,\alpha,\gamma] + 1/\sigma^2 Sim[I(1),I_1]
 params = dict()
 params['sigma']=0.1
 params['gamma']=1.
 params['alpha']=0.2
 
-sigma = params['sigma']
-gamma = params['gamma']
-alpha = params['alpha']
-
-class SVFNet(nn.Module):
-# TODO: do proper spacing
-    def __init__(self,sz,params):
-        super(SVFNet, self).__init__()
-        self.sigma = params['sigma']
-        self.alpha = params['alpha']
-        self.gamma = params['gamma']
-        self.hx = hx = 1./(sz-1)
-        self.nrOfTimeSteps = 10
-        self.tFrom = 0.
-        self.tTo = 1.
-        self.v = Parameter(torch.zeros(sz, sz, 2))
-        self.advection = FM.AdvectImage( self.hx, self.hx )
-        self.integrator = RK.RK4(self.advection.f,self.advection.u,self.v)
-
-    def forward(self, I):
-        I1 = self.integrator.solve([I], self.tFrom, self.tTo, self.nrOfTimeSteps)
-        return I1[0]
-
-
-class SVFLoss(nn.Module):
-# make velocity field an input here
-    def __init__(self,v,sz,params):
-        super(SVFLoss, self).__init__()
-        self.sigma = params['sigma']
-        self.alpha = params['alpha']
-        self.gamma = params['gamma']
-        self.v = v
-        self.fdt = fd.FD_torch()
-        self.hx = hx = 1. / (sz - 1)
-        self.fdt.setspacing( self.hx, self.hx )
-
-    def computeRegularizer(self, v, alpha, gamma):
-        # just do the standard component-wise gamma id -\alpha \Delta
-        ndim = v.ndimension()
-        if ndim != 3:
-            raise ValueError('Regularizer only supported in 2D at the moment')
-
-        Lv = Variable(torch.zeros(v.size()), requires_grad=False)
-        for i in [0, 1]:
-            Lv[:, :, i] = v[:, :, i] * gamma - self.fdt.lap(v[:, :, i]) * alpha
-
-        # now compute the norm
-        return (Lv[:, :, 0] ** 2 + Lv[:, :, 1] ** 2).sum()
-
-    def forward(self, I1_warped, I1_target):
-        ssd = ((I1_target - I1_warped) ** 2).sum() / (self.sigma ** 2)
-        reg = self.computeRegularizer( self.v, self.alpha, self.gamma)
-        energy = ssd + reg
-        print('Energy = ' + str(t2np(energy)[0]) + '; ssd = ' + str(t2np(ssd)[0]) + '; reg = ' + str(t2np(reg)[0]))
-        # compute max velocity
-        maxVelocity = ( ( self.v[0]**2 + self.v[1]**2 ).max() ).sqrt()
-        print('Max velocity = ' + str(t2np(maxVelocity)[0]) )
-        return energy
-
-model = SVFNet(sz,params)
+model = RN.SVFNet(sz,params)    # instantiate a stationary velocity field model
 print(model)
 
+# create the source and target image as pyTorch variables
 ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
 ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 
-criterion = SVFLoss(list(model.parameters())[0],sz,params)
+# use the standard SVFLoss
+criterion = RN.SVFLoss(list(model.parameters())[0],sz,params)
+# use LBFGS as optimizer; this is essential for convergence when not using the Hilbert gradient
 optimizer = torch.optim.LBFGS(model.parameters(),lr=1)
+
+# optimize for a few steps
 for iter in range(100):
     print( 'Iteration = ' + str( iter ) )
 
