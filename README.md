@@ -10,3 +10,6 @@ The goal is to:
 4. Port everything from 2D to 3D
 5. Implement LDDMM using pyTorch
 
+# Setup
+
+* To compile the spatial transformer code (used for 2D map versions), simply go to the external/stn.pytorch directory and exectute 'python build.by'
