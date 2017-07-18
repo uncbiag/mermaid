@@ -13,13 +13,8 @@ from torch.autograd import Variable
 
 import numpy as np
 
-import finite_differences as fd
-import utils
 import registration_networks as RN
 import visualize_registration_results as vizReg
-
-import matplotlib.pyplot as plt
-import matplotlib.image as img
 
 import example_generation as eg
 
