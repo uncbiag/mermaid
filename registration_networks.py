@@ -26,7 +26,6 @@ class SVFNet(nn.Module):
         self.sigma = params['sigma']
         self.alpha = params['alpha']
         self.gamma = params['gamma']
-        self.hx = 1./(sz-1)
         self.spacing = spacing
         self.dim = spacing.size
         self.nrOfTimeSteps = 10
@@ -61,7 +60,7 @@ class SVFLoss(nn.Module):
         self.spacing = spacing
         self.dim = spacing.size
         self.fdt = fd.FD_torch( self.spacing )
-        self.hx = 1. / (sz - 1)
+        self.volumeElement = self.spacing.prod()
 
     def computeRegularizer(self, v, alpha, gamma):
         # just do the standard component-wise gamma id -\alpha \Delta
@@ -100,14 +99,14 @@ class SVFLoss(nn.Module):
 
 
     def getEnergy(self, I1_warped, I1_target):
-        ssd = utils.t2np( (((I1_target - I1_warped) ** 2).sum() / (self.sigma ** 2))[0] )
-        reg = utils.t2np( (self.computeRegularizer(self.v, self.alpha, self.gamma))[0] )
+        ssd = utils.t2np( (((I1_target - I1_warped) ** 2).sum() / (self.sigma ** 2))[0] )*self.volumeElement
+        reg = utils.t2np( (self.computeRegularizer(self.v, self.alpha, self.gamma))[0] )*self.volumeElement
         energy = ssd + reg
         return energy, ssd, reg
 
     def forward(self, I1_warped, I1_target):
-        ssd = ((I1_target - I1_warped) ** 2).sum() / (self.sigma ** 2)
-        reg = self.computeRegularizer( self.v, self.alpha, self.gamma)
+        ssd = ((I1_target - I1_warped) ** 2).sum() / (self.sigma ** 2)*self.volumeElement
+        reg = self.computeRegularizer( self.v, self.alpha, self.gamma)*self.volumeElement
         energy = ssd + reg
         #print('Energy = ' + str(utils.t2np(energy)[0]) + '; ssd = ' + str(utils.t2np(ssd)[0]) + '; reg = ' + str(utils.t2np(reg)[0]))
         # compute max velocity
@@ -126,7 +125,6 @@ class SVFNetMap(nn.Module):
         self.gamma = params['gamma']
         self.spacing = spacing
         self.dim = spacing.size
-        self.hx = 1./(sz-1)
         self.nrOfTimeSteps = 10
         self.tFrom = 0.
         self.tTo = 1.
@@ -157,7 +155,8 @@ class SVFLossMap(nn.Module):
         self.gamma = params['gamma']
         self.v = v
         self.fdt = fd.FD_torch( spacing )
-        self.hx = 1. / (sz - 1)
+        self.dim = spacing.size
+        self.volumeElement = self.spacing.prod()
         self.stn = STN()
         self.sz = sz
 
@@ -180,8 +179,8 @@ class SVFLossMap(nn.Module):
         phi1_stn = phi1.view(torch.Size([1, self.sz, self.sz, 2]))
         I1_warped = self.stn(I0_source_stn, phi1_stn)
 
-        ssd = utils.t2np( (((I1_target - I1_warped[0, :, :, 0]) ** 2).sum() / (self.sigma ** 2))[0] )
-        reg = utils.t2np( (self.computeRegularizer(self.v, self.alpha, self.gamma))[0] )
+        ssd = utils.t2np( (((I1_target - I1_warped[0, :, :, 0]) ** 2).sum() / (self.sigma ** 2))[0] )*self.volumeElement
+        reg = utils.t2np( (self.computeRegularizer(self.v, self.alpha, self.gamma))[0] )*self.volumeElement
         energy = ssd + reg
         return energy, ssd, reg
 
@@ -191,8 +190,8 @@ class SVFLossMap(nn.Module):
         phi1_stn = phi1.view(torch.Size([1,self.sz,self.sz,2]))
         I1_warped = self.stn(I0_source_stn, phi1_stn)
 
-        ssd = ((I1_target - I1_warped[0,:,:,0]) ** 2).sum() / (self.sigma ** 2)
-        reg = self.computeRegularizer( self.v, self.alpha, self.gamma)
+        ssd = ((I1_target - I1_warped[0,:,:,0]) ** 2).sum() / (self.sigma ** 2)*self.volumeElement
+        reg = self.computeRegularizer( self.v, self.alpha, self.gamma)*self.volumeElement
         energy = ssd + reg
         #print('Energy = ' + str(utils.t2np(energy)[0]) + '; ssd = ' + str(utils.t2np(ssd)[0]) + '; reg = ' + str(utils.t2np(reg)[0]))
         # compute max velocity
