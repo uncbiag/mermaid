@@ -10,107 +10,36 @@ Contributors:
 from __future__ import print_function
 import torch
 from torch.autograd import Variable
-from torch.nn.parameter import Parameter
-import torch.nn as nn
-import torch.nn.functional as F
-
-import finite_differences as fd
-import rungekutta_integrators as RK
-import forward_models as FM
-import utils
-import registration_networks as RN
 
 import numpy as np
+
+import finite_differences as fd
+import utils
+import registration_networks as RN
+import visualize_registration_results as vizReg
+
 import matplotlib.pyplot as plt
 import matplotlib.image as img
 
+import example_generation as eg
+
+# select the desired dimension of the registration
+dim = 3
+sz = 30         # size of the desired images: (sz)^dim
+
 # create a default image size with two sample squares
-sz = 30         # size of the 2D image: sz x sz
-c = sz/2        # center coordinates
-len_s = sz/6    # half of side-length for small square
-len_l = sz/3    # half of side-length for large square
-
-# create two example square images
-I0 = np.zeros([sz,sz], dtype='float32' )
-I1 = np.zeros([sz,sz], dtype='float32' )
-
-# create small and large squares
-I0[c-len_s:c+len_s,c-len_s:c+len_s] = 1
-I1[c-len_l:c+len_l,c-len_l:c+len_l] = 1
+cs = eg.CreateSquares(dim,sz)
+I0,I1 = cs.create_image_pair()
 
 # spacing so that everything is in [0,1]^2 for now
 # TODO: change to support arbitrary spacing
 hx = 1./(sz-1)
-print ('Spacing = ' + str( hx ) )
-
-fdnp = fd.FD_np()       # numpy finite differencing
-fdnp.setspacing(hx,hx)  # set spacing
+spacing = np.tile( hx, dim )
+print ('Spacing = ' + str( spacing ) )
 
 # some debugging output to show image gradients
 # compute gradients
-dx0 = fdnp.dXc( I0 )
-dy0 = fdnp.dYc( I0 )
-
-dx1 = fdnp.dXc( I1 )
-dy1 = fdnp.dYc( I1 )
-
-plt.figure(1)
-plt.setp( plt.gcf(),'facecolor','white')
-plt.style.use('bmh')
-
-plt.subplot(321)
-plt.imshow( I0 )
-plt.title( 'I0' )
-plt.subplot(323)
-plt.imshow( dx0 )
-plt.subplot(325)
-plt.imshow( dy0 )
-
-plt.subplot(322)
-plt.imshow( I1 )
-plt.title( 'I1' )
-plt.subplot(324)
-plt.imshow( dx1 )
-plt.subplot(326)
-plt.imshow( dy1 )
-#plt.axis('tight')
-plt.show( block=False )
-
-
-def showCurrentImages(iter,iS,iT,iW):
-    """
-    Show current 2D registration results in relation to the source and target images
-    :param iter: iteration number
-    :param iS: source image
-    :param iT: target image
-    :param iW: current warped image
-    :return: no return arguments
-    """
-    plt.figure(1)
-    plt.clf()
-
-    plt.suptitle( 'Iteration = ' + str(iter))
-    plt.setp(plt.gcf(), 'facecolor', 'white')
-    plt.style.use('bmh')
-
-    plt.subplot(131)
-    plt.imshow(utils.t2np(iS))
-    plt.colorbar()
-    plt.title('source image')
-
-    plt.subplot(132)
-    plt.imshow(utils.t2np(iT))
-    plt.colorbar()
-    plt.title('target image')
-
-    plt.subplot(133)
-    plt.imshow(utils.t2np(iW))
-    plt.colorbar()
-    plt.title('warped image')
-
-    plt.show(block=False)
-    plt.draw_all(force=True)
-    plt.waitforbuttonpress()
+vizReg.debugOutput( I0, I1, spacing )
 
 # some settings for the registration energy
 # Reg[\Phi,\alpha,\gamma] + 1/\sigma^2 Sim[I(1),I_1]
@@ -119,7 +48,7 @@ params['sigma']=0.1
 params['gamma']=1.
 params['alpha']=0.2
 
-model = RN.SVFNet(sz,params)    # instantiate a stationary velocity field model
+model = RN.SVFNet(sz,spacing,params)    # instantiate a stationary velocity field model
 print(model)
 
 # create the source and target image as pyTorch variables
@@ -127,13 +56,12 @@ ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
 ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 
 # use the standard SVFLoss
-criterion = RN.SVFLoss(list(model.parameters())[0],sz,params)
+criterion = RN.SVFLoss(list(model.parameters())[0],sz,spacing,params)
 # use LBFGS as optimizer; this is essential for convergence when not using the Hilbert gradient
 optimizer = torch.optim.LBFGS(model.parameters(),lr=1)
 
 # optimize for a few steps
 for iter in range(100):
-    print( 'Iteration = ' + str( iter ) )
 
     def closure():
         optimizer.zero_grad()
@@ -141,13 +69,19 @@ for iter in range(100):
         IWarped = model(ISource)
         # Compute and print loss
         loss = criterion(IWarped, ITarget)
-        print(iter, loss.data[0])
+        #print(iter, loss.data[0])
         loss.backward()
         return loss
 
     optimizer.step(closure)
     p = list(model.parameters())
-    print( 'v norm = ' + str( (p[0]**2).sum()[0] ) )
+    #print( 'v norm = ' + str( (p[0]**2).sum()[0] ) )
     cIWarped = model(ISource)
+
+    if iter%1==0:
+        energy, ssdEnergy, regEnergy = criterion.getEnergy(cIWarped, ITarget)
+        print('Iter {iter}: E={energy}, ssdE={ssdE}, regE={regE}'
+              .format(iter=iter, energy=energy, ssdE=ssdEnergy, regE=regEnergy))
+
     if iter%10==0:
-        showCurrentImages(iter,ISource,ITarget,cIWarped)
+        vizReg.showCurrentImages(iter,ISource,ITarget,cIWarped)

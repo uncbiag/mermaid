@@ -12,21 +12,19 @@ import numpy as np
 class FD(object):
     __metaclass__ = ABCMeta
 
-    spacing = np.ones(3)
+    def __init__(self, spacing):
 
-    def setspacing(self, hx=None, hy=None, hz=None):
-        if hx is None:
-            self.spacing[0] = 1.
+        self.dim = spacing.size
+        self.spacing = np.ones( self.dim )
+        if spacing.size==1:
+            self.spacing[0] = spacing[0]
+        elif spacing.size==2:
+            self.spacing[0] = spacing[0]
+            self.spacing[1] = spacing[1]
+        elif spacing.size==3:
+            self.spacing = spacing
         else:
-            self.spacing[0] = hx
-        if hy is None:
-            self.spacing[1] = 1.
-        else:
-            self.spacing[1] = hy
-        if hz is None:
-            self.spacing[2] = 1.
-        else:
-            self.spacing[2] = hz
+            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
 
     def dXb(self,I):
         return (I-self.xm(I))/self.spacing[0]
@@ -113,6 +111,9 @@ class FD(object):
 
 class FD_np(FD):
 
+    def __init__(self,spacing):
+        super(FD_np, self).__init__(spacing)
+
     def getdimension(self,I):
         return I.ndim
 
@@ -185,6 +186,9 @@ class FD_np(FD):
 
 
 class FD_torch(FD):
+
+    def __init__(self,spacing):
+        super(FD_torch, self).__init__(spacing)
 
     def getdimension(self,I):
         return I.dim()

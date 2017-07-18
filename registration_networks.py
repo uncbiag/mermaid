@@ -21,17 +21,28 @@ import utils
 
 class SVFNet(nn.Module):
 # TODO: do proper spacing
-    def __init__(self,sz,params):
+    def __init__(self,sz,spacing,params):
         super(SVFNet, self).__init__()
         self.sigma = params['sigma']
         self.alpha = params['alpha']
         self.gamma = params['gamma']
-        self.hx = hx = 1./(sz-1)
+        self.hx = 1./(sz-1)
+        self.spacing = spacing
+        self.dim = spacing.size
         self.nrOfTimeSteps = 10
         self.tFrom = 0.
         self.tTo = 1.
-        self.v = Parameter(torch.zeros(sz, sz, 2))
-        self.advection = FM.AdvectImage( self.hx, self.hx )
+
+        if self.dim==1:
+            self.v = Parameter(torch.zeros(sz))
+        elif self.dim==2:
+            self.v = Parameter(torch.zeros([sz,sz,2]))
+        elif self.dim==3:
+            self.v = Parameter(torch.zeros([sz,sz,sz,3]))
+        else:
+            raise ValueError( 'Can only create velocity fields for dimensions 1 to 3.')
+
+        self.advection = FM.AdvectImage( self.spacing )
         self.integrator = RK.RK4(self.advection.f,self.advection.u,self.v)
 
     def forward(self, I):
@@ -41,22 +52,37 @@ class SVFNet(nn.Module):
 
 class SVFLoss(nn.Module):
 # make velocity field an input here
-    def __init__(self,v,sz,params):
+    def __init__(self,v,sz,spacing,params):
         super(SVFLoss, self).__init__()
         self.sigma = params['sigma']
         self.alpha = params['alpha']
         self.gamma = params['gamma']
         self.v = v
-        self.fdt = fd.FD_torch()
-        self.hx = hx = 1. / (sz - 1)
-        self.fdt.setspacing( self.hx, self.hx )
+        self.spacing = spacing
+        self.dim = spacing.size
+        self.fdt = fd.FD_torch( self.spacing )
+        self.hx = 1. / (sz - 1)
 
     def computeRegularizer(self, v, alpha, gamma):
         # just do the standard component-wise gamma id -\alpha \Delta
-        ndim = v.ndimension()
-        if ndim != 3:
-            raise ValueError('Regularizer only supported in 2D at the moment')
 
+        if self.dim==1:
+            return self._computeRegularizer_1d(v, alpha, gamma)
+        elif self.dim==2:
+            return self._computeRegularizer_2d(v, alpha, gamma)
+        elif self.dim==3:
+            return self._computeRegularizer_3d(v, alpha, gamma)
+        else:
+            raise ValueError('Regularizer is currently only supported in dimensions 1 to 3')
+
+
+    def _computeRegularizer_1d(self, v, alpha, gamma):
+        Lv = Variable(torch.zeros(v.size()), requires_grad=False)
+        Lv = v* gamma - self.fdt.lap(v) * alpha
+        # now compute the norm
+        return (Lv**2).sum()
+
+    def _computeRegularizer_2d(self, v, alpha, gamma):
         Lv = Variable(torch.zeros(v.size()), requires_grad=False)
         for i in [0, 1]:
             Lv[:, :, i] = v[:, :, i] * gamma - self.fdt.lap(v[:, :, i]) * alpha
@@ -64,31 +90,57 @@ class SVFLoss(nn.Module):
         # now compute the norm
         return (Lv[:, :, 0] ** 2 + Lv[:, :, 1] ** 2).sum()
 
+    def _computeRegularizer_3d(self, v, alpha, gamma):
+        Lv = Variable(torch.zeros(v.size()), requires_grad=False)
+        for i in [0, 1, 2]:
+            Lv[:, :, :, i] = v[:, :, :, i] * gamma - self.fdt.lap(v[:, :, :, i]) * alpha
+
+        # now compute the norm
+        return (Lv[:, :, :, 0] ** 2 + Lv[:, :, :, 1] ** 2 + Lv[:, :, :, 2] ** 2).sum()
+
+
+    def getEnergy(self, I1_warped, I1_target):
+        ssd = utils.t2np( (((I1_target - I1_warped) ** 2).sum() / (self.sigma ** 2))[0] )
+        reg = utils.t2np( (self.computeRegularizer(self.v, self.alpha, self.gamma))[0] )
+        energy = ssd + reg
+        return energy, ssd, reg
+
     def forward(self, I1_warped, I1_target):
         ssd = ((I1_target - I1_warped) ** 2).sum() / (self.sigma ** 2)
         reg = self.computeRegularizer( self.v, self.alpha, self.gamma)
         energy = ssd + reg
-        print('Energy = ' + str(utils.t2np(energy)[0]) + '; ssd = ' + str(utils.t2np(ssd)[0]) + '; reg = ' + str(utils.t2np(reg)[0]))
+        #print('Energy = ' + str(utils.t2np(energy)[0]) + '; ssd = ' + str(utils.t2np(ssd)[0]) + '; reg = ' + str(utils.t2np(reg)[0]))
         # compute max velocity
-        maxVelocity = ( ( self.v[0]**2 + self.v[1]**2 ).max() ).sqrt()
-        print('Max velocity = ' + str(utils.t2np(maxVelocity)[0]) )
+        #maxVelocity = ( ( self.v[0]**2 + self.v[1]**2 ).max() ).sqrt()
+        #print('Max velocity = ' + str(utils.t2np(maxVelocity)[0]) )
         return energy
 
 
 
 class SVFNetMap(nn.Module):
 # TODO: do proper spacing
-    def __init__(self,sz,params):
+    def __init__(self,sz,spacing,params):
         super(SVFNetMap, self).__init__()
         self.sigma = params['sigma']
         self.alpha = params['alpha']
         self.gamma = params['gamma']
-        self.hx = hx = 1./(sz-1)
+        self.spacing = spacing
+        self.dim = spacing.size
+        self.hx = 1./(sz-1)
         self.nrOfTimeSteps = 10
         self.tFrom = 0.
         self.tTo = 1.
-        self.v = Parameter(torch.zeros(sz, sz, 2))
-        self.advectionMap = FM.AdvectMap( self.hx, self.hx )
+
+        if self.dim==1:
+            self.v = Parameter(torch.zeros(sz))
+        elif self.dim==2:
+            self.v = Parameter(torch.zeros([sz,sz,2]))
+        elif self.dim==3:
+            self.v = Parameter(torch.zeros([sz,sz,sz,3]))
+        else:
+            raise ValueError( 'Can only create velocity fields for dimensions 1 to 3.')
+
+        self.advectionMap = FM.AdvectMap( self.spacing )
         self.integrator = RK.RK4(self.advectionMap.f,self.advectionMap.u,self.v)
 
     def forward(self, phi):
@@ -98,15 +150,14 @@ class SVFNetMap(nn.Module):
 
 class SVFLossMap(nn.Module):
 # make velocity field an input here
-    def __init__(self,v,sz,params):
+    def __init__(self,v,sz,spacing,params):
         super(SVFLossMap, self).__init__()
         self.sigma = params['sigma']
         self.alpha = params['alpha']
         self.gamma = params['gamma']
         self.v = v
-        self.fdt = fd.FD_torch()
-        self.hx = hx = 1. / (sz - 1)
-        self.fdt.setspacing( self.hx, self.hx )
+        self.fdt = fd.FD_torch( spacing )
+        self.hx = 1. / (sz - 1)
         self.stn = STN()
         self.sz = sz
 
@@ -123,6 +174,17 @@ class SVFLossMap(nn.Module):
         # now compute the norm
         return (Lv[:, :, 0] ** 2 + Lv[:, :, 1] ** 2).sum()
 
+
+    def getEnergy(self, phi1, I0_source, I1_target):
+        I0_source_stn = I0_source.view(torch.Size([1, self.sz, self.sz, 1]))
+        phi1_stn = phi1.view(torch.Size([1, self.sz, self.sz, 2]))
+        I1_warped = self.stn(I0_source_stn, phi1_stn)
+
+        ssd = utils.t2np( (((I1_target - I1_warped[0, :, :, 0]) ** 2).sum() / (self.sigma ** 2))[0] )
+        reg = utils.t2np( (self.computeRegularizer(self.v, self.alpha, self.gamma))[0] )
+        energy = ssd + reg
+        return energy, ssd, reg
+
     def forward(self, phi1, I0_source, I1_target):
 
         I0_source_stn = I0_source.view(torch.Size([1,self.sz,self.sz,1]))
@@ -132,8 +194,8 @@ class SVFLossMap(nn.Module):
         ssd = ((I1_target - I1_warped[0,:,:,0]) ** 2).sum() / (self.sigma ** 2)
         reg = self.computeRegularizer( self.v, self.alpha, self.gamma)
         energy = ssd + reg
-        print('Energy = ' + str(utils.t2np(energy)[0]) + '; ssd = ' + str(utils.t2np(ssd)[0]) + '; reg = ' + str(utils.t2np(reg)[0]))
+        #print('Energy = ' + str(utils.t2np(energy)[0]) + '; ssd = ' + str(utils.t2np(ssd)[0]) + '; reg = ' + str(utils.t2np(reg)[0]))
         # compute max velocity
-        maxVelocity = ( ( self.v[0]**2 + self.v[1]**2 ).max() ).sqrt()
-        print('Max velocity = ' + str(utils.t2np(maxVelocity)[0]) )
+        #maxVelocity = ( ( self.v[0]**2 + self.v[1]**2 ).max() ).sqrt()
+        #print('Max velocity = ' + str(utils.t2np(maxVelocity)[0]) )
         return energy

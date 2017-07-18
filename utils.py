@@ -1,3 +1,15 @@
+"""
+Various utility functions
+"""
+
+# TODO: maybe reorganize them in a more meaningful way
+def getpar( params, key, defaultval ):
+    if params.has_key( key ):
+        return params[ key ]
+    else:
+        print( 'Using default value: ' + str( defaultval) + ' for key = ' + key )
+        return defaultval
+
 def t2np( v ):
     return (v.data).cpu().numpy()
 
