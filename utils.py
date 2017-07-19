@@ -2,7 +2,34 @@
 Various utility functions
 """
 
+import numpy as np
+import math
+
 # TODO: maybe reorganize them in a more meaningful way
+
+def identityMap(nrOfVals):
+    dim = len(nrOfVals)
+    if dim==1:
+        id = np.mgrid[0:nrOfVals[0]]
+    elif dim==2:
+        id = np.mgrid[0:nrOfVals[0],0:nrOfVals[1]]
+    elif dim==3:
+        id = np.mgrid[0:nrOfVals[0],0:nrOfVals[1],0:nrOfVals[2]]
+    else:
+        raise ValueError('Only dimensions 1-3 are currently supported for the identity map')
+
+    # now get it into range [-1,1]^d
+    id = np.array( id.astype('float32') )
+    if dim==1:
+        id*=2./(nrOfVals[0]-1)
+        id-=1
+    else:
+        for d in range(dim):
+            id[d]*=2./(nrOfVals[d]-1)
+            id[d]-=1
+
+    return id
+
 def getpar( params, key, defaultval ):
     if params.has_key( key ):
         return params[ key ]

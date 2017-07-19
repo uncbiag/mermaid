@@ -20,11 +20,13 @@ import forward_models as FM
 import utils
 import registration_networks as RN
 
-from modules.stn import STN
+from modules.stn_nd import STN_ND
 
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as img
+
+dim = 2 # dimension
 
 # create a default image size with two sample squares
 sz = 30         # size of the 2D image: sz x sz
@@ -129,14 +131,11 @@ ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
 ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 
 # create the identity map
-xvals = np.array(np.linspace(-1,1,sz))
-yvals = np.array(np.linspace(-1,1,sz))
-
-YY,XX = np.meshgrid(xvals,yvals)
+id2 = utils.identityMap([sz,sz])
 
 id = np.zeros([sz,sz,2], dtype='float32')
-id[:,:,0] = XX
-id[:,:,1] = YY
+id[:,:,0] = id2[0]
+id[:,:,1] = id2[1]
 
 identityMap = Variable( torch.from_numpy( id ), requires_grad=False )
 
@@ -145,7 +144,7 @@ criterion = RN.SVFLossMap(list(model.parameters())[0],sz,params)
 # use LBFGS as optimizer; this is essential for convergence when not using the Hilbert gradient
 optimizer = torch.optim.LBFGS(model.parameters(),lr=1)
 
-stn = STN()
+stn = STN_ND( dim )
 # optimize for a few steps
 for iter in range(100):
     print( 'Iteration = ' + str( iter ) )

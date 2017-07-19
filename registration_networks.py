@@ -15,7 +15,7 @@ import finite_differences as fd
 import rungekutta_integrators as RK
 import forward_models as FM
 
-from modules.stn import STN
+from modules.stn_nd import STN_ND
 
 import utils
 
@@ -157,7 +157,7 @@ class SVFLossMap(nn.Module):
         self.fdt = fd.FD_torch( spacing )
         self.dim = spacing.size
         self.volumeElement = self.spacing.prod()
-        self.stn = STN()
+        self.stn = STN_ND( self.dim )
         self.sz = sz
 
     def computeRegularizer(self, v, alpha, gamma):

@@ -12,4 +12,4 @@ The goal is to:
 
 # Setup
 
-* To compile the spatial transformer code (used for 2D map versions), simply go to the external/stn.pytorch directory and exectute 'python build.by'
+* To compile the spatial transformer code simply go to the libraries directory and exectute 'python build.by'
