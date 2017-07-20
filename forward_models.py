@@ -26,16 +26,9 @@ class ForwardModel(object):
         """
 
         self.dim = spacing.size # spatial dimension of the problem
-        self.spacing = np.ones(self.dim)
+        self.spacing = spacing
 
-        if spacing.size == 1:
-            self.spacing[0] = spacing[0]
-        elif spacing.size == 2:
-            self.spacing[0] = spacing[0]
-            self.spacing[1] = spacing[1]
-        elif spacing.size == 3:
-            self.spacing = spacing
-        else:
+        if self.dim>3 or self.dim<1:
             raise ValueError('Forward models are currently only supported in dimensions 1 to 3')
 
         self.fdt = fd.FD_torch( self.spacing )

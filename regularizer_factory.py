@@ -1,0 +1,88 @@
+'''
+General purpose regularizers which can be used
+'''
+
+from abc import ABCMeta, abstractmethod
+
+import torch
+from torch.autograd import Variable
+
+import finite_differences as fd
+import utils
+
+
+class Regularizer(object):
+    __metaclass__ = ABCMeta
+
+    def __init__(self, spacing, params):
+        self.spacing = spacing
+        self.fdt = fd.FD_torch( self.spacing )
+        self.volumeElement = self.spacing.prod()
+        self.dim = len(spacing)
+        self.params = params
+
+    @abstractmethod
+    def computeRegularizer(self, v):
+        pass
+
+
+class HelmholtzRegularizer(Regularizer):
+
+    def __init__(self, spacing, params):
+        super(HelmholtzRegularizer,self).__init__(spacing,params)
+        self.alpha = utils.getpar(params, 'alpha', 0.2)
+        self.gamma = utils.getpar(params, 'gamma', 1.0)
+
+    def computeRegularizer(self,v):
+        # just do the standard component-wise gamma id -\alpha \Delta
+
+        if self.dim == 1:
+            return self._computeRegularizer_1d(v, self.alpha, self.gamma)
+        elif self.dim == 2:
+            return self._computeRegularizer_2d(v, self.alpha, self.gamma)
+        elif self.dim == 3:
+            return self._computeRegularizer_3d(v, self.alpha, self.gamma)
+        else:
+            raise ValueError('Regularizer is currently only supported in dimensions 1 to 3')
+
+    def _computeRegularizer_1d(self, v, alpha, gamma):
+        Lv = Variable(torch.zeros(v.size()), requires_grad=False)
+        Lv = v * gamma - self.fdt.lap(v) * alpha
+        # now compute the norm
+        return (Lv ** 2).sum()*self.volumeElement
+
+    def _computeRegularizer_2d(self, v, alpha, gamma):
+        Lv = Variable(torch.zeros(v.size()), requires_grad=False)
+        for i in [0, 1]:
+            Lv[:, :, i] = v[:, :, i] * gamma - self.fdt.lap(v[:, :, i]) * alpha
+
+        # now compute the norm
+        return (Lv[:, :, 0] ** 2 + Lv[:, :, 1] ** 2).sum()*self.volumeElement
+
+    def _computeRegularizer_3d(self, v, alpha, gamma):
+        Lv = Variable(torch.zeros(v.size()), requires_grad=False)
+        for i in [0, 1, 2]:
+            Lv[:, :, :, i] = v[:, :, :, i] * gamma - self.fdt.lap(v[:, :, :, i]) * alpha
+
+        # now compute the norm
+        return (Lv[:, :, :, 0] ** 2 + Lv[:, :, :, 1] ** 2 + Lv[:, :, :, 2] ** 2).sum()*self.volumeElement
+
+
+class RegularizerFactory(object):
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self,spacing):
+        self.spacing = spacing
+        self.dim = len( spacing )
+
+    def createRegularizer(self,regularizerName='helmholtz',params=None):
+        if regularizerName=='helmholtz':
+            return HelmholtzRegularizer(self.spacing,params)
+        else:
+            raise ValueError( 'Regularizer: ' + regularizerName + ' not known')
+
+
+
+
+

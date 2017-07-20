@@ -19,17 +19,15 @@ import visualize_registration_results as vizReg
 import example_generation as eg
 
 # select the desired dimension of the registration
-dim = 3
-sz = 30         # size of the desired images: (sz)^dim
+dim = 2
+sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
 
 # create a default image size with two sample squares
-cs = eg.CreateSquares(dim,sz)
+cs = eg.CreateSquares(sz)
 I0,I1 = cs.create_image_pair()
 
 # spacing so that everything is in [0,1]^2 for now
-# TODO: change to support arbitrary spacing
-hx = 1./(sz-1)
-spacing = np.tile( hx, dim )
+spacing = 1./(sz-1)
 print ('Spacing = ' + str( spacing ) )
 
 # some debugging output to show image gradients
@@ -42,6 +40,11 @@ params = dict()
 params['sigma']=0.1
 params['gamma']=1.
 params['alpha']=0.2
+
+params['similarityMeasure'] = 'ssd'
+params['regularizer'] = 'helmholtz'
+
+params['numberOfTimeSteps'] = 10
 
 model = RN.SVFNet(sz,spacing,params)    # instantiate a stationary velocity field model
 print(model)
@@ -62,21 +65,18 @@ for iter in range(100):
         optimizer.zero_grad()
         # Forward pass: Compute predicted y by passing x to the model
         IWarped = model(ISource)
-        # Compute and print loss
+        # Compute loss
         loss = criterion(IWarped, ITarget)
-        #print(iter, loss.data[0])
         loss.backward()
         return loss
 
     optimizer.step(closure)
-    p = list(model.parameters())
-    #print( 'v norm = ' + str( (p[0]**2).sum()[0] ) )
     cIWarped = model(ISource)
 
     if iter%1==0:
-        energy, ssdEnergy, regEnergy = criterion.getEnergy(cIWarped, ITarget)
-        print('Iter {iter}: E={energy}, ssdE={ssdE}, regE={regE}'
-              .format(iter=iter, energy=energy, ssdE=ssdEnergy, regE=regEnergy))
+        energy, similarityEnergy, regEnergy = criterion.getEnergy(cIWarped, ITarget)
+        print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}'
+              .format(iter=iter, energy=energy, similarityE=similarityEnergy, regE=regEnergy))
 
     if iter%10==0:
         vizReg.showCurrentImages(iter,ISource,ITarget,cIWarped)
