@@ -11,7 +11,7 @@ with_cuda = False
 
 extra_compile_args = []
 extra_link_args = []
-with_openmp = True
+with_openmp = True # set this to false if you are using clang on OSX or install gcc
 
 if torch.cuda.is_available():
     raise ValueError( 'There is currently no CUDA support. Please adapt the stn.pytorch CUDA code appropriately.')
