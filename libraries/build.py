@@ -9,6 +9,10 @@ headers = ['src/my_lib_nd.h']
 defines = []
 with_cuda = False
 
+extra_compile_args = []
+extra_link_args = []
+with_openmp = True
+
 if torch.cuda.is_available():
     raise ValueError( 'There is currently no CUDA support. Please adapt the stn.pytorch CUDA code appropriately.')
 
@@ -18,6 +22,10 @@ if torch.cuda.is_available():
     defines += [('WITH_CUDA', None)]
     with_cuda = True
 
+if with_openmp:
+    extra_compile_args += ['-fopenmp']
+    extra_link_args += ['-fopenmp']
+    
 this_file = os.path.dirname(os.path.realpath(__file__))
 print(this_file)
 if torch.cuda.is_available():
@@ -32,10 +40,13 @@ ffi = create_extension(
     '_ext.my_lib_nd',
     headers=headers,
     sources=sources,
+    verbose=True,
     define_macros=defines,
     relative_to=__file__,
     with_cuda=with_cuda,
-    extra_objects=extra_objects
+    extra_objects=extra_objects,
+    extra_compile_args=extra_compile_args,
+    extra_link_args=extra_link_args
 )
 
 if __name__ == '__main__':

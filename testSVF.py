@@ -12,6 +12,7 @@ import torch
 from torch.autograd import Variable
 
 import numpy as np
+import time
 
 import registration_networks as RN
 import visualize_registration_results as vizReg
@@ -19,12 +20,16 @@ import visualize_registration_results as vizReg
 import example_generation as eg
 
 # select the desired dimension of the registration
-dim = 2
-sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
+dim = 3
+sz = np.tile( 60, dim )         # size of the desired images: (sz)^dim
+
+params = dict()
+params['len_s'] = sz.min()/4
+params['len_l'] = sz.min()/3
 
 # create a default image size with two sample squares
 cs = eg.CreateSquares(sz)
-I0,I1 = cs.create_image_pair()
+I0,I1 = cs.create_image_pair(params)
 
 # spacing so that everything is in [0,1]^2 for now
 spacing = 1./(sz-1)
@@ -36,7 +41,7 @@ vizReg.debugOutput( I0, I1, spacing )
 
 # some settings for the registration energy
 # Reg[\Phi,\alpha,\gamma] + 1/\sigma^2 Sim[I(1),I_1]
-params = dict()
+
 params['sigma']=0.1
 params['gamma']=1.
 params['alpha']=0.2
@@ -56,9 +61,14 @@ ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 # use the standard SVFLoss
 criterion = RN.SVFLoss(list(model.parameters())[0],sz,spacing,params)
 # use LBFGS as optimizer; this is essential for convergence when not using the Hilbert gradient
-optimizer = torch.optim.LBFGS(model.parameters(),lr=1)
+optimizer = torch.optim.LBFGS(model.parameters(),
+                              lr=1,max_iter=5,max_eval=10,
+                              tolerance_grad=1e-3,tolerance_change=1e-4,
+                              history_size=5)
 
 # optimize for a few steps
+start = time.time()
+
 for iter in range(100):
 
     def closure():
@@ -80,3 +90,5 @@ for iter in range(100):
 
     if iter%10==0:
         vizReg.showCurrentImages(iter,ISource,ITarget,cIWarped)
+
+print('time:', time.time() - start)

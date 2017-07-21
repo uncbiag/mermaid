@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import numpy as np
+
 import utils
 import sys
 
@@ -129,7 +131,7 @@ def debugOutput( I0, I1, spacing ):
         raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
 
 
-def showCurrentImages_1d( iS, iT, iW):
+def showCurrentImages_1d( iS, iT, iW, phiWarped):
     plt.subplot(131)
     plt.plot(utils.t2np(iS))
     plt.title('source image')
@@ -144,45 +146,67 @@ def showCurrentImages_1d( iS, iT, iW):
     plt.plot(utils.t2np(iS),'r')
     plt.title('warped image')
 
-def showCurrentImages_2d( iS, iT, iW):
+def showCurrentImages_2d( iS, iT, iW, phiWarped):
 
-    plt.subplot(131)
+    plt.subplot(221)
     plt.imshow(utils.t2np(iS))
     plt.colorbar()
     plt.title('source image')
 
-    plt.subplot(132)
+    plt.subplot(222)
     plt.imshow(utils.t2np(iT))
     plt.colorbar()
     plt.title('target image')
 
-    plt.subplot(133)
+    plt.subplot(223)
     plt.imshow(utils.t2np(iW))
+
     plt.colorbar()
     plt.title('warped image')
 
-def showCurrentImages_3d( iS, iT, iW):
+
+    if phiWarped is not None:
+        plt.subplot(224)
+        plt.imshow(utils.t2np(iW))
+
+        plt.contour(utils.t2np(phiWarped[:, :, 0]), np.linspace(-1, 1, 20))
+        plt.contour(utils.t2np(phiWarped[:, :, 1]), np.linspace(-1, 1, 20))
+
+        plt.colorbar()
+        plt.title('warped image with grid')
+
+def showCurrentImages_3d( iS, iT, iW, phiWarped):
 
     sz = iS.size()
     c = sz[2]/2
 
-    plt.subplot(131)
+    plt.subplot(221)
     plt.imshow(utils.t2np(iS[:,:,c]))
     plt.colorbar()
     plt.title('source image')
 
-    plt.subplot(132)
+    plt.subplot(222)
     plt.imshow(utils.t2np(iT[:,:,c]))
     plt.colorbar()
     plt.title('target image')
 
-    plt.subplot(133)
+    plt.subplot(223)
     plt.imshow(utils.t2np(iW[:,:,c]))
     plt.colorbar()
     plt.title('warped image')
 
+    if phiWarped is not None:
 
-def showCurrentImages(iter,iS,iT,iW):
+        plt.subplot(224)
+        plt.imshow(utils.t2np(iW[:, :, c]))
+        plt.contour(utils.t2np(phiWarped[:, :, c, 0]), np.linspace(-1, 1, 20))
+        plt.contour(utils.t2np(phiWarped[:, :, c, 1]), np.linspace(-1, 1, 20))
+
+        plt.colorbar()
+        plt.title('warped image with grid')
+
+
+def showCurrentImages(iter,iS,iT,iW,phiWarped=None):
     """
     Show current 2D registration results in relation to the source and target images
     :param iter: iteration number
@@ -202,11 +226,11 @@ def showCurrentImages(iter,iS,iT,iW):
     dim = iS.ndimension()
 
     if dim==1:
-        showCurrentImages_1d( iS, iT, iW )
+        showCurrentImages_1d( iS, iT, iW, phiWarped )
     elif dim==2:
-        showCurrentImages_2d( iS, iT, iW )
+        showCurrentImages_2d( iS, iT, iW, phiWarped )
     elif dim==3:
-        showCurrentImages_3d( iS, iT, iW )
+        showCurrentImages_3d( iS, iT, iW, phiWarped )
     else:
         raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
 

@@ -1,3 +1,4 @@
+#include <omp.h>
 #include <TH/TH.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -34,6 +35,7 @@ int BilinearSamplerBXC_updateOutput_1D(THFloatTensor *inputImages, THFloatTensor
 
   for(b=0; b < batchsize; b++)
     {
+      #pragma omp parallel for
       for(xOut=0; xOut < output_X; xOut++)
 	{
 	  //read the grid
@@ -108,6 +110,7 @@ int BilinearSamplerBXYC_updateOutput_2D(THFloatTensor *inputImages, THFloatTenso
 
   for(b=0; b < batchsize; b++)
   {
+    #pragma omp parallel for
     for(xOut=0; xOut < output_X; xOut++)
     {
       for(yOut=0; yOut < output_Y; yOut++)
@@ -207,6 +210,7 @@ int BilinearSamplerBXYZC_updateOutput_3D(THFloatTensor *inputImages, THFloatTens
 
   for(b=0; b < batchsize; b++)
   {
+    #pragma omp parallel for
     for(xOut=0; xOut < output_X; xOut++)
       {
 	for(yOut=0; yOut < output_Y; yOut++)
@@ -456,6 +460,7 @@ int BilinearSamplerBXC_updateGradInput_1D(THFloatTensor *inputImages, THFloatTen
 
   for(b=0; b < batchsize; b++)
   {
+    #pragma omp parallel for
     for(xOut=0; xOut < gradOutput_X; xOut++)
     {
       //read the grid
@@ -562,6 +567,7 @@ int BilinearSamplerBXYC_updateGradInput_2D(THFloatTensor *inputImages, THFloatTe
 
   for(b=0; b < batchsize; b++)
   {
+    #pragma omp parallel for
     for(xOut=0; xOut < gradOutput_X; xOut++)
     {
       for(yOut=0; yOut < gradOutput_Y; yOut++)
@@ -713,6 +719,7 @@ int BilinearSamplerBXYZC_updateGradInput_3D(THFloatTensor *inputImages, THFloatT
 
   for(b=0; b < batchsize; b++)
   {
+    #pragma omp parallel for
     for(xOut=0; xOut < gradOutput_X; xOut++)
     {
       for(yOut=0; yOut < gradOutput_Y; yOut++)
