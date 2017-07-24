@@ -6,7 +6,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import matplotlib.pyplot as plt
-
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 def create_some_test_data():
     a = np.sin(np.linspace(0, np.pi, 20))
@@ -30,7 +30,16 @@ class FigureEventHandler(object):
         self.ax_events['key_release_event']=[]
         self.supported_events = ['button_press_event','button_release_event',
                                  'key_press_event','key_release_event']
+        self.sync_d = dict()
+
         self.connect()
+
+    def reset_synchronize(self):
+        self.sync_d.clear()
+
+    def synchronize(self,axes):
+        for e in axes:
+            self.sync_d[e]=axes
 
     def is_supported_event(self,eventname):
         if self.supported_events.count(eventname)>0:
@@ -72,11 +81,11 @@ class FigureEventHandler(object):
                     return True
         return False
 
-    def add_axes_event(self, eventname, ax, eventfcn):
+    def add_axes_event(self, eventname, ax, eventfcn, getsyncfcn=None,setsyncfcn=None):
         if self.is_supported_event(eventname):
             print_debug('Registering an event')
             if not self.eventIsRegistered(eventname,ax):
-                self.ax_events[eventname].append((ax,eventfcn))
+                self.ax_events[eventname].append((ax,eventfcn,getsyncfcn,setsyncfcn))
         else:
             print('Event ' + eventname + ' is not supported and cannot be registered')
 
@@ -93,6 +102,14 @@ class FigureEventHandler(object):
         else:
             print('Event ' + eventname + ' is not supported and cannot be removed')
 
+    def broadcast(self,broadCastTo,syncInfo,eventName):
+        registeredEvents = self.ax_events[eventName]
+        for e in registeredEvents:
+            for b in broadCastTo:
+                if b is e[0]: # found the axes
+                    if e[3] is not None:
+                        e[3](syncInfo) # now sync it
+
     def on_mouse_press(self, event):
         print_debug('Pressed mouse button')
         # get current axis
@@ -104,6 +121,12 @@ class FigureEventHandler(object):
                 if e[0] is ax:
                     print_debug( 'Dispatching event')
                     e[1](event)
+
+                    if self.sync_d.has_key(e[0]) and e[2] is not None:
+                        print_debug('Broadcasting')
+                        syncInfo = e[2]()
+                        self.broadcast( self.sync_d[e[0]], syncInfo, 'button_press_event')
+
                     # and now draw the canvas
                     self.fig.canvas.draw()
 
@@ -147,6 +170,14 @@ class ImageViewer3D(ImageViewer):
     def next_slice(self):
         pass
 
+    @abstractmethod
+    def set_synchronize(self,index):
+        pass
+
+    @abstractmethod
+    def get_synchronize(self):
+        pass
+
     def on_mouse_release(self,event):
         x = event.xdata
         y = event.ydata
@@ -173,10 +204,11 @@ class ImageViewer3D(ImageViewer):
 
 class ImageViewer3D_Sliced(ImageViewer3D):
 
-    def __init__(self, ax, data, sliceDim, textStr='Slice'):
+    def __init__(self, ax, data, sliceDim, textStr='Slice', showColorbar=False):
         self.sliceDim = sliceDim
         self.textStr = textStr
         self.index = data.shape[self.sliceDim] // 2
+        self.showColorbar = showColorbar
         super(ImageViewer3D_Sliced,self).__init__(ax,data)
 
     def get_slice_at_dimension(self,index):
@@ -186,25 +218,84 @@ class ImageViewer3D_Sliced(ImageViewer3D):
         return (self.data[slc]).squeeze()
 
     def previous_slice(self):
+        plt.sca(self.ax)
+        plt.cla()
         self.index = (self.index - 1) % self.data.shape[self.sliceDim]  # wrap around using %
-        self.ax.images[0].set_array(self.get_slice_at_dimension(self.index))
+        self.ax.imshow(self.get_slice_at_dimension(self.index))
+        #self.ax.images[0].set_array(self.get_slice_at_dimension(self.index))
 
     def next_slice(self):
+        plt.sca(self.ax)
+        plt.cla()
         self.index = (self.index + 1) % self.data.shape[self.sliceDim]
-        self.ax.images[0].set_array(self.get_slice_at_dimension(self.index))
+        self.ax.imshow(self.get_slice_at_dimension(self.index))
+        #self.ax.images[0].set_array(self.get_slice_at_dimension(self.index))
+
+    def set_synchronize(self,index):
+        plt.sca(self.ax)
+        plt.cla()
+        self.index = (index) % self.data.shape[self.sliceDim]
+        self.ax.imshow(self.get_slice_at_dimension(self.index))
+        #self.ax.images[0].set_array(self.get_slice_at_dimension(self.index))
+        self.displayTitle()
+
+    def get_synchronize(self):
+        return self.index
 
     def displayTitle(self):
         plt.sca(self.ax)
         plt.title( self.textStr + ' = ' + str(self.index) + '/' + str(self.data.shape[self.sliceDim]-1) )
 
     def show(self):
-        self.ax.imshow(self.get_slice_at_dimension(self.index))
+        plt.sca(self.ax)
+        plt.cla()
+        cim = self.ax.imshow(self.get_slice_at_dimension(self.index))
+        divider = make_axes_locatable(self.ax)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        plt.gcf().colorbar(cim, cax=cax, orientation='vertical')
         self.displayTitle()
+
+
+class ImageViewer3D_Sliced_Contour(ImageViewer3D_Sliced):
+    def __init__(self, ax, data, phi, sliceDim, textStr='Slice', showColorbar=False):
+        self.phi = phi
+        super(ImageViewer3D_Sliced_Contour,self).__init__(ax,data, sliceDim, textStr, showColorbar)
+
+    def get_phi_slice_at_dimension(self,index):
+        # slicing a along a given dimension at index, index
+        slc = [slice(None)] * len(self.phi.shape)
+        slc[self.sliceDim] = slice(index, index+1)
+        return (self.phi[slc]).squeeze()
+
+    def show_contours(self):
+        plt.sca(self.ax)
+        phiSliced = self.get_phi_slice_at_dimension(self.index)
+        for d in range(0,self.sliceDim):
+            plt.contour(phiSliced[:,:,d], np.linspace(-1,1,20))
+        for d in range(self.sliceDim+1,3):
+            plt.contour(phiSliced[:,:,d], np.linspace(-1,1,20))
+
+    def previous_slice(self):
+        super(ImageViewer3D_Sliced_Contour,self).previous_slice()
+        self.show_contours()
+
+    def next_slice(self):
+        super(ImageViewer3D_Sliced_Contour,self).next_slice()
+        self.show_contours()
+
+    def set_synchronize(self,index):
+        super(ImageViewer3D_Sliced_Contour,self).set_synchronize(index)
+        self.show_contours()
+
+    def show(self):
+        super(ImageViewer3D_Sliced_Contour,self).show()
+        self.show_contours()
 
 
 def test_viewer():
     data = create_some_test_data()
     fig,ax = plt.subplots(1,3)
+
     plt.setp(plt.gcf(), 'facecolor', 'white')
     plt.style.use('bmh')
 
@@ -213,12 +304,11 @@ def test_viewer():
     ivz = ImageViewer3D_Sliced( ax[2], data, 2, 'Z slice')
 
     feh = FigureEventHandler(fig)
+
     feh.add_axes_event('button_press_event',ax[0],ivx.on_mouse_release)
     feh.add_axes_event('button_press_event',ax[1],ivy.on_mouse_release)
     feh.add_axes_event('button_press_event',ax[2],ivz.on_mouse_release)
 
+    feh.synchronize([ax[0], ax[1], ax[2]])
+
     plt.show()
-
-
-
-

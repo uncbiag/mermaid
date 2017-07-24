@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import utils
+import viewers
 import sys
 
 import finite_differences as fd
@@ -130,23 +131,39 @@ def debugOutput( I0, I1, spacing ):
     else:
         raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
 
+def showCurrentImages_1d( iS, iT, iW, iter, phiWarped):
 
-def showCurrentImages_1d( iS, iT, iW, phiWarped):
-    plt.subplot(131)
+    plt.suptitle('Iteration = ' + str(iter))
+    plt.setp(plt.gcf(), 'facecolor', 'white')
+    plt.style.use('bmh')
+
+    plt.subplot(221)
     plt.plot(utils.t2np(iS))
     plt.title('source image')
 
-    plt.subplot(132)
+    plt.subplot(222)
     plt.plot(utils.t2np(iT))
     plt.title('target image')
 
-    plt.subplot(133)
+    plt.subplot(224)
     plt.plot(utils.t2np(iW))
     plt.plot(utils.t2np(iT),'g')
     plt.plot(utils.t2np(iS),'r')
     plt.title('warped image')
 
-def showCurrentImages_2d( iS, iT, iW, phiWarped):
+    if phiWarped is not None:
+        plt.subplot(223)
+        plt.plot(utils.t2np(phiWarped))
+        plt.title('phi')
+
+    plt.show()
+
+
+def showCurrentImages_2d( iS, iT, iW, iter, phiWarped):
+
+    plt.suptitle('Iteration = ' + str(iter))
+    plt.setp(plt.gcf(), 'facecolor', 'white')
+    plt.style.use('bmh')
 
     plt.subplot(221)
     plt.imshow(utils.t2np(iS))
@@ -175,7 +192,14 @@ def showCurrentImages_2d( iS, iT, iW, phiWarped):
         plt.colorbar()
         plt.title('warped image with grid')
 
-def showCurrentImages_3d( iS, iT, iW, phiWarped):
+    plt.show()
+
+
+def showCurrentImages_3d_simple( iS, iT, iW, iter, phiWarped):
+
+    plt.suptitle('Iteration = ' + str(iter))
+    plt.setp(plt.gcf(), 'facecolor', 'white')
+    plt.style.use('bmh')
 
     sz = iS.size()
     c = sz[2]/2
@@ -205,6 +229,65 @@ def showCurrentImages_3d( iS, iT, iW, phiWarped):
         plt.colorbar()
         plt.title('warped image with grid')
 
+    plt.show()
+
+
+def showCurrentImages_3d( iS, iT, iW, iter, phiWarped):
+
+    if phiWarped is not None:
+        fig, ax = plt.subplots(4,3)
+    else:
+        fig, ax = plt.subplots(3,3)
+
+    plt.suptitle('Iteration = ' + str(iter))
+    plt.setp(plt.gcf(), 'facecolor', 'white')
+    plt.style.use('bmh')
+
+    ivsx = viewers.ImageViewer3D_Sliced(ax[0][0], utils.t2np(iS), 0, 'source X', True)
+    ivsy = viewers.ImageViewer3D_Sliced(ax[0][1], utils.t2np(iS), 1, 'source Y', True)
+    ivsz = viewers.ImageViewer3D_Sliced(ax[0][2], utils.t2np(iS), 2, 'source Z', True)
+
+    ivtx = viewers.ImageViewer3D_Sliced(ax[1][0], utils.t2np(iT), 0, 'target X', True)
+    ivty = viewers.ImageViewer3D_Sliced(ax[1][1], utils.t2np(iT), 1, 'target Y', True)
+    ivtz = viewers.ImageViewer3D_Sliced(ax[1][2], utils.t2np(iT), 2, 'target Z', True)
+
+    ivwx = viewers.ImageViewer3D_Sliced(ax[2][0], utils.t2np(iW), 0, 'warped X', True)
+    ivwy = viewers.ImageViewer3D_Sliced(ax[2][1], utils.t2np(iW), 1, 'warped Y', True)
+    ivwz = viewers.ImageViewer3D_Sliced(ax[2][2], utils.t2np(iW), 2, 'warped Z', True)
+
+    ivwxc = viewers.ImageViewer3D_Sliced_Contour(ax[3][0], utils.t2np(iW), utils.t2np(phiWarped), 0, 'warped X', True)
+    ivwyc = viewers.ImageViewer3D_Sliced_Contour(ax[3][1], utils.t2np(iW), utils.t2np(phiWarped), 1, 'warped Y', True)
+    ivwzc = viewers.ImageViewer3D_Sliced_Contour(ax[3][2], utils.t2np(iW), utils.t2np(phiWarped), 2, 'warped Z', True)
+
+    feh = viewers.FigureEventHandler(fig)
+
+    feh.add_axes_event('button_press_event', ax[0][0], ivsx.on_mouse_release, ivsx.get_synchronize, ivsx.set_synchronize)
+    feh.add_axes_event('button_press_event', ax[0][1], ivsy.on_mouse_release, ivsy.get_synchronize, ivsy.set_synchronize)
+    feh.add_axes_event('button_press_event', ax[0][2], ivsz.on_mouse_release, ivsz.get_synchronize, ivsz.set_synchronize)
+
+    feh.add_axes_event('button_press_event', ax[1][0], ivtx.on_mouse_release, ivtx.get_synchronize, ivtx.set_synchronize)
+    feh.add_axes_event('button_press_event', ax[1][1], ivty.on_mouse_release, ivty.get_synchronize, ivty.set_synchronize)
+    feh.add_axes_event('button_press_event', ax[1][2], ivtz.on_mouse_release, ivtz.get_synchronize, ivtz.set_synchronize)
+
+    feh.add_axes_event('button_press_event', ax[2][0], ivwx.on_mouse_release, ivwx.get_synchronize, ivwx.set_synchronize)
+    feh.add_axes_event('button_press_event', ax[2][1], ivwy.on_mouse_release, ivwy.get_synchronize, ivwy.set_synchronize)
+    feh.add_axes_event('button_press_event', ax[2][2], ivwz.on_mouse_release, ivwz.get_synchronize, ivwz.set_synchronize)
+
+    feh.add_axes_event('button_press_event', ax[3][0], ivwxc.on_mouse_release, ivwxc.get_synchronize, ivwxc.set_synchronize)
+    feh.add_axes_event('button_press_event', ax[3][1], ivwyc.on_mouse_release, ivwyc.get_synchronize, ivwyc.set_synchronize)
+    feh.add_axes_event('button_press_event', ax[3][2], ivwzc.on_mouse_release, ivwzc.get_synchronize, ivwzc.set_synchronize)
+
+    if phiWarped is not None:
+        feh.synchronize([ax[0][0], ax[1][0], ax[2][0], ax[3][0]])
+        feh.synchronize([ax[0][1], ax[1][1], ax[2][1], ax[3][1]])
+        feh.synchronize([ax[0][2], ax[1][2], ax[2][2], ax[3][2]])
+    else:
+        feh.synchronize([ax[0][0], ax[1][0], ax[2][0]])
+        feh.synchronize([ax[0][1], ax[1][1], ax[2][1]])
+        feh.synchronize([ax[0][2], ax[1][2], ax[2][2]])
+
+    plt.show()
+
 
 def showCurrentImages(iter,iS,iT,iW,phiWarped=None):
     """
@@ -216,24 +299,18 @@ def showCurrentImages(iter,iS,iT,iW,phiWarped=None):
     :return: no return arguments
     """
 
-    plt.figure(1)
-    plt.clf()
-
-    plt.suptitle('Iteration = ' + str(iter))
-    plt.setp(plt.gcf(), 'facecolor', 'white')
-    plt.style.use('bmh')
-
     dim = iS.ndimension()
 
     if dim==1:
-        showCurrentImages_1d( iS, iT, iW, phiWarped )
+        showCurrentImages_1d( iS, iT, iW, iter, phiWarped )
     elif dim==2:
-        showCurrentImages_2d( iS, iT, iW, phiWarped )
+        showCurrentImages_2d( iS, iT, iW, iter, phiWarped )
     elif dim==3:
-        showCurrentImages_3d( iS, iT, iW, phiWarped )
+        showCurrentImages_3d( iS, iT, iW, iter, phiWarped )
     else:
         raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
 
+    '''
     plt.show(block=False)
     plt.draw_all(force=True)
 
@@ -241,3 +318,4 @@ def showCurrentImages(iter,iS,iT,iW,phiWarped=None):
     wasKeyPressed = plt.waitforbuttonpress()
     if wasKeyPressed:
         sys.exit()
+    '''

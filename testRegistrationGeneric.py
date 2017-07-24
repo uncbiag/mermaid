@@ -13,14 +13,17 @@ from torch.autograd import Variable
 import time
 
 import utils
-import registration_networks as RN
 
 import numpy as np
 
 import visualize_registration_results as vizReg
 import example_generation as eg
 
+import model_factory as MF
+
 # select the desired dimension of the registration
+useMap = True # set to true if a map-based implementation should be used
+modelName = 'SVF'
 dim = 2
 sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
 
@@ -52,18 +55,20 @@ params['regularizer'] = 'helmholtz'
 
 params['numberOfTimeSteps'] = 10
 
-model = RN.SVFNetMap(sz,spacing,params)    # instantiate a stationary velocity field model
+mf = MF.ModelFactory( sz, spacing )
+
+model,criterion = mf.createRegistrationModel( modelName, useMap, params)
 print(model)
 
 # create the source and target image as pyTorch variables
 ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
 ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 
-# create the identity map [-1,1]^d
-id = utils.identityMap(sz)
-identityMap = Variable( torch.from_numpy( id ), requires_grad=False )
+if useMap:
+    # create the identity map [-1,1]^d, since we will use a map-based implementation
+    id = utils.identityMap(sz)
+    identityMap = Variable( torch.from_numpy( id ), requires_grad=False )
 
-criterion = RN.SVFLossMap(list(model.parameters())[0],sz,spacing,params) # stationary velocity field with maps
 # use LBFGS as optimizer; this is essential for convergence when not using the Hilbert gradient
 optimizer = torch.optim.LBFGS(model.parameters(),
                               lr=1,max_iter=5,max_eval=10,
@@ -77,23 +82,41 @@ for iter in range(100):
 
     def closure():
         optimizer.zero_grad()
-        # Forward pass: Compute predicted y by passing x to the model
-        phiWarped = model(identityMap)
-        # Compute loss
-        loss = criterion(phiWarped, ISource, ITarget)
+        # 1) Forward pass: Compute predicted y by passing x to the model
+        # 2) Compute loss
+        if useMap:
+            phiWarped = model(identityMap)
+            loss = criterion(phiWarped, ISource, ITarget)
+        else:
+            IWarped = model(ISource)
+            loss = criterion(IWarped, ITarget)
+
         loss.backward()
         return loss
 
+    # take a step of the optimizer
     optimizer.step(closure)
-    phiWarped = model(identityMap)
+
+    # apply the current state to either get the warped map or directly the warped source image
+    if useMap:
+        phiWarped = model(identityMap)
+    else:
+        cIWarped = model(ISource)
 
     if iter%1==0:
-        energy, similarityEnergy, regEnergy = criterion.getEnergy(phiWarped, ISource, ITarget)
+        if useMap:
+            energy, similarityEnergy, regEnergy = criterion.getEnergy(phiWarped, ISource, ITarget)
+        else:
+            energy, similarityEnergy, regEnergy = criterion.getEnergy(cIWarped, ITarget)
+
         print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}'
               .format(iter=iter, energy=energy, similarityE=similarityEnergy, regE=regEnergy))
 
     if iter%10==0:
+        if useMap:
             I1Warped = utils.computeWarpedImage(ISource,phiWarped)
             vizReg.showCurrentImages(iter, ISource, ITarget, I1Warped, phiWarped)
+        else:
+            vizReg.showCurrentImages(iter, ISource, ITarget, cIWarped)
 
 print('time:', time.time() - start)

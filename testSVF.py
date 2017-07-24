@@ -21,7 +21,7 @@ import example_generation as eg
 
 # select the desired dimension of the registration
 dim = 3
-sz = np.tile( 60, dim )         # size of the desired images: (sz)^dim
+sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
 
 params = dict()
 params['len_s'] = sz.min()/4
@@ -37,7 +37,7 @@ print ('Spacing = ' + str( spacing ) )
 
 # some debugging output to show image gradients
 # compute gradients
-vizReg.debugOutput( I0, I1, spacing )
+#vizReg.debugOutput( I0, I1, spacing )
 
 # some settings for the registration energy
 # Reg[\Phi,\alpha,\gamma] + 1/\sigma^2 Sim[I(1),I_1]
