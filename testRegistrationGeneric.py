@@ -22,9 +22,9 @@ import example_generation as eg
 import model_factory as MF
 
 # select the desired dimension of the registration
-useMap = False # set to true if a map-based implementation should be used
+useMap = True # set to true if a map-based implementation should be used
 modelName = 'SVF'
-dim = 3
+dim = 2
 sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
 
 params = dict()

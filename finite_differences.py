@@ -79,50 +79,19 @@ class FD(object):
         pass
 
     @abstractmethod
-    def xp(self,I):
-        # returns x values to the right
+    def create_zero_array(self, sz):
         pass
 
     @abstractmethod
-    def xm(self, I):
-        # returns x values to the left
+    def get_size_of_array(self, A):
         pass
-
-    @abstractmethod
-    def yp(self,I):
-        # returns y values to the right
-        pass
-
-    @abstractmethod
-    def ym(self,I):
-        # returns y values to the left
-        pass
-
-    @abstractmethod
-    def zp(self,I):
-        # returns z values to the right
-        pass
-
-    @abstractmethod
-    def zm(self,I):
-        # returns z values to the left
-        pass
-
-
-class FD_np(FD):
-
-    def __init__(self,spacing):
-        super(FD_np, self).__init__(spacing)
-
-    def getdimension(self,I):
-        return I.ndim
 
     # We are assuming linear interpolation for the values outside the bounds here
     # TODO: Offer other boundary conditions if desired
-    # TODO: Remove code duplication for the torch part
 
     def xp(self,I):
-        rxp = np.zeros(I.shape)
+        # returns x values to the right
+        rxp = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
         if ndim == 1:
             rxp[0:-1] = I[1:]
@@ -138,7 +107,8 @@ class FD_np(FD):
         return rxp
 
     def xm(self,I):
-        rxm = np.zeros(I.shape)
+        # returns x values to the left
+        rxm = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
         if ndim == 1:
             rxm[1:] = I[0:-1]
@@ -154,7 +124,8 @@ class FD_np(FD):
         return rxm
 
     def yp(self, I):
-        ryp = np.zeros(I.shape)
+        # returns y values to the right
+        ryp = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
         if ndim == 2:
             ryp[:,0:-1] = I[:,1:]
@@ -167,7 +138,8 @@ class FD_np(FD):
         return ryp
 
     def ym(self, I):
-        rym = np.zeros(I.shape)
+        # returns y values to the left
+        rym = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
         if ndim == 2:
             rym[:,1:] = I[:,0:-1]
@@ -180,7 +152,8 @@ class FD_np(FD):
         return rym
 
     def zp(self, I):
-        rzp = np.zeros(I.shape)
+        # returns z values to the right
+        rzp = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
         if ndim == 3:
             rzp[:,:,0:-1] = I[:,:,1:]
@@ -190,7 +163,8 @@ class FD_np(FD):
         return rzp
 
     def zm(self, I):
-        rzm = np.zeros(I.shape)
+        # returns z values to the left
+        rzm = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
         if ndim == 3:
             rzm[:,:,1:] = I[:,:,0:-1]
@@ -199,6 +173,20 @@ class FD_np(FD):
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rzm
 
+
+class FD_np(FD):
+
+    def __init__(self,spacing):
+        super(FD_np, self).__init__(spacing)
+
+    def getdimension(self,I):
+        return I.ndim
+
+    def create_zero_array(self, sz):
+        return np.zeros( sz )
+
+    def get_size_of_array(self, A):
+        return A.shape
 
 
 class FD_torch(FD):
@@ -209,80 +197,8 @@ class FD_torch(FD):
     def getdimension(self,I):
         return I.dim()
 
-    def xp(self,I):
-        rxp = Variable( torch.zeros(I.size()), requires_grad=False )
-        ndim = self.getdimension(I)
-        if ndim == 1:
-            rxp[0:-1] = I[1:]
-            rxp[-1] = 2*I[-1]-I[-2]
-        elif ndim == 2:
-            rxp[0:-1,:] = I[1:,:]
-            rxp[-1,:] = 2*I[-1,:]-I[-2,:]
-        elif ndim == 3:
-            rxp[0:-1,:,:] = I[1:,:,:]
-            rxp[-1,:,:] = 2*I[-1,:,:]-I[-2,:,:]
-        else:
-            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
-        return rxp
+    def create_zero_array(self, sz):
+        return Variable( torch.zeros( sz ), requires_grad=False )
 
-    def xm(self,I):
-        rxm = Variable( torch.zeros(I.size()), requires_grad=False )
-        ndim = self.getdimension(I)
-        if ndim == 1:
-            rxm[1:] = I[0:-1]
-            rxm[0] = 2*I[0]-I[1]
-        elif ndim == 2:
-            rxm[1:,:] = I[0:-1,:]
-            rxm[0,:] = 2*I[0,:]-I[1,:]
-        elif ndim == 3:
-            rxm[1:,:,:] = I[0:-1,:,:]
-            rxm[0,:,:] = 2*I[0,:,:]-I[1,:,:]
-        else:
-            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
-        return rxm
-
-    def yp(self, I):
-        ryp = Variable( torch.zeros(I.size()), requires_grad=False )
-        ndim = self.getdimension(I)
-        if ndim == 2:
-            ryp[:,0:-1] = I[:,1:]
-            ryp[:,-1] = 2*I[:,-1]-I[:,-2]
-        elif ndim == 3:
-            ryp[:,0:-1,:] = I[:,1:,:]
-            ryp[:,-1,:] = 2*I[:,-1,:]-I[:,-2,:]
-        else:
-            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
-        return ryp
-
-    def ym(self, I):
-        rym = Variable( torch.zeros(I.size()), requires_grad=False )
-        ndim = self.getdimension(I)
-        if ndim == 2:
-            rym[:,1:] = I[:,0:-1]
-            rym[:,0] = 2*I[:,0]-I[:,1]
-        elif ndim == 3:
-            rym[:,1:,:] = I[:,0:-1,:]
-            rym[:,0,:] = 2*I[:,0,:]-I[:,1,:]
-        else:
-            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
-        return rym
-
-    def zp(self, I):
-        rzp = Variable( torch.zeros(I.size()), requires_grad=False )
-        ndim = self.getdimension(I)
-        if ndim == 3:
-            rzp[:,:,0:-1] = I[:,:,1:]
-            rzp[:,:,-1] = 2*I[:,:,-1]-I[:,:,-2]
-        else:
-            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
-        return rzp
-
-    def zm(self, I):
-        rzm = Variable( torch.zeros(I.size()), requires_grad=False )
-        ndim = self.getdimension(I)
-        if ndim == 3:
-            rzm[:,:,1:] = I[:,:,0:-1]
-            rzm[:,:,0] = 2*I[:,:,0]-I[:,:,1]
-        else:
-            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
-        return rzm
+    def get_size_of_array(self, A):
+        return A.size()
