@@ -255,9 +255,10 @@ def showCurrentImages_3d( iS, iT, iW, iter, phiWarped):
     ivwy = viewers.ImageViewer3D_Sliced(ax[2][1], utils.t2np(iW), 1, 'warped Y', True)
     ivwz = viewers.ImageViewer3D_Sliced(ax[2][2], utils.t2np(iW), 2, 'warped Z', True)
 
-    ivwxc = viewers.ImageViewer3D_Sliced_Contour(ax[3][0], utils.t2np(iW), utils.t2np(phiWarped), 0, 'warped X', True)
-    ivwyc = viewers.ImageViewer3D_Sliced_Contour(ax[3][1], utils.t2np(iW), utils.t2np(phiWarped), 1, 'warped Y', True)
-    ivwzc = viewers.ImageViewer3D_Sliced_Contour(ax[3][2], utils.t2np(iW), utils.t2np(phiWarped), 2, 'warped Z', True)
+    if phiWarped is not None:
+        ivwxc = viewers.ImageViewer3D_Sliced_Contour(ax[3][0], utils.t2np(iW), utils.t2np(phiWarped), 0, 'warped X', True)
+        ivwyc = viewers.ImageViewer3D_Sliced_Contour(ax[3][1], utils.t2np(iW), utils.t2np(phiWarped), 1, 'warped Y', True)
+        ivwzc = viewers.ImageViewer3D_Sliced_Contour(ax[3][2], utils.t2np(iW), utils.t2np(phiWarped), 2, 'warped Z', True)
 
     feh = viewers.FigureEventHandler(fig)
 
@@ -273,9 +274,10 @@ def showCurrentImages_3d( iS, iT, iW, iter, phiWarped):
     feh.add_axes_event('button_press_event', ax[2][1], ivwy.on_mouse_release, ivwy.get_synchronize, ivwy.set_synchronize)
     feh.add_axes_event('button_press_event', ax[2][2], ivwz.on_mouse_release, ivwz.get_synchronize, ivwz.set_synchronize)
 
-    feh.add_axes_event('button_press_event', ax[3][0], ivwxc.on_mouse_release, ivwxc.get_synchronize, ivwxc.set_synchronize)
-    feh.add_axes_event('button_press_event', ax[3][1], ivwyc.on_mouse_release, ivwyc.get_synchronize, ivwyc.set_synchronize)
-    feh.add_axes_event('button_press_event', ax[3][2], ivwzc.on_mouse_release, ivwzc.get_synchronize, ivwzc.set_synchronize)
+    if phiWarped is not None:
+        feh.add_axes_event('button_press_event', ax[3][0], ivwxc.on_mouse_release, ivwxc.get_synchronize, ivwxc.set_synchronize)
+        feh.add_axes_event('button_press_event', ax[3][1], ivwyc.on_mouse_release, ivwyc.get_synchronize, ivwyc.set_synchronize)
+        feh.add_axes_event('button_press_event', ax[3][2], ivwzc.on_mouse_release, ivwzc.get_synchronize, ivwzc.set_synchronize)
 
     if phiWarped is not None:
         feh.synchronize([ax[0][0], ax[1][0], ax[2][0], ax[3][0]])
