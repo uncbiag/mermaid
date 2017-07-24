@@ -117,15 +117,22 @@ class FD_np(FD):
     def getdimension(self,I):
         return I.ndim
 
+    # We are assuming linear interpolation for the values outside the bounds here
+    # TODO: Offer other boundary conditions if desired
+    # TODO: Remove code duplication for the torch part
+
     def xp(self,I):
         rxp = np.zeros(I.shape)
         ndim = self.getdimension(I)
         if ndim == 1:
             rxp[0:-1] = I[1:]
+            rxp[-1] = 2*I[-1]-I[-2]
         elif ndim == 2:
             rxp[0:-1:,:] = I[1:,:]
+            rxp[-1,:] = 2*I[-1,:]-I[-2,:]
         elif ndim == 3:
             rxp[0:-1,:,:] = I[1:,:,:]
+            rxp[-1,:,:] = 2*I[-1,:,:]-I[-2,:,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rxp
@@ -135,10 +142,13 @@ class FD_np(FD):
         ndim = self.getdimension(I)
         if ndim == 1:
             rxm[1:] = I[0:-1]
+            rxm[0] = 2*I[0]-I[1]
         elif ndim == 2:
             rxm[1:,:] = I[0:-1,:]
+            rxm[0,:] = 2*I[0,:]-I[1,:]
         elif ndim == 3:
             rxm[1:,:,:] = I[0:-1,:,:]
+            rxm[0,:,:] = 2*I[0,:,:]-I[1,:,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rxm
@@ -147,9 +157,11 @@ class FD_np(FD):
         ryp = np.zeros(I.shape)
         ndim = self.getdimension(I)
         if ndim == 2:
-            ryp[:,0:-1:] = I[:,1:]
+            ryp[:,0:-1] = I[:,1:]
+            ryp[:,-1] = 2*I[:,-1]-I[:,-2]
         elif ndim == 3:
             ryp[:,0:-1,:] = I[:,1:,:]
+            ryp[:,-1,:] = 2*I[:,-1,:]-I[:,-2,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return ryp
@@ -159,8 +171,10 @@ class FD_np(FD):
         ndim = self.getdimension(I)
         if ndim == 2:
             rym[:,1:] = I[:,0:-1]
+            rym[:,0] = 2*I[:,0]-I[:,1]
         elif ndim == 3:
             rym[:,1:,:] = I[:,0:-1,:]
+            rym[:,0,:] = 2*I[:,0,:]-I[:,1,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rym
@@ -170,6 +184,7 @@ class FD_np(FD):
         ndim = self.getdimension(I)
         if ndim == 3:
             rzp[:,:,0:-1] = I[:,:,1:]
+            rzp[:,:,-1] = 2*I[:,:,-1]-I[:,:,-2]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rzp
@@ -179,6 +194,7 @@ class FD_np(FD):
         ndim = self.getdimension(I)
         if ndim == 3:
             rzm[:,:,1:] = I[:,:,0:-1]
+            rzm[:,:,0] = 2*I[:,:,0]-I[:,:,1]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rzm
@@ -198,10 +214,13 @@ class FD_torch(FD):
         ndim = self.getdimension(I)
         if ndim == 1:
             rxp[0:-1] = I[1:]
+            rxp[-1] = 2*I[-1]-I[-2]
         elif ndim == 2:
-            rxp[0:-1:,:] = I[1:,:]
+            rxp[0:-1,:] = I[1:,:]
+            rxp[-1,:] = 2*I[-1,:]-I[-2,:]
         elif ndim == 3:
             rxp[0:-1,:,:] = I[1:,:,:]
+            rxp[-1,:,:] = 2*I[-1,:,:]-I[-2,:,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rxp
@@ -211,10 +230,13 @@ class FD_torch(FD):
         ndim = self.getdimension(I)
         if ndim == 1:
             rxm[1:] = I[0:-1]
+            rxm[0] = 2*I[0]-I[1]
         elif ndim == 2:
             rxm[1:,:] = I[0:-1,:]
+            rxm[0,:] = 2*I[0,:]-I[1,:]
         elif ndim == 3:
             rxm[1:,:,:] = I[0:-1,:,:]
+            rxm[0,:,:] = 2*I[0,:,:]-I[1,:,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rxm
@@ -223,9 +245,11 @@ class FD_torch(FD):
         ryp = Variable( torch.zeros(I.size()), requires_grad=False )
         ndim = self.getdimension(I)
         if ndim == 2:
-            ryp[:,0:-1:] = I[:,1:]
+            ryp[:,0:-1] = I[:,1:]
+            ryp[:,-1] = 2*I[:,-1]-I[:,-2]
         elif ndim == 3:
             ryp[:,0:-1,:] = I[:,1:,:]
+            ryp[:,-1,:] = 2*I[:,-1,:]-I[:,-2,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return ryp
@@ -235,8 +259,10 @@ class FD_torch(FD):
         ndim = self.getdimension(I)
         if ndim == 2:
             rym[:,1:] = I[:,0:-1]
+            rym[:,0] = 2*I[:,0]-I[:,1]
         elif ndim == 3:
             rym[:,1:,:] = I[:,0:-1,:]
+            rym[:,0,:] = 2*I[:,0,:]-I[:,1,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rym
@@ -246,6 +272,7 @@ class FD_torch(FD):
         ndim = self.getdimension(I)
         if ndim == 3:
             rzp[:,:,0:-1] = I[:,:,1:]
+            rzp[:,:,-1] = 2*I[:,:,-1]-I[:,:,-2]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rzp
@@ -255,6 +282,7 @@ class FD_torch(FD):
         ndim = self.getdimension(I)
         if ndim == 3:
             rzm[:,:,1:] = I[:,:,0:-1]
+            rzm[:,:,0] = 2*I[:,:,0]-I[:,:,1]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rzm

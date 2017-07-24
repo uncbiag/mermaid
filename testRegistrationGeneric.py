@@ -24,12 +24,12 @@ import model_factory as MF
 # select the desired dimension of the registration
 useMap = True # set to true if a map-based implementation should be used
 modelName = 'SVF'
-dim = 2
+dim = 3
 sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
 
 params = dict()
-params['len_s'] = sz.min()/5
-params['len_l'] = sz.min()/4
+params['len_s'] = sz.min()/6
+params['len_l'] = sz.min()/3
 
 # create a default image size with two sample squares
 cs = eg.CreateSquares(sz)
