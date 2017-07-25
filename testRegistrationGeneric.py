@@ -20,16 +20,18 @@ import visualize_registration_results as vizReg
 import example_generation as eg
 
 import model_factory as MF
+import smoother_factory as SF
 
 # select the desired dimension of the registration
-useMap = True # set to true if a map-based implementation should be used
-modelName = 'SVF'
+useMap = False # set to true if a map-based implementation should be used
+#modelName = 'SVF'
+modelName = 'LDDMMShooting'
 dim = 2
 sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
 
 params = dict()
 params['len_s'] = sz.min()/6
-params['len_l'] = sz.min()/3
+params['len_l'] = sz.min()/4
 
 # create a default image size with two sample squares
 cs = eg.CreateSquares(sz)
@@ -64,6 +66,11 @@ print(model)
 ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
 ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 
+# smooth both a little bit
+s = SF.SmootherFactory( spacing ).createSmoother('diffusion',{'iter':10})
+ISource = s.computeSmootherScalarField(ISource)
+ITarget = s.computeSmootherScalarField(ITarget)
+
 if useMap:
     # create the identity map [-1,1]^d, since we will use a map-based implementation
     id = utils.identityMap(sz)
@@ -71,7 +78,7 @@ if useMap:
 
 # use LBFGS as optimizer; this is essential for convergence when not using the Hilbert gradient
 optimizer = torch.optim.LBFGS(model.parameters(),
-                              lr=1,max_iter=5,max_eval=10,
+                              lr=1,max_iter=1,max_eval=10,
                               tolerance_grad=1e-3,tolerance_change=1e-4,
                               history_size=5)
 
@@ -110,9 +117,12 @@ for iter in range(100):
             energy, similarityEnergy, regEnergy = criterion.getEnergy(cIWarped, ITarget)
 
         print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}'
-              .format(iter=iter, energy=energy, similarityE=similarityEnergy, regE=regEnergy))
+              .format(iter=iter,
+                      energy=utils.t2np(energy),
+                      similarityE=utils.t2np(similarityEnergy),
+                      regE=utils.t2np(regEnergy)))
 
-    if iter%10==0:
+    if iter%5==0:
         if useMap:
             I1Warped = utils.computeWarpedImage(ISource,phiWarped)
             vizReg.showCurrentImages(iter, ISource, ITarget, I1Warped, phiWarped)

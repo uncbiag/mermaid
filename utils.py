@@ -46,7 +46,7 @@ def computeWarpedImage(I0, phi):
         raise ValueError('Images can only be warped in dimensions 1 to 3')
 
 
-def createNDVectorField( sz ):
+def createNDVectorFieldParameter( sz ):
 
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
@@ -58,6 +58,13 @@ def createNDVectorField( sz ):
         return Parameter(torch.zeros(csz.tolist()))
     else:
         raise ValueError('Cannot create a ' + str( dim ) + ' dimensional vector field')
+
+def createNDScalarFieldParameter( sz ):
+
+    dim = len(sz)
+    csz = np.array(sz) # just to make sure it is a numpy array
+
+    return Parameter(torch.zeros(csz.tolist()))
 
 
 def identityMap(sz):

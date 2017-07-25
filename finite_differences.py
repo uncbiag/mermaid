@@ -12,10 +12,11 @@ import numpy as np
 class FD(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, spacing):
+    def __init__(self, spacing, bcNeumannZero=True):
 
         self.dim = spacing.size
         self.spacing = np.ones( self.dim )
+        self.bcNeumannZero = bcNeumannZero # if false then linear interpolation
         if spacing.size==1:
             self.spacing[0] = spacing[0]
         elif spacing.size==2:
@@ -95,13 +96,22 @@ class FD(object):
         ndim = self.getdimension(I)
         if ndim == 1:
             rxp[0:-1] = I[1:]
-            rxp[-1] = 2*I[-1]-I[-2]
+            if self.bcNeumannZero:
+                rxp[-1] = I[-1]
+            else:
+                rxp[-1] = 2*I[-1]-I[-2]
         elif ndim == 2:
             rxp[0:-1:,:] = I[1:,:]
-            rxp[-1,:] = 2*I[-1,:]-I[-2,:]
+            if self.bcNeumannZero:
+                rxp[-1,:] = I[-1,:]
+            else:
+                rxp[-1,:] = 2*I[-1,:]-I[-2,:]
         elif ndim == 3:
             rxp[0:-1,:,:] = I[1:,:,:]
-            rxp[-1,:,:] = 2*I[-1,:,:]-I[-2,:,:]
+            if self.bcNeumannZero:
+                rxp[-1,:,:] = I[-1,:,:]
+            else:
+                rxp[-1,:,:] = 2*I[-1,:,:]-I[-2,:,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rxp
@@ -112,13 +122,22 @@ class FD(object):
         ndim = self.getdimension(I)
         if ndim == 1:
             rxm[1:] = I[0:-1]
-            rxm[0] = 2*I[0]-I[1]
+            if self.bcNeumannZero:
+                rxm[0] = I[0]
+            else:
+                rxm[0] = 2*I[0]-I[1]
         elif ndim == 2:
             rxm[1:,:] = I[0:-1,:]
-            rxm[0,:] = 2*I[0,:]-I[1,:]
+            if self.bcNeumannZero:
+                rxm[0,:] = I[0,:]
+            else:
+                rxm[0,:] = 2*I[0,:]-I[1,:]
         elif ndim == 3:
             rxm[1:,:,:] = I[0:-1,:,:]
-            rxm[0,:,:] = 2*I[0,:,:]-I[1,:,:]
+            if self.bcNeumannZero:
+                rxm[0,:,:] = I[0,:,:]
+            else:
+                rxm[0,:,:] = 2*I[0,:,:]-I[1,:,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rxm
@@ -129,10 +148,16 @@ class FD(object):
         ndim = self.getdimension(I)
         if ndim == 2:
             ryp[:,0:-1] = I[:,1:]
-            ryp[:,-1] = 2*I[:,-1]-I[:,-2]
+            if self.bcNeumannZero:
+                ryp[:,-1] = I[:,-1]
+            else:
+                ryp[:,-1] = 2*I[:,-1]-I[:,-2]
         elif ndim == 3:
             ryp[:,0:-1,:] = I[:,1:,:]
-            ryp[:,-1,:] = 2*I[:,-1,:]-I[:,-2,:]
+            if self.bcNeumannZero:
+                ryp[:,-1,:] = I[:,-1,:]
+            else:
+                ryp[:,-1,:] = 2*I[:,-1,:]-I[:,-2,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return ryp
@@ -143,10 +168,16 @@ class FD(object):
         ndim = self.getdimension(I)
         if ndim == 2:
             rym[:,1:] = I[:,0:-1]
-            rym[:,0] = 2*I[:,0]-I[:,1]
+            if self.bcNeumannZero:
+                rym[:,0] = I[:,0]
+            else:
+                rym[:,0] = 2*I[:,0]-I[:,1]
         elif ndim == 3:
             rym[:,1:,:] = I[:,0:-1,:]
-            rym[:,0,:] = 2*I[:,0,:]-I[:,1,:]
+            if self.bcNeumannZero:
+                rym[:,0,:] = I[:,0,:]
+            else:
+                rym[:,0,:] = 2*I[:,0,:]-I[:,1,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rym
@@ -157,7 +188,10 @@ class FD(object):
         ndim = self.getdimension(I)
         if ndim == 3:
             rzp[:,:,0:-1] = I[:,:,1:]
-            rzp[:,:,-1] = 2*I[:,:,-1]-I[:,:,-2]
+            if self.bcNeumannZero:
+                rzp[:,:,-1] = I[:,:,-1]
+            else:
+                rzp[:,:,-1] = 2*I[:,:,-1]-I[:,:,-2]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rzp
@@ -168,7 +202,10 @@ class FD(object):
         ndim = self.getdimension(I)
         if ndim == 3:
             rzm[:,:,1:] = I[:,:,0:-1]
-            rzm[:,:,0] = 2*I[:,:,0]-I[:,:,1]
+            if self.bcNeumannZero:
+                rzm[:,:,0] = I[:,:,0]
+            else:
+                rzm[:,:,0] = 2*I[:,:,0]-I[:,:,1]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rzm

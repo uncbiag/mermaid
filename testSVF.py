@@ -18,9 +18,10 @@ import registration_networks as RN
 import visualize_registration_results as vizReg
 
 import example_generation as eg
+import utils
 
 # select the desired dimension of the registration
-dim = 3
+dim = 2
 sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
 
 params = dict()
@@ -86,7 +87,10 @@ for iter in range(100):
     if iter%1==0:
         energy, similarityEnergy, regEnergy = criterion.getEnergy(cIWarped, ITarget)
         print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}'
-              .format(iter=iter, energy=energy, similarityE=similarityEnergy, regE=regEnergy))
+              .format(iter=iter,
+                      energy=utils.t2np(energy),
+                      similarityE=utils.t2np(similarityEnergy),
+                      regE=utils.t2np(regEnergy)))
 
     if iter%10==0:
         vizReg.showCurrentImages(iter,ISource,ITarget,cIWarped)

@@ -90,7 +90,10 @@ for iter in range(100):
     if iter%1==0:
         energy, similarityEnergy, regEnergy = criterion.getEnergy(phiWarped, ISource, ITarget)
         print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}'
-              .format(iter=iter, energy=energy, similarityE=similarityEnergy, regE=regEnergy))
+              .format(iter=iter,
+                      energy=utils.t2np(energy),
+                      similarityE=utils.t2np(similarityEnergy),
+                      regE=utils.t2np(regEnergy)))
 
     if iter%10==0:
             I1Warped = utils.computeWarpedImage(ISource,phiWarped)

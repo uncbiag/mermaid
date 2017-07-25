@@ -31,7 +31,10 @@ class RKIntegrator(object):
         timepoints = np.linspace(fromT, toT, nrSteps + 1)
         dt = timepoints[1]-timepoints[0]
         currentT = fromT
+        #iter = 0
         for i in range(0, nrSteps):
+            #print('RKIter = ' + str( iter ) )
+            #iter+=1
             x = self.solveOneStep(x,currentT,dt)
             currentT += dt
         #print( x )

@@ -13,6 +13,8 @@ import forward_models as FM
 import regularizer_factory as RF
 import similarity_measure_factory as SM
 
+import smoother_factory as SF
+
 import utils
 
 # TODO: create separate classes for regularizers and similiarty measures to avoid code duplication
@@ -24,7 +26,7 @@ class SVFNet(nn.Module):
         self.nrOfTimeSteps = utils.getpar(params,'numberOfTimeSteps',10)
         self.tFrom = 0.
         self.tTo = 1.
-        self.v = utils.createNDVectorField( sz )
+        self.v = utils.createNDVectorFieldParameter( sz )
         self.advection = FM.AdvectImage( self.spacing )
         self.integrator = RK.RK4(self.advection.f,self.advection.u,self.v)
 
@@ -45,15 +47,13 @@ class SVFLoss(nn.Module):
                                   createSimilarityMeasure(utils.getpar(params,'similarityMeasure','ssd'), params))
 
     def getEnergy(self, I1_warped, I1_target):
-        sim = utils.t2np( (self.similarityMeasure.computeSimilarity(I1_warped,I1_target))[0] )
-        reg = utils.t2np( (self.regularizer.computeRegularizer(self.v))[0] )
+        sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
+        reg = self.regularizer.computeRegularizer(self.v)
         energy = sim + reg
         return energy, sim, reg
 
     def forward(self, I1_warped, I1_target):
-        sim = self.similarityMeasure.computeSimilarity(I1_warped,I1_target)
-        reg = self.regularizer.computeRegularizer( self.v )
-        energy = sim + reg
+        energy, sim, reg = self.getEnergy( I1_warped, I1_target)
         return energy
 
 class SVFNetMap(nn.Module):
@@ -63,7 +63,7 @@ class SVFNetMap(nn.Module):
         self.nrOfTimeSteps = utils.getpar(params,'numberOfTimeSteps',10)
         self.tFrom = 0.
         self.tTo = 1.
-        self.v = utils.createNDVectorField( sz )
+        self.v = utils.createNDVectorFieldParameter( sz )
         self.advectionMap = FM.AdvectMap( self.spacing )
         self.integrator = RK.RK4(self.advectionMap.f,self.advectionMap.u,self.v)
 
@@ -85,14 +85,48 @@ class SVFLossMap(nn.Module):
 
     def getEnergy(self, phi1, I0_source, I1_target):
         I1_warped = utils.computeWarpedImage(I0_source, phi1)
-        sim = utils.t2np( (self.similarityMeasure.computeSimilarity(I1_warped,I1_target))[0] )
-        reg = utils.t2np( (self.regularizer.computeRegularizer(self.v))[0] )
+        sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
+        reg = self.regularizer.computeRegularizer(self.v)
         energy = sim + reg
         return energy, sim, reg
 
     def forward(self, phi1, I0_source, I1_target):
-        I1_warped = utils.computeWarpedImage(I0_source,phi1)
+        energy, sim, reg = self.getEnergy(phi1, I0_source, I1_target)
+        return energy
+
+class LDDMMShootingNet(nn.Module):
+    def __init__(self,sz,spacing,params):
+        super(LDDMMShootingNet, self).__init__()
+        self.spacing = spacing
+        self.nrOfTimeSteps = utils.getpar(params,'numberOfTimeSteps',10)
+        self.tFrom = 0.
+        self.tTo = 1.
+        self.m = utils.createNDVectorFieldParameter( sz )
+        self.epdiffImage = FM.EPDiffImage( self.spacing )
+        self.integrator = RK.RK4(self.epdiffImage.f)
+
+    def forward(self, I):
+        mI1 = self.integrator.solve([self.m,I], self.tFrom, self.tTo, self.nrOfTimeSteps)
+        return mI1[1]
+
+
+class LDDMMShootingLoss(nn.Module):
+    def __init__(self,m,sz,spacing,params):
+        super(LDDMMShootingLoss, self).__init__()
+        self.m = m
+        self.spacing = spacing
+        self.sz = sz
+        self.diffusionSmoother = SF.SmootherFactory(self.spacing).createSmoother('diffusion')
+        self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
+                                  createSimilarityMeasure(utils.getpar(params,'similarityMeasure','ssd'), params))
+
+    def getEnergy(self, I1_warped, I1_target):
         sim = self.similarityMeasure.computeSimilarity(I1_warped,I1_target)
-        reg = self.regularizer.computeRegularizer( self.v )
+        v = self.diffusionSmoother.computeSmootherVectorField(self.m)
+        reg = (v * self.m).sum() * self.spacing.prod()
         energy = sim + reg
+        return energy, sim, reg
+
+    def forward(self, I1_warped, I1_target):
+        energy, sim, reg = self.getEnergy(I1_warped, I1_target)
         return energy

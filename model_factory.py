@@ -30,8 +30,9 @@ class ModelFactory(object):
                 raise ValueError('Map-based LDDMM not yet implemented')
             else:
                 print('Using shooting-based LDDMM')
-                model = RN.LDDMMShooting(self.sz,self.spacing,params)
-                loss = RN.LDDMMShoootingLoss(list(model.parameters())[0], self.sz, self.spacing, params)
+                model = RN.LDDMMShootingNet(self.sz,self.spacing,params)
+                loss = RN.LDDMMShootingLoss(list(model.parameters())[0], self.sz, self.spacing, params)
+                return model,loss
         else:
             self.print_known_models()
             raise ValueError( 'Registration model: ' + modelName + ' not known')
