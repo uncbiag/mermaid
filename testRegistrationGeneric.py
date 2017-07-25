@@ -25,11 +25,11 @@ import smoother_factory as SF
 import custom_optimizers as CO
 
 # select the desired dimension of the registration
-useMap = False # set to true if a map-based implementation should be used
+useMap = True # set to true if a map-based implementation should be used
 #modelName = 'SVF'
 modelName = 'LDDMMShooting'
 dim = 3
-sz = np.tile( 20, dim )         # size of the desired images: (sz)^dim
+sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
 
 params = dict()
 params['len_s'] = sz.min()/6
@@ -129,7 +129,7 @@ for iter in range(100):
                       similarityE=utils.t2np(similarityEnergy),
                       regE=utils.t2np(regEnergy)))
 
-    if iter%5==0:
+    if iter%10==0:
         if useMap:
             I1Warped = utils.computeWarpedImage(ISource,phiWarped)
             vizReg.showCurrentImages(iter, ISource, ITarget, I1Warped, phiWarped)

@@ -39,14 +39,15 @@ class DiffusionSmoother(Smoother):
 
     def __init__(self, spacing, params):
         super(DiffusionSmoother,self).__init__(spacing,params)
-        self.iter = utils.getpar(params, 'iter', 10)
+        self.iter = utils.getpar(params, 'iter', 5)
 
     def computeSmootherScalarField(self,v):
         # basically just solving the heat equation for a few steps
         Sv = v.clone()
         # now iterate and average based on the neighbors
-        for i in range(0,self.iter):
-            Sv = Sv + 0.25*self.fdt.lap(Sv)*self.spacing.min()**2 # multiply with smallest h^2 to assure stability
+        for i in range(0,self.iter*2**self.dim): # so that we smooth the same indepdenent of dimension
+            # multiply with smallest h^2 and divide by 2^dim to assure stability
+            Sv = Sv + 0.5/(2**self.dim)*self.fdt.lap(Sv)*self.spacing.min()**2 # multiply with smallest h^2 to assure stability
                 # now compute the norm
         return Sv
 
