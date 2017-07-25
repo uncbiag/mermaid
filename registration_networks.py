@@ -17,8 +17,6 @@ import smoother_factory as SF
 
 import utils
 
-# TODO: create separate classes for regularizers and similiarty measures to avoid code duplication
-
 class SVFNet(nn.Module):
     def __init__(self,sz,spacing,params):
         super(SVFNet, self).__init__()

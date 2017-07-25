@@ -26,9 +26,9 @@ import custom_optimizers as CO
 
 # select the desired dimension of the registration
 useMap = True # set to true if a map-based implementation should be used
-#modelName = 'SVF'
-modelName = 'LDDMMShooting'
-dim = 3
+modelName = 'SVF'
+#modelName = 'LDDMMShooting'
+dim = 2
 sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
 
 params = dict()
