@@ -130,3 +130,41 @@ class LDDMMShootingLoss(nn.Module):
     def forward(self, I1_warped, I1_target):
         energy, sim, reg = self.getEnergy(I1_warped, I1_target)
         return energy
+
+class LDDMMShootingNetMap(nn.Module):
+    def __init__(self,sz,spacing,params):
+        super(LDDMMShootingNetMap, self).__init__()
+        self.spacing = spacing
+        self.nrOfTimeSteps = utils.getpar(params,'numberOfTimeSteps',10)
+        self.tFrom = 0.
+        self.tTo = 1.
+        self.m = utils.createNDVectorFieldParameter( sz )
+        self.epdiffMap = FM.EPDiffMap( self.spacing )
+        self.integrator = RK.RK4(self.epdiffMap.f)
+
+    def forward(self, phi):
+        mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo, self.nrOfTimeSteps)
+        return mphi1[1]
+
+
+class LDDMMShootingLossMap(nn.Module):
+    def __init__(self,m,sz,spacing,params):
+        super(LDDMMShootingLossMap, self).__init__()
+        self.m = m
+        self.spacing = spacing
+        self.sz = sz
+        self.diffusionSmoother = SF.SmootherFactory(self.spacing).createSmoother('diffusion')
+        self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
+                                  createSimilarityMeasure(utils.getpar(params, 'similarityMeasure', 'ssd'), params))
+
+    def getEnergy(self, phi1, I0_source, I1_target):
+        I1_warped = utils.computeWarpedImage(I0_source, phi1)
+        sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
+        v = self.diffusionSmoother.computeSmootherVectorField(self.m)
+        reg = (v * self.m).sum() * self.spacing.prod()
+        energy = sim + reg
+        return energy, sim, reg
+
+    def forward(self, phi1, I0_source, I1_target):
+        energy, sim, reg = self.getEnergy(phi1, I0_source, I1_target)
+        return energy

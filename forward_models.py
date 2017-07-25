@@ -201,7 +201,7 @@ class EPDiffImage(ForwardModel):
             raise ValueError('Forward models are currently only supported in dimensions 1 to 3')
 
     def _f1d(self,t,x,u,pars):
-        # assume x[0] is m and x[0] is I for the state
+        # assume x[0] is m and x[1] is I for the state
         m = x[0]
         I = x[1]
         v = self.diffusionSmoother.computeSmootherVectorField(m)
@@ -211,7 +211,7 @@ class EPDiffImage(ForwardModel):
         return [rhsm,rhsI]
 
     def _f2d(self,t,x,u,pars):
-        # assume x[0] is m and x[0] is I for the state
+        # assume x[0] is m and x[1] is I for the state
         m = x[0]
         I = x[1]
         v = self.diffusionSmoother.computeSmootherVectorField(m)
@@ -232,7 +232,7 @@ class EPDiffImage(ForwardModel):
         return [rhsm,rhsI]
 
     def _f3d(self,t,x,u,pars):
-        # assume x[0] is m and x[0] is I for the state
+        # assume x[0] is m and x[1] is I for the state
         m = x[0]
         I = x[1]
         v = self.diffusionSmoother.computeSmootherVectorField(m)
@@ -260,6 +260,114 @@ class EPDiffImage(ForwardModel):
                          - self.fdt.dZc(v[:, :, 1]) * m[:, :, 1]
                          - self.fdt.dZc(v[:, :, 2]) * m[:, :, 2])
 
-        rhsI = -self.fdt.dXc(I)*v[:,:,0] -self.fdt.dYc(I)*v[:,:,1] -self.fdt.dYc(I)*v[:,:,2]
-        return [rhsm,rhsI]
+        rhsI = -self.fdt.dXc(I) * v[:, :, 0] - self.fdt.dYc(I) * v[:, :, 1] - self.fdt.dYc(I) * v[:, :, 2]
+        return [rhsm, rhsI]
+
+class EPDiffMap(ForwardModel):
+
+    def __init__(self, spacing, params=None):
+        super(EPDiffMap, self).__init__(spacing,params)
+        self.diffusionSmoother = sf.SmootherFactory(self.spacing).createSmoother('diffusion')
+
+    """
+    Forward model to advect a 2D image using a transport equation: I_t + \nabla I^Tv = 0.
+    v is treated as an external argument and I is the state
+    """
+
+    def f(self,t, x, u, pars):
+        """
+        Function to be integrated, i.e., right hand side of transport equation: -\nabla I^T v
+        :param t: time (ignored; not time-dependent) 
+        :param x: state, here the image, I, itself
+        :param u: external input, will be the velocity field here
+        :param pars: ignored (does not expect any additional inputs)
+        :return: 
+        """
+        if self.dim==1:
+            return self._f1d(t,x,u,pars)
+        elif self.dim==2:
+            return self._f2d(t,x,u,pars)
+        elif self.dim==3:
+            return self._f3d(t,x,u,pars)
+        else:
+            raise ValueError('Forward models are currently only supported in dimensions 1 to 3')
+
+    def _f1d(self,t,x,u,pars):
+        # assume x[0] is m and x[1] is phi for the state
+        m = x[0]
+        phi = x[1]
+        v = self.diffusionSmoother.computeSmootherVectorField(m)
+        #print('max(|v|) = ' + str( v.abs().max() ))
+        rhsm = -self.fdt.dXc(m*v)-self.fdt.dXc(v)*m
+        rhsphi = -self.fdt.dXc(phi)*v
+        return [rhsm,rhsphi]
+
+    def _f2d(self,t,x,u,pars):
+        # assume x[0] is m and x[1] is phi for the state
+        m = x[0]
+        phi = x[1]
+        v = self.diffusionSmoother.computeSmootherVectorField(m)
+        rhsm = Variable( torch.zeros( m.size() ), requires_grad=False )
+
+        #(m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)
+        rhsm[:,:,0] = (-self.fdt.dXc(m[:,:,0]*v[:,:,0])
+                       -self.fdt.dYc(m[:,:,0]*v[:,:,1])
+                       -self.fdt.dXc(v[:,:,0])*m[:,:,0]
+                       -self.fdt.dXc(v[:,:,1])*m[:,:,1])
+
+        rhsm[:,:,1] = (-self.fdt.dXc(m[:,:,1] * v[:,:,0])
+                       -self.fdt.dYc(m[:,:,1] * v[:,:,1])
+                       -self.fdt.dYc(v[:,:,0]) * m[:,:,0]
+                       -self.fdt.dYc(v[:,:,1]) * m[:,:,1])
+
+        rhsphi = Variable(torch.zeros(phi.size()), requires_grad=False)
+        rhsphi[:, :, 0] = -(v[:, :, 0] * self.fdt.dXc(phi[:, :, 0]) + v[:, :, 1] * self.fdt.dYc(phi[:, :, 0]))
+        rhsphi[:, :, 1] = -(v[:, :, 0] * self.fdt.dXc(phi[:, :, 1]) + v[:, :, 1] * self.fdt.dYc(phi[:, :, 1]))
+
+        return [rhsm, rhsphi]
+
+    def _f3d(self,t,x,u,pars):
+        # assume x[0] is m and x[0] is I for the state
+        m = x[0]
+        phi = x[1]
+        v = self.diffusionSmoother.computeSmootherVectorField(m)
+        rhsm = Variable(torch.zeros(m.size()), requires_grad=False)
+
+        # (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)
+        rhsm[:, :, 0] = (-self.fdt.dXc(m[:, :, 0] * v[:, :, 0])
+                         -self.fdt.dYc(m[:, :, 0] * v[:, :, 1])
+                         -self.fdt.dZc(m[:, :, 0] * v[:, :, 2])
+                         - self.fdt.dXc(v[:, :, 0]) * m[:, :, 0]
+                         - self.fdt.dXc(v[:, :, 1]) * m[:, :, 1]
+                         - self.fdt.dXc(v[:, :, 2]) * m[:, :, 2])
+
+        rhsm[:, :, 1] = (-self.fdt.dXc(m[:, :, 1] * v[:, :, 0])
+                         - self.fdt.dYc(m[:, :, 1] * v[:, :, 1])
+                         - self.fdt.dZc(m[:, :, 1] * v[:, :, 2])
+                         - self.fdt.dYc(v[:, :, 0]) * m[:, :, 0]
+                         - self.fdt.dYc(v[:, :, 1]) * m[:, :, 1]
+                         - self.fdt.dYc(v[:, :, 2]) * m[:, :, 2])
+
+        rhsm[:, :, 2] = (-self.fdt.dXc(m[:, :, 2] * v[:, :, 0])
+                         - self.fdt.dYc(m[:, :, 2] * v[:, :, 1])
+                         - self.fdt.dZc(m[:, :, 2] * v[:, :, 2])
+                         - self.fdt.dZc(v[:, :, 0]) * m[:, :, 0]
+                         - self.fdt.dZc(v[:, :, 1]) * m[:, :, 1]
+                         - self.fdt.dZc(v[:, :, 2]) * m[:, :, 2])
+
+        rhsphi = Variable(torch.zeros(phi.size()), requires_grad=False)
+        rhsphi[:,:,:,0] = -(v[:, :, :, 0] * self.fdt.dXc(phi[:, :, :, 0]) +
+                           v[:, :, :, 1] * self.fdt.dYc(phi[:, :, :, 0]) +
+                           v[:, :, :, 2] * self.fdt.dZc(phi[:, :, :, 0]))
+
+        rhsphi[:,:,:,1] = -(v[:, :, :, 0] * self.fdt.dXc(phi[:, :, :, 1]) +
+                           v[:, :, :, 1] * self.fdt.dYc(phi[:, :, :, 1]) +
+                           v[:, :, :, 2] * self.fdt.dZc(phi[:, :, :, 1]))
+
+        rhsphi[:,:,:,2] = -(v[:, :, :, 0] * self.fdt.dXc(phi[:, :, :, 2]) +
+                           v[:, :, :, 1] * self.fdt.dYc(phi[:, :, :, 2]) +
+                           v[:, :, :, 2] * self.fdt.dZc(phi[:, :, :, 2]))
+
+        return [rhsm, rhsphi]
+
 

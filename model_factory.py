@@ -27,7 +27,10 @@ class ModelFactory(object):
         elif modelName=='LDDMMShooting':
             # TODO: Actually implement this
             if useMap:
-                raise ValueError('Map-based LDDMM not yet implemented')
+                print('Using map-based shooting LDDMM')
+                model = RN.LDDMMShootingNetMap(self.sz, self.spacing, params)
+                loss = RN.LDDMMShootingLossMap(list(model.parameters())[0], self.sz, self.spacing, params)
+                return model, loss
             else:
                 print('Using shooting-based LDDMM')
                 model = RN.LDDMMShootingNet(self.sz,self.spacing,params)

@@ -22,8 +22,10 @@ import example_generation as eg
 import model_factory as MF
 import smoother_factory as SF
 
+import custom_optimizers as CO
+
 # select the desired dimension of the registration
-useMap = False # set to true if a map-based implementation should be used
+useMap = True # set to true if a map-based implementation should be used
 #modelName = 'SVF'
 modelName = 'LDDMMShooting'
 dim = 2
@@ -77,10 +79,15 @@ if useMap:
     identityMap = Variable( torch.from_numpy( id ), requires_grad=False )
 
 # use LBFGS as optimizer; this is essential for convergence when not using the Hilbert gradient
-optimizer = torch.optim.LBFGS(model.parameters(),
-                              lr=1,max_iter=1,max_eval=10,
+#optimizer = torch.optim.LBFGS(model.parameters(),
+#                              lr=1,max_iter=1,max_eval=5,
+#                              tolerance_grad=1e-3,tolerance_change=1e-4,
+#                              history_size=5)
+
+optimizer = CO.LBFGS_LS(model.parameters(),
+                              lr=1.0,max_iter=1,max_eval=5,
                               tolerance_grad=1e-3,tolerance_change=1e-4,
-                              history_size=5)
+                              history_size=5,line_search_fn='backtracking')
 
 # optimize for a few steps
 start = time.time()
