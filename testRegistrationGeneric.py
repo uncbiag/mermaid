@@ -25,11 +25,11 @@ import smoother_factory as SF
 import custom_optimizers as CO
 
 # select the desired dimension of the registration
-useMap = True # set to true if a map-based implementation should be used
+useMap = False # set to true if a map-based implementation should be used
 #modelName = 'SVF'
 modelName = 'LDDMMShooting'
-dim = 2
-sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
+dim = 3
+sz = np.tile( 20, dim )         # size of the desired images: (sz)^dim
 
 params = dict()
 params['len_s'] = sz.min()/6

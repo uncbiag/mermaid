@@ -239,28 +239,28 @@ class EPDiffImage(ForwardModel):
         rhsm = Variable(torch.zeros(m.size()), requires_grad=False)
 
         # (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)
-        rhsm[:, :, 0] = (-self.fdt.dXc(m[:, :, 0] * v[:, :, 0])
-                         -self.fdt.dYc(m[:, :, 0] * v[:, :, 1])
-                         -self.fdt.dZc(m[:, :, 0] * v[:, :, 2])
-                         - self.fdt.dXc(v[:, :, 0]) * m[:, :, 0]
-                         - self.fdt.dXc(v[:, :, 1]) * m[:, :, 1]
-                         - self.fdt.dXc(v[:, :, 2]) * m[:, :, 2])
+        rhsm[:, :, :, 0] = (-self.fdt.dXc(m[:, :, :, 0] * v[:, :, :, 0])
+                         -self.fdt.dYc(m[:, :, :, 0] * v[:, :, :, 1])
+                         -self.fdt.dZc(m[:, :, :, 0] * v[:, :, :, 2])
+                         - self.fdt.dXc(v[:, :, :, 0]) * m[:, :, :, 0]
+                         - self.fdt.dXc(v[:, :, :, 1]) * m[:, :, :, 1]
+                         - self.fdt.dXc(v[:, :, :, 2]) * m[:, :, :, 2])
 
-        rhsm[:, :, 1] = (-self.fdt.dXc(m[:, :, 1] * v[:, :, 0])
-                         - self.fdt.dYc(m[:, :, 1] * v[:, :, 1])
-                         - self.fdt.dZc(m[:, :, 1] * v[:, :, 2])
-                         - self.fdt.dYc(v[:, :, 0]) * m[:, :, 0]
-                         - self.fdt.dYc(v[:, :, 1]) * m[:, :, 1]
-                         - self.fdt.dYc(v[:, :, 2]) * m[:, :, 2])
+        rhsm[:, :, :, 1] = (-self.fdt.dXc(m[:, :, :, 1] * v[:, :, :, 0])
+                         - self.fdt.dYc(m[:, :, :, 1] * v[:, :, :, 1])
+                         - self.fdt.dZc(m[:, :, :, 1] * v[:, :, :, 2])
+                         - self.fdt.dYc(v[:, :, :, 0]) * m[:, :, :, 0]
+                         - self.fdt.dYc(v[:, :, :, 1]) * m[:, :, :, 1]
+                         - self.fdt.dYc(v[:, :, :, 2]) * m[:, :, :, 2])
 
-        rhsm[:, :, 2] = (-self.fdt.dXc(m[:, :, 2] * v[:, :, 0])
-                         - self.fdt.dYc(m[:, :, 2] * v[:, :, 1])
-                         - self.fdt.dZc(m[:, :, 2] * v[:, :, 2])
-                         - self.fdt.dZc(v[:, :, 0]) * m[:, :, 0]
-                         - self.fdt.dZc(v[:, :, 1]) * m[:, :, 1]
-                         - self.fdt.dZc(v[:, :, 2]) * m[:, :, 2])
+        rhsm[:, :, :, 2] = (-self.fdt.dXc(m[:, :, :, 2] * v[:, :, :, 0])
+                         - self.fdt.dYc(m[:, :, :, 2] * v[:, :, :, 1])
+                         - self.fdt.dZc(m[:, :, :, 2] * v[:, :, :, 2])
+                         - self.fdt.dZc(v[:, :, :, 0]) * m[:, :, :, 0]
+                         - self.fdt.dZc(v[:, :, :, 1]) * m[:, :, :, 1]
+                         - self.fdt.dZc(v[:, :, :, 2]) * m[:, :, :, 2])
 
-        rhsI = -self.fdt.dXc(I) * v[:, :, 0] - self.fdt.dYc(I) * v[:, :, 1] - self.fdt.dYc(I) * v[:, :, 2]
+        rhsI = -self.fdt.dXc(I) * v[:, :, :, 0] - self.fdt.dYc(I) * v[:, :, :, 1] - self.fdt.dZc(I) * v[:, :, :, 2]
         return [rhsm, rhsI]
 
 class EPDiffMap(ForwardModel):
@@ -334,26 +334,26 @@ class EPDiffMap(ForwardModel):
         rhsm = Variable(torch.zeros(m.size()), requires_grad=False)
 
         # (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)
-        rhsm[:, :, 0] = (-self.fdt.dXc(m[:, :, 0] * v[:, :, 0])
-                         -self.fdt.dYc(m[:, :, 0] * v[:, :, 1])
-                         -self.fdt.dZc(m[:, :, 0] * v[:, :, 2])
-                         - self.fdt.dXc(v[:, :, 0]) * m[:, :, 0]
-                         - self.fdt.dXc(v[:, :, 1]) * m[:, :, 1]
-                         - self.fdt.dXc(v[:, :, 2]) * m[:, :, 2])
+        rhsm[:, :, :, 0] = (-self.fdt.dXc(m[:, :, :, 0] * v[:, :, :, 0])
+                         -self.fdt.dYc(m[:, :, :, 0] * v[:, :, :, 1])
+                         -self.fdt.dZc(m[:, :, :, 0] * v[:, :, :, 2])
+                         - self.fdt.dXc(v[:, :, :, 0]) * m[:, :, :, 0]
+                         - self.fdt.dXc(v[:, :, :, 1]) * m[:, :, :, 1]
+                         - self.fdt.dXc(v[:, :, :, 2]) * m[:, :, :, 2])
 
-        rhsm[:, :, 1] = (-self.fdt.dXc(m[:, :, 1] * v[:, :, 0])
-                         - self.fdt.dYc(m[:, :, 1] * v[:, :, 1])
-                         - self.fdt.dZc(m[:, :, 1] * v[:, :, 2])
-                         - self.fdt.dYc(v[:, :, 0]) * m[:, :, 0]
-                         - self.fdt.dYc(v[:, :, 1]) * m[:, :, 1]
-                         - self.fdt.dYc(v[:, :, 2]) * m[:, :, 2])
+        rhsm[:, :, :, 1] = (-self.fdt.dXc(m[:, :, :, 1] * v[:, :, :, 0])
+                         - self.fdt.dYc(m[:, :, :, 1] * v[:, :, :, 1])
+                         - self.fdt.dZc(m[:, :, :, 1] * v[:, :, :, 2])
+                         - self.fdt.dYc(v[:, :, :, 0]) * m[:, :, :, 0]
+                         - self.fdt.dYc(v[:, :, :, 1]) * m[:, :, :, 1]
+                         - self.fdt.dYc(v[:, :, :, 2]) * m[:, :, :, 2])
 
-        rhsm[:, :, 2] = (-self.fdt.dXc(m[:, :, 2] * v[:, :, 0])
-                         - self.fdt.dYc(m[:, :, 2] * v[:, :, 1])
-                         - self.fdt.dZc(m[:, :, 2] * v[:, :, 2])
-                         - self.fdt.dZc(v[:, :, 0]) * m[:, :, 0]
-                         - self.fdt.dZc(v[:, :, 1]) * m[:, :, 1]
-                         - self.fdt.dZc(v[:, :, 2]) * m[:, :, 2])
+        rhsm[:, :, :, 2] = (-self.fdt.dXc(m[:, :, :, 2] * v[:, :, :, 0])
+                         - self.fdt.dYc(m[:, :, :, 2] * v[:, :, :, 1])
+                         - self.fdt.dZc(m[:, :, :, 2] * v[:, :, :, 2])
+                         - self.fdt.dZc(v[:, :, :, 0]) * m[:, :, :, 0]
+                         - self.fdt.dZc(v[:, :, :, 1]) * m[:, :, :, 1]
+                         - self.fdt.dZc(v[:, :, :, 2]) * m[:, :, :, 2])
 
         rhsphi = Variable(torch.zeros(phi.size()), requires_grad=False)
         rhsphi[:,:,:,0] = -(v[:, :, :, 0] * self.fdt.dXc(phi[:, :, :, 0]) +

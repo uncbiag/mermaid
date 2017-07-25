@@ -101,7 +101,7 @@ class FD(object):
             else:
                 rxp[-1] = 2*I[-1]-I[-2]
         elif ndim == 2:
-            rxp[0:-1:,:] = I[1:,:]
+            rxp[0:-1,:] = I[1:,:]
             if self.bcNeumannZero:
                 rxp[-1,:] = I[-1,:]
             else:
