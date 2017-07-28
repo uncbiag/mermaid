@@ -15,12 +15,12 @@ class RKIntegrator(object):
     def __init__(self,f,u=None,pars=None):
         self.f = f
 
-        if not bool(pars) or (pars is None):
+        if pars is None:
             self.pars = []
         else:
             self.pars = pars
 
-        if not bool(u) or (u is None):
+        if u is None:
             self.u = lambda t,pars: []
         else:
             self.u = u

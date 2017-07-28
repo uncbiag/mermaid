@@ -4,25 +4,49 @@ Various utility functions
 
 import torch
 from torch.nn.parameter import Parameter
+from torch.autograd import Variable
 from modules.stn_nd import STN_ND
 
 import numpy as np
 
 # TODO: maybe reorganize them in a more meaningful way
 
+def computeNormalizedGaussian(X,mu,sig):
+    dim = len(mu)
+    if dim==1:
+        g = np.exp(-np.power(X-mu[0],2.)/(2*np.power(sig[0],2.)))
+        g = g/g.sum()
+        return g
+    elif dim==2:
+        g = np.exp(-np.power(X[0,:,:]-mu[0],2.)/(2*np.power(sig[0],2.))
+                   - np.power(X[1,:, :] - mu[1], 2.) / (2 * np.power(sig[1], 2.)))
+        g = g/g.sum()
+        return g
+    elif dim==3:
+        g = np.exp(-np.power(X[0,:, :, :] - mu[0], 2.) / (2 * np.power(sig[0], 2.))
+                   -np.power(X[1,:, :, :] - mu[1], 2.) / (2 * np.power(sig[1], 2.))
+                   -np.power(X[2,:, :, :] - mu[2], 2.) / (2 * np.power(sig[2], 2.)))
+        g = g / g.sum()
+        return g
+    else:
+        raise ValueError('Can only compute Gaussians in dimensions 1-3')
+
 def computeWarpedImage_1d( I0, phi):
     stn = STN_ND(1)
     sz = I0.size()
     I0_stn = I0.view(torch.Size([1, sz[0], 1]))
-    phi_stn = phi.view(torch.Size([1, sz[0], 1]))
+    phi_stn = Variable( torch.zeros([1,sz[0],1]), requires_grad=False )
+    phi_stn[0,:,0] = phi
     I1_warped = stn(I0_stn, phi_stn)
-    return I1_warped[0, :]
+    return I1_warped[0,:,0]
 
 def computeWarpedImage_2d(I0, phi):
     stn = STN_ND(2)
     sz = I0.size()
     I0_stn = I0.view(torch.Size([1, sz[0], sz[1], 1]))
-    phi_stn = phi.view(torch.Size([1, sz[0], sz[1], 2]))
+    phi_stn = Variable( torch.zeros([1,sz[0],sz[1],2]), requires_grad=False )
+    phi_stn[0,:,:,0]=phi[0,:,:]
+    phi_stn[0,:,:,1]=phi[1,:,:]
     I1_warped = stn(I0_stn, phi_stn)
     return I1_warped[0, :, :, 0]
 
@@ -30,7 +54,10 @@ def computeWarpedImage_3d(I0, phi):
     stn = STN_ND(3)
     sz = I0.size()
     I0_stn = I0.view(torch.Size([1, sz[0], sz[1], sz[2], 1]))
-    phi_stn = phi.view(torch.Size([1, sz[0], sz[1], sz[2], 3]))
+    phi_stn = Variable( torch.zeros([1,sz[0],sz[1],sz[2],3]), requires_grad=False )
+    phi_stn[0,:,:,:,0] = phi[0,:,:,:]
+    phi_stn[0,:,:,:,1] = phi[1,:,:,:]
+    phi_stn[0,:,:,:,2] = phi[2,:,:,:]
     I1_warped = stn(I0_stn, phi_stn)
     return I1_warped[0, :, :, :, 0]
 
@@ -54,7 +81,7 @@ def createNDVectorFieldParameter( sz ):
     if dim==1:
         return Parameter(torch.zeros(csz.tolist()))
     elif dim>1:
-        csz = np.append(csz,dim)
+        csz = np.array([dim]+list(csz))
         return Parameter(torch.zeros(csz.tolist()))
     else:
         raise ValueError('Cannot create a ' + str( dim ) + ' dimensional vector field')
@@ -92,14 +119,14 @@ def identityMap(sz):
     if dim==1:
         idnp = id
     elif dim==2:
-        idnp = np.zeros([sz[0], sz[1], 2], dtype='float32')
-        idnp[:, :, 0] = id[0]
-        idnp[:, :, 1] = id[1]
+        idnp = np.zeros([2, sz[0], sz[1]], dtype='float32')
+        idnp[0,:, :] = id[0]
+        idnp[1,:, :] = id[1]
     elif dim==3:
-        idnp = np.zeros([sz[0], sz[1], sz[2], 3], dtype='float32')
-        idnp[:, :, :, 0] = id[0]
-        idnp[:, :, :, 1] = id[1]
-        idnp[:, :, :, 2] = id[2]
+        idnp = np.zeros([3,sz[0], sz[1], sz[2]], dtype='float32')
+        idnp[0,:, :, :] = id[0]
+        idnp[1,:, :, :] = id[1]
+        idnp[2,:, :, :] = id[2]
     else:
         raise ValueError('Only dimensions 1-3 are currently supported for the identity map')
 

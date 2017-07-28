@@ -54,18 +54,18 @@ class HelmholtzRegularizer(Regularizer):
     def _computeRegularizer_2d(self, v, alpha, gamma):
         Lv = Variable(torch.zeros(v.size()), requires_grad=False)
         for i in [0, 1]:
-            Lv[:, :, i] = v[:, :, i] * gamma - self.fdt.lap(v[:, :, i]) * alpha
+            Lv[i,:, :] = v[i,:, :] * gamma - self.fdt.lap(v[i,:, :]) * alpha
 
         # now compute the norm
-        return (Lv[:, :, 0] ** 2 + Lv[:, :, 1] ** 2).sum()*self.volumeElement
+        return (Lv[0,:, :] ** 2 + Lv[1,:, :] ** 2).sum()*self.volumeElement
 
     def _computeRegularizer_3d(self, v, alpha, gamma):
         Lv = Variable(torch.zeros(v.size()), requires_grad=False)
         for i in [0, 1, 2]:
-            Lv[:, :, :, i] = v[:, :, :, i] * gamma - self.fdt.lap(v[:, :, :, i]) * alpha
+            Lv[i,:, :, :] = v[i,:, :, :] * gamma - self.fdt.lap(v[i,:, :, :]) * alpha
 
         # now compute the norm
-        return (Lv[:, :, :, 0] ** 2 + Lv[:, :, :, 1] ** 2 + Lv[:, :, :, 2] ** 2).sum()*self.volumeElement
+        return (Lv[0,:, :, :] ** 2 + Lv[1,:, :, :] ** 2 + Lv[2,:, :, :] ** 2).sum()*self.volumeElement
 
 
 class RegularizerFactory(object):

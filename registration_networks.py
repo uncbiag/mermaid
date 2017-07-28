@@ -25,7 +25,7 @@ class SVFNet(nn.Module):
         self.tFrom = 0.
         self.tTo = 1.
         self.v = utils.createNDVectorFieldParameter( sz )
-        self.advection = FM.AdvectImage( self.spacing )
+        self.advection = FM.AdvectImage( sz, self.spacing )
         self.integrator = RK.RK4(self.advection.f,self.advection.u,self.v)
 
     def forward(self, I):
@@ -62,7 +62,7 @@ class SVFNetMap(nn.Module):
         self.tFrom = 0.
         self.tTo = 1.
         self.v = utils.createNDVectorFieldParameter( sz )
-        self.advectionMap = FM.AdvectMap( self.spacing )
+        self.advectionMap = FM.AdvectMap( sz, self.spacing )
         self.integrator = RK.RK4(self.advectionMap.f,self.advectionMap.u,self.v)
 
     def forward(self, phi):
@@ -100,7 +100,7 @@ class LDDMMShootingNet(nn.Module):
         self.tFrom = 0.
         self.tTo = 1.
         self.m = utils.createNDVectorFieldParameter( sz )
-        self.epdiffImage = FM.EPDiffImage( self.spacing )
+        self.epdiffImage = FM.EPDiffImage( sz, self.spacing )
         self.integrator = RK.RK4(self.epdiffImage.f)
 
     def forward(self, I):
@@ -114,13 +114,13 @@ class LDDMMShootingLoss(nn.Module):
         self.m = m
         self.spacing = spacing
         self.sz = sz
-        self.diffusionSmoother = SF.SmootherFactory(self.spacing).createSmoother('diffusion')
+        self.smoother = SF.SmootherFactory(self.sz,self.spacing).createSmoother('gaussian')
         self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
                                   createSimilarityMeasure(utils.getpar(params,'similarityMeasure','ssd'), params))
 
     def getEnergy(self, I1_warped, I1_target):
         sim = self.similarityMeasure.computeSimilarity(I1_warped,I1_target)
-        v = self.diffusionSmoother.computeSmootherVectorField(self.m)
+        v = self.smoother.computeSmootherVectorField(self.m)
         reg = (v * self.m).sum() * self.spacing.prod()
         energy = sim + reg
         return energy, sim, reg
@@ -137,7 +137,7 @@ class LDDMMShootingNetMap(nn.Module):
         self.tFrom = 0.
         self.tTo = 1.
         self.m = utils.createNDVectorFieldParameter( sz )
-        self.epdiffMap = FM.EPDiffMap( self.spacing )
+        self.epdiffMap = FM.EPDiffMap( sz, self.spacing )
         self.integrator = RK.RK4(self.epdiffMap.f)
 
     def forward(self, phi):
@@ -151,14 +151,14 @@ class LDDMMShootingLossMap(nn.Module):
         self.m = m
         self.spacing = spacing
         self.sz = sz
-        self.diffusionSmoother = SF.SmootherFactory(self.spacing).createSmoother('diffusion')
+        self.smoother = SF.SmootherFactory(self.sz,self.spacing).createSmoother('gaussian')
         self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
                                   createSimilarityMeasure(utils.getpar(params, 'similarityMeasure', 'ssd'), params))
 
     def getEnergy(self, phi1, I0_source, I1_target):
         I1_warped = utils.computeWarpedImage(I0_source, phi1)
         sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
-        v = self.diffusionSmoother.computeSmootherVectorField(self.m)
+        v = self.smoother.computeSmootherVectorField(self.m)
         reg = (v * self.m).sum() * self.spacing.prod()
         energy = sim + reg
         return energy, sim, reg

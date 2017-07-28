@@ -27,7 +27,7 @@ ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 spacing = 1./(sz-1)
 print ('Spacing = ' + str( spacing ) )
 
-s = sf.SmootherFactory( spacing ).createSmoother('diffusion',{'iter':10})
+s = sf.SmootherFactory( sz, spacing ).createSmoother('diffusion',{'iter':10})
 r = s.computeSmootherScalarField(ISource)
 
 plt.figure(1)

@@ -264,16 +264,16 @@ class ImageViewer3D_Sliced_Contour(ImageViewer3D_Sliced):
     def get_phi_slice_at_dimension(self,index):
         # slicing a along a given dimension at index, index
         slc = [slice(None)] * len(self.phi.shape)
-        slc[self.sliceDim] = slice(index, index+1)
+        slc[self.sliceDim+1] = slice(index, index+1)
         return (self.phi[slc]).squeeze()
 
     def show_contours(self):
         plt.sca(self.ax)
         phiSliced = self.get_phi_slice_at_dimension(self.index)
         for d in range(0,self.sliceDim):
-            plt.contour(phiSliced[:,:,d], np.linspace(-1,1,20))
+            plt.contour(phiSliced[d,:,:], np.linspace(-1,1,20),colors='r',linestyles='solid')
         for d in range(self.sliceDim+1,3):
-            plt.contour(phiSliced[:,:,d], np.linspace(-1,1,20))
+            plt.contour(phiSliced[d,:,:], np.linspace(-1,1,20),colors='r',linestyles='solid')
 
     def previous_slice(self):
         super(ImageViewer3D_Sliced_Contour,self).previous_slice()

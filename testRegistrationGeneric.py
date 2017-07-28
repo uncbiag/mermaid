@@ -6,6 +6,8 @@ Contributors:
   Marc Niethammer: mn@cs.unc.edu
 """
 
+#TODO: Change all the images to be of the format 1x1x(...)
+
 # first do the torch imports
 from __future__ import print_function
 import torch
@@ -26,10 +28,15 @@ import custom_optimizers as CO
 
 # select the desired dimension of the registration
 useMap = True # set to true if a map-based implementation should be used
-modelName = 'SVF'
-#modelName = 'LDDMMShooting'
+visualize = True # set to true if intermediate visualizations are desired
+nrOfIterations = 50 # number of iterations for the optimizer
+#modelName = 'SVF'
+modelName = 'LDDMMShooting'
 dim = 2
-sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
+sz = np.tile( 50, dim )         # size of the desired images: (sz)^dim
+
+torch.set_num_threads(4) # not sure if this actually affects anything
+print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
 
 params = dict()
 params['len_s'] = sz.min()/6
@@ -69,7 +76,8 @@ ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
 ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 
 # smooth both a little bit
-s = SF.SmootherFactory( spacing ).createSmoother('diffusion',{'iter':10})
+#s = SF.SmootherFactory( spacing ).createSmoother('diffusion',{'iter':10})
+s = SF.SmootherFactory( sz, spacing ).createSmoother('gaussian', {'gaussianStd':0.05}) #,{'k_sz_h':np.tile(20,dim)})
 ISource = s.computeSmootherScalarField(ISource)
 ITarget = s.computeSmootherScalarField(ITarget)
 
@@ -89,10 +97,15 @@ optimizer = CO.LBFGS_LS(model.parameters(),
                               tolerance_grad=1e-3,tolerance_change=1e-4,
                               history_size=5,line_search_fn='backtracking')
 
+#optimizer = torch.optim.LBFGS(model.parameters(),
+#                              lr=1,max_iter=1,max_eval=5,
+#                              tolerance_grad=1e-3,tolerance_change=1e-4,
+#                              history_size=5)
+
 # optimize for a few steps
 start = time.time()
 
-for iter in range(100):
+for iter in range(nrOfIterations):
 
     def closure():
         optimizer.zero_grad()
@@ -129,11 +142,12 @@ for iter in range(100):
                       similarityE=utils.t2np(similarityEnergy),
                       regE=utils.t2np(regEnergy)))
 
-    if iter%10==0:
-        if useMap:
-            I1Warped = utils.computeWarpedImage(ISource,phiWarped)
-            vizReg.showCurrentImages(iter, ISource, ITarget, I1Warped, phiWarped)
-        else:
-            vizReg.showCurrentImages(iter, ISource, ITarget, cIWarped)
+    if visualize:
+        if iter%5==0:
+            if useMap:
+                I1Warped = utils.computeWarpedImage(ISource,phiWarped)
+                vizReg.showCurrentImages(iter, ISource, ITarget, I1Warped, phiWarped)
+            else:
+                vizReg.showCurrentImages(iter, ISource, ITarget, cIWarped)
 
 print('time:', time.time() - start)

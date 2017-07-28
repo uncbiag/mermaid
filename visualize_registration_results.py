@@ -146,9 +146,9 @@ def showCurrentImages_1d( iS, iT, iW, iter, phiWarped):
     plt.title('target image')
 
     plt.subplot(224)
-    plt.plot(utils.t2np(iW))
-    plt.plot(utils.t2np(iT),'g')
-    plt.plot(utils.t2np(iS),'r')
+    plt.plot(utils.t2np(iT),'g',linestyle=':')
+    plt.plot(utils.t2np(iS),'r',linestyle='--')
+    plt.plot(utils.t2np(iW),linestyle=':')
     plt.title('warped image')
 
     if phiWarped is not None:
@@ -186,8 +186,8 @@ def showCurrentImages_2d( iS, iT, iW, iter, phiWarped):
         plt.subplot(224)
         plt.imshow(utils.t2np(iW))
 
-        plt.contour(utils.t2np(phiWarped[:, :, 0]), np.linspace(-1, 1, 20))
-        plt.contour(utils.t2np(phiWarped[:, :, 1]), np.linspace(-1, 1, 20))
+        plt.contour(utils.t2np(phiWarped[0,:, :]), np.linspace(-1, 1, 20),colors='r',linestyles='solid')
+        plt.contour(utils.t2np(phiWarped[1,:, :]), np.linspace(-1, 1, 20),colors='r',linestyles='solid')
 
         plt.colorbar()
         plt.title('warped image with grid')
@@ -223,8 +223,8 @@ def showCurrentImages_3d_simple( iS, iT, iW, iter, phiWarped):
 
         plt.subplot(224)
         plt.imshow(utils.t2np(iW[:, :, c]))
-        plt.contour(utils.t2np(phiWarped[:, :, c, 0]), np.linspace(-1, 1, 20))
-        plt.contour(utils.t2np(phiWarped[:, :, c, 1]), np.linspace(-1, 1, 20))
+        plt.contour(utils.t2np(phiWarped[0,:, :, c]), np.linspace(-1, 1, 20),colors='r',linestyles='solid')
+        plt.contour(utils.t2np(phiWarped[1,:, :, c]), np.linspace(-1, 1, 20),colors='r',linestyles='solid')
 
         plt.colorbar()
         plt.title('warped image with grid')
