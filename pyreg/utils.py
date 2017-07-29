@@ -5,11 +5,10 @@ Various utility functions
 import torch
 from torch.nn.parameter import Parameter
 from torch.autograd import Variable
-from modules.stn_nd import STN_ND
+from libraries.modules.stn_nd import STN_ND
 
 import numpy as np
 import finite_differences as fd
-import utils
 
 # TODO: maybe reorganize them in a more meaningful way
 
