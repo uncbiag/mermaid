@@ -14,20 +14,19 @@ import torch
 from torch.autograd import Variable
 import time
 
-import utils
-
 import numpy as np
 
-import visualize_registration_results as vizReg
-import example_generation as eg
+from pyreg import utils
+import pyreg.visualize_registration_results as vizReg
+import pyreg.example_generation as eg
 
-import model_factory as MF
-import smoother_factory as SF
+import pyreg.model_factory as MF
+import pyreg.smoother_factory as SF
 
-import custom_optimizers as CO
+import pyreg.custom_optimizers as CO
 
 # select the desired dimension of the registration
-useMap = False # set to true if a map-based implementation should be used
+useMap = True # set to true if a map-based implementation should be used
 visualize = True # set to true if intermediate visualizations are desired
 nrOfIterations = 50 # number of iterations for the optimizer
 modelName = 'SVF'
