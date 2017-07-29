@@ -8,6 +8,8 @@ from torch.autograd import Variable
 from modules.stn_nd import STN_ND
 
 import numpy as np
+import finite_differences as fd
+import utils
 
 # TODO: maybe reorganize them in a more meaningful way
 
@@ -72,6 +74,35 @@ def computeWarpedImage(I0, phi):
     else:
         raise ValueError('Images can only be warped in dimensions 1 to 3')
 
+def computeVectorMomentumFromScalarMomentum( lam, I, sz, spacing ):
+    fdt = fd.FD_torch(spacing)
+    dim = len(sz)
+    m = utils.createNDVectorFieldVariable( sz )
+    if dim==1:
+        m = fdt.dXc(I)*lam
+    elif dim==2:
+        m[0,:,:] = fdt.dXc(I)*lam
+        m[1,:,:] = fdt.dYc(I)*lam
+    elif dim==3:
+        m[0,:,:,:] = fdt.dXc(I)*lam
+        m[1,:,:,:] = fdt.dYc(I)*lam
+        m[2,:,:,:] = fdt.dZc(I)*lam
+    else:
+        raise ValueError('Can only convert scalar to vector momentum in dimensions 1-3')
+    return m
+
+def createNDVectorFieldVariable( sz ):
+
+    dim = len(sz)
+    csz = np.array(sz) # just to make sure it is a numpy array
+
+    if dim==1:
+        return Variable(torch.zeros(csz.tolist()), requires_grad=False )
+    elif dim>1:
+        csz = np.array([dim]+list(csz))
+        return Variable(torch.zeros(csz.tolist()), requires_grad=False)
+    else:
+        raise ValueError('Cannot create a ' + str( dim ) + ' dimensional vector field')
 
 def createNDVectorFieldParameter( sz ):
 

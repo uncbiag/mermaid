@@ -6,6 +6,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import finite_differences as fd
 import smoother_factory as sf
+import utils
 
 import torch
 from torch.autograd import Variable
@@ -24,6 +25,16 @@ class RHSLibrary(object):
             return -self.fdt.dXc(I) * v[0,:,:] -self.fdt.dYc(I)*v[1,:,:]
         elif self.dim==3:
             return -self.fdt.dXc(I) * v[0,:,:,:] -self.fdt.dYc(I)*v[1,:,:,:]-self.fdt.dZc(I)*v[2,:,:,:]
+        else:
+            raise ValueError('Only supported up to dimension 3')
+
+    def rhs_scalar_conservation(self,I,v):
+        if self.dim==1:
+            return -self.fdt.dXc(I*v)
+        elif self.dim==2:
+            return -self.fdt.dXc(I*v[0,:,:]) -self.fdt.dYc(I*v[1,:,:])
+        elif self.dim==3:
+            return -self.fdt.dXc(I* v[0,:,:,:]) -self.fdt.dYc(I*v[1,:,:,:])-self.fdt.dZc(I*v[2,:,:,:])
         else:
             raise ValueError('Only supported up to dimension 3')
 
@@ -259,4 +270,70 @@ class EPDiffMap(ForwardModel):
         # print('max(|v|) = ' + str( v.abs().max() ))
         return [self.rhs.rhs_epdiff(m,v),self.rhs.rhs_advect_map(phi,v)]
 
+class EPDiffScalarMomentum(ForwardModel):
 
+    def __init__(self, sz, spacing, params=None):
+        super(EPDiffScalarMomentum,self).__init__(sz,spacing,params)
+        self.smoother = sf.SmootherFactory(self.sz,self.spacing).createSmoother('gaussian')
+
+class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
+
+    def __init__(self, sz, spacing, params=None):
+        super(EPDiffScalarMomentumImage, self).__init__(sz, spacing,params)
+
+    """
+    Forward model for the EPdiff equation. State is the scalar momentum, lam, and the image I
+    """
+
+    def f(self,t, x, u, pars):
+        """
+        Function to be integrated, i.e., right hand side of transport equation: -\nabla I^T v
+        :param t: time (ignored; not time-dependent) 
+        :param x: state, here the image, I, itself
+        :param u: external input, will be the velocity field here
+        :param pars: ignored (does not expect any additional inputs)
+        :return: 
+        """
+        # assume x[0] is \lambda and x[1] is I for the state
+        lam = x[0]
+        I = x[1]
+
+        # now compute the momentum
+        m = utils.computeVectorMomentumFromScalarMomentum(lam,I, self.sz, self.spacing)
+        v = self.smoother.computeSmootherVectorField(m)
+
+        # advection for I, scalar-conservation law for lam
+        return [self.rhs.rhs_scalar_conservation(lam,v), self.rhs.rhs_advect_image(I,v)]
+
+
+class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
+
+    def __init__(self, sz, spacing, params=None):
+        super(EPDiffScalarMomentumMap, self).__init__(sz,spacing,params)
+
+    """
+    Forward model for the EPDiff equation. State is the scalar momentum, lam, the image, I, and the transform, phi.
+    """
+
+    def f(self,t, x, u, pars):
+        """
+        Function to be integrated, i.e., right hand side of transport equation: -\nabla I^T v
+        :param t: time (ignored; not time-dependent) 
+        :param x: state, here the image, I, itself
+        :param u: external input, will be the velocity field here
+        :param pars: ignored (does not expect any additional inputs)
+        :return: 
+        """
+
+        # assume x[0] is lam and x[1] is I and x[2] is phi for the state
+        lam = x[0]
+        I = x[1]
+        phi = x[2]
+
+        # now compute the momentum
+        m = utils.computeVectorMomentumFromScalarMomentum(lam, I, self.sz, self.spacing)
+        v = self.smoother.computeSmootherVectorField(m)
+
+        return [self.rhs.rhs_scalar_conservation(lam,v),
+                self.rhs.rhs_advect_image(I,v),
+                self.rhs.rhs_advect_map(phi,v)]

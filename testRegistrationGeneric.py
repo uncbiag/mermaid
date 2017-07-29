@@ -27,11 +27,12 @@ import smoother_factory as SF
 import custom_optimizers as CO
 
 # select the desired dimension of the registration
-useMap = True # set to true if a map-based implementation should be used
+useMap = False # set to true if a map-based implementation should be used
 visualize = True # set to true if intermediate visualizations are desired
 nrOfIterations = 50 # number of iterations for the optimizer
-#modelName = 'SVF'
-modelName = 'LDDMMShooting'
+modelName = 'SVF'
+#modelName = 'LDDMMShooting'
+#modelName = 'LDDMMShootingScalarMomentum'
 dim = 2
 sz = np.tile( 50, dim )         # size of the desired images: (sz)^dim
 
@@ -112,11 +113,11 @@ for iter in range(nrOfIterations):
         # 1) Forward pass: Compute predicted y by passing x to the model
         # 2) Compute loss
         if useMap:
-            phiWarped = model(identityMap)
+            phiWarped = model(identityMap, ISource)
             loss = criterion(phiWarped, ISource, ITarget)
         else:
             IWarped = model(ISource)
-            loss = criterion(IWarped, ITarget)
+            loss = criterion(IWarped, ISource, ITarget)
 
         loss.backward()
         return loss
@@ -126,7 +127,7 @@ for iter in range(nrOfIterations):
 
     # apply the current state to either get the warped map or directly the warped source image
     if useMap:
-        phiWarped = model(identityMap)
+        phiWarped = model(identityMap, ISource)
     else:
         cIWarped = model(ISource)
 
@@ -134,7 +135,7 @@ for iter in range(nrOfIterations):
         if useMap:
             energy, similarityEnergy, regEnergy = criterion.getEnergy(phiWarped, ISource, ITarget)
         else:
-            energy, similarityEnergy, regEnergy = criterion.getEnergy(cIWarped, ITarget)
+            energy, similarityEnergy, regEnergy = criterion.getEnergy(cIWarped, ISource, ITarget)
 
         print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}'
               .format(iter=iter,

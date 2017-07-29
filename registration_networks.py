@@ -44,14 +44,14 @@ class SVFLoss(nn.Module):
         self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
                                   createSimilarityMeasure(utils.getpar(params,'similarityMeasure','ssd'), params))
 
-    def getEnergy(self, I1_warped, I1_target):
+    def getEnergy(self, I1_warped, I0_source, I1_target):
         sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
         reg = self.regularizer.computeRegularizer(self.v)
         energy = sim + reg
         return energy, sim, reg
 
-    def forward(self, I1_warped, I1_target):
-        energy, sim, reg = self.getEnergy( I1_warped, I1_target)
+    def forward(self, I1_warped, I0_source, I1_target):
+        energy, sim, reg = self.getEnergy( I1_warped, I0_source, I1_target)
         return energy
 
 class SVFNetMap(nn.Module):
@@ -65,7 +65,7 @@ class SVFNetMap(nn.Module):
         self.advectionMap = FM.AdvectMap( sz, self.spacing )
         self.integrator = RK.RK4(self.advectionMap.f,self.advectionMap.u,self.v)
 
-    def forward(self, phi):
+    def forward(self, phi, I0_source):
         phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, self.nrOfTimeSteps)
         return phi1[0]
 
@@ -118,16 +118,17 @@ class LDDMMShootingLoss(nn.Module):
         self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
                                   createSimilarityMeasure(utils.getpar(params,'similarityMeasure','ssd'), params))
 
-    def getEnergy(self, I1_warped, I1_target):
+    def getEnergy(self, I1_warped, I0_source, I1_target):
         sim = self.similarityMeasure.computeSimilarity(I1_warped,I1_target)
         v = self.smoother.computeSmootherVectorField(self.m)
         reg = (v * self.m).sum() * self.spacing.prod()
         energy = sim + reg
         return energy, sim, reg
 
-    def forward(self, I1_warped, I1_target):
-        energy, sim, reg = self.getEnergy(I1_warped, I1_target)
+    def forward(self, I1_warped, I0_source, I1_target):
+        energy, sim, reg = self.getEnergy(I1_warped, I0_source, I1_target)
         return energy
+
 
 class LDDMMShootingNetMap(nn.Module):
     def __init__(self,sz,spacing,params):
@@ -140,7 +141,7 @@ class LDDMMShootingNetMap(nn.Module):
         self.epdiffMap = FM.EPDiffMap( sz, self.spacing )
         self.integrator = RK.RK4(self.epdiffMap.f)
 
-    def forward(self, phi):
+    def forward(self, phi, I0_source):
         mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo, self.nrOfTimeSteps)
         return mphi1[1]
 
@@ -160,6 +161,83 @@ class LDDMMShootingLossMap(nn.Module):
         sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
         v = self.smoother.computeSmootherVectorField(self.m)
         reg = (v * self.m).sum() * self.spacing.prod()
+        energy = sim + reg
+        return energy, sim, reg
+
+    def forward(self, phi1, I0_source, I1_target):
+        energy, sim, reg = self.getEnergy(phi1, I0_source, I1_target)
+        return energy
+
+class LDDMMShootingScalarMomentumNet(nn.Module):
+    def __init__(self,sz,spacing,params):
+        super(LDDMMShootingScalarMomentumNet, self).__init__()
+        self.spacing = spacing
+        self.nrOfTimeSteps = utils.getpar(params,'numberOfTimeSteps',10)
+        self.tFrom = 0.
+        self.tTo = 1.
+        self.lam = utils.createNDScalarFieldParameter( sz )
+        self.epdiffScalarMomentumImage = FM.EPDiffScalarMomentumImage( sz, self.spacing )
+        self.integrator = RK.RK4(self.epdiffScalarMomentumImage.f)
+
+    def forward(self, I):
+        lamI1 = self.integrator.solve([self.lam,I], self.tFrom, self.tTo, self.nrOfTimeSteps)
+        return lamI1[1]
+
+
+class LDDMMShootingScalarMomentumLoss(nn.Module):
+    def __init__(self,lam,sz,spacing,params):
+        super(LDDMMShootingScalarMomentumLoss, self).__init__()
+        self.lam = lam
+        self.spacing = spacing
+        self.sz = sz
+        self.smoother = SF.SmootherFactory(self.sz,self.spacing).createSmoother('gaussian')
+        self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
+                                  createSimilarityMeasure(utils.getpar(params,'similarityMeasure','ssd'), params))
+
+    def getEnergy(self, I1_warped, I0_source, I1_target):
+        sim = self.similarityMeasure.computeSimilarity(I1_warped,I1_target)
+        m = utils.computeVectorMomentumFromScalarMomentum(self.lam,I0_source,self.sz,self.spacing)
+        v = self.smoother.computeSmootherVectorField(m)
+        reg = (v * m).sum() * self.spacing.prod()
+        energy = sim + reg
+        return energy, sim, reg
+
+    def forward(self, I1_warped, I0_source, I1_target):
+        energy, sim, reg = self.getEnergy(I1_warped, I0_source, I1_target)
+        return energy
+
+class LDDMMShootingScalarMomentumNetMap(nn.Module):
+    def __init__(self,sz,spacing,params):
+        super(LDDMMShootingScalarMomentumNetMap, self).__init__()
+        self.spacing = spacing
+        self.nrOfTimeSteps = utils.getpar(params,'numberOfTimeSteps',10)
+        self.tFrom = 0.
+        self.tTo = 1.
+        self.lam = utils.createNDScalarFieldParameter( sz )
+        self.epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( sz, self.spacing )
+        self.integrator = RK.RK4(self.epdiffScalarMomentumMap.f)
+
+    def forward(self, phi, I0_source):
+        lamIphi1 = self.integrator.solve([self.lam,I0_source, phi], self.tFrom, self.tTo, self.nrOfTimeSteps)
+        return lamIphi1[2]
+
+
+class LDDMMShootingScalarMomentumLossMap(nn.Module):
+    def __init__(self,lam,sz,spacing,params):
+        super(LDDMMShootingScalarMomentumLossMap, self).__init__()
+        self.lam = lam
+        self.spacing = spacing
+        self.sz = sz
+        self.smoother = SF.SmootherFactory(self.sz,self.spacing).createSmoother('gaussian')
+        self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
+                                  createSimilarityMeasure(utils.getpar(params, 'similarityMeasure', 'ssd'), params))
+
+    def getEnergy(self, phi1, I0_source, I1_target):
+        I1_warped = utils.computeWarpedImage(I0_source, phi1)
+        sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
+        m = utils.computeVectorMomentumFromScalarMomentum(self.lam,I0_source,self.sz,self.spacing)
+        v = self.smoother.computeSmootherVectorField(m)
+        reg = (v * m).sum() * self.spacing.prod()
         energy = sim + reg
         return energy, sim, reg
 
