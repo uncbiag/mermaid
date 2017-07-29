@@ -29,10 +29,10 @@ import pyreg.custom_optimizers as CO
 useMap = True # set to true if a map-based implementation should be used
 visualize = True # set to true if intermediate visualizations are desired
 nrOfIterations = 50 # number of iterations for the optimizer
-modelName = 'SVF'
+#modelName = 'SVF'
 #modelName = 'LDDMMShooting'
-#modelName = 'LDDMMShootingScalarMomentum'
-dim = 2
+modelName = 'LDDMMShootingScalarMomentum'
+dim = 1
 sz = np.tile( 50, dim )         # size of the desired images: (sz)^dim
 
 torch.set_num_threads(4) # not sure if this actually affects anything

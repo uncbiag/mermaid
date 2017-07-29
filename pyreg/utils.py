@@ -76,7 +76,7 @@ def computeWarpedImage(I0, phi):
 def computeVectorMomentumFromScalarMomentum( lam, I, sz, spacing ):
     fdt = fd.FD_torch(spacing)
     dim = len(sz)
-    m = utils.createNDVectorFieldVariable( sz )
+    m = createNDVectorFieldVariable( sz )
     if dim==1:
         m = fdt.dXc(I)*lam
     elif dim==2:
