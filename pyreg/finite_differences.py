@@ -213,8 +213,8 @@ class FD(object):
 
 class FD_np(FD):
 
-    def __init__(self,spacing):
-        super(FD_np, self).__init__(spacing)
+    def __init__(self,spacing,bcNeumannZero=True):
+        super(FD_np, self).__init__(spacing,bcNeumannZero)
 
     def getdimension(self,I):
         return I.ndim
@@ -228,8 +228,8 @@ class FD_np(FD):
 
 class FD_torch(FD):
 
-    def __init__(self,spacing):
-        super(FD_torch, self).__init__(spacing)
+    def __init__(self,spacing,bcNeumannZero=True):
+        super(FD_torch, self).__init__(spacing,bcNeumannZero)
 
     def getdimension(self,I):
         return I.dim()
