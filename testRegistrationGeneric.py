@@ -16,6 +16,8 @@ import time
 
 import numpy as np
 
+import set_pyreg_paths
+
 from pyreg import utils
 import pyreg.visualize_registration_results as vizReg
 import pyreg.example_generation as eg
@@ -32,7 +34,7 @@ nrOfIterations = 50 # number of iterations for the optimizer
 #modelName = 'SVF'
 #modelName = 'LDDMMShooting'
 modelName = 'LDDMMShootingScalarMomentum'
-dim = 1
+dim = 2
 sz = np.tile( 50, dim )         # size of the desired images: (sz)^dim
 
 torch.set_num_threads(4) # not sure if this actually affects anything

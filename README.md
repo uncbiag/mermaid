@@ -12,4 +12,7 @@ The goal is to:
 
 # Setup
 
-* To compile the spatial transformer code simply go to the libraries directory and exectute 'python build.by'
+* To compile the spatial transformer code simply go to the pyreg/libraries directory and exectute 'python build.by'
+* To run the code import set_pyreg_paths (which will take care of the paths for the libraries)
+* The main registation code example is in testRegistrationGeneric.py
+
