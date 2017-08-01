@@ -11,6 +11,7 @@ PyTorchRegistration documentation
    :caption: Package Reference
 
    custom_optimizers
+   custom_pytorch_extensions
    example_generation
    finite_differences
    forward_models
