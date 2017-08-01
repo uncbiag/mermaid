@@ -1,5 +1,8 @@
 """
-Finite difference class to support numpy (FD_np) and pyTorch (FD_torch)
+*finite_difference.py* is the main package to compute finite differences in 
+1D, 2D, and 3D on numpy arrays (class FD_np) and pytorch tensors (class FD_torch).
+The package supports first and second order derivatives and Neumann and linear extrapolation
+boundary conditions (though the latter have not been tested extensively yet).
 """
 
 from abc import ABCMeta, abstractmethod
@@ -10,9 +13,21 @@ from torch.autograd import Variable
 import numpy as np
 
 class FD(object):
+    """
+    *FD* is the abstract class for finite differences. It includes most of the actual finite difference code, 
+    but requires the definition (in a derived class) of the methods *get_dimension*, *create_zero_array*, and *get_size_of_array*.
+    In this way the numpy and pytorch versions can easily be derived.
+    """
     __metaclass__ = ABCMeta
 
     def __init__(self, spacing, bcNeumannZero=True):
+        """
+        Constructor        
+        :param spacing: 1D numpy array defining the spatial spacing, e.g., [0.1,0.1,0.1] for a 3D image  
+        :param bcNeumannZero: Defines the boundary condition. If set to *True* (default) zero Neumann boundary conditions
+            are imposed. If set to *False* linear extrapolation is used (this is still experimental, but may be beneficial 
+            for better boundary behavior)
+        """
 
         self.dim = spacing.size
         self.spacing = np.ones( self.dim )
@@ -28,42 +43,123 @@ class FD(object):
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
 
     def dXb(self,I):
+        """
+        Backward difference in x direction:
+        :math:`\\frac{dI(i)}{dx}\\approx\\frac{I_i-I_{i-1}}{h_x}`
+
+        :param I: Input image  
+        :return: Returns the first derivative in x direction using backward differences
+        """
         return (I-self.xm(I))/self.spacing[0]
 
     def dXf(self,I):
+        """
+        Forward difference in x direction:
+        :math:`\\frac{dI(i)}{dx}\\approx\\frac{I_{i+1}-I_{i}}{h_x}`
+        
+        :param I: Input image
+        :return: Returns the first derivative in x direction using forward differences
+        """
         return (self.xp(I)-I)/self.spacing[0]
 
     def dXc(self,I):
+        """
+        Central difference in x direction:
+        :math:`\\frac{dI(i)}{dx}\\approx\\frac{I_{i+1}-I_{i-1}}{2h_x}`
+        
+        :param I: Input image
+        :return: Returns the first derivative in x direction using central differences
+        """
         return (self.xp(I)-self.xm(I))/(2*self.spacing[0])
 
     def ddXc(self,I):
+        """
+        Second deriative in x direction
+        
+        :param I: Input image
+        :return: Returns the second derivative in x direction
+        """
         return (self.xp(I)-2*I+self.xm(I))/(self.spacing[0]**2)
 
     def dYb(self,I):
+        """
+        Same as dXb, but for the y direction
+        
+        :param I: Input image
+        :return: Returns the first derivative in y direction using backward differences
+        """
         return (I-self.ym(I))/self.spacing[1]
 
     def dYf(self,I):
+        """
+        Same as dXf, but for the y direction
+        
+        :param I: Input image
+        :return: Returns the first derivative in y direction using forward differences
+        """
         return (self.yp(I)-I)/self.spacing[1]
 
     def dYc(self,I):
+        """
+        Same as dXc, but for the y direction
+        
+        :param I: Input image
+        :return: Returns the first derivative in y direction using central differences
+        """
         return (self.yp(I)-self.ym(I))/(2*self.spacing[1])
 
     def ddYc(self,I):
+        """
+        Same as ddXc, but for the y direction
+        
+        :param I: Input image
+        :return: Returns the second derivative in the y direction
+        """
         return (self.yp(I)-2*I+self.ym(I))/(self.spacing[1]**2)
 
     def dZb(self,I):
+        """
+        Same as dXb, but for the z direction
+        
+        :param I: Input image 
+        :return: Returns the first derivative in the z direction using backward differences
+        """
         return (I - self.zm(I))/self.spacing[2]
 
     def dZf(self, I):
+        """
+        Same as dXf, but for the z direction
+        
+        :param I: Input image
+        :return: Returns the first derivative in the z direction using forward differences
+        """
         return (self.zp(I)-I)/self.spacing[2]
 
     def dZc(self, I):
+        """
+        Same as dXc, but for the z direction
+        
+        :param I: Input image
+        :return: Returns the first derivative in the z direction using central differences
+        """
         return (self.zp(I)-self.zm(I))/(2*self.spacing[2])
 
     def ddZc(self,I):
+        """
+        Same as ddXc, but for the z direction
+        
+        :param I: Input iamge
+        :return: Returns the second derivative in the z direction 
+        """
         return (self.zp(I)-2*I+self.zm(I))/(self.spacing[2]**2)
 
     def lap(self, I):
+        """
+        Compute the Lapacian of an image
+        
+        :param I: Input image
+        :return: Returns the Laplacian
+        """
         ndim = self.getdimension(I)
         if ndim == 1:
             return self.ddXc(I)
@@ -76,22 +172,44 @@ class FD(object):
 
     @abstractmethod
     def getdimension(self,I):
-        # returns the dimension of the array
+        """
+        Abstract method to return the dimension of an input image I
+        
+        :param I: Input image 
+        :return: Returns the dimension of the image I
+        """
         pass
 
     @abstractmethod
     def create_zero_array(self, sz):
+        """
+        Abstract method to create a zero array of a given size, sz. E.g., sz=[10,2,5]
+        
+        :param sz: Size array
+        :return: Returns a zero array of the specified size
+        """
         pass
 
     @abstractmethod
     def get_size_of_array(self, A):
+        """
+        Abstract method to return the size of an array (as a vector)
+        
+        :param A: Input array
+        :return: Returns its size (e.g., [5,10] or [3,4,6]
+        """
         pass
 
     # We are assuming linear interpolation for the values outside the bounds here
     # TODO: Offer other boundary conditions if desired
 
     def xp(self,I):
-        # returns x values to the right
+        """
+        Returns the values for x-index incremented by one (to the right in 1D)
+        
+        :param I: Input image
+        :return: Image with values at an x-index one larger
+        """
         rxp = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
         if ndim == 1:
@@ -117,7 +235,12 @@ class FD(object):
         return rxp
 
     def xm(self,I):
-        # returns x values to the left
+        """
+        Returns the values for x-index decremented by one (to the left in 1D)
+        
+        :param I: Input image
+        :return: Image with values at an x-index one smaller
+        """
         rxm = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
         if ndim == 1:
@@ -143,7 +266,12 @@ class FD(object):
         return rxm
 
     def yp(self, I):
-        # returns y values to the right
+        """
+        Same as xp, but for the y direction
+        
+        :param I: Input image
+        :return: Image with values at y-index one larger
+        """
         ryp = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
         if ndim == 2:
@@ -163,7 +291,12 @@ class FD(object):
         return ryp
 
     def ym(self, I):
-        # returns y values to the left
+        """
+        Same as xm, but for the y direction
+        
+        :param I: Input image
+        :return: Image with values at y-index one smaller
+        """
         rym = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
         if ndim == 2:
@@ -183,7 +316,12 @@ class FD(object):
         return rym
 
     def zp(self, I):
-        # returns z values to the right
+        """
+        Same as xp, but for the z direction
+        
+        :param I: Input image
+        :return: Image with values at z-index one larger
+        """
         rzp = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
         if ndim == 3:
@@ -197,7 +335,12 @@ class FD(object):
         return rzp
 
     def zm(self, I):
-        # returns z values to the left
+        """
+        Same as xm, but for the z direction
+        
+        :param I: Input image
+        :return: Image with values at z-index one smaller
+        """
         rzm = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
         if ndim == 3:
@@ -212,6 +355,9 @@ class FD(object):
 
 
 class FD_np(FD):
+    """
+    Defnitions of the abstract methods for numpy
+    """
 
     def __init__(self,spacing,bcNeumannZero=True):
         super(FD_np, self).__init__(spacing,bcNeumannZero)
@@ -227,6 +373,9 @@ class FD_np(FD):
 
 
 class FD_torch(FD):
+    """
+    Defnitions of the abstract methods for torch
+    """
 
     def __init__(self,spacing,bcNeumannZero=True):
         super(FD_torch, self).__init__(spacing,bcNeumannZero)
