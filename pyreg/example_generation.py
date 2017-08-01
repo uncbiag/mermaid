@@ -54,6 +54,10 @@ class CreateSquares(CreateExample):
         else:
             raise ValueError('Square examples only supported in dimensions 1-3.')
 
+        # now transform from single-channel to multi-channel image format
+        I0 = utils.transformImageToNCImageFormat(I0)
+        I1 = utils.transformImageToNCImageFormat(I1)
+
         return I0,I1
 
 class CreateRealExampleImages(CreateExample):
@@ -81,5 +85,9 @@ class CreateRealExampleImages(CreateExample):
             I1 = I1 / np.percentile(I1, 95) * 0.95
         else:
             raise ValueError('Real examples only supported in dimension 2 at the moment.')
+
+        # now transform from single-channel to multi-channel image format
+        I0 = utils.transformImageToNCImageFormat(I0)
+        I1 = utils.transformImageToNCImageFormat(I1)
 
         return I0,I1

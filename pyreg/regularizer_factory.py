@@ -22,9 +22,15 @@ class Regularizer(object):
         self.params = params
 
     @abstractmethod
-    def computeRegularizer(self, v):
+    def _computeRegularizer(self, v):
         pass
 
+    def computeRegularizer_multiN(self,v):
+        szv = v.size()
+        reg = Variable(torch.zeros(1), requires_grad=False)
+        for nrI in range(szv[0]): # loop over number of images
+            reg = reg + self._computeRegularizer(v[nrI,...])
+        return reg
 
 class HelmholtzRegularizer(Regularizer):
 
@@ -33,7 +39,7 @@ class HelmholtzRegularizer(Regularizer):
         self.alpha = utils.getpar(params, 'alpha', 0.2)
         self.gamma = utils.getpar(params, 'gamma', 1.0)
 
-    def computeRegularizer(self,v):
+    def _computeRegularizer(self,v):
         # just do the standard component-wise gamma id -\alpha \Delta
 
         if self.dim == 1:
@@ -47,9 +53,9 @@ class HelmholtzRegularizer(Regularizer):
 
     def _computeRegularizer_1d(self, v, alpha, gamma):
         Lv = Variable(torch.zeros(v.size()), requires_grad=False)
-        Lv = v * gamma - self.fdt.lap(v) * alpha
+        Lv[0,:] = v[0,:] * gamma - self.fdt.lap(v[0,:]) * alpha
         # now compute the norm
-        return (Lv ** 2).sum()*self.volumeElement
+        return (Lv[0,:] ** 2).sum()*self.volumeElement
 
     def _computeRegularizer_2d(self, v, alpha, gamma):
         Lv = Variable(torch.zeros(v.size()), requires_grad=False)

@@ -28,13 +28,13 @@ import pyreg.smoother_factory as SF
 import pyreg.custom_optimizers as CO
 
 # select the desired dimension of the registration
-useMap = True # set to true if a map-based implementation should be used
+useMap = False # set to true if a map-based implementation should be used
 visualize = True # set to true if intermediate visualizations are desired
 smoothImages = True
 useRealImages = False
 nrOfIterations = 200 # number of iterations for the optimizer
-modelName = 'SVF'
-#modelName = 'LDDMMShooting'
+#modelName = 'SVF'
+modelName = 'LDDMMShooting'
 #modelName = 'LDDMMShootingScalarMomentum'
 dim = 2
 
@@ -47,18 +47,21 @@ params = dict()
 if useRealImages:
 
     I0,I1= eg.CreateRealExampleImages(dim).create_image_pair()
-    sz = np.array(I0.shape)
 
 else:
-    sz = np.tile( 50, dim )         # size of the desired images: (sz)^dim
-    params['len_s'] = sz.min()/6
-    params['len_l'] = sz.min()/4
+    szEx = np.tile( 50, dim )         # size of the desired images: (sz)^dim
+    params['len_s'] = szEx.min()/6
+    params['len_l'] = szEx.min()/4
 
     # create a default image size with two sample squares
-    I0,I1= eg.CreateSquares(dim).create_image_pair(sz,params)
+    I0,I1= eg.CreateSquares(dim).create_image_pair(szEx,params)
+
+sz = np.array(I0.shape)
+
+assert( len(sz)==dim+2 )
 
 # spacing so that everything is in [0,1]^2 for now
-spacing = 1./(sz-1)
+spacing = 1./(sz[2::]-1) # the first two dimensions are batch size and number of image channels
 print ('Spacing = ' + str( spacing ) )
 
 # some settings for the registration energy
@@ -86,13 +89,13 @@ ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 if smoothImages:
     # smooth both a little bit
     #s = SF.SmootherFactory( spacing ).createSmoother('diffusion',{'iter':10})
-    s = SF.SmootherFactory( sz, spacing ).createSmoother('gaussian', {'gaussianStd':0.05}) #,{'k_sz_h':np.tile(20,dim)})
+    s = SF.SmootherFactory( sz[2::], spacing ).createSmoother('gaussian', {'gaussianStd':0.05}) #,{'k_sz_h':np.tile(20,dim)})
     ISource = s.computeSmootherScalarField(ISource)
     ITarget = s.computeSmootherScalarField(ITarget)
 
 if useMap:
     # create the identity map [-1,1]^d, since we will use a map-based implementation
-    id = utils.identityMap(sz)
+    id = utils.identityMap_multiN(sz)
     identityMap = Variable( torch.from_numpy( id ), requires_grad=False )
 
 # use LBFGS as optimizer; this is essential for convergence when not using the Hilbert gradient
@@ -149,7 +152,7 @@ for iter in range(nrOfIterations):
     if visualize:
         if iter%5==0:
             if useMap:
-                I1Warped = utils.computeWarpedImage(ISource,phiWarped)
+                I1Warped = utils.computeWarpedImage_multiNC(ISource,phiWarped)
                 vizReg.showCurrentImages(iter, ISource, ITarget, I1Warped, phiWarped)
             else:
                 vizReg.showCurrentImages(iter, ISource, ITarget, cIWarped)

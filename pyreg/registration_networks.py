@@ -24,7 +24,8 @@ class SVFNet(nn.Module):
         self.nrOfTimeSteps = utils.getpar(params,'numberOfTimeSteps',10)
         self.tFrom = 0.
         self.tTo = 1.
-        self.v = utils.createNDVectorFieldParameter( sz )
+        nrOfImages = sz[0]
+        self.v = utils.createNDVectorFieldParameter_multiN( sz[2::],nrOfImages )
         self.advection = FM.AdvectImage( sz, self.spacing )
         self.integrator = RK.RK4(self.advection.f,self.advection.u,self.v)
 
@@ -46,7 +47,7 @@ class SVFLoss(nn.Module):
 
     def getEnergy(self, I1_warped, I0_source, I1_target):
         sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
-        reg = self.regularizer.computeRegularizer(self.v)
+        reg = self.regularizer.computeRegularizer_multiN(self.v)
         energy = sim + reg
         return energy, sim, reg
 
@@ -61,7 +62,8 @@ class SVFNetMap(nn.Module):
         self.nrOfTimeSteps = utils.getpar(params,'numberOfTimeSteps',10)
         self.tFrom = 0.
         self.tTo = 1.
-        self.v = utils.createNDVectorFieldParameter( sz )
+        nrOfImages = sz[0]
+        self.v = utils.createNDVectorFieldParameter_multiN( sz[2::],nrOfImages )
         self.advectionMap = FM.AdvectMap( sz, self.spacing )
         self.integrator = RK.RK4(self.advectionMap.f,self.advectionMap.u,self.v)
 
@@ -82,9 +84,9 @@ class SVFLossMap(nn.Module):
                                   createSimilarityMeasure(utils.getpar(params, 'similarityMeasure', 'ssd'), params))
 
     def getEnergy(self, phi1, I0_source, I1_target):
-        I1_warped = utils.computeWarpedImage(I0_source, phi1)
+        I1_warped = utils.computeWarpedImage_multiNC(I0_source, phi1)
         sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
-        reg = self.regularizer.computeRegularizer(self.v)
+        reg = self.regularizer.computeRegularizer_multiN(self.v)
         energy = sim + reg
         return energy, sim, reg
 
@@ -99,7 +101,8 @@ class LDDMMShootingNet(nn.Module):
         self.nrOfTimeSteps = utils.getpar(params,'numberOfTimeSteps',10)
         self.tFrom = 0.
         self.tTo = 1.
-        self.m = utils.createNDVectorFieldParameter( sz )
+        nrOfImages = sz[0]
+        self.m = utils.createNDVectorFieldParameter_multiN( sz[2::],nrOfImages )
         self.epdiffImage = FM.EPDiffImage( sz, self.spacing )
         self.integrator = RK.RK4(self.epdiffImage.f)
 
@@ -114,13 +117,13 @@ class LDDMMShootingLoss(nn.Module):
         self.m = m
         self.spacing = spacing
         self.sz = sz
-        self.smoother = SF.SmootherFactory(self.sz,self.spacing).createSmoother('gaussian')
+        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
         self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
                                   createSimilarityMeasure(utils.getpar(params,'similarityMeasure','ssd'), params))
 
     def getEnergy(self, I1_warped, I0_source, I1_target):
         sim = self.similarityMeasure.computeSimilarity(I1_warped,I1_target)
-        v = self.smoother.computeSmootherVectorField(self.m)
+        v = self.smoother.computeSmootherVectorField_multiN(self.m)
         reg = (v * self.m).sum() * self.spacing.prod()
         energy = sim + reg
         return energy, sim, reg
@@ -137,7 +140,8 @@ class LDDMMShootingNetMap(nn.Module):
         self.nrOfTimeSteps = utils.getpar(params,'numberOfTimeSteps',10)
         self.tFrom = 0.
         self.tTo = 1.
-        self.m = utils.createNDVectorFieldParameter( sz )
+        nrOfImages = sz[0]
+        self.m = utils.createNDVectorFieldParameter_multiN( sz[2::],nrOfImages )
         self.epdiffMap = FM.EPDiffMap( sz, self.spacing )
         self.integrator = RK.RK4(self.epdiffMap.f)
 
@@ -152,14 +156,14 @@ class LDDMMShootingLossMap(nn.Module):
         self.m = m
         self.spacing = spacing
         self.sz = sz
-        self.smoother = SF.SmootherFactory(self.sz,self.spacing).createSmoother('gaussian')
+        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
         self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
                                   createSimilarityMeasure(utils.getpar(params, 'similarityMeasure', 'ssd'), params))
 
     def getEnergy(self, phi1, I0_source, I1_target):
-        I1_warped = utils.computeWarpedImage(I0_source, phi1)
+        I1_warped = utils.computeWarpedImage_multiNC(I0_source, phi1)
         sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
-        v = self.smoother.computeSmootherVectorField(self.m)
+        v = self.smoother.computeSmootherVectorField_multiN(self.m)
         reg = (v * self.m).sum() * self.spacing.prod()
         energy = sim + reg
         return energy, sim, reg
@@ -175,7 +179,9 @@ class LDDMMShootingScalarMomentumNet(nn.Module):
         self.nrOfTimeSteps = utils.getpar(params,'numberOfTimeSteps',10)
         self.tFrom = 0.
         self.tTo = 1.
-        self.lam = utils.createNDScalarFieldParameter( sz )
+        nrOfImages = sz[0]
+        nrOfChannels = sz[1]
+        self.lam = utils.createNDScalarFieldParameter_multiNC( sz[2::],nrOfImages, nrOfChannels )
         self.epdiffScalarMomentumImage = FM.EPDiffScalarMomentumImage( sz, self.spacing )
         self.integrator = RK.RK4(self.epdiffScalarMomentumImage.f)
 
@@ -190,14 +196,14 @@ class LDDMMShootingScalarMomentumLoss(nn.Module):
         self.lam = lam
         self.spacing = spacing
         self.sz = sz
-        self.smoother = SF.SmootherFactory(self.sz,self.spacing).createSmoother('gaussian')
+        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
         self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
                                   createSimilarityMeasure(utils.getpar(params,'similarityMeasure','ssd'), params))
 
     def getEnergy(self, I1_warped, I0_source, I1_target):
         sim = self.similarityMeasure.computeSimilarity(I1_warped,I1_target)
-        m = utils.computeVectorMomentumFromScalarMomentum(self.lam,I0_source,self.sz,self.spacing)
-        v = self.smoother.computeSmootherVectorField(m)
+        m = utils.computeVectorMomentumFromScalarMomentum_multiNC(self.lam,I0_source,self.sz,self.spacing)
+        v = self.smoother.computeSmootherVectorField_multiN(m)
         reg = (v * m).sum() * self.spacing.prod()
         energy = sim + reg
         return energy, sim, reg
@@ -213,7 +219,9 @@ class LDDMMShootingScalarMomentumNetMap(nn.Module):
         self.nrOfTimeSteps = utils.getpar(params,'numberOfTimeSteps',10)
         self.tFrom = 0.
         self.tTo = 1.
-        self.lam = utils.createNDScalarFieldParameter( sz )
+        nrI = sz[0]
+        nrC = sz[1]
+        self.lam = utils.createNDScalarFieldParameter_multiNC( sz[2::], nrI, nrC )
         self.epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( sz, self.spacing )
         self.integrator = RK.RK4(self.epdiffScalarMomentumMap.f)
 
@@ -228,15 +236,15 @@ class LDDMMShootingScalarMomentumLossMap(nn.Module):
         self.lam = lam
         self.spacing = spacing
         self.sz = sz
-        self.smoother = SF.SmootherFactory(self.sz,self.spacing).createSmoother('gaussian')
+        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
         self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
                                   createSimilarityMeasure(utils.getpar(params, 'similarityMeasure', 'ssd'), params))
 
     def getEnergy(self, phi1, I0_source, I1_target):
-        I1_warped = utils.computeWarpedImage(I0_source, phi1)
+        I1_warped = utils.computeWarpedImage_multiNC(I0_source, phi1)
         sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
-        m = utils.computeVectorMomentumFromScalarMomentum(self.lam,I0_source,self.sz,self.spacing)
-        v = self.smoother.computeSmootherVectorField(m)
+        m = utils.computeVectorMomentumFromScalarMomentum_multiNC(self.lam,I0_source,self.sz,self.spacing)
+        v = self.smoother.computeSmootherVectorField_multiN(m)
         reg = (v * m).sum() * self.spacing.prod()
         energy = sim + reg
         return energy, sim, reg

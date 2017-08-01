@@ -351,14 +351,23 @@ def showCurrentImages(iter,iS,iT,iW,phiWarped=None):
     :return: no return arguments
     """
 
-    dim = iS.ndimension()
+    dim = iS.ndimension()-2
+
+    iSF = iS[0,0,...]
+    iTF = iT[0,0,...]
+    iWF = iW[0,0,...]
+
+    if phiWarped is not None:
+        pwF = phiWarped[0,...]
+    else:
+        pwF = None
 
     if dim==1:
-        showCurrentImages_1d( iS, iT, iW, iter, phiWarped )
+        showCurrentImages_1d( iSF, iTF, iWF, iter, pwF )
     elif dim==2:
-        showCurrentImages_2d( iS, iT, iW, iter, phiWarped )
+        showCurrentImages_2d( iSF, iTF, iWF, iter, pwF )
     elif dim==3:
-        showCurrentImages_3d( iS, iT, iW, iter, phiWarped )
+        showCurrentImages_3d( iSF, iTF, iWF, iter, pwF )
     else:
         raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
 

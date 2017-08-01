@@ -18,9 +18,30 @@ class RHSLibrary(object):
         self.fdt = fd.FD_torch( self.spacing )
         self.dim = len(self.spacing)
 
-    def rhs_advect_image(self,I,v):
+    def rhs_advect_image_multiNC(self,I,v):
+        '''
+        Expected image format here, is NxCxXxYxZ, where N is the number of images, C, the number of channels
+        per image and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)
+        :param I: 
+        :param v: 
+        :return: 
+        '''
+        sz = I.size()
+        rhs_ret = Variable( torch.zeros( sz ), requires_grad=False )
+        for nrI in range(sz[0]): # loop over all the images
+            rhs_ret[nrI,...]= self._rhs_advect_image_multiC(I[nrI,...],v[nrI,...])
+        return rhs_ret
+
+    def _rhs_advect_image_multiC(self,I,v):
+        sz = I.size()
+        rhs_ret = Variable( torch.zeros( sz ), requires_grad=False )
+        for nrC in range(sz[0]): # loop over all the channels, just advect them all the same
+            rhs_ret[nrC,...] = self._rhs_advect_image_singleC(I[nrC,...],v)
+        return rhs_ret
+
+    def _rhs_advect_image_singleC(self,I,v):
         if self.dim==1:
-            return -self.fdt.dXc(I) * v
+            return -self.fdt.dXc(I) * v[0,:]
         elif self.dim==2:
             return -self.fdt.dXc(I) * v[0,:,:] -self.fdt.dYc(I)*v[1,:,:]
         elif self.dim==3:
@@ -28,9 +49,23 @@ class RHSLibrary(object):
         else:
             raise ValueError('Only supported up to dimension 3')
 
-    def rhs_scalar_conservation(self,I,v):
+    def rhs_scalar_conservation_multiNC(self, I, v):
+        sz = I.size()
+        rhs_ret = Variable(torch.zeros(sz), requires_grad=False)
+        for nrI in range(sz[0]):  # loop over all the images
+            rhs_ret[nrI, ...] = self._rhs_scalar_conservation_multiC(I[nrI, ...], v[nrI, ...])
+        return rhs_ret
+
+    def _rhs_scalar_conservation_multiC(self,I,v):
+        sz = I.size()
+        rhs_ret = Variable(torch.zeros(sz), requires_grad=False)
+        for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same
+            rhs_ret[nrC, ...] = self._rhs_scalar_conservation_singleC(I[nrC, ...], v)
+        return rhs_ret
+
+    def _rhs_scalar_conservation_singleC(self,I,v):
         if self.dim==1:
-            return -self.fdt.dXc(I*v)
+            return -self.fdt.dXc(I*v[0,:])
         elif self.dim==2:
             return -self.fdt.dXc(I*v[0,:,:]) -self.fdt.dYc(I*v[1,:,:])
         elif self.dim==3:
@@ -38,9 +73,16 @@ class RHSLibrary(object):
         else:
             raise ValueError('Only supported up to dimension 3')
 
-    def rhs_advect_map(self,phi,v):
+    def rhs_advect_map_multiN(self, phi, v):
+        sz = phi.size()
+        rhs_ret = Variable(torch.zeros(sz), requires_grad=False)
+        for nrI in range(sz[0]):  # loop over all the images
+            rhs_ret[nrI, ...] = self._rhs_advect_map_singleN(phi[nrI, ...], v[nrI, ...])
+        return rhs_ret
+
+    def _rhs_advect_map_singleN(self,phi,v):
         if self.dim==1:
-            return -self.fdt.dXc(phi) * v
+            return -self.fdt.dXc(phi[0,:]) * v[0,:]
         elif self.dim==2:
             rhsphi = Variable(torch.zeros(phi.size()), requires_grad=False)
             rhsphi[0,:, :] = -(v[0,:, :] * self.fdt.dXc(phi[0,:, :]) + v[1,:, :] * self.fdt.dYc(phi[0,:, :]))
@@ -63,9 +105,17 @@ class RHSLibrary(object):
         else:
             raise ValueError('Only supported up to dimension 3')
 
-    def rhs_epdiff(self,m,v):
+
+    def rhs_epdiff_multiN(self, m, v):
+        sz = m.size()
+        rhs_ret = Variable(torch.zeros(sz), requires_grad=False)
+        for nrI in range(sz[0]):  # loop over all the images
+            rhs_ret[nrI, ...] = self._rhs_epdiff_singleN(m[nrI, ...], v[nrI, ...])
+        return rhs_ret
+
+    def _rhs_epdiff_singleN(self,m,v):
         if self.dim==1:
-            return -self.fdt.dXc(m * v) - self.fdt.dXc(v) * m
+            return -self.fdt.dXc(m[:,0] * v[0,:]) - self.fdt.dXc(v[0,:]) * m[0,:]
         elif self.dim==2:
             rhsm = Variable(torch.zeros(m.size()), requires_grad=False)
              # (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)
@@ -180,12 +230,12 @@ class AdvectMap(ForwardModel):
         """
         Function to be integrated, i.e., right hand side of transport equation: -\nabla I^T v
         :param t: time (ignored; not time-dependent) 
-        :param x: state, here the map, \Phi, itself (assumes 3D array; [:,:,0] x-coors; [:,:,1] y-coors; ...
+        :param x: state, here the map, \Phi, itself (assumes 3D-5D array; [nrI,0,:,:] x-coors; [nrI,1,:,:] y-coors; ...
         :param u: external input, will be the velocity field here
         :param pars: ignored (does not expect any additional inputs)
         :return: 
         """
-        return [self.rhs.rhs_advect_map(x[0],u)]
+        return [self.rhs.rhs_advect_map_multiN(x[0],u)]
 
 class AdvectImage(ForwardModel):
 
@@ -209,18 +259,18 @@ class AdvectImage(ForwardModel):
         """
         Function to be integrated, i.e., right hand side of transport equation: -\nabla I^T v
         :param t: time (ignored; not time-dependent) 
-        :param x: state, here the image, I, itself
+        :param x: state, here the image, I, itself (supports multiple images and channels)
         :param u: external input, will be the velocity field here
         :param pars: ignored (does not expect any additional inputs)
         :return: 
         """
-        return [self.rhs.rhs_advect_image(x[0],u)]
+        return [self.rhs.rhs_advect_image_multiNC(x[0],u)]
 
 class EPDiffImage(ForwardModel):
 
     def __init__(self, sz, spacing, params=None):
         super(EPDiffImage, self).__init__(sz, spacing,params)
-        self.smoother = sf.SmootherFactory(self.sz,self.spacing).createSmoother('gaussian')
+        self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
 
     """
     Forward model for the EPdiff equation. State is the momentum, m, and the image I
@@ -238,16 +288,16 @@ class EPDiffImage(ForwardModel):
         # assume x[0] is m and x[1] is I for the state
         m = x[0]
         I = x[1]
-        v = self.smoother.computeSmootherVectorField(m)
+        v = self.smoother.computeSmootherVectorField_multiN(m)
         # print('max(|v|) = ' + str( v.abs().max() ))
-        return [self.rhs.rhs_epdiff(m,v), self.rhs.rhs_advect_image(I,v)]
+        return [self.rhs.rhs_epdiff_multiN(m,v), self.rhs.rhs_advect_image_multiNC(I,v)]
 
 
 class EPDiffMap(ForwardModel):
 
     def __init__(self, sz, spacing, params=None):
         super(EPDiffMap, self).__init__(sz,spacing,params)
-        self.smoother = sf.SmootherFactory(self.sz,self.spacing).createSmoother('gaussian')
+        self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
 
     """
     Forward model for the EPDiff equation. State is the momentum, m, and the transform, phi.
@@ -266,15 +316,15 @@ class EPDiffMap(ForwardModel):
         # assume x[0] is m and x[1] is phi for the state
         m = x[0]
         phi = x[1]
-        v = self.smoother.computeSmootherVectorField(m)
+        v = self.smoother.computeSmootherVectorField_multiN(m)
         # print('max(|v|) = ' + str( v.abs().max() ))
-        return [self.rhs.rhs_epdiff(m,v),self.rhs.rhs_advect_map(phi,v)]
+        return [self.rhs.rhs_epdiff_multiN(m,v),self.rhs.rhs_advect_map_multiN(phi,v)]
 
 class EPDiffScalarMomentum(ForwardModel):
 
     def __init__(self, sz, spacing, params=None):
         super(EPDiffScalarMomentum,self).__init__(sz,spacing,params)
-        self.smoother = sf.SmootherFactory(self.sz,self.spacing).createSmoother('gaussian')
+        self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
 
 class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
 
@@ -299,11 +349,11 @@ class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
         I = x[1]
 
         # now compute the momentum
-        m = utils.computeVectorMomentumFromScalarMomentum(lam,I, self.sz, self.spacing)
-        v = self.smoother.computeSmootherVectorField(m)
+        m = utils.computeVectorMomentumFromScalarMomentum_multiNC(lam,I, self.sz, self.spacing)
+        v = self.smoother.computeSmootherVectorField_multiN(m)
 
         # advection for I, scalar-conservation law for lam
-        return [self.rhs.rhs_scalar_conservation(lam,v), self.rhs.rhs_advect_image(I,v)]
+        return [self.rhs.rhs_scalar_conservation_multiNC(lam,v), self.rhs.rhs_advect_image_multiNC(I,v)]
 
 
 class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
@@ -331,9 +381,9 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
         phi = x[2]
 
         # now compute the momentum
-        m = utils.computeVectorMomentumFromScalarMomentum(lam, I, self.sz, self.spacing)
-        v = self.smoother.computeSmootherVectorField(m)
+        m = utils.computeVectorMomentumFromScalarMomentum_multiNC(lam, I, self.sz, self.spacing)
+        v = self.smoother.computeSmootherVectorField_multiN(m)
 
-        return [self.rhs.rhs_scalar_conservation(lam,v),
-                self.rhs.rhs_advect_image(I,v),
-                self.rhs.rhs_advect_map(phi,v)]
+        return [self.rhs.rhs_scalar_conservation_multiNC(lam,v),
+                self.rhs.rhs_advect_image_multiNC(I,v),
+                self.rhs.rhs_advect_map_multiN(phi,v)]

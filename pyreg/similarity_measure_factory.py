@@ -28,6 +28,7 @@ class SSDSimilarity(SimilarityMeasure):
         self.sigma = utils.getpar(params, 'sigma', 0.1)
 
     def computeSimilarity(self,I0,I1):
+        # sums over all images and channels
         return ((I0 - I1) ** 2).sum() / (self.sigma ** 2) * self.volumeElement
 
 class NCCSimilarity(SimilarityMeasure):
@@ -37,8 +38,22 @@ class NCCSimilarity(SimilarityMeasure):
         self.sigma = utils.getpar(params, 'sigma', 0.1)
 
     def computeSimilarity(self,I0,I1):
-        ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
-        # does not need to be multipled by self.volumeElement (as we are dealing with a correlation measure)
+        # compute mean over all channels and images
+        szI = I0.size()
+        nrOfI = szI[0]
+        nrOfC = szI[2]
+
+        nccS = 0
+        for i in range(nrOfI):
+            for c in range(nrOfC):
+                cI0 = I0[i,c,...]
+                cI1 = I1[i,c,...]
+                nccS = nccS + ((cI0-cI0.mean().expand_as(cI0))*(cI1-cI1.mean().expand_as(cI1))).mean()/(cI0.std()*cI1.std())
+        # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
+
+        # compute overall NCC as average over all the individual nccS
+        ncc = nccs/(nrOfI*nrOfC)
+
         return (1-ncc**2) / (self.sigma ** 2)
 
 

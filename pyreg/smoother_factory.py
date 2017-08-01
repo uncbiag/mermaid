@@ -29,6 +29,13 @@ class Smoother(object):
     def computeSmootherScalarField(self, v):
         pass
 
+    def computeSmootherVectorField_multiN(self,v):
+        sz = v.size()
+        Sv = Variable(torch.FloatTensor(v.size()))
+        for nrI in range(sz[0]): #loop over all the images
+            Sv[nrI,...] = self.computeSmootherVectorField(v[nrI,...])
+        return Sv
+
     def computeSmootherVectorField(self, v):
         if self.dim==1:
             return self.computeSmootherScalarField(v) # if one dimensional, default to scalar-field smoothing
@@ -76,11 +83,11 @@ class GaussianSpatialSmoother(GaussianSmoother):
         self.required_padding = (self.k_sz-1)/2
 
         if self.dim==1:
-            self.filter = Variable(torch.from_numpy(self.smoothingKernel).view([1,1,k_sz[0]]))
+            self.filter = Variable(torch.from_numpy(self.smoothingKernel).view([sz[0],sz[1],k_sz[0]]))
         elif self.dim==2:
-            self.filter = Variable(torch.from_numpy(self.smoothingKernel).view([1,1,k_sz[0],k_sz[1]]))
+            self.filter = Variable(torch.from_numpy(self.smoothingKernel).view([sz[0],sz[1],k_sz[0],k_sz[1]]))
         elif self.dim==3:
-            self.filter = Variable(torch.from_numpy(self.smoothingKernel).view([1,1,k_sz[0],k_sz[1],k_sz[2]]))
+            self.filter = Variable(torch.from_numpy(self.smoothingKernel).view([sz[0],sz[1],k_sz[0],k_sz[1],k_sz[2]]))
         else:
             raise ValueError('Can only create the smoothing kernel in dimensions 1-3')
 
@@ -95,19 +102,18 @@ class GaussianSpatialSmoother(GaussianSmoother):
 
     # TODO: See if we can avoid the clone calls somehow
     # This is likely due to the slicing along the dimension for vector-valued field
+    # TODO: implement a version that can be used for multi-channel multi-image inputs
     def _filterInputWithPadding(self,I):
         if self.dim==1:
             I_4d = I.view([1,1,1]+list(I.size()))
             I_pad = F.pad(I_4d,(self.required_padding[0],self.required_padding[0],0,0),mode='replicate').view(1,1,-1)
             return F.conv1d(I_pad,self.filter).view(I.size())
         elif self.dim==2:
-            I_4d = I.view([1,1]+list(I.size()))
-            I_pad = F.pad(I_4d,(self.required_padding[0],self.required_padding[0],
+            I_pad = F.pad(I,(self.required_padding[0],self.required_padding[0],
                                 self.required_padding[1],self.required_padding[1]),mode='replicate')
             return F.conv2d(I_pad,self.filter).view(I.size())
         elif self.dim==3:
-            I_5d = I.view([1, 1] + list(I.size()))
-            I_pad = F.pad(I_5d, (self.required_padding[0], self.required_padding[0],
+            I_pad = F.pad(I, (self.required_padding[0], self.required_padding[0],
                                  self.required_padding[1], self.required_padding[1],
                                  self.required_padding[2], self.required_padding[2]), mode='replicate')
             return F.conv3d(I_pad, self.filter).view(I.size())
@@ -126,10 +132,10 @@ class GaussianFourierSmoother(GaussianSmoother):
 
         mus = np.zeros(self.dim)
         stds = gaussianStd*np.ones(self.dim)
-        id = utils.identityMap(sz)
+        id = utils.identityMap(self.sz)
         g = utils.computeNormalizedGaussian(id, mus, stds)
 
-        self.FFilter = ce.createComplexFourierFilter(g, self.sz)
+        self.FFilter = ce.createComplexFourierFilter(g, self.sz )
 
     def computeSmootherScalarField(self,v):
         # just doing a Gaussian smoothing
