@@ -1,5 +1,23 @@
 """
-Defines dynamic forward models, for example transport equations
+Package defining various dynamic forward models as well as convenience methods to generate the
+right hand sides (RHS) of the related partial differential equations.
+
+Currently, the following forward models are implemented:
+    #. An advection equation for images
+    #. An advection equation for maps
+    #. The EPDiff-equation parameterized using the vector-valued momentum for images
+    #. The EPDiff-equation parameterized using the vector-valued momentum for maps
+    #. The EPDiff-equation parameterized using the scalar-valued momentum for images
+    #. The EPDiff-equation parameterized using the scalar-valued momentum for maps
+    
+The images are expected to be tensors of dimension: BxCxXxYxZ (or BxCxX in 1D and BxCxXxY in 2D),
+where B is the batch-size, C the number of channels, and X, Y, and Z are the spatial coordinate indices.
+
+Futhermore the following (RHSs) are provided
+    #. Image advection
+    #. Map advection
+    #. Scalar conservation law
+    #. EPDiff
 """
 
 from abc import ABCMeta, abstractmethod
@@ -12,19 +30,30 @@ import torch
 from torch.autograd import Variable
 
 class RHSLibrary(object):
+    """
+    Convenience class to quickly generate various right hand sides (RHSs) of popular partial differential 
+    equations. In this way new forward models can be written with minimal code duplication.
+    """
 
     def __init__(self, spacing):
+        """
+        Constructor
+        
+        :param spacing: Spacing for the images. This will be an array with 1, 2, or 3 entries in 1D, 2D, and 3D respectively. 
+        """
         self.spacing = spacing
         self.fdt = fd.FD_torch( self.spacing )
         self.dim = len(self.spacing)
 
     def rhs_advect_image_multiNC(self,I,v):
         '''
-        Expected image format here, is NxCxXxYxZ, where N is the number of images, C, the number of channels
+        Advects a batch of images which can be multi-channel. Expected image format here, is 
+        BxCxXxYxZ, where B is the number of images (batch size), C, the number of channels
         per image and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)
-        :param I: 
-        :param v: 
-        :return: 
+        
+        :param I: Image batch
+        :param v: Velocity fields (this will be one velocity field per image)
+        :return: Returns the RHS of the advection equations involved
         '''
         sz = I.size()
         rhs_ret = Variable( torch.zeros( sz ), requires_grad=False )
@@ -33,6 +62,13 @@ class RHSLibrary(object):
         return rhs_ret
 
     def _rhs_advect_image_multiC(self,I,v):
+        """
+        Similar to *_rhs_advect_image_multiNC*, but only for one multi-channel image at at time.
+        
+        :param I: Multi-channel image: CxXxYxZ
+        :param v: Same velocity field applied to each channel
+        :return: Returns the RHS of the advection equation
+        """
         sz = I.size()
         rhs_ret = Variable( torch.zeros( sz ), requires_grad=False )
         for nrC in range(sz[0]): # loop over all the channels, just advect them all the same
@@ -40,6 +76,13 @@ class RHSLibrary(object):
         return rhs_ret
 
     def _rhs_advect_image_singleC(self,I,v):
+        """
+        Similar to *_rhs_advect_image_multiC*, but only for one channel at a time.
+        
+        :param I: One-channel input image: XxYxZ 
+        :param v: velocity field
+        :return: Returns the RHS of the advection equation for one channel
+        """
         if self.dim==1:
             return -self.fdt.dXc(I) * v[0,:]
         elif self.dim==2:
@@ -50,6 +93,16 @@ class RHSLibrary(object):
             raise ValueError('Only supported up to dimension 3')
 
     def rhs_scalar_conservation_multiNC(self, I, v):
+        """
+        Scalar conservation law for a batch of images which can be multi-channel. Expected image format here, is 
+        BxCxXxYxZ, where B is the number of images (batch size), C, the number of channels
+        per image and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)
+
+        :param I: Image batch
+        :param v: Velocity fields (this will be one velocity field per image)
+        :return: Returns the RHS of the scalar conservation law equations involved
+        """
+
         sz = I.size()
         rhs_ret = Variable(torch.zeros(sz), requires_grad=False)
         for nrI in range(sz[0]):  # loop over all the images
@@ -57,6 +110,13 @@ class RHSLibrary(object):
         return rhs_ret
 
     def _rhs_scalar_conservation_multiC(self,I,v):
+        """
+        Similar to *_rhs_scalar_conservation_multiNC*, but only for one multi-channel image at at time.
+
+        :param I: Multi-channel image: CxXxYxZ
+        :param v: Same velocity field applied to each channel
+        :return: Returns the RHS of the scalar-conservation law equation
+        """
         sz = I.size()
         rhs_ret = Variable(torch.zeros(sz), requires_grad=False)
         for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same
@@ -64,6 +124,13 @@ class RHSLibrary(object):
         return rhs_ret
 
     def _rhs_scalar_conservation_singleC(self,I,v):
+        """
+        Similar to *_rhs_scalar_conservation_multiC*, but only for one channel at a time.
+
+        :param I: One-channel input image: XxYxZ 
+        :param v: velocity field
+        :return: Returns the RHS of the scalar-conservation law equation for one channel
+        """
         if self.dim==1:
             return -self.fdt.dXc(I*v[0,:])
         elif self.dim==2:
