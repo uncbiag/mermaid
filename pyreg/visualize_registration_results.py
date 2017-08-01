@@ -153,7 +153,7 @@ def showCurrentImages_1d( iS, iT, iW, iter, phiWarped):
 
     if phiWarped is not None:
         plt.subplot(223)
-        plt.plot(utils.t2np(phiWarped))
+        plt.plot(utils.t2np(phiWarped[0,:]))
         plt.title('phi')
 
     plt.show()
