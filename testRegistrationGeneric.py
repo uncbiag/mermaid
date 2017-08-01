@@ -30,40 +30,46 @@ import pyreg.custom_optimizers as CO
 # select the desired dimension of the registration
 useMap = True # set to true if a map-based implementation should be used
 visualize = True # set to true if intermediate visualizations are desired
-nrOfIterations = 50 # number of iterations for the optimizer
-#modelName = 'SVF'
+smoothImages = True
+useRealImages = False
+nrOfIterations = 200 # number of iterations for the optimizer
+modelName = 'SVF'
 #modelName = 'LDDMMShooting'
-modelName = 'LDDMMShootingScalarMomentum'
+#modelName = 'LDDMMShootingScalarMomentum'
 dim = 2
-sz = np.tile( 50, dim )         # size of the desired images: (sz)^dim
 
 torch.set_num_threads(4) # not sure if this actually affects anything
 print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
 
+# general parameter dictionary; TODO: make more hierarchical
 params = dict()
-params['len_s'] = sz.min()/6
-params['len_l'] = sz.min()/4
 
-# create a default image size with two sample squares
-cs = eg.CreateSquares(sz)
-I0,I1 = cs.create_image_pair(params)
+if useRealImages:
+
+    I0,I1= eg.CreateRealExampleImages(dim).create_image_pair()
+    sz = np.array(I0.shape)
+
+else:
+    sz = np.tile( 50, dim )         # size of the desired images: (sz)^dim
+    params['len_s'] = sz.min()/6
+    params['len_l'] = sz.min()/4
+
+    # create a default image size with two sample squares
+    I0,I1= eg.CreateSquares(dim).create_image_pair(sz,params)
 
 # spacing so that everything is in [0,1]^2 for now
 spacing = 1./(sz-1)
 print ('Spacing = ' + str( spacing ) )
 
-# some debugging output to show image gradients
-# compute gradients
-#vizReg.debugOutput( I0, I1, spacing )
-
 # some settings for the registration energy
 # Reg[\Phi,\alpha,\gamma] + 1/\sigma^2 Sim[I(1),I_1]
 
-params['sigma']=0.1
+params['sigma']=0.05
+
 params['gamma']=1.
 params['alpha']=0.2
 
-params['similarityMeasure'] = 'ssd'
+params['similarityMeasure'] = 'ssd' #'ncc'
 params['regularizer'] = 'helmholtz'
 
 params['numberOfTimeSteps'] = 10
@@ -77,11 +83,12 @@ print(model)
 ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
 ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 
-# smooth both a little bit
-#s = SF.SmootherFactory( spacing ).createSmoother('diffusion',{'iter':10})
-s = SF.SmootherFactory( sz, spacing ).createSmoother('gaussian', {'gaussianStd':0.05}) #,{'k_sz_h':np.tile(20,dim)})
-ISource = s.computeSmootherScalarField(ISource)
-ITarget = s.computeSmootherScalarField(ITarget)
+if smoothImages:
+    # smooth both a little bit
+    #s = SF.SmootherFactory( spacing ).createSmoother('diffusion',{'iter':10})
+    s = SF.SmootherFactory( sz, spacing ).createSmoother('gaussian', {'gaussianStd':0.05}) #,{'k_sz_h':np.tile(20,dim)})
+    ISource = s.computeSmootherScalarField(ISource)
+    ITarget = s.computeSmootherScalarField(ITarget)
 
 if useMap:
     # create the identity map [-1,1]^d, since we will use a map-based implementation
@@ -98,11 +105,6 @@ optimizer = CO.LBFGS_LS(model.parameters(),
                               lr=1.0,max_iter=1,max_eval=5,
                               tolerance_grad=1e-3,tolerance_change=1e-4,
                               history_size=5,line_search_fn='backtracking')
-
-#optimizer = torch.optim.LBFGS(model.parameters(),
-#                              lr=1,max_iter=1,max_eval=5,
-#                              tolerance_grad=1e-3,tolerance_change=1e-4,
-#                              history_size=5)
 
 # optimize for a few steps
 start = time.time()

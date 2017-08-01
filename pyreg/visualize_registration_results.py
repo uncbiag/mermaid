@@ -158,41 +158,91 @@ def showCurrentImages_1d( iS, iT, iW, iter, phiWarped):
 
     plt.show()
 
+def checkerboard_2d(I0,I1,nrOfTiles=8):
+    sz = I0.shape
+    tileSize = int( np.array(sz).min()/nrOfTiles )
+    nrOfTileXH = int( np.ceil(sz[0]/tileSize)/2+1 )
+    nrOfTileYH = int( np.ceil(sz[1]/tileSize)/2+1 )
+    cb_grid = np.kron([[1, 0] * nrOfTileYH, [0, 1] * nrOfTileYH] *nrOfTileXH, np.ones((tileSize, tileSize)))
+    # now cut it to the same size
+    cb_grid=cb_grid[0:sz[0],0:sz[1]]
+    cb_image = I0*cb_grid + I1*(1-cb_grid)
+    return cb_image
 
-def showCurrentImages_2d( iS, iT, iW, iter, phiWarped):
-
+def showCurrentImages_2d_no_map( iS, iT, iW, iter):
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')
     plt.style.use('bmh')
 
     plt.subplot(221)
-    plt.imshow(utils.t2np(iS))
+    plt.imshow(utils.t2np(iS),cmap='gray')
     plt.colorbar()
     plt.title('source image')
 
     plt.subplot(222)
-    plt.imshow(utils.t2np(iT))
+    plt.imshow(utils.t2np(iT),cmap='gray')
     plt.colorbar()
     plt.title('target image')
 
     plt.subplot(223)
-    plt.imshow(utils.t2np(iW))
+    plt.imshow(utils.t2np(iW),cmap='gray')
 
     plt.colorbar()
     plt.title('warped image')
 
-
-    if phiWarped is not None:
-        plt.subplot(224)
-        plt.imshow(utils.t2np(iW))
-
-        plt.contour(utils.t2np(phiWarped[0,:, :]), np.linspace(-1, 1, 20),colors='r',linestyles='solid')
-        plt.contour(utils.t2np(phiWarped[1,:, :]), np.linspace(-1, 1, 20),colors='r',linestyles='solid')
-
-        plt.colorbar()
-        plt.title('warped image with grid')
+    plt.subplot(224)
+    plt.imshow(checkerboard_2d(utils.t2np(iW),utils.t2np(iT)),cmap='gray')
+    plt.colorbar()
+    plt.title('checkerboard')
 
     plt.show()
+
+def showCurrentImages_2d_map( iS, iT, iW, iter, phiWarped):
+
+    plt.suptitle('Iteration = ' + str(iter))
+    plt.setp(plt.gcf(), 'facecolor', 'white')
+    plt.style.use('bmh')
+
+    plt.subplot(231)
+    plt.imshow(utils.t2np(iS),cmap='gray')
+    plt.colorbar()
+    plt.title('source image')
+
+    plt.subplot(232)
+    plt.imshow(utils.t2np(iT),cmap='gray')
+    plt.colorbar()
+    plt.title('target image')
+
+    plt.subplot(233)
+    plt.imshow(utils.t2np(iW),cmap='gray')
+
+    plt.colorbar()
+    plt.title('warped image')
+
+    plt.subplot(234)
+    plt.imshow(checkerboard_2d(utils.t2np(iW), utils.t2np(iT)),cmap='gray')
+    plt.colorbar()
+    plt.title('checkerboard')
+
+    if phiWarped is not None:
+        plt.subplot(235)
+        plt.imshow(utils.t2np(iW),cmap='gray')
+
+        plt.contour(utils.t2np(phiWarped[0, :, :]), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+        plt.contour(utils.t2np(phiWarped[1, :, :]), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+
+        plt.colorbar()
+        plt.title('warped image + grid')
+
+    plt.show()
+
+
+def showCurrentImages_2d( iS, iT, iW, iter, phiWarped):
+
+    if phiWarped is not None:
+        showCurrentImages_2d_map( iS, iT, iW, iter, phiWarped )
+    else:
+        showCurrentImages_2d_no_map( iS, iT, iW, iter )
 
 
 def showCurrentImages_3d_simple( iS, iT, iW, iter, phiWarped):
@@ -227,7 +277,7 @@ def showCurrentImages_3d_simple( iS, iT, iW, iter, phiWarped):
         plt.contour(utils.t2np(phiWarped[1,:, :, c]), np.linspace(-1, 1, 20),colors='r',linestyles='solid')
 
         plt.colorbar()
-        plt.title('warped image with grid')
+        plt.title('warped image + grid')
 
     plt.show()
 

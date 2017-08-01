@@ -38,7 +38,8 @@ class NCCSimilarity(SimilarityMeasure):
 
     def computeSimilarity(self,I0,I1):
         ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
-        return (1-ncc**2) / (self.sigma ** 2) * self.volumeElement
+        # does not need to be multipled by self.volumeElement (as we are dealing with a correlation measure)
+        return (1-ncc**2) / (self.sigma ** 2)
 
 
 class SimilarityMeasureFactory(object):
