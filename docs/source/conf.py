@@ -36,6 +36,8 @@ sys.path.insert(0,os.path.abspath('../..'))
 # ones.
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
+              'sphinx.ext.graphviz',
+              'sphinx.ext.inheritance_diagram',
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
@@ -97,6 +99,7 @@ todo_include_todos = True
 #html_theme = 'classic'
 html_theme = 'sphinx_rtd_theme'
 html_theme_path = ['_themes',]
+#html_theme = 'sphinxdoc'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
