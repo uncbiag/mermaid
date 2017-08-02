@@ -17,37 +17,37 @@ class ModelFactory(object):
         if modelName=='SVF':
             if useMap:
                 print('Using map-based SVF model')
-                model = RN.SVFNetMap(self.sz,self.spacing,params)
-                loss = RN.SVFLossMap(list(model.parameters())[0], self.sz, self.spacing, params)
+                model = RN.SVFMapNet(self.sz,self.spacing,params)
+                loss = RN.SVFMapLoss(list(model.parameters())[0], self.sz, self.spacing, params)
                 return model,loss
             else:
                 print('Using image-based SVF model')
-                model = RN.SVFNet(self.sz,self.spacing,params)
-                loss = RN.SVFLoss(list(model.parameters())[0], self.sz, self.spacing, params)
+                model = RN.SVFImageNet(self.sz,self.spacing,params)
+                loss = RN.SVFImageLoss(list(model.parameters())[0], self.sz, self.spacing, params)
                 return model,loss
         elif modelName=='LDDMMShooting':
             # TODO: Actually implement this
             if useMap:
                 print('Using map-based shooting LDDMM')
-                model = RN.LDDMMShootingNetMap(self.sz, self.spacing, params)
-                loss = RN.LDDMMShootingLossMap(list(model.parameters())[0], self.sz, self.spacing, params)
+                model = RN.LDDMMShootingVectorMomentumMapNet(self.sz, self.spacing, params)
+                loss = RN.LDDMMShootingVectorMomentumMapLoss(list(model.parameters())[0], self.sz, self.spacing, params)
                 return model, loss
             else:
                 print('Using shooting-based LDDMM')
-                model = RN.LDDMMShootingNet(self.sz,self.spacing,params)
-                loss = RN.LDDMMShootingLoss(list(model.parameters())[0], self.sz, self.spacing, params)
+                model = RN.LDDMMShootingVectorMomentumImageNet(self.sz,self.spacing,params)
+                loss = RN.LDDMMShootingVectorMomentumImageLoss(list(model.parameters())[0], self.sz, self.spacing, params)
                 return model,loss
         elif modelName=='LDDMMShootingScalarMomentum':
             # TODO: Actually implement this
             if useMap:
                 print('Using map-based shooting scalar-momentum LDDMM')
-                model = RN.LDDMMShootingScalarMomentumNetMap(self.sz, self.spacing, params)
-                loss = RN.LDDMMShootingScalarMomentumLossMap(list(model.parameters())[0], self.sz, self.spacing, params)
+                model = RN.LDDMMShootingScalarMomentumMapNet(self.sz, self.spacing, params)
+                loss = RN.LDDMMShootingScalarMomentumMapLoss(list(model.parameters())[0], self.sz, self.spacing, params)
                 return model, loss
             else:
                 print('Using shooting-based scalar-momentum LDDMM')
-                model = RN.LDDMMShootingScalarMomentumNet(self.sz,self.spacing,params)
-                loss = RN.LDDMMShootingScalarMomentumLoss(list(model.parameters())[0], self.sz, self.spacing, params)
+                model = RN.LDDMMShootingScalarMomentumImageNet(self.sz,self.spacing,params)
+                loss = RN.LDDMMShootingScalarMomentumImageLoss(list(model.parameters())[0], self.sz, self.spacing, params)
                 return model,loss
         else:
             self.print_known_models()

@@ -28,7 +28,7 @@ import pyreg.smoother_factory as SF
 import pyreg.custom_optimizers as CO
 
 # select the desired dimension of the registration
-useMap = True # set to true if a map-based implementation should be used
+useMap = True# set to true if a map-based implementation should be used
 visualize = True # set to true if intermediate visualizations are desired
 smoothImages = True
 useRealImages = False
@@ -36,7 +36,7 @@ nrOfIterations = 200 # number of iterations for the optimizer
 #modelName = 'SVF'
 modelName = 'LDDMMShooting'
 #modelName = 'LDDMMShootingScalarMomentum'
-dim = 1
+dim = 2
 
 torch.set_num_threads(4) # not sure if this actually affects anything
 print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
