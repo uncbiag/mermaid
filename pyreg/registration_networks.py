@@ -16,6 +16,7 @@ import similarity_measure_factory as SM
 import smoother_factory as SF
 
 import utils
+import module_parameters as pars
 
 from abc import ABCMeta, abstractmethod
 
@@ -26,7 +27,7 @@ class RegistrationNet(nn.Module):
         super(RegistrationNet,self).__init__()
         self.sz = sz
         self.spacing = spacing
-        self.nrOfTimeSteps = utils.getpar(params, 'numberOfTimeSteps', 10)
+        self.params = params
         self.tFrom = 0.
         self.tTo = 1.
         self.nrOfImages = sz[0]
@@ -63,11 +64,12 @@ class SVFImageNet(SVFNet):
         super(SVFImageNet, self).__init__(sz,spacing,params)
 
     def createIntegrator(self):
+        cparams = pars.getCurrentCategory(self.params, 'forward_model')
         advection = FM.AdvectImage(self.sz, self.spacing)
-        return RK.RK4(advection.f, advection.u, self.v)
+        return RK.RK4(advection.f, advection.u, self.v, cparams)
 
     def forward(self, I):
-        I1 = self.integrator.solve([I], self.tFrom, self.tTo, self.nrOfTimeSteps)
+        I1 = self.integrator.solve([I], self.tFrom, self.tTo)
         return I1[0]
 
 
@@ -78,8 +80,9 @@ class RegistrationLoss(nn.Module):
         super(RegistrationLoss, self).__init__()
         self.spacing = spacing
         self.sz = sz
+
         self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
-                                  createSimilarityMeasure(utils.getpar(params, 'similarityMeasure', 'ssd'), params))
+                                  createSimilarityMeasure(params))
 
     @abstractmethod
     def computeRegularizationEnergy(self, I0_source):
@@ -122,8 +125,11 @@ class SVFImageLoss(RegistrationImageLoss):
     def __init__(self,v,sz,spacing,params):
         super(SVFImageLoss, self).__init__(sz,spacing,params)
         self.v = v
+
+        cparams = pars.getCurrentCategory(params, 'loss')
+
         self.regularizer = (RF.RegularizerFactory(self.spacing).
-                            createRegularizer(utils.getpar(params,'regularizer','helmholtz'),params))
+                            createRegularizer(cparams))
 
     def computeRegularizationEnergy(self,I0_source):
         return self.regularizer.computeRegularizer_multiN(self.v)
@@ -134,11 +140,12 @@ class SVFMapNet(SVFNet):
         super(SVFMapNet, self).__init__(sz,spacing,params)
 
     def createIntegrator(self):
+        cparams = pars.getCurrentCategory(self.params, 'forward_model')
         advectionMap = FM.AdvectMap( self.sz, self.spacing )
-        return RK.RK4(advectionMap.f,advectionMap.u,self.v)
+        return RK.RK4(advectionMap.f,advectionMap.u,self.v,cparams)
 
     def forward(self, phi, I0_source):
-        phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, self.nrOfTimeSteps)
+        phi1 = self.integrator.solve([phi], self.tFrom, self.tTo)
         return phi1[0]
 
 
@@ -146,8 +153,11 @@ class SVFMapLoss(RegistrationMapLoss):
     def __init__(self,v,sz,spacing,params):
         super(SVFMapLoss, self).__init__(sz,spacing,params)
         self.v = v
+
+        cparams = pars.getCurrentCategory(params, 'loss')
+
         self.regularizer = (RF.RegularizerFactory(self.spacing).
-                            createRegularizer(utils.getpar(params, 'regularizer', 'helmholtz'), params))
+                            createRegularizer(cparams))
 
     def computeRegularizationEnergy(self,I0_source):
         return self.regularizer.computeRegularizer_multiN(self.v)
@@ -171,11 +181,12 @@ class LDDMMShootingVectorMomentumImageNet(LDDMMShootingVectorMomentumNet):
         super(LDDMMShootingVectorMomentumImageNet, self).__init__(sz,spacing,params)
 
     def createIntegrator(self):
-        epdiffImage = FM.EPDiffImage( self.sz, self.spacing )
-        return RK.RK4(epdiffImage.f)
+        cparams = pars.getCurrentCategory(self.params, 'forward_model')
+        epdiffImage = FM.EPDiffImage( self.sz, self.spacing, cparams )
+        return RK.RK4(epdiffImage.f,None,None,cparams)
 
     def forward(self, I):
-        mI1 = self.integrator.solve([self.m,I], self.tFrom, self.tTo, self.nrOfTimeSteps)
+        mI1 = self.integrator.solve([self.m,I], self.tFrom, self.tTo)
         return mI1[1]
 
 
@@ -183,7 +194,9 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
     def __init__(self,m,sz,spacing,params):
         super(LDDMMShootingVectorMomentumImageLoss, self).__init__(sz,spacing,params)
         self.m = m
-        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
+
+        cparams = pars.getCurrentCategory(params, 'forward_model')
+        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother(cparams)
 
     def computeRegularizationEnergy(self,I0_source):
         v = self.smoother.computeSmootherVectorField_multiN(self.m)
@@ -196,11 +209,12 @@ class LDDMMShootingVectorMomentumMapNet(LDDMMShootingVectorMomentumNet):
         super(LDDMMShootingVectorMomentumMapNet, self).__init__(sz,spacing,params)
 
     def createIntegrator(self):
-        epdiffMap = FM.EPDiffMap( self.sz, self.spacing )
-        return RK.RK4(epdiffMap.f)
+        cparams = pars.getCurrentCategory(self.params, 'forward_model')
+        epdiffMap = FM.EPDiffMap( self.sz, self.spacing, cparams )
+        return RK.RK4(epdiffMap.f,None,None,cparams)
 
     def forward(self, phi, I0_source):
-        mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo, self.nrOfTimeSteps)
+        mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo)
         return mphi1[1]
 
 
@@ -208,7 +222,9 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
     def __init__(self,m,sz,spacing,params):
         super(LDDMMShootingVectorMomentumMapLoss, self).__init__(sz,spacing,params)
         self.m = m
-        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
+
+        cparams = pars.getCurrentCategory(params, 'forward_model')
+        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother(cparams)
 
     def computeRegularizationEnergy(self,I0_source):
         v = self.smoother.computeSmootherVectorField_multiN(self.m)
@@ -234,8 +250,9 @@ class LDDMMShootingScalarMomentumImageNet(LDDMMShootingScalarMomentumNet):
         super(LDDMMShootingScalarMomentumImageNet, self).__init__(sz,spacing,params)
 
     def createIntegrator(self):
-        epdiffScalarMomentumImage = FM.EPDiffScalarMomentumImage( self.sz, self.spacing )
-        return RK.RK4(epdiffScalarMomentumImage.f)
+        cparams = pars.getCurrentCategory(self.params, 'forward_model')
+        epdiffScalarMomentumImage = FM.EPDiffScalarMomentumImage( self.sz, self.spacing, cparams )
+        return RK.RK4(epdiffScalarMomentumImage.f,None,None,cparams)
 
     def forward(self, I):
         lamI1 = self.integrator.solve([self.lam,I], self.tFrom, self.tTo, self.nrOfTimeSteps)
@@ -246,7 +263,9 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
     def __init__(self,lam,sz,spacing,params):
         super(LDDMMShootingScalarMomentumImageLoss, self).__init__(sz,spacing,params)
         self.lam = lam
-        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
+
+        cparams = pars.getCurrentCategory(params, 'forward_model')
+        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother(cparams)
 
     def computeRegularizationEnergy(self, I0_source):
         m = utils.computeVectorMomentumFromScalarMomentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
@@ -260,11 +279,12 @@ class LDDMMShootingScalarMomentumMapNet(LDDMMShootingScalarMomentumNet):
         super(LDDMMShootingScalarMomentumMapNet, self).__init__(sz,spacing,params)
 
     def createIntegrator(self):
-        epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( self.sz, self.spacing )
-        return RK.RK4(epdiffScalarMomentumMap.f)
+        cparams = pars.getCurrentCategory(self.params, 'forward_model')
+        epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, cparams )
+        return RK.RK4(epdiffScalarMomentumMap.f,None,None,cparams)
 
     def forward(self, phi, I0_source):
-        lamIphi1 = self.integrator.solve([self.lam,I0_source, phi], self.tFrom, self.tTo, self.nrOfTimeSteps)
+        lamIphi1 = self.integrator.solve([self.lam,I0_source, phi], self.tFrom, self.tTo)
         return lamIphi1[2]
 
 
@@ -272,7 +292,9 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
     def __init__(self,lam,sz,spacing,params):
         super(LDDMMShootingScalarMomentumMapLoss, self).__init__(sz,spacing,params)
         self.lam = lam
-        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
+
+        cparams = pars.getCurrentCategory(params, 'forward_model')
+        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother(cparams)
 
     def computeRegularizationEnergy(self, I0_source):
         m = utils.computeVectorMomentumFromScalarMomentum_multiNC(self.lam, I0_source, self.sz, self.spacing)

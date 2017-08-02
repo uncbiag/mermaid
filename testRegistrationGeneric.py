@@ -6,7 +6,9 @@ Contributors:
   Marc Niethammer: mn@cs.unc.edu
 """
 
-#TODO: Change all the images to be of the format 1x1x(...)
+# Note: all images have to be in the format BxCxXxYxZ (BxCxX in 1D and BxCxXxY in 2D)
+# I.e., in 1D, 2D, 3D we are dealing with 3D, 4D, 5D tensors. B is the batchsize, and C are the channels
+# (for example to support color-images or general multi-modal registration scenarios)
 
 # first do the torch imports
 from __future__ import print_function
@@ -19,30 +21,41 @@ import numpy as np
 import set_pyreg_paths
 
 from pyreg import utils
+
 import pyreg.visualize_registration_results as vizReg
 import pyreg.example_generation as eg
+import pyreg.module_parameters as pars
 
 import pyreg.model_factory as MF
 import pyreg.smoother_factory as SF
-
 import pyreg.custom_optimizers as CO
+
+# load settings from file
+loadSettingsFromFile = True
+saveSettingsToFile = True
 
 # select the desired dimension of the registration
 useMap = True# set to true if a map-based implementation should be used
 visualize = True # set to true if intermediate visualizations are desired
 smoothImages = True
 useRealImages = False
-nrOfIterations = 200 # number of iterations for the optimizer
+nrOfIterations = 20 # number of iterations for the optimizer
 #modelName = 'SVF'
 modelName = 'LDDMMShooting'
 #modelName = 'LDDMMShootingScalarMomentum'
 dim = 2
 
+# general parameters
+mp = pars.ModuleParameters()
+if loadSettingsFromFile:
+    settingFile = modelName + '_settings.json'
+    print( 'Reading settings from: ' + settingFile )
+    mp.loadJSON( settingFile )
+
+params = mp.getRoot()
+
 torch.set_num_threads(4) # not sure if this actually affects anything
 print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
-
-# general parameter dictionary; TODO: make more hierarchical
-params = dict()
 
 if useRealImages:
 
@@ -50,8 +63,10 @@ if useRealImages:
 
 else:
     szEx = np.tile( 50, dim )         # size of the desired images: (sz)^dim
-    params['len_s'] = szEx.min()/6
-    params['len_l'] = szEx.min()/4
+
+    cc = pars.setCurrentCategory(params,'square_example_images')
+    pars.setCurrentKey(cc,'len_s', szEx.min()/6)
+    pars.setCurrentKey(cc,'len_l', szEx.max()/4)
 
     # create a default image size with two sample squares
     I0,I1= eg.CreateSquares(dim).create_image_pair(szEx,params)
@@ -67,15 +82,8 @@ print ('Spacing = ' + str( spacing ) )
 # some settings for the registration energy
 # Reg[\Phi,\alpha,\gamma] + 1/\sigma^2 Sim[I(1),I_1]
 
-params['sigma']=0.05
-
-params['gamma']=1.
-params['alpha']=0.2
-
-params['similarityMeasure'] = 'ssd' #'ncc'
-params['regularizer'] = 'helmholtz'
-
-params['numberOfTimeSteps'] = 10
+# All of the following manual settings can be removed if desired
+# they will then be replaced by their default setting
 
 mf = MF.ModelFactory( sz, spacing )
 
@@ -88,8 +96,11 @@ ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 
 if smoothImages:
     # smooth both a little bit
-    #s = SF.SmootherFactory( spacing ).createSmoother('diffusion',{'iter':10})
-    s = SF.SmootherFactory( sz[2::], spacing ).createSmoother('gaussian', {'gaussianStd':0.05}) #,{'k_sz_h':np.tile(20,dim)})
+    cc = pars.setCurrentCategory(params,'image_smoothing')
+    ccs = pars.setCurrentCategory(cc,'smoother')
+    pars.setCurrentKey(ccs,'type','gaussian')
+    pars.setCurrentKey(ccs,'gaussianStd',0.05)
+    s = SF.SmootherFactory( sz[2::], spacing ).createSmoother(cc)
     ISource = s.computeSmootherScalarField(ISource)
     ITarget = s.computeSmootherScalarField(ITarget)
 
@@ -158,3 +169,7 @@ for iter in range(nrOfIterations):
                 vizReg.showCurrentImages(iter, ISource, ITarget, cIWarped)
 
 print('time:', time.time() - start)
+
+if saveSettingsToFile:
+    mp.writeJSON(modelName + '_settings_clean.json')
+    mp.writeJSONComments(modelName + '_settings_comments.json')

@@ -4,7 +4,7 @@ General purpose similarity measures that can be used
 
 from abc import ABCMeta, abstractmethod
 
-import utils
+import module_parameters as pars
 
 
 class SimilarityMeasure(object):
@@ -25,7 +25,8 @@ class SSDSimilarity(SimilarityMeasure):
 
     def __init__(self, spacing, params):
         super(SSDSimilarity,self).__init__(spacing,params)
-        self.sigma = utils.getpar(params, 'sigma', 0.1)
+        self.sigma = pars.getCurrentKey(params, 'sigma', 0.1,
+                                        '1/sigma^2 is the weight in front of the similarity measure')
 
     def computeSimilarity(self,I0,I1):
         # sums over all images and channels
@@ -35,7 +36,8 @@ class NCCSimilarity(SimilarityMeasure):
 
     def __init__(self, spacing, params):
         super(NCCSimilarity,self).__init__(spacing,params)
-        self.sigma = utils.getpar(params, 'sigma', 0.1)
+        self.sigma = pars.getCurrentKey(params, 'sigma', 0.1,
+                                        '1/sigma^2 is the weight in front of the similarity measure')
 
     def computeSimilarity(self,I0,I1):
         # compute mean over all channels and images
@@ -65,12 +67,16 @@ class SimilarityMeasureFactory(object):
         self.spacing = spacing
         self.dim = len( spacing )
 
-    def createSimilarityMeasure(self,similarityMeasureName='ssd',params=None):
-        if similarityMeasureName=='ssd':
+    def createSimilarityMeasure(self,params):
+
+        cparams = pars.getCurrentCategory(params, 'similarity_measure')
+        similarityMeasureType = pars.getCurrentKey(cparams, 'type', 'ssd', 'type of similarity measure (ssd/ncc)')
+
+        if similarityMeasureType=='ssd':
             print('Using SSD similarity measure')
-            return SSDSimilarity(self.spacing,params)
-        elif similarityMeasureName=='ncc':
+            return SSDSimilarity(self.spacing,cparams)
+        elif similarityMeasureType=='ncc':
             print('Using NCC similarity measure')
-            return NCCSimilarity(self.spacing, params)
+            return NCCSimilarity(self.spacing, cparams)
         else:
-            raise ValueError( 'Similarity measure: ' + similarityMeasureName + ' not known')
+            raise ValueError( 'Similarity measure: ' + similarityMeasureType + ' not known')

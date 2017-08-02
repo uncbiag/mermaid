@@ -7,12 +7,16 @@ import torch
 from torch.autograd import Variable
 
 import numpy as np
+import module_parameters as mod_pars
 
 class RKIntegrator(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self,f,u=None,pars=None):
+    def __init__(self,f,u,pars,params):
+
+        self.nrOfTimeSteps = mod_pars.getCurrentKey(params, 'numberOfTimeSteps', 10,
+                                                'Number of time-steps to integrate the PDE')
         self.f = f
 
         if pars is None:
@@ -25,14 +29,14 @@ class RKIntegrator(object):
         else:
             self.u = u
 
-    def solve(self,x,fromT,toT,nrSteps):
+    def solve(self,x,fromT,toT):
         # arguments need to be list so we can pass multiple variables at the same time
         assert type(x)==list
-        timepoints = np.linspace(fromT, toT, nrSteps + 1)
+        timepoints = np.linspace(fromT, toT, self.nrOfTimeSteps + 1)
         dt = timepoints[1]-timepoints[0]
         currentT = fromT
         #iter = 0
-        for i in range(0, nrSteps):
+        for i in range(0, self.nrOfTimeSteps):
             #print('RKIter = ' + str( iter ) )
             #iter+=1
             x = self.solveOneStep(x,currentT,dt)

@@ -337,7 +337,7 @@ class EPDiffImage(ForwardModel):
 
     def __init__(self, sz, spacing, params=None):
         super(EPDiffImage, self).__init__(sz, spacing,params)
-        self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
+        self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).createSmoother(params)
 
     """
     Forward model for the EPdiff equation. State is the momentum, m, and the image I
@@ -364,7 +364,7 @@ class EPDiffMap(ForwardModel):
 
     def __init__(self, sz, spacing, params=None):
         super(EPDiffMap, self).__init__(sz,spacing,params)
-        self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
+        self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).createSmoother(params)
 
     """
     Forward model for the EPDiff equation. State is the momentum, m, and the transform, phi.
@@ -389,9 +389,10 @@ class EPDiffMap(ForwardModel):
 
 class EPDiffScalarMomentum(ForwardModel):
 
-    def __init__(self, sz, spacing, params=None):
+    def __init__(self, sz, spacing, params):
         super(EPDiffScalarMomentum,self).__init__(sz,spacing,params)
-        self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).createSmoother('gaussian')
+
+        self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).createSmoother(params)
 
 class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
 
