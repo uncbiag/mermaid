@@ -31,7 +31,7 @@ import pyreg.smoother_factory as SF
 import pyreg.custom_optimizers as CO
 
 # load settings from file
-loadSettingsFromFile = True
+loadSettingsFromFile = False
 saveSettingsToFile = True
 
 # select the desired dimension of the registration
@@ -46,27 +46,24 @@ modelName = 'LDDMMShooting'
 dim = 2
 
 # general parameters
-mp = pars.ModuleParameters()
+params = pars.ParameterDict()
+
 if loadSettingsFromFile:
     settingFile = modelName + '_settings.json'
-    print( 'Reading settings from: ' + settingFile )
-    mp.loadJSON( settingFile )
-
-params = mp.getRoot()
+    params.loadJSON( settingFile )
 
 torch.set_num_threads(4) # not sure if this actually affects anything
 print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
 
 if useRealImages:
-
     I0,I1= eg.CreateRealExampleImages(dim).create_image_pair()
 
 else:
     szEx = np.tile( 50, dim )         # size of the desired images: (sz)^dim
 
-    cc = pars.setCurrentCategory(params,'square_example_images')
-    pars.setCurrentKey(cc,'len_s', szEx.min()/6)
-    pars.setCurrentKey(cc,'len_l', szEx.max()/4)
+    params['square_example_images']=({},'Settings for example image generation')
+    params['square_example_images']['len_s'] = szEx.min()/6
+    params['square_example_images']['len_l'] = szEx.max()/4
 
     # create a default image size with two sample squares
     I0,I1= eg.CreateSquares(dim).create_image_pair(szEx,params)
@@ -96,11 +93,11 @@ ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 
 if smoothImages:
     # smooth both a little bit
-    cc = pars.setCurrentCategory(params,'image_smoothing')
-    ccs = pars.setCurrentCategory(cc,'smoother')
-    pars.setCurrentKey(ccs,'type','gaussian')
-    pars.setCurrentKey(ccs,'gaussianStd',0.05)
-    s = SF.SmootherFactory( sz[2::], spacing ).createSmoother(cc)
+    cparams = params[('image_smoothing',{},'general settings to pre-smooth images')]
+    cparams[('smoother',{})]
+    cparams['smoother']['type']='gaussian'
+    cparams['smoother']['gaussianStd']=0.05
+    s = SF.SmootherFactory( sz[2::], spacing ).createSmoother(cparams)
     ISource = s.computeSmootherScalarField(ISource)
     ITarget = s.computeSmootherScalarField(ITarget)
 
@@ -171,5 +168,5 @@ for iter in range(nrOfIterations):
 print('time:', time.time() - start)
 
 if saveSettingsToFile:
-    mp.writeJSON(modelName + '_settings_clean.json')
-    mp.writeJSONComments(modelName + '_settings_comments.json')
+    params.writeJSON(modelName + '_settings_clean.json')
+    params.writeJSONComments(modelName + '_settings_comments.json')

@@ -16,6 +16,7 @@ PyTorchRegistration documentation
    finite_differences
    forward_models
    model_factory
+   module_parameters
    registration_networks
    regularizer_factory
    rungekutta_integrators

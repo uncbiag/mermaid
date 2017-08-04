@@ -8,7 +8,6 @@ import torch
 from torch.autograd import Variable
 
 import finite_differences as fd
-import module_parameters as pars
 
 class Regularizer(object):
     __metaclass__ = ABCMeta
@@ -36,8 +35,8 @@ class HelmholtzRegularizer(Regularizer):
     def __init__(self, spacing, params):
         super(HelmholtzRegularizer,self).__init__(spacing,params)
 
-        self.alpha = pars.getCurrentKey(params, 'alpha', 0.2, 'penalty for 2nd derivative' )
-        self.gamma = pars.getCurrentKey(params, 'gamma', 1.0, 'penaly for magnitude' )
+        self.alpha = params[('alpha', 0.2, 'penalty for 2nd derivative' )]
+        self.gamma = params[('gamma', 1.0, 'penaly for magnitude' )]
 
 
     def _computeRegularizer(self,v):
@@ -85,9 +84,9 @@ class RegularizerFactory(object):
 
     def createRegularizer(self,params):
 
-        cparams = pars.getCurrentCategory(params, 'regularizer')
-        regularizerType = pars.getCurrentKey(cparams, 'type', 'helmholtz',
-                                             'type of regularizer (only helmholtz at the moment)')
+        cparams = params[('regularizer',{},'Parameters for the regularizer')]
+        regularizerType = cparams[('type','helmholtz',
+                                             'type of regularizer (only helmholtz at the moment)')]
 
         if regularizerType=='helmholtz':
             return HelmholtzRegularizer(self.spacing,cparams)

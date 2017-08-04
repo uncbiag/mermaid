@@ -3,7 +3,6 @@ import numpy as np
 
 import utils
 import viewers
-import sys
 
 import finite_differences as fd
 

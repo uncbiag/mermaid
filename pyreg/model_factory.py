@@ -1,5 +1,4 @@
 import registration_networks as RN
-import module_parameters as pars
 
 class ModelFactory(object):
 
@@ -15,8 +14,8 @@ class ModelFactory(object):
         print('   LDDMMShootingScalarMomentum: shooting-based LDDMM using the scalar momentum')
 
     def createRegistrationModel(self,modelName,useMap,params):
-        cparams = pars.setCurrentCategory(params,'registration_model')
-        pars.setCurrentKey(cparams,'type',modelName,'Name of the registration model')
+        cparams = params[('registration_model',{},'specifies the registration model')]
+        cparams['type']= (modelName,'Name of the registration model')
         if modelName=='SVF':
             if useMap:
                 print('Using map-based SVF model')

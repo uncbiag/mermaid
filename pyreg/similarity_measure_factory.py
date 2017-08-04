@@ -4,9 +4,6 @@ General purpose similarity measures that can be used
 
 from abc import ABCMeta, abstractmethod
 
-import module_parameters as pars
-
-
 class SimilarityMeasure(object):
     __metaclass__ = ABCMeta
 
@@ -25,8 +22,8 @@ class SSDSimilarity(SimilarityMeasure):
 
     def __init__(self, spacing, params):
         super(SSDSimilarity,self).__init__(spacing,params)
-        self.sigma = pars.getCurrentKey(params, 'sigma', 0.1,
-                                        '1/sigma^2 is the weight in front of the similarity measure')
+        self.sigma = params[('sigma', 0.1,
+                                        '1/sigma^2 is the weight in front of the similarity measure')]
 
     def computeSimilarity(self,I0,I1):
         # sums over all images and channels
@@ -36,8 +33,8 @@ class NCCSimilarity(SimilarityMeasure):
 
     def __init__(self, spacing, params):
         super(NCCSimilarity,self).__init__(spacing,params)
-        self.sigma = pars.getCurrentKey(params, 'sigma', 0.1,
-                                        '1/sigma^2 is the weight in front of the similarity measure')
+        self.sigma = params[('sigma', 0.1,
+                                        '1/sigma^2 is the weight in front of the similarity measure')]
 
     def computeSimilarity(self,I0,I1):
         # compute mean over all channels and images
@@ -69,8 +66,8 @@ class SimilarityMeasureFactory(object):
 
     def createSimilarityMeasure(self,params):
 
-        cparams = pars.getCurrentCategory(params, 'similarity_measure')
-        similarityMeasureType = pars.getCurrentKey(cparams, 'type', 'ssd', 'type of similarity measure (ssd/ncc)')
+        cparams = params[('similarity_measure',{},'settings for the similarity measure')]
+        similarityMeasureType = cparams[('type', 'ssd', 'type of similarity measure (ssd/ncc)')]
 
         if similarityMeasureType=='ssd':
             print('Using SSD similarity measure')

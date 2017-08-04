@@ -7,7 +7,6 @@ import torch
 from torch.autograd import Variable
 
 import numpy as np
-import module_parameters as mod_pars
 
 class RKIntegrator(object):
 
@@ -15,8 +14,8 @@ class RKIntegrator(object):
 
     def __init__(self,f,u,pars,params):
 
-        self.nrOfTimeSteps = mod_pars.getCurrentKey(params, 'numberOfTimeSteps', 10,
-                                                'Number of time-steps to integrate the PDE')
+        self.nrOfTimeSteps = params[('numberOfTimeSteps', 10,
+                                                'Number of time-steps to integrate the PDE')]
         self.f = f
 
         if pars is None:

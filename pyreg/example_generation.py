@@ -8,7 +8,6 @@ Package to create example images to test the image registration algorithms
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import utils
-import pyreg.module_parameters as pars
 
 class CreateExample(object):
     """
@@ -55,9 +54,10 @@ class CreateSquares(CreateExample):
         I1 = np.zeros(sz, dtype='float32')
         # get parameters and replace with defaults if necessary
 
-        cc = pars.getCurrentCategory(params, 'square_example_images', 'Controlling the size of a nD cube')
-        len_s = pars.getCurrentKey(cc, 'len_s', sz.min() / 6, 'Mimimum side-length of square')
-        len_l = pars.getCurrentKey(cc, 'len_l', sz.max() / 4, 'Maximum side-length of square')
+        # create a new category if it does not exist
+        params[('square_example_images', {}, 'Controlling the size of a nD cube')]
+        len_s = params['square_example_images'][('len_s',sz.min()/6,'Mimimum side-length of square')]
+        len_l = params['square_example_images'][('len_l',sz.max()/4,'Maximum side-length of square')]
 
         c = sz/2 # center coordinates
         # create small and large squares

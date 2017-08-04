@@ -10,7 +10,6 @@ import torch.nn.functional as F
 import numpy as np
 
 import finite_differences as fd
-import module_parameters as pars
 
 import utils
 
@@ -52,7 +51,7 @@ class DiffusionSmoother(Smoother):
 
     def __init__(self, sz, spacing, params):
         super(DiffusionSmoother,self).__init__(sz,spacing,params)
-        self.iter = pars.getCurrentKey(params, 'iter', 5, 'Number of iterations' )
+        self.iter = params[('iter', 5, 'Number of iterations' )]
 
     def computeSmootherScalarField(self,v):
         # basically just solving the heat equation for a few steps
@@ -73,7 +72,7 @@ class GaussianSpatialSmoother(GaussianSmoother):
 
     def __init__(self, sz, spacing, params):
         super(GaussianSpatialSmoother,self).__init__(sz,spacing,params)
-        k_sz_h = pars.getCurrentKey(params, 'k_sz_h', None, 'size of the kernel' )
+        k_sz_h = params[('k_sz_h', None, 'size of the kernel' )]
 
         if k_sz_h is None:
             self.k_sz = (2 * 5 + 1) * np.ones(self.dim, dtype='int')  # default kernel size
@@ -130,8 +129,7 @@ class GaussianFourierSmoother(GaussianSmoother):
 
     def __init__(self, sz, spacing, params):
         super(GaussianFourierSmoother,self).__init__(sz,spacing,params)
-        gaussianStd = pars.getCurrentKey(params, 'gaussianStd', 0.15,
-                                         'std for the Gaussian' )
+        gaussianStd = params[('gaussianStd', 0.15,'std for the Gaussian' )]
 
         mus = np.zeros(self.dim)
         stds = gaussianStd*np.ones(self.dim)
@@ -156,9 +154,9 @@ class SmootherFactory(object):
 
     def createSmoother(self,params):
 
-        cparams = pars.getCurrentCategory(params, 'smoother')
-        smootherType = pars.getCurrentKey(cparams, 'type', 'gaussian',
-                                          'type of smoother (difusion/gaussian/gaussianSpatial)' )
+        cparams = params[('smoother',{})]
+        smootherType = cparams[('type', 'gaussian',
+                                          'type of smoother (difusion/gaussian/gaussianSpatial)' )]
         if smootherType=='diffusion':
             return DiffusionSmoother(self.sz,self.spacing,cparams)
         elif smootherType=='gaussian':
