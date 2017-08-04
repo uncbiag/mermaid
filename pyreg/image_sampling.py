@@ -149,4 +149,4 @@ def testMe():
 
     plt.show()
 
-testMe()
+#testMe()
