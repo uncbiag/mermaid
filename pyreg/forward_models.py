@@ -355,7 +355,7 @@ class EPDiffImage(ForwardModel):
         # assume x[0] is m and x[1] is I for the state
         m = x[0]
         I = x[1]
-        v = self.smoother.computeSmootherVectorField_multiN(m)
+        v = self.smoother.smoothVectorField_multiN(m)
         # print('max(|v|) = ' + str( v.abs().max() ))
         return [self.rhs.rhs_epdiff_multiN(m,v), self.rhs.rhs_advect_image_multiNC(I,v)]
 
@@ -383,7 +383,7 @@ class EPDiffMap(ForwardModel):
         # assume x[0] is m and x[1] is phi for the state
         m = x[0]
         phi = x[1]
-        v = self.smoother.computeSmootherVectorField_multiN(m)
+        v = self.smoother.smoothVectorField_multiN(m)
         # print('max(|v|) = ' + str( v.abs().max() ))
         return [self.rhs.rhs_epdiff_multiN(m,v),self.rhs.rhs_advect_map_multiN(phi,v)]
 
@@ -418,7 +418,7 @@ class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
 
         # now compute the momentum
         m = utils.computeVectorMomentumFromScalarMomentum_multiNC(lam,I, self.sz, self.spacing)
-        v = self.smoother.computeSmootherVectorField_multiN(m)
+        v = self.smoother.smoothVectorField_multiN(m)
 
         # advection for I, scalar-conservation law for lam
         return [self.rhs.rhs_scalar_conservation_multiNC(lam,v), self.rhs.rhs_advect_image_multiNC(I,v)]
@@ -450,7 +450,7 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
 
         # now compute the momentum
         m = utils.computeVectorMomentumFromScalarMomentum_multiNC(lam, I, self.sz, self.spacing)
-        v = self.smoother.computeSmootherVectorField_multiN(m)
+        v = self.smoother.smoothVectorField_multiN(m)
 
         return [self.rhs.rhs_scalar_conservation_multiNC(lam,v),
                 self.rhs.rhs_advect_image_multiNC(I,v),

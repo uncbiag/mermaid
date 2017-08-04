@@ -198,7 +198,7 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
         self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother(cparams)
 
     def computeRegularizationEnergy(self,I0_source):
-        v = self.smoother.computeSmootherVectorField_multiN(self.m)
+        v = self.smoother.smoothVectorField_multiN(self.m)
         reg = (v * self.m).sum() * self.spacing.prod()
         return reg
 
@@ -226,7 +226,7 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother(cparams)
 
     def computeRegularizationEnergy(self,I0_source):
-        v = self.smoother.computeSmootherVectorField_multiN(self.m)
+        v = self.smoother.smoothVectorField_multiN(self.m)
         reg = (v * self.m).sum() * self.spacing.prod()
         return reg
 
@@ -268,7 +268,7 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
 
     def computeRegularizationEnergy(self, I0_source):
         m = utils.computeVectorMomentumFromScalarMomentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
-        v = self.smoother.computeSmootherVectorField_multiN(m)
+        v = self.smoother.smoothVectorField_multiN(m)
         reg = (v * m).sum() * self.spacing.prod()
         return reg
 
@@ -297,6 +297,6 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
 
     def computeRegularizationEnergy(self, I0_source):
         m = utils.computeVectorMomentumFromScalarMomentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
-        v = self.smoother.computeSmootherVectorField_multiN(m)
+        v = self.smoother.smoothVectorField_multiN(m)
         reg = (v * m).sum() * self.spacing.prod()
         return reg

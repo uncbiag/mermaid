@@ -28,7 +28,7 @@ spacing = 1./(sz-1)
 print ('Spacing = ' + str( spacing ) )
 
 s = sf.SmootherFactory( sz, spacing ).createSmoother('diffusion',{'iter':10})
-r = s.computeSmootherScalarField(ISource)
+r = s.smoothScalarField(ISource)
 
 plt.figure(1)
 plt.plot(utils.t2np(ISource))

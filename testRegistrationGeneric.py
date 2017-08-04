@@ -98,8 +98,8 @@ if smoothImages:
     cparams['smoother']['type']='gaussian'
     cparams['smoother']['gaussianStd']=0.05
     s = SF.SmootherFactory( sz[2::], spacing ).createSmoother(cparams)
-    ISource = s.computeSmootherScalarField(ISource)
-    ITarget = s.computeSmootherScalarField(ITarget)
+    ISource = s.smoothScalarField(ISource)
+    ITarget = s.smoothScalarField(ITarget)
 
 if useMap:
     # create the identity map [-1,1]^d, since we will use a map-based implementation

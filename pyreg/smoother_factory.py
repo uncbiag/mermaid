@@ -27,24 +27,38 @@ class Smoother(object):
         self.params = params
 
     @abstractmethod
-    def computeSmootherScalarField(self, v):
+    def smoothScalarField(self, I):
         pass
 
-    def computeSmootherVectorField_multiN(self,v):
+    def smoothScalarField_multiNC(self,I):
+        sz = I.size()
+        Is = Variable(torch.zeros(sz), requires_grad=False)
+        for nrI in range(sz[0]):  # loop over all the images
+            Is[nrI, ...] = self.smoothScalarField_multiC(I[nrI, ...])
+        return Is
+
+    def smoothScalarField_multiC(self,I):
+        sz = I.size()
+        Is = Variable(torch.zeros(sz), requires_grad=False)
+        for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same
+            Is[nrC, ...] = self.smoothScalarField(I[nrC, ...])
+        return Is
+
+    def smoothVectorField_multiN(self, v):
         sz = v.size()
         Sv = Variable(torch.FloatTensor(v.size()))
         for nrI in range(sz[0]): #loop over all the images
-            Sv[nrI,...] = self.computeSmootherVectorField(v[nrI,...])
+            Sv[nrI,...] = self.smoothVectorField(v[nrI, ...])
         return Sv
 
-    def computeSmootherVectorField(self, v):
+    def smoothVectorField(self, v):
         if self.dim==1:
-            return self.computeSmootherScalarField(v) # if one dimensional, default to scalar-field smoothing
+            return self.smoothScalarField(v) # if one dimensional, default to scalar-field smoothing
         else:
             Sv = Variable( torch.FloatTensor( v.size() ) )
             # smooth every dimension individually
             for d in range(0, self.dim):
-                Sv[d,...] = self.computeSmootherScalarField(v[d,...])
+                Sv[d,...] = self.smoothScalarField(v[d, ...])
             return Sv
 
 class DiffusionSmoother(Smoother):
@@ -53,7 +67,7 @@ class DiffusionSmoother(Smoother):
         super(DiffusionSmoother,self).__init__(sz,spacing,params)
         self.iter = params[('iter', 5, 'Number of iterations' )]
 
-    def computeSmootherScalarField(self,v):
+    def smoothScalarField(self, v):
         # basically just solving the heat equation for a few steps
         Sv = v.clone()
         # now iterate and average based on the neighbors
@@ -121,7 +135,7 @@ class GaussianSpatialSmoother(GaussianSmoother):
         else:
             raise ValueError('Can only perform padding in dimensions 1-3')
 
-    def computeSmootherScalarField(self,v):
+    def smoothScalarField(self, v):
         # just doing a Gaussian smoothing
         return self._filterInputWithPadding(v)
 
@@ -138,7 +152,7 @@ class GaussianFourierSmoother(GaussianSmoother):
 
         self.FFilter = ce.createComplexFourierFilter(g, self.sz )
 
-    def computeSmootherScalarField(self,v):
+    def smoothScalarField(self, v):
         # just doing a Gaussian smoothing
         # we need to instantiate a new filter function here every time for the autograd to work
         return ce.fourierConvolution(v, self.FFilter)
