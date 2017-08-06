@@ -65,11 +65,14 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def add_similarity_measure(self, simName, simMeasure):
         self.criterion.add_similarity_measure(simName, simMeasure)
 
+    def add_model(self, modelName, modelNetworkClass, modelLossClass):
+        self.model.add_model(modelName,modelNetworkClass,modelLossClass)
+
     def set_optimization_parameters(self, p):
         self.model.set_registration_parameters(p, self.sz, self.spacing)
 
     def get_optimization_parameters(self, p):
-        self.mode.get_registration_parameters()
+        self.model.get_registration_parameters()
 
     def upsample_optimization_parameters(self, desiredSize):
         return self.model.upsample_registration_parameters(desiredSize)
@@ -144,12 +147,21 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         super(MultiScaleRegistrationOptimizer,self).__init__(modelName,sz,spacing,useMap,params)
         self.scaleFactors = [1.]
         self.scaleIterations = [100]
+
         self.addSimName = None
         self.addSimMeasure = None
+        self.add_model_name = None
+        self.add_model_networkClass = None
+        self.add_model_lossClass = None
 
     def add_similarity_measure(self, simName, simMeasure):
         self.addSimName = simName
         self.addSimMeasure = simMeasure
+
+    def add_model(self, add_model_name, add_model_networkClass, add_model_lossClass):
+        self.add_model_name = add_model_name
+        self.add_model_networkClass = add_model_networkClass
+        self.add_model_lossClass = add_model_lossClass
 
     def set_scale_factors(self, scaleFactors):
         self.scaleFactors = scaleFactors
@@ -209,6 +221,11 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             if (self.addSimName is not None) and (self.addSimMeasure is not None):
                 ssOpt.add_similarity_measure(self.addSimName, self.addSimMeasure)
+
+            if ( (self.add_model_name is not None) and
+                     (self.add_model_networkClass is not None) and
+                     (self.add_model_lossClass is not None) ):
+                ssOpt.add_model(self.add_model_name,self.add_model_networkClass,self.add_model_lossClass)
 
             ssOpt.set_source_image(ISourceC)
             ssOpt.set_target_image(ITargetC)
