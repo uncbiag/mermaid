@@ -30,15 +30,20 @@ loadSettingsFromFile = False
 saveSettingsToFile = True
 
 # select the desired dimension of the registration
-useMap = True# set to true if a map-based implementation should be used
+useMap = False # set to true if a map-based implementation should be used
 visualize = True # set to true if intermediate visualizations are desired
 smoothImages = True
 useRealImages = False
 nrOfIterations = 5 # number of iterations for the optimizer
-#modelName = 'SVF'
-modelName = 'LDDMMShooting'
-#modelName = 'LDDMMShootingScalarMomentum'
+#modelName = 'svf'
+#modelName = 'lddmm_shooting'
+modelName = 'lddmm_shooting_scalar_momentum'
 dim = 2
+
+if useMap:
+    modelName = modelName + '_map'
+else:
+    modelName = modelName + '_image'
 
 # general parameters
 params = pars.ParameterDict()

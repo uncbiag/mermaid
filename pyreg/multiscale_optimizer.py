@@ -51,7 +51,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         super(SingleScaleRegistrationOptimizer,self).__init__(modelName,sz,spacing,useMap,params)
 
         mf = MF.ModelFactory(self.sz, self.spacing)
-        self.model, self.criterion = mf.create_registration_model(modelName, useMap, params)
+        self.model, self.criterion = mf.create_registration_model(modelName, params)
         print(self.model)
 
         self.nrOfIterations = 1

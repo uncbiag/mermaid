@@ -40,10 +40,15 @@ visualize = True # set to true if intermediate visualizations are desired
 smoothImages = True
 useRealImages = False
 nrOfIterations = 5 # number of iterations for the optimizer
-modelName = 'SVF'
-#modelName = 'LDDMMShooting'
-#modelName = 'LDDMMShootingScalarMomentum'
+modelName = 'svf'
+#modelName = 'lddmm_shooting'
+#modelName = 'lddmm_shooting_scalar_momentum'
 dim = 2
+
+if useMap:
+    modelName = modelName + '_map'
+else:
+    modelName = modelName + '_image'
 
 # general parameters
 params = pars.ParameterDict()
@@ -84,7 +89,7 @@ print ('Spacing = ' + str( spacing ) )
 
 mf = MF.ModelFactory( sz, spacing )
 
-model,criterion = mf.create_registration_model(modelName, useMap, params)
+model,criterion = mf.create_registration_model(modelName, params)
 print(model)
 
 # create the source and target image as pyTorch variables

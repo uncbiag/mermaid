@@ -90,7 +90,7 @@ class SVFImageNet(SVFNet):
         super(SVFImageNet, self).__init__(sz,spacing,params)
 
     def create_integrator(self):
-        cparams = params[('forward_model',{},'settings for the forward model')]
+        cparams = self.params[('forward_model',{},'settings for the forward model')]
         advection = FM.AdvectImage(self.sz, self.spacing)
         return RK.RK4(advection.f, advection.u, self.v, cparams)
 
@@ -375,7 +375,7 @@ class LDDMMShootingScalarMomentumImageNet(LDDMMShootingScalarMomentumNet):
         return RK.RK4(epdiffScalarMomentumImage.f,None,None,cparams)
 
     def forward(self, I):
-        lamI1 = self.integrator.solve([self.lam,I], self.tFrom, self.tTo, self.nrOfTimeSteps)
+        lamI1 = self.integrator.solve([self.lam,I], self.tFrom, self.tTo)
         return lamI1[1]
 
 
