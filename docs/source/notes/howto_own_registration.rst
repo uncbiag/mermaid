@@ -38,7 +38,7 @@ we can simply instruct it to use our new similarity measure
 
 .. code::
     
-   mo.add_similarity_measure('mySSD', mySSD)
+   mo.add_similarity_measure('mySSD', MySSD)
    
 
 This will propagate through all the registration models. Hence, all of them will instantly be able to use the new similarity measure.
