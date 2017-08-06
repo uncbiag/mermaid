@@ -8,7 +8,7 @@ import finite_differences as fd
 
 # some debugging output to show image gradients
 
-def debugOutput_1d( I0, I1, spacing):
+def debug_output_1d(I0, I1, spacing):
     # compute gradients
     fdnp = fd.FD_np(spacing)  # numpy finite differencing
 
@@ -36,7 +36,7 @@ def debugOutput_1d( I0, I1, spacing):
     # plt.axis('tight')
     plt.show(block=False)
 
-def debugOutput_2d( I0, I1, spacing):
+def debug_output_2d(I0, I1, spacing):
     # compute gradients
     fdnp = fd.FD_np(spacing)  # numpy finite differencing
 
@@ -68,7 +68,7 @@ def debugOutput_2d( I0, I1, spacing):
     # plt.axis('tight')
     plt.show(block=False)
 
-def debugOutput_3d( I0, I1, spacing):
+def debug_output_3d(I0, I1, spacing):
     # compute gradients
     fdnp = fd.FD_np(spacing)  # numpy finite differencing
 
@@ -117,20 +117,20 @@ def debugOutput_3d( I0, I1, spacing):
     plt.show(block=False)
 
 
-def debugOutput( I0, I1, spacing ):
+def debug_output(I0, I1, spacing):
 
     dim = spacing.size
 
     if dim==1:
-        debugOutput_1d( I0, I1, spacing )
+        debug_output_1d(I0, I1, spacing)
     elif dim==2:
-        debugOutput_2d( I0, I1, spacing )
+        debug_output_2d(I0, I1, spacing)
     elif dim==3:
-        debugOutput_3d( I0, I1, spacing )
+        debug_output_3d(I0, I1, spacing)
     else:
         raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
 
-def showCurrentImages_1d( iS, iT, iW, iter, phiWarped):
+def show_current_images_1d(iS, iT, iW, iter, phiWarped):
 
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')
@@ -168,7 +168,7 @@ def checkerboard_2d(I0,I1,nrOfTiles=8):
     cb_image = I0*cb_grid + I1*(1-cb_grid)
     return cb_image
 
-def showCurrentImages_2d_no_map( iS, iT, iW, iter):
+def show_current_images_2d_no_map(iS, iT, iW, iter):
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')
     plt.style.use('bmh')
@@ -196,7 +196,7 @@ def showCurrentImages_2d_no_map( iS, iT, iW, iter):
 
     plt.show()
 
-def showCurrentImages_2d_map( iS, iT, iW, iter, phiWarped):
+def show_current_images_2d_map(iS, iT, iW, iter, phiWarped):
 
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')
@@ -236,15 +236,15 @@ def showCurrentImages_2d_map( iS, iT, iW, iter, phiWarped):
     plt.show()
 
 
-def showCurrentImages_2d( iS, iT, iW, iter, phiWarped):
+def show_current_images_2d(iS, iT, iW, iter, phiWarped):
 
     if phiWarped is not None:
-        showCurrentImages_2d_map( iS, iT, iW, iter, phiWarped )
+        show_current_images_2d_map(iS, iT, iW, iter, phiWarped)
     else:
-        showCurrentImages_2d_no_map( iS, iT, iW, iter )
+        show_current_images_2d_no_map(iS, iT, iW, iter)
 
 
-def showCurrentImages_3d_simple( iS, iT, iW, iter, phiWarped):
+def show_current_images_3d_simple(iS, iT, iW, iter, phiWarped):
 
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')
@@ -281,7 +281,7 @@ def showCurrentImages_3d_simple( iS, iT, iW, iter, phiWarped):
     plt.show()
 
 
-def showCurrentImages_3d( iS, iT, iW, iter, phiWarped):
+def show_current_images_3d(iS, iT, iW, iter, phiWarped):
 
     if phiWarped is not None:
         fig, ax = plt.subplots(4,3)
@@ -340,7 +340,7 @@ def showCurrentImages_3d( iS, iT, iW, iter, phiWarped):
     plt.show()
 
 
-def showCurrentImages(iter,iS,iT,iW,phiWarped=None):
+def show_current_images(iter, iS, iT, iW, phiWarped=None):
     """
     Show current 2D registration results in relation to the source and target images
     :param iter: iteration number
@@ -362,11 +362,11 @@ def showCurrentImages(iter,iS,iT,iW,phiWarped=None):
         pwF = None
 
     if dim==1:
-        showCurrentImages_1d( iSF, iTF, iWF, iter, pwF )
+        show_current_images_1d(iSF, iTF, iWF, iter, pwF)
     elif dim==2:
-        showCurrentImages_2d( iSF, iTF, iWF, iter, pwF )
+        show_current_images_2d(iSF, iTF, iWF, iter, pwF)
     elif dim==3:
-        showCurrentImages_3d( iSF, iTF, iWF, iter, pwF )
+        show_current_images_3d(iSF, iTF, iWF, iter, pwF)
     else:
         raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
 

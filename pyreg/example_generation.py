@@ -74,8 +74,8 @@ class CreateSquares(CreateExample):
             raise ValueError('Square examples only supported in dimensions 1-3.')
 
         # now transform from single-channel to multi-channel image format
-        I0 = utils.transformImageToNCImageFormat(I0)
-        I1 = utils.transformImageToNCImageFormat(I1)
+        I0 = utils.transform_image_to_NC_image_format(I0)
+        I1 = utils.transform_image_to_NC_image_format(I1)
 
         return I0,I1
 
@@ -113,7 +113,7 @@ class CreateRealExampleImages(CreateExample):
             raise ValueError('Real examples only supported in dimension 2 at the moment.')
 
         # now transform from single-channel to multi-channel image format
-        I0 = utils.transformImageToNCImageFormat(I0)
-        I1 = utils.transformImageToNCImageFormat(I1)
+        I0 = utils.transform_image_to_NC_image_format(I0)
+        I1 = utils.transform_image_to_NC_image_format(I1)
 
         return I0,I1

@@ -27,38 +27,59 @@ class Smoother(object):
         self.params = params
 
     @abstractmethod
-    def smoothScalarField(self, I):
+    def smooth_scalar_field(self, I):
         pass
 
-    def smoothScalarField_multiNC(self,I):
+    @abstractmethod
+    def inverse_smooth_scalar_field(self, I):
+        pass
+
+    def smooth_scalar_field_multiNC(self, I):
         sz = I.size()
         Is = Variable(torch.zeros(sz), requires_grad=False)
         for nrI in range(sz[0]):  # loop over all the images
-            Is[nrI, ...] = self.smoothScalarField_multiC(I[nrI, ...])
+            Is[nrI, ...] = self.smooth_scalar_field_multiC(I[nrI, ...])
         return Is
 
-    def smoothScalarField_multiC(self,I):
+    def smooth_scalar_field_multiC(self, I):
         sz = I.size()
         Is = Variable(torch.zeros(sz), requires_grad=False)
         for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same
-            Is[nrC, ...] = self.smoothScalarField(I[nrC, ...])
+            Is[nrC, ...] = self.smooth_scalar_field(I[nrC, ...])
         return Is
 
-    def smoothVectorField_multiN(self, v):
+    def inverse_smooth_vector_field_multiN(self, v):
+        sz = v.size()
+        ISv = Variable(torch.FloatTensor(v.size()))
+        for nrI in range(sz[0]): # loop over all images
+            ISv[nrI,...] = self.inverse_smooth_vector_field(v[nrI, ...])
+        return ISv
+
+    def inverse_smooth_vector_field(self, v):
+        if self.dim==1:
+            return self.inverse_smooth_scalar_field(v) # if one dimensional, default to scalar-field smoothing
+        else:
+            ISv = Variable( torch.FloatTensor( v.size() ) )
+            # smooth every dimension individually
+            for d in range(0, self.dim):
+                ISv[d,...] = self.inverse_smooth_scalar_field(v[d, ...])
+            return ISv
+
+    def smooth_vector_field_multiN(self, v):
         sz = v.size()
         Sv = Variable(torch.FloatTensor(v.size()))
         for nrI in range(sz[0]): #loop over all the images
-            Sv[nrI,...] = self.smoothVectorField(v[nrI, ...])
+            Sv[nrI,...] = self.smooth_vector_field(v[nrI, ...])
         return Sv
 
-    def smoothVectorField(self, v):
+    def smooth_vector_field(self, v):
         if self.dim==1:
-            return self.smoothScalarField(v) # if one dimensional, default to scalar-field smoothing
+            return self.smooth_scalar_field(v) # if one dimensional, default to scalar-field smoothing
         else:
             Sv = Variable( torch.FloatTensor( v.size() ) )
             # smooth every dimension individually
             for d in range(0, self.dim):
-                Sv[d,...] = self.smoothScalarField(v[d, ...])
+                Sv[d,...] = self.smooth_scalar_field(v[d, ...])
             return Sv
 
 class DiffusionSmoother(Smoother):
@@ -67,7 +88,13 @@ class DiffusionSmoother(Smoother):
         super(DiffusionSmoother,self).__init__(sz,spacing,params)
         self.iter = params[('iter', 5, 'Number of iterations' )]
 
-    def smoothScalarField(self, v):
+    def set_iter(self,iter):
+        self.iter = iter
+
+    def get_iter(self):
+        return self.iter
+
+    def smooth_scalar_field(self, v):
         # basically just solving the heat equation for a few steps
         Sv = v.clone()
         # now iterate and average based on the neighbors
@@ -75,6 +102,9 @@ class DiffusionSmoother(Smoother):
             # multiply with smallest h^2 and divide by 2^dim to assure stability
             Sv = Sv + 0.5/(2**self.dim)*self.fdt.lap(Sv)*self.spacing.min()**2 # multiply with smallest h^2 to assure stability
         return Sv
+
+    def inverse_smooth_scalar_field(self, v):
+        raise ValueError('Sorry: Inversion of smoothing only supported for Fourier-based filters at the moment')
 
 # TODO: clean up the two Gaussian smoothers
 class GaussianSmoother(Smoother):
@@ -86,15 +116,23 @@ class GaussianSpatialSmoother(GaussianSmoother):
 
     def __init__(self, sz, spacing, params):
         super(GaussianSpatialSmoother,self).__init__(sz,spacing,params)
-        k_sz_h = params[('k_sz_h', None, 'size of the kernel' )]
+        self.k_sz_h = params[('k_sz_h', None, 'size of the kernel' )]
+        self.filter = None
 
-        if k_sz_h is None:
+    def set_k_sz_h(self,k_sz_h):
+        self.k_sz_h = k_sz_h
+
+    def get_k_sz_h(self):
+        return self.k_sz_h
+
+    def _create_filter(self):
+
+        if self.k_sz_h is None:
             self.k_sz = (2 * 5 + 1) * np.ones(self.dim, dtype='int')  # default kernel size
         else:
             self.k_sz = k_sz_h * 2 + 1  # this is to assure that the kernel is odd size
 
-        self.smoothingKernel = self._createSmoothingKernel(self.k_sz)
-
+        self.smoothingKernel = self._create_smoothing_kernel(self.k_sz)
         self.required_padding = (self.k_sz-1)/2
 
         if self.dim==1:
@@ -107,18 +145,18 @@ class GaussianSpatialSmoother(GaussianSmoother):
             raise ValueError('Can only create the smoothing kernel in dimensions 1-3')
 
         # TODO: Potentially do all of the computations in physical coordinates (for now just [-1,1]^d)
-    def _createSmoothingKernel(self, k_sz):
+    def _create_smoothing_kernel(self, k_sz):
         mus = np.zeros(self.dim)
         stds = np.ones(self.dim)
-        id = utils.identityMap(k_sz)
-        g = utils.computeNormalizedGaussian(id, mus, stds)
+        id = utils.identity_map(k_sz)
+        g = utils.compute_normalized_gaussian(id, mus, stds)
 
         return g
 
     # TODO: See if we can avoid the clone calls somehow
     # This is likely due to the slicing along the dimension for vector-valued field
     # TODO: implement a version that can be used for multi-channel multi-image inputs
-    def _filterInputWithPadding(self,I):
+    def _filter_input_with_padding(self, I):
         if self.dim==1:
             I_4d = I.view([1,1,1]+list(I.size()))
             I_pad = F.pad(I_4d,(self.required_padding[0],self.required_padding[0],0,0),mode='replicate').view(1,1,-1)
@@ -135,27 +173,49 @@ class GaussianSpatialSmoother(GaussianSmoother):
         else:
             raise ValueError('Can only perform padding in dimensions 1-3')
 
-    def smoothScalarField(self, v):
+    def smooth_scalar_field(self, v):
+        if self.filter is None:
+            self._create_filter()
         # just doing a Gaussian smoothing
-        return self._filterInputWithPadding(v)
+        return self._filter_input_with_padding(v)
+
+    def inverse_smooth_scalar_field(self, v):
+        raise ValueError('Sorry: Inversion of smoothing only supported for Fourier-based filters at the moment')
+
 
 class GaussianFourierSmoother(GaussianSmoother):
 
     def __init__(self, sz, spacing, params):
         super(GaussianFourierSmoother,self).__init__(sz,spacing,params)
-        gaussianStd = params[('gaussianStd', 0.15,'std for the Gaussian' )]
+        self.gaussianStd = params[('gaussian_std', 0.15,'std for the Gaussian' )]
+        self.FFilter = None
+
+    def _create_filter(self):
 
         mus = np.zeros(self.dim)
-        stds = gaussianStd*np.ones(self.dim)
-        id = utils.identityMap(self.sz)
-        g = utils.computeNormalizedGaussian(id, mus, stds)
+        stds = self.gaussianStd*np.ones(self.dim)
+        id = utils.identity_map(self.sz)
+        g = utils.compute_normalized_gaussian(id, mus, stds)
 
-        self.FFilter = ce.createComplexFourierFilter(g, self.sz )
+        self.FFilter = ce.create_complex_fourier_filter(g, self.sz)
 
-    def smoothScalarField(self, v):
+    def set_gaussian_std(self,gstd):
+        self.gaussianStd = gstd
+
+    def get_gaussian_std(self):
+        return self.gaussianStd
+
+    def smooth_scalar_field(self, v):
         # just doing a Gaussian smoothing
         # we need to instantiate a new filter function here every time for the autograd to work
-        return ce.fourierConvolution(v, self.FFilter)
+        if self.FFilter is None:
+            self._create_filter()
+        return ce.fourier_convolution(v, self.FFilter)
+
+    def inverse_smooth_scalar_field(self, v):
+        if self.FFilter is None:
+            self._create_filter()
+        return ce.inverse_fourier_convolution(v, self.FFilter)
 
 class SmootherFactory(object):
 
@@ -165,11 +225,21 @@ class SmootherFactory(object):
         self.spacing = spacing
         self.sz = sz
         self.dim = len( spacing )
+        self.default_smoother_type = 'gaussian'
 
-    def createSmoother(self,params):
+    def set_default_smoother_type_to_gaussian(self):
+        self.default_smoother_type = 'gaussian'
+
+    def set_default_smoother_type_to_diffusion(self):
+        self.default_smoother_type = 'diffusion'
+
+    def set_default_smoother_type_to_gaussianSpatial(self):
+        self.default_smoother_type = 'gaussianSpatial'
+
+    def create_smoother(self, params):
 
         cparams = params[('smoother',{})]
-        smootherType = cparams[('type', 'gaussian',
+        smootherType = cparams[('type', self.default_smoother_type,
                                           'type of smoother (difusion/gaussian/gaussianSpatial)' )]
         if smootherType=='diffusion':
             return DiffusionSmoother(self.sz,self.spacing,cparams)

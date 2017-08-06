@@ -73,7 +73,7 @@ class FigureEventHandler(object):
         self.fig.canvas.mpl_disconnect(self.on_key_press)
         self.fig.canvas.mpl_disconnect(self.on_key_release)
 
-    def eventIsRegistered(self,eventname,ax):
+    def event_is_registered(self, eventname, ax):
         if self.ax_events.has_key(eventname):
             registeredEvents = self.ax_events[eventname]
             for e in registeredEvents:
@@ -84,7 +84,7 @@ class FigureEventHandler(object):
     def add_axes_event(self, eventname, ax, eventfcn, getsyncfcn=None,setsyncfcn=None):
         if self.is_supported_event(eventname):
             print_debug('Registering an event')
-            if not self.eventIsRegistered(eventname,ax):
+            if not self.event_is_registered(eventname, ax):
                 self.ax_events[eventname].append((ax,eventfcn,getsyncfcn,setsyncfcn))
         else:
             print('Event ' + eventname + ' is not supported and cannot be registered')
@@ -152,7 +152,7 @@ class ImageViewer(object):
     def show(self):
         pass
 
-    def displayTitle(self):
+    def display_title(self):
         pass
 
 class ImageViewer3D(ImageViewer):
@@ -200,7 +200,7 @@ class ImageViewer3D(ImageViewer):
                 print_debug('Next slice')
                 self.next_slice()
 
-        self.displayTitle()
+        self.display_title()
 
 class ImageViewer3D_Sliced(ImageViewer3D):
 
@@ -237,12 +237,12 @@ class ImageViewer3D_Sliced(ImageViewer3D):
         self.index = (index) % self.data.shape[self.sliceDim]
         self.ax.imshow(self.get_slice_at_dimension(self.index))
         #self.ax.images[0].set_array(self.get_slice_at_dimension(self.index))
-        self.displayTitle()
+        self.display_title()
 
     def get_synchronize(self):
         return self.index
 
-    def displayTitle(self):
+    def display_title(self):
         plt.sca(self.ax)
         plt.title( self.textStr + ' = ' + str(self.index) + '/' + str(self.data.shape[self.sliceDim]-1) )
 
@@ -253,7 +253,7 @@ class ImageViewer3D_Sliced(ImageViewer3D):
         divider = make_axes_locatable(self.ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
         plt.gcf().colorbar(cim, cax=cax, orientation='vertical')
-        self.displayTitle()
+        self.display_title()
 
 
 class ImageViewer3D_Sliced_Contour(ImageViewer3D_Sliced):

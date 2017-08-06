@@ -14,6 +14,7 @@ import regularizer_factory as RF
 import similarity_measure_factory as SM
 
 import smoother_factory as SF
+import image_sampling as IS
 
 import utils
 
@@ -33,36 +34,62 @@ class RegistrationNet(nn.Module):
         self.nrOfChannels = sz[1]
 
     @abstractmethod
-    def createRegistrationParameters(self):
+    def create_registration_parameters(self):
         pass
 
     @abstractmethod
-    def getRegistrationParameters(self):
+    def get_registration_parameters(self):
         pass
 
     @abstractmethod
-    def createIntegrator(self):
+    def set_registration_parameters(self, p, sz, spacing):
         pass
 
+    @abstractmethod
+    def create_integrator(self):
+        pass
+
+    @abstractmethod
+    def downsample_registration_parameters(self, desiredSz):
+        pass
+
+    @abstractmethod
+    def upsample_registration_parameters(self, desiredSz):
+        pass
 
 class SVFNet(RegistrationNet):
     def __init__(self,sz,spacing,params):
         super(SVFNet, self).__init__(sz,spacing,params)
-        self.v = self.createRegistrationParameters()
-        self.integrator = self.createIntegrator()
+        self.v = self.create_registration_parameters()
+        self.integrator = self.create_integrator()
 
-    def createRegistrationParameters(self):
-        return utils.createNDVectorFieldParameter_multiN( self.sz[2::],self.nrOfImages )
+    def create_registration_parameters(self):
+        return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
-    def getRegistrationParameters(self):
+    def get_registration_parameters(self):
         return self.v
 
+    # TODO: improve interface. Do we need sz as input to the constructors?
+    def set_registration_parameters(self, p, sz, spacing):
+        self.v.data = p.data
+        self.sz = sz
+        self.spacing = spacing
+
+    def upsample_registration_parameters(self, desiredSz):
+        sampler = IS.ResampleImage()
+        vUpsampled,upsampled_spacing=sampler.upsample_image_to_size(self.v,self.spacing,desiredSz)
+        return vUpsampled,upsampled_spacing
+
+    def downsample_registration_parameters(self, desiredSz):
+        sampler = IS.ResampleImage()
+        vDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz)
+        return vDownsampled,downsampled_spacing
 
 class SVFImageNet(SVFNet):
     def __init__(self, sz, spacing, params):
         super(SVFImageNet, self).__init__(sz,spacing,params)
 
-    def createIntegrator(self):
+    def create_integrator(self):
         cparams = params[('forward_model',{},'settings for the forward model')]
         advection = FM.AdvectImage(self.sz, self.spacing)
         return RK.RK4(advection.f, advection.u, self.v, cparams)
@@ -79,12 +106,22 @@ class RegistrationLoss(nn.Module):
         super(RegistrationLoss, self).__init__()
         self.spacing = spacing
         self.sz = sz
+        self.params = params
 
-        self.similarityMeasure = (SM.SimilarityMeasureFactory(self.spacing).
-                                  createSimilarityMeasure(params))
+        self.smFactory = SM.SimilarityMeasureFactory(self.spacing)
+        self.similarityMeasure = None
+
+    def add_similarity_measure(self, simName, simMeasure):
+        self.smFactory.add_similarity_measure(simName,simMeasure)
+
+    def compute_similarity_energy(self, I1_warped, I1_target):
+        if self.similarityMeasure is None:
+            self.similarityMeasure = self.smFactory.create_similarity_measure(self.params)
+        sim = self.similarityMeasure.compute_similarity_multiNC(I1_warped, I1_target)
+        return sim
 
     @abstractmethod
-    def computeRegularizationEnergy(self, I0_source):
+    def compute_regularization_energy(self, I0_source):
         pass
 
 
@@ -93,14 +130,14 @@ class RegistrationImageLoss(RegistrationLoss):
     def __init__(self,sz,spacing,params):
         super(RegistrationImageLoss, self).__init__(sz,spacing,params)
 
-    def getEnergy(self, I1_warped, I0_source, I1_target):
-        sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
-        reg = self.computeRegularizationEnergy(I0_source)
+    def get_energy(self, I1_warped, I0_source, I1_target):
+        sim = self.compute_similarity_energy(I1_warped, I1_target)
+        reg = self.compute_regularization_energy(I0_source)
         energy = sim + reg
         return energy, sim, reg
 
     def forward(self, I1_warped, I0_source, I1_target):
-        energy, sim, reg = self.getEnergy( I1_warped, I0_source, I1_target)
+        energy, sim, reg = self.get_energy(I1_warped, I0_source, I1_target)
         return energy
 
 
@@ -108,15 +145,15 @@ class RegistrationMapLoss(RegistrationLoss):
     def __init__(self, sz, spacing, params):
         super(RegistrationMapLoss, self).__init__(sz, spacing, params)
 
-    def getEnergy(self, phi1, I0_source, I1_target):
-        I1_warped = utils.computeWarpedImage_multiNC(I0_source, phi1)
-        sim = self.similarityMeasure.computeSimilarity(I1_warped, I1_target)
-        reg = self.computeRegularizationEnergy(I0_source)
+    def get_energy(self, phi1, I0_source, I1_target):
+        I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1)
+        sim = self.compute_similarity_energy(I1_warped, I1_target)
+        reg = self.compute_regularization_energy(I0_source)
         energy = sim + reg
         return energy, sim, reg
 
     def forward(self, phi1, I0_source, I1_target):
-        energy, sim, reg = self.getEnergy(phi1, I0_source, I1_target)
+        energy, sim, reg = self.get_energy(phi1, I0_source, I1_target)
         return energy
 
 
@@ -128,17 +165,17 @@ class SVFImageLoss(RegistrationImageLoss):
         cparams = params[('loss',{},'settings for the loss function')]
 
         self.regularizer = (RF.RegularizerFactory(self.spacing).
-                            createRegularizer(cparams))
+                            create_regularizer(cparams))
 
-    def computeRegularizationEnergy(self,I0_source):
-        return self.regularizer.computeRegularizer_multiN(self.v)
+    def compute_regularization_energy(self, I0_source):
+        return self.regularizer.compute_regularizer_multiN(self.v)
 
 
 class SVFMapNet(SVFNet):
     def __init__(self,sz,spacing,params):
         super(SVFMapNet, self).__init__(sz,spacing,params)
 
-    def createIntegrator(self):
+    def create_integrator(self):
         cparams = self.params[('forward_model',{},'settings for the forward model')]
         advectionMap = FM.AdvectMap( self.sz, self.spacing )
         return RK.RK4(advectionMap.f,advectionMap.u,self.v,cparams)
@@ -156,30 +193,66 @@ class SVFMapLoss(RegistrationMapLoss):
         cparams = params[('loss',{},'settings for the loss function')]
 
         self.regularizer = (RF.RegularizerFactory(self.spacing).
-                            createRegularizer(cparams))
+                            create_regularizer(cparams))
 
-    def computeRegularizationEnergy(self,I0_source):
-        return self.regularizer.computeRegularizer_multiN(self.v)
+    def compute_regularization_energy(self, I0_source):
+        return self.regularizer.compute_regularizer_multiN(self.v)
 
 
 class LDDMMShootingVectorMomentumNet(RegistrationNet):
     def __init__(self,sz,spacing,params):
         super(LDDMMShootingVectorMomentumNet, self).__init__(sz,spacing,params)
-        self.m = self.createRegistrationParameters()
-        self.integrator = self.createIntegrator()
+        self.m = self.create_registration_parameters()
+        self.integrator = self.create_integrator()
 
-    def createRegistrationParameters(self):
-        return utils.createNDVectorFieldParameter_multiN( self.sz[2::], self.nrOfImages )
+    def create_registration_parameters(self):
+        return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
-    def getRegistrationParameters(self):
+    def get_registration_parameters(self):
         return self.m
 
+    def set_registration_parameters(self, p, sz, spacing):
+        self.m.data = p.data
+        self.sz = sz
+        self.spacing = spacing
+
+    def upsample_registration_parameters(self, desiredSz):
+        # 1) convert momentum to velocity
+        # 2) upsample velocity
+        # 3) convert upsampled velocity to momentum
+
+        raise ValueError('Not yet properly implemented. Run at a single scale instead for now')
+
+        cparams = self.params[('forward_model',{},'settings for the forward model')]
+        smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
+        v = smoother.smooth_vector_field_multiN(self.m)
+        sampler = IS.ResampleImage()
+        vUpsampled,upsampled_spacing=sampler.upsample_image_to_size(v,self.spacing,desiredSz)
+        smootherInverse = SF.SmootherFactory(desiredSz,upsampled_spacing).create_smoother(cparams)
+        mUpsampled = smootherInverse.inverse_smooth_vector_field_multiN(vUpsampled)
+        return mUpsampled,upsampled_spacing
+
+    def downsample_registration_parameters(self, desiredSz):
+        # 1) convert momentum to velocity
+        # 2) downsample velocity
+        # 3) convert downsampled velocity to momentum
+
+        raise ValueError('Not yet properly implemented. Run at a single scale instead for now')
+
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+        smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        v = smoother.smooth_vector_field_multiN(self.m)
+        sampler = IS.ResampleImage()
+        vDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz)
+        smootherInverse = SF.SmootherFactory(desiredSz, downsampled_spacing).create_smoother(cparams)
+        mDownsampled = smootherInverse.inverse_smooth_vector_field_multiN(vDownsampled)
+        return mDownsampled, downsampled_spacing
 
 class LDDMMShootingVectorMomentumImageNet(LDDMMShootingVectorMomentumNet):
     def __init__(self,sz,spacing,params):
         super(LDDMMShootingVectorMomentumImageNet, self).__init__(sz,spacing,params)
 
-    def createIntegrator(self):
+    def create_integrator(self):
         cparams = self.params[('forward_model',{},'settings for the forward model')]
         epdiffImage = FM.EPDiffImage( self.sz, self.spacing, cparams )
         return RK.RK4(epdiffImage.f,None,None,cparams)
@@ -195,10 +268,10 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
         self.m = m
 
         cparams = params[('forward_model',{},'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother(cparams)
+        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
 
-    def computeRegularizationEnergy(self,I0_source):
-        v = self.smoother.smoothVectorField_multiN(self.m)
+    def compute_regularization_energy(self, I0_source):
+        v = self.smoother.smooth_vector_field_multiN(self.m)
         reg = (v * self.m).sum() * self.spacing.prod()
         return reg
 
@@ -207,7 +280,7 @@ class LDDMMShootingVectorMomentumMapNet(LDDMMShootingVectorMomentumNet):
     def __init__(self,sz,spacing,params):
         super(LDDMMShootingVectorMomentumMapNet, self).__init__(sz,spacing,params)
 
-    def createIntegrator(self):
+    def create_integrator(self):
         cparams = self.params[('forward_model',{},'settings for the forward model')]
         epdiffMap = FM.EPDiffMap( self.sz, self.spacing, cparams )
         return RK.RK4(epdiffMap.f,None,None,cparams)
@@ -223,10 +296,10 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         self.m = m
 
         cparams = params[('forward_model',{},'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother(cparams)
+        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
 
-    def computeRegularizationEnergy(self,I0_source):
-        v = self.smoother.smoothVectorField_multiN(self.m)
+    def compute_regularization_energy(self, I0_source):
+        v = self.smoother.smooth_vector_field_multiN(self.m)
         reg = (v * self.m).sum() * self.spacing.prod()
         return reg
 
@@ -234,21 +307,69 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
 class LDDMMShootingScalarMomentumNet(RegistrationNet):
     def __init__(self,sz,spacing,params):
         super(LDDMMShootingScalarMomentumNet, self).__init__(sz,spacing,params)
-        self.lam = self.createRegistrationParameters()
-        self.integrator = self.createIntegrator()
+        self.lam = self.create_registration_parameters()
+        self.integrator = self.create_integrator()
 
-    def createRegistrationParameters(self):
-        return utils.createNDScalarFieldParameter_multiNC( self.sz[2::], self.nrOfImages, self.nrOfChannels )
+    def create_registration_parameters(self):
+        return utils.create_ND_scalar_field_parameter_multiNC(self.sz[2::], self.nrOfImages, self.nrOfChannels)
 
-    def getRegistrationParameters(self):
+    def get_registration_parameters(self):
         return self.lam
 
+    def set_registration_parameters(self, p, sz, spacing):
+        self.lam.data = p.data
+        self.sz = sz
+        self.spacing = spacing
+
+    def upsample_registration_parameters(self, desiredSz):
+        # 1) convert scalar momentum to velocity
+        # 2) upsample velocity
+        # 3) convert upsampled velocity to scalar momentum
+        # (for this find the scalar momentum which can generate the smoothed velocity)
+
+        raise ValueError('Not yet properly implemented. Run at a single scale instead for now')
+
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
+
+        cparams = self.params[('forward_model',{},'settings for the forward model')]
+        smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
+        v = smoother.smooth_vector_field_multiN(m)
+
+        sampler = IS.ResampleImage()
+        vUpsampled,upsampled_spacing=sampler.upsample_image_to_size(v,self.spacing,desiredSz)
+
+        mUpsampled = None
+        raise ValueError('TODO: implement velocity field to scalar momentum')
+
+        return mUpsampled,upsampled_spacing
+
+    def downsample_registration_parameters(self, desiredSz):
+        # 1) convert scalar momentum to velocity
+        # 2) downsample velocity
+        # 3) convert downsampled velocity to scalar momentum
+        # (for this find the scalar momentum which can generate the smoothed velocity)
+
+        raise ValueError('Not yet properly implemented. Run at a single scale instead for now')
+
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
+
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+        smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        v = smoother.smooth_vector_field_multiN(m)
+
+        sampler = IS.ResampleImage()
+        vDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz)
+
+        mUpsampled = None
+        raise ValueError('TODO: implement velocity field to scalar momentum')
+
+        return mDownsampled, downsampled_spacing
 
 class LDDMMShootingScalarMomentumImageNet(LDDMMShootingScalarMomentumNet):
     def __init__(self,sz,spacing,params):
         super(LDDMMShootingScalarMomentumImageNet, self).__init__(sz,spacing,params)
 
-    def createIntegrator(self):
+    def create_integrator(self):
         cparams = self.params[('forward_model',{},'settings for the forward model')]
         epdiffScalarMomentumImage = FM.EPDiffScalarMomentumImage( self.sz, self.spacing, cparams )
         return RK.RK4(epdiffScalarMomentumImage.f,None,None,cparams)
@@ -264,11 +385,11 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
         self.lam = lam
 
         cparams = params[('forward_model',{},'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother(cparams)
+        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
 
-    def computeRegularizationEnergy(self, I0_source):
-        m = utils.computeVectorMomentumFromScalarMomentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
-        v = self.smoother.smoothVectorField_multiN(m)
+    def compute_regularization_energy(self, I0_source):
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
+        v = self.smoother.smooth_vector_field_multiN(m)
         reg = (v * m).sum() * self.spacing.prod()
         return reg
 
@@ -277,7 +398,7 @@ class LDDMMShootingScalarMomentumMapNet(LDDMMShootingScalarMomentumNet):
     def __init__(self,sz,spacing,params):
         super(LDDMMShootingScalarMomentumMapNet, self).__init__(sz,spacing,params)
 
-    def createIntegrator(self):
+    def create_integrator(self):
         cparams = self.params[('forward_model',{},'settings for the forward model')]
         epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, cparams )
         return RK.RK4(epdiffScalarMomentumMap.f,None,None,cparams)
@@ -293,10 +414,10 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
         self.lam = lam
 
         cparams = params[('forward_model',{},'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).createSmoother(cparams)
+        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
 
-    def computeRegularizationEnergy(self, I0_source):
-        m = utils.computeVectorMomentumFromScalarMomentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
-        v = self.smoother.smoothVectorField_multiN(m)
+    def compute_regularization_energy(self, I0_source):
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
+        v = self.smoother.smooth_vector_field_multiN(m)
         reg = (v * m).sum() * self.spacing.prod()
         return reg

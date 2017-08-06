@@ -85,7 +85,7 @@ for iter in range(100):
     cIWarped = model(ISource)
 
     if iter%1==0:
-        energy, similarityEnergy, regEnergy = criterion.getEnergy(cIWarped, ITarget)
+        energy, similarityEnergy, regEnergy = criterion.get_energy(cIWarped, ITarget)
         print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}'
               .format(iter=iter,
                       energy=utils.t2np(energy),

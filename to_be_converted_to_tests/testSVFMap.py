@@ -88,7 +88,7 @@ for iter in range(100):
     phiWarped = model(identityMap)
 
     if iter%1==0:
-        energy, similarityEnergy, regEnergy = criterion.getEnergy(phiWarped, ISource, ITarget)
+        energy, similarityEnergy, regEnergy = criterion.get_energy(phiWarped, ISource, ITarget)
         print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}'
               .format(iter=iter,
                       energy=utils.t2np(energy),

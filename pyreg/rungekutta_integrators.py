@@ -14,7 +14,7 @@ class RKIntegrator(object):
 
     def __init__(self,f,u,pars,params):
 
-        self.nrOfTimeSteps = params[('numberOfTimeSteps', 10,
+        self.nrOfTimeSteps = params[('number_of_time_steps', 10,
                                                 'Number of time-steps to integrate the PDE')]
         self.f = f
 
@@ -28,6 +28,12 @@ class RKIntegrator(object):
         else:
             self.u = u
 
+    def set_number_of_time_steps(self, nr):
+        self.nrOfTimeSteps = nr
+
+    def get_number_of_time_steps(self):
+        return self.nrOfTimeSteps
+
     def solve(self,x,fromT,toT):
         # arguments need to be list so we can pass multiple variables at the same time
         assert type(x)==list
@@ -38,7 +44,7 @@ class RKIntegrator(object):
         for i in range(0, self.nrOfTimeSteps):
             #print('RKIter = ' + str( iter ) )
             #iter+=1
-            x = self.solveOneStep(x,currentT,dt)
+            x = self.solve_one_step(x, currentT, dt)
             currentT += dt
         #print( x )
         return x
@@ -55,20 +61,20 @@ class RKIntegrator(object):
         return [a+b for a,b in zip(x,y)]
 
     @abstractmethod
-    def solveOneStep(self,x,t,dt):
+    def solve_one_step(self, x, t, dt):
         # x and output of f are expected to be lists
         pass
 
 class EulerForward(RKIntegrator):
 
-    def solveOneStep(self,x,t,dt):
+    def solve_one_step(self, x, t, dt):
         #xp1 = [a+b*dt for a,b in zip(x,self.f(t,x,self.u(t)))]
         xp1 = self.xpyts(x,self.f(t,x,self.u(t, self.pars), self.pars),dt)
         return xp1
 
 class RK4(RKIntegrator):
 
-    def solveOneStep(self,x,t,dt):
+    def solve_one_step(self, x, t, dt):
         k1 = self.xts( self.f(t,x,self.u(t,self.pars), self.pars), dt )
         k2 = self.xts( self.f(t+0.5*dt, self.xpyts(x, k1, 0.5), self.u(t+  0.5 * dt, self.pars), self.pars), dt )
         k3 = self.xts( self.f(t+0.5*dt, self.xpyts(x, k2, 0.5), self.u(t + 0.5 * dt, self.pars), self.pars), dt)

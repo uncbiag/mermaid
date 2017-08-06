@@ -13,7 +13,7 @@ class ModelFactory(object):
         print('   LDDMMShooting              : shooting-based LDDMM using the vector momentum')
         print('   LDDMMShootingScalarMomentum: shooting-based LDDMM using the scalar momentum')
 
-    def createRegistrationModel(self,modelName,useMap,params):
+    def create_registration_model(self, modelName, useMap, params):
         cparams = params[('registration_model',{},'specifies the registration model')]
         cparams['type']= (modelName,'Name of the registration model')
         if modelName=='SVF':

@@ -28,7 +28,7 @@ def are_indices_close(loc):
             return False
     return True
 
-def createComplexFourierFilter(spatial_filter,sz,enforceMaxSymmetry=True):
+def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True):
     """
     Creates a filter in the Fourier domain given a spatial array defining the filter
     
@@ -123,7 +123,68 @@ class FourierConvolution(Function):
 
         return torch.FloatTensor(grad_input)
 
-def fourierConvolution(input, complex_fourier_filter):
+
+class InverseFourierConvolution(Function):
+    """
+    pyTorch function to compute convolutions in the Fourier domain: f = g*h
+    But uses the inverse of the smoothing filter
+    """
+
+    def __init__(self, complex_fourier_filter):
+        """
+        Constructor for the Fouier-based convolution
+
+        :param complex_fourier_filter: Filter in the Fourier domain as created by *createComplexFourierFilter*
+        """
+        # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
+        super(InverseFourierConvolution, self).__init__()
+        self.complex_fourier_filter = complex_fourier_filter
+
+    def forward(self, input):
+        """
+        Performs the Fourier-based filtering
+
+        :param input: Image
+        :return: Filtered-image
+        """
+        # do the filtering in the Fourier domain
+        conv_output = np.fft.ifftn(np.fft.fftn(input.numpy()) / self.complex_fourier_filter)
+        # result = abs(conv_output) # should in principle be real
+        result = conv_output.real
+
+        return torch.FloatTensor(result)
+
+    # This function has only a single output, so it gets only one gradient
+    def backward(self, grad_output):
+        """
+        Computes the gradient
+
+        :param grad_output: Gradient output of previous layer
+        :return: Gradient including the Fourier-based convolution
+        """
+
+        # Initialize all gradients w.r.t. inputs to
+        # None. Thanks to the fact that additional trailing Nones are
+        # ignored, the return statement is simple even when the function has
+        # optional inputs.
+
+        grad_input = None
+
+        # These needs_input_grad checks are optional and there only to
+        # improve efficiency. If you want to make your code simpler, you can
+        # skip them. Returning gradients for inputs that don't require it is
+        # not an error.
+        # if self.needs_input_grad[0]:
+        numpy_go = grad_output.numpy()
+        # we use the conjugate because the assumption was that the spatial filter is real
+
+        # THe following two lines should be correct
+        grad_input_c = (np.fft.ifftn( np.fft.fftn(numpy_go) / np.conjugate(self.complex_fourier_filter)))
+        grad_input = grad_input_c.real
+
+        return torch.FloatTensor(grad_input)
+
+def fourier_convolution(input, complex_fourier_filter):
     """
     Convenience function for Fourier-based convolutions. Make sure to use this one (instead of directly
     using the class FourierConvolution). This will assure that each call generates its own instance
@@ -139,7 +200,11 @@ def fourierConvolution(input, complex_fourier_filter):
     # return it.
     return FourierConvolution(complex_fourier_filter)(input)
 
-def checkFourierConv():
+def inverse_fourier_convolution(input, complex_fourier_filter):
+    # just filtering with inverse filter
+    return InverseFourierConvolution(complex_fourier_filter)(input)
+
+def check_fourier_conv():
     """
     Convenience function to check the gradient. Fails, as pytorch's check appears to have difficulty
     
@@ -156,14 +221,14 @@ def checkFourierConv():
 
     mus = np.zeros(dim)
     stds = np.ones(dim)
-    id = utils.identityMap(sz)
-    g = 10000*utils.computeNormalizedGaussian(id, mus, stds)
-    FFilter = createComplexFourierFilter(g, sz)
+    id = utils.identity_map(sz)
+    g = 10000*utils.compute_normalized_gaussian(id, mus, stds)
+    FFilter = create_complex_fourier_filter(g, sz)
     input = (Variable(torch.randn(sz).float(), requires_grad=True),)
     test = gradcheck(FourierConvolution(FFilter), input, eps=1e-6, atol=1e-4)
     print(test)
 
-def checkRunForwardAndBackward():
+def check_run_forward_and_backward():
     """
     Convenience function to check running the function forward and backward
     
@@ -171,7 +236,7 @@ def checkRunForwardAndBackward():
     """
     sz = [20,20]
     f = 1/400.*np.ones(sz)
-    FFilter = createComplexFourierFilter(f, sz, False)
+    FFilter = create_complex_fourier_filter(f, sz, False)
     input = Variable( torch.randn(sz).float(), requires_grad=True )
     fc = FourierConvolution(FFilter)(input)
     #print( fc )

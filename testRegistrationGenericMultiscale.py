@@ -14,21 +14,16 @@ Contributors:
 from __future__ import print_function
 import torch
 from torch.autograd import Variable
-import time
 
 import numpy as np
 
 import set_pyreg_paths
 
-from pyreg import utils
-
-import pyreg.visualize_registration_results as vizReg
 import pyreg.example_generation as eg
 import pyreg.module_parameters as pars
-
-import pyreg.model_factory as MF
 import pyreg.smoother_factory as SF
-import pyreg.custom_optimizers as CO
+
+import pyreg.multiscale_optimizer as MO
 
 # load settings from file
 loadSettingsFromFile = False
@@ -40,8 +35,8 @@ visualize = True # set to true if intermediate visualizations are desired
 smoothImages = True
 useRealImages = False
 nrOfIterations = 5 # number of iterations for the optimizer
-modelName = 'SVF'
-#modelName = 'LDDMMShooting'
+#modelName = 'SVF'
+modelName = 'LDDMMShooting'
 #modelName = 'LDDMMShootingScalarMomentum'
 dim = 2
 
@@ -82,11 +77,6 @@ print ('Spacing = ' + str( spacing ) )
 # All of the following manual settings can be removed if desired
 # they will then be replaced by their default setting
 
-mf = MF.ModelFactory( sz, spacing )
-
-model,criterion = mf.create_registration_model(modelName, useMap, params)
-print(model)
-
 # create the source and target image as pyTorch variables
 ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
 ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
@@ -101,73 +91,29 @@ if smoothImages:
     ISource = s.smooth_scalar_field(ISource)
     ITarget = s.smooth_scalar_field(ITarget)
 
-if useMap:
-    # create the identity map [-1,1]^d, since we will use a map-based implementation
-    id = utils.identity_map_multiN(sz)
-    identityMap = Variable( torch.from_numpy( id ), requires_grad=False )
 
-# use LBFGS as optimizer; this is essential for convergence when not using the Hilbert gradient
-#optimizer = torch.optim.LBFGS(model.parameters(),
-#                              lr=1,max_iter=1,max_eval=5,
-#                              tolerance_grad=1e-3,tolerance_change=1e-4,
-#                              history_size=5)
-
-optimizer = CO.LBFGS_LS(model.parameters(),
-                              lr=1.0,max_iter=1,max_eval=5,
-                              tolerance_grad=1e-3,tolerance_change=1e-4,
-                              history_size=5,line_search_fn='backtracking')
-
-# optimize for a few steps
-start = time.time()
-
-for iter in range(nrOfIterations):
-
-    def closure():
-        optimizer.zero_grad()
-        # 1) Forward pass: Compute predicted y by passing x to the model
-        # 2) Compute loss
-        if useMap:
-            phiWarped = model(identityMap, ISource)
-            loss = criterion(phiWarped, ISource, ITarget)
-        else:
-            IWarped = model(ISource)
-            loss = criterion(IWarped, ISource, ITarget)
-
-        loss.backward()
-        return loss
-
-    # take a step of the optimizer
-    optimizer.step(closure)
-
-    # apply the current state to either get the warped map or directly the warped source image
-    if useMap:
-        phiWarped = model(identityMap, ISource)
-    else:
-        cIWarped = model(ISource)
-
-    if iter%1==0:
-        if useMap:
-            energy, similarityEnergy, regEnergy = criterion.get_energy(phiWarped, ISource, ITarget)
-        else:
-            energy, similarityEnergy, regEnergy = criterion.get_energy(cIWarped, ISource, ITarget)
-
-        print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}'
-              .format(iter=iter,
-                      energy=utils.t2np(energy),
-                      similarityE=utils.t2np(similarityEnergy),
-                      regE=utils.t2np(regEnergy)))
-
-    if visualize:
-        if iter%5==0:
-            if useMap:
-                I1Warped = utils.compute_warped_image_multiNC(ISource, phiWarped)
-                vizReg.show_current_images(iter, ISource, ITarget, I1Warped, phiWarped)
-            else:
-                vizReg.show_current_images(iter, ISource, ITarget, cIWarped)
-
-print('time:', time.time() - start)
+mo = MO.MultiScaleRegistrationOptimizer(modelName,sz,spacing,useMap,params)
 
 
+#params['registration_model']['similarity_measure']['type'] = 'mySSD'
+#
+#import similarity_measure_factory as sm
+#
+#class mySSD(sm.SimilarityMeasure):
+#    def compute_similarity(self,I0,I1):
+#        print('Computing my SSD')
+#        return ((I0 - I1) ** 2).sum() / (0.1**2) * self.volumeElement
+
+#mo.add_similarity_measure('mySSD', mySSD)
+
+mo.set_source_image(ISource)
+mo.set_target_image(ITarget)
+
+mo.set_scale_factors([1.0, 0.5, 0.25])
+mo.set_number_of_iterations_per_scale([5, 10, 10])
+
+# and now do the optimization
+mo.optimize()
 
 if saveSettingsToFile:
     params.write_JSON(modelName + '_settings_clean.json')

@@ -20,34 +20,34 @@ class ParameterDict(object):
             'com = ' + self.com.__str__() + "\n" + \
             'currentCategoryName = ' + str( self.currentCategoryName) +"\n"
 
-    def loadJSON(self, fileName):
+    def load_JSON(self, fileName):
         with open(fileName) as data_file:
             if self.printSettings:
                 print('Loading parameter file = ' + fileName )
             self.ext = json.load(data_file)
 
-    def writeJSON(self, fileName):
+    def write_JSON(self, fileName):
         with open(fileName, 'w') as outfile:
             if self.printSettings:
                 print('Writing parameter file = ' + fileName )
             json.dump(self.int, outfile, indent=4, sort_keys=True)
 
-    def writeJSONComments(self, fileNameComments):
+    def write_JSON_comments(self, fileNameComments):
         with open(fileNameComments, 'w') as outfile:
             if self.printSettings:
                 print('Writing parameter file = ' + fileNameComments )
             json.dump(self.com, outfile, indent=4, sort_keys=True)
 
-    def printSettingsOn(self):
+    def print_settings_on(self):
         self.printSettings = True
 
-    def printSettingsOff(self):
+    def print_settings_off(self):
         self.printSettings = False
 
-    def getPrintSettings(self):
+    def get_print_settings(self):
         return self.printSettings
 
-    def _setValueOfInstance(self,ext,int,com,currentCategoryName):
+    def _set_value_of_instance(self, ext, int, com, currentCategoryName):
         self.ext = ext
         self.int = int
         self.com = com
@@ -72,21 +72,21 @@ class ParameterDict(object):
             lT = len(key_or_keyTuple)
             if lT==1:
                 # treat this as if it would only be the keyword
-                return self._getCurrentKey( key_or_keyTuple[0] )
+                return self._get_current_key(key_or_keyTuple[0])
             elif lT==2:
                 # treat this as keyword + default value
-                return self._getCurrentKey( key_or_keyTuple[0],
-                                             key_or_keyTuple[1] )
+                return self._get_current_key(key_or_keyTuple[0],
+                                             key_or_keyTuple[1])
             elif lT==3:
                 # treat this as keyword + default value + comment
-                return self._getCurrentKey( key_or_keyTuple[0],
+                return self._get_current_key(key_or_keyTuple[0],
                                              key_or_keyTuple[1],
-                                             key_or_keyTuple[2] )
+                                             key_or_keyTuple[2])
             else:
                 raise ValueError('Tuple of incorrect size')
         else:
             # now we just want to return it (there is no default value or comment)
-            return self._getCurrentKey( key_or_keyTuple )
+            return self._get_current_key(key_or_keyTuple)
 
 
     def __setitem__(self, key, valueTuple):
@@ -109,15 +109,15 @@ class ParameterDict(object):
         if type(value)==dict:
             # only add if this is an empty dictionary
             if len(value)==0:
-                self._setCurrentCategory(key,comment)
+                self._set_current_category(key, comment)
             else:
                 raise ValueError('Can only add empty dictionaries')
             # we are assigning a category
         else:
             # now we have to set an actual value (not a category)
-            self._setCurrentKey(key,value,comment)
+            self._set_current_key(key, value, comment)
 
-    def _setCurrentCategory(self, key, comment):
+    def _set_current_category(self, key, comment):
         currentCategoryName = self.currentCategoryName + '.' + str(key)
 
         if not self.ext.has_key(key) or (self.ext.has_key(key) and type(self.ext[key])!=dict):
@@ -133,7 +133,7 @@ class ParameterDict(object):
             if len(comment) > 0:
                 self.com[key]['__doc__'] = comment
 
-    def _setCurrentKey(self, key, value, comment=None):
+    def _set_current_key(self, key, value, comment=None):
 
         if self.printSettings:
             if self.ext.has_key(key):
@@ -149,7 +149,7 @@ class ParameterDict(object):
                 self.com[key] = comment
 
 
-    def _getCurrentKey(self, key, defaultValue=None, comment=None):
+    def _get_current_key(self, key, defaultValue=None, comment=None):
 
         # returns a ParDicts object if we are accessing a category (i.e., a dictionary)
         # returns just the value if it is a regular value
@@ -169,7 +169,7 @@ class ParameterDict(object):
 
                 newpar = ParameterDict()
                 currentCategoryName = self.currentCategoryName + '.' + str(key)
-                newpar._setValueOfInstance(self.ext[key],self.int[key],self.com[key],currentCategoryName)
+                newpar._set_value_of_instance(self.ext[key], self.int[key], self.com[key], currentCategoryName)
 
                 return newpar
             else:
@@ -182,36 +182,39 @@ class ParameterDict(object):
                 return value
         else:
             # does not have the key, create it via the default value
-            if defaultValue is not None:
-                if type(defaultValue)==dict:
-                    # make sure it is empty and if it is create a category
-                    if len(defaultValue)==0:
-                        self._setCurrentCategory(key,comment)
-                        # and now we need to return it
-                        newpar = ParameterDict()
-                        currentCategoryName = self.currentCategoryName + '.' + str(key)
-                        newpar._setValueOfInstance(self.ext[key], self.int[key], self.com[key], currentCategoryName)
+            if defaultValue is None:
+                # then make it a dictionary
+                defaultValue = {}
+            # if defaultValue is not None:
+            if type(defaultValue)==dict:
+                # make sure it is empty and if it is create a category
+                if len(defaultValue)==0:
+                    self._set_current_category(key, comment)
+                    # and now we need to return it
+                    newpar = ParameterDict()
+                    currentCategoryName = self.currentCategoryName + '.' + str(key)
+                    newpar._set_value_of_instance(self.ext[key], self.int[key], self.com[key], currentCategoryName)
 
-                        return newpar
-                    else:
-                        raise ValueError('Cannot create a default key of type dict()')
+                    return newpar
                 else:
-                    # now we can create it and return it
-                    self.ext[key]=defaultValue
-                    self.int[key]=defaultValue
-                    if comment is not None:
-                        if len(comment)>0:
-                            self.com[key]=comment
-                    if self.printSettings:
-                        print('Using default value = ' + str(defaultValue) + ' for key = ' + str(key) + ' of category = ' + self.currentCategoryName  )
-
-                    return defaultValue
+                    raise ValueError('Cannot create a default key of type dict()')
             else:
-                raise ValueError('Cannot create key = ' + str(key) + ' without a default value')
+                # now we can create it and return it
+                self.ext[key]=defaultValue
+                self.int[key]=defaultValue
+                if comment is not None:
+                    if len(comment)>0:
+                        self.com[key]=comment
+                if self.printSettings:
+                    print('Using default value = ' + str(defaultValue) + ' for key = ' + str(key) + ' of category = ' + self.currentCategoryName  )
+
+                return defaultValue
+            #else:
+            #    raise ValueError('Cannot create key = ' + str(key) + ' without a default value')
 
 
 # test it
-def testParameterDict():
+def test_parameter_dict():
     p = ParameterDict()
 
     # we can directly assign
@@ -229,8 +232,8 @@ def testParameterDict():
     print(p)
 
     # lastly we can write it all out as json
-    p.writeJSON('test_pars.json')
-    p.writeJSONComments('test_pars_comments.json')
+    p.write_JSON('test_pars.json')
+    p.write_JSON_comments('test_pars_comments.json')
 
 
 
