@@ -34,10 +34,14 @@ useMap = False # set to true if a map-based implementation should be used
 visualize = True # set to true if intermediate visualizations are desired
 smoothImages = True
 useRealImages = False
-nrOfIterations = 5 # number of iterations for the optimizer
+
 #modelName = 'svf'
 #modelName = 'lddmm_shooting'
 modelName = 'lddmm_shooting_scalar_momentum'
+
+multi_scale_scale_factors = [1.0, 0.5, 0.25]
+multi_scale_iterations_per_scale = [50, 100, 100]
+
 dim = 2
 
 if useMap:
@@ -92,84 +96,13 @@ if smoothImages:
 
 mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,useMap,params)
 
-'''
-params['registration_model']['similarity_measure']['type'] = 'mySSD'
-
-import similarity_measure_factory as sm
-
-class mySSD(sm.SimilarityMeasure):
-    def compute_similarity(self,I0,I1):
-        print('Computing my SSD')
-        return ((I0 - I1) ** 2).sum() / (0.1**2) * self.volumeElement
-
-mo.add_similarity_measure('mySSD', mySSD)
-
-import registration_networks as RN
-import utils
-import image_sampling as IS
-import rungekutta_integrators as RK
-import forward_models as FM
-import regularizer_factory as RF
-
-class MySVFNet(RN.RegistrationNet):
-    def __init__(self,sz,spacing,params):
-        super(MySVFNet, self).__init__(sz,spacing,params)
-        self.v = self.create_registration_parameters()
-        self.integrator = self.create_integrator()
-
-    def create_registration_parameters(self):
-        return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
-
-    def get_registration_parameters(self):
-        return self.v
-
-    def set_registration_parameters(self, p, sz, spacing):
-        self.v.data = p.data
-        self.sz = sz
-        self.spacing = spacing
-
-    def create_integrator(self):
-        cparams = self.params[('forward_model',{},'settings for the forward model')]
-        advection = FM.AdvectImage(self.sz, self.spacing)
-        return RK.RK4(advection.f, advection.u, self.v, cparams)
-
-    def forward(self, I):
-        I1 = self.integrator.solve([I], self.tFrom, self.tTo)
-        return I1[0]
-
-    def upsample_registration_parameters(self, desiredSz):
-        sampler = IS.ResampleImage()
-        vUpsampled,upsampled_spacing=sampler.upsample_image_to_size(self.v,self.spacing,desiredSz)
-        return vUpsampled,upsampled_spacing
-
-    def downsample_registration_parameters(self, desiredSz):
-        sampler = IS.ResampleImage()
-        vDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz)
-        return vDownsampled,downsampled_spacing
-
-class MySVFImageLoss(RN.RegistrationImageLoss):
-    def __init__(self,v,sz,spacing,params):
-        super(MySVFImageLoss, self).__init__(sz,spacing,params)
-        self.v = v
-        cparams = params[('loss',{},'settings for the loss function')]
-        self.regularizer = (RF.RegularizerFactory(self.spacing).
-                            create_regularizer(cparams))
-
-    def compute_regularization_energy(self, I0_source):
-        return self.regularizer.compute_regularizer_multiN(self.v)
-
-myModelName = 'mySVF'
-mo.add_model(myModelName,MySVFNet,MySVFImageLoss)
-mo.set_model(myModelName)
-'''
-
 mo.set_model(modelName)
 
 mo.set_source_image(ISource)
 mo.set_target_image(ITarget)
 
-mo.set_scale_factors([1.0, 0.5, 0.25])
-mo.set_number_of_iterations_per_scale([50, 100, 100])
+mo.set_scale_factors(multi_scale_scale_factors)
+mo.set_number_of_iterations_per_scale(multi_scale_iterations_per_scale)
 
 # and now do the optimization
 mo.optimize()

@@ -85,7 +85,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         if self.useMap:
             # create the identity map [-1,1]^d, since we will use a map-based implementation
-            id = utils.identity_map_multiN(sz)
+            id = utils.identity_map_multiN(self.sz)
             self.identityMap = Variable(torch.from_numpy(id), requires_grad=False)
 
 

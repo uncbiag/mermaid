@@ -29,20 +29,23 @@ import pyreg.module_parameters as pars
 import pyreg.model_factory as MF
 import pyreg.smoother_factory as SF
 import pyreg.custom_optimizers as CO
+import pyreg.multiscale_optimizer as MO
 
 # load settings from file
 loadSettingsFromFile = False
 saveSettingsToFile = True
 
 # select the desired dimension of the registration
-useMap = True# set to true if a map-based implementation should be used
+useMap = False# set to true if a map-based implementation should be used
 visualize = True # set to true if intermediate visualizations are desired
 smoothImages = True
 useRealImages = False
-nrOfIterations = 5 # number of iterations for the optimizer
-modelName = 'svf'
-#modelName = 'lddmm_shooting'
+nrOfIterations = 25 # number of iterations for the optimizer
+
+#modelName = 'svf'
+modelName = 'lddmm_shooting'
 #modelName = 'lddmm_shooting_scalar_momentum'
+
 dim = 2
 
 if useMap:
@@ -106,73 +109,16 @@ if smoothImages:
     ISource = s.smooth_scalar_field(ISource)
     ITarget = s.smooth_scalar_field(ITarget)
 
-if useMap:
-    # create the identity map [-1,1]^d, since we will use a map-based implementation
-    id = utils.identity_map_multiN(sz)
-    identityMap = Variable( torch.from_numpy( id ), requires_grad=False )
+so = MO.SingleScaleRegistrationOptimizer(sz,spacing,useMap,params)
+so.set_model(modelName)
 
-# use LBFGS as optimizer; this is essential for convergence when not using the Hilbert gradient
-#optimizer = torch.optim.LBFGS(model.parameters(),
-#                              lr=1,max_iter=1,max_eval=5,
-#                              tolerance_grad=1e-3,tolerance_change=1e-4,
-#                              history_size=5)
+so.set_number_of_iterations(nrOfIterations)
 
-optimizer = CO.LBFGS_LS(model.parameters(),
-                              lr=1.0,max_iter=1,max_eval=5,
-                              tolerance_grad=1e-3,tolerance_change=1e-4,
-                              history_size=5,line_search_fn='backtracking')
+so.set_source_image(ISource)
+so.set_target_image(ITarget)
 
-# optimize for a few steps
-start = time.time()
-
-for iter in range(nrOfIterations):
-
-    def closure():
-        optimizer.zero_grad()
-        # 1) Forward pass: Compute predicted y by passing x to the model
-        # 2) Compute loss
-        if useMap:
-            phiWarped = model(identityMap, ISource)
-            loss = criterion(phiWarped, ISource, ITarget)
-        else:
-            IWarped = model(ISource)
-            loss = criterion(IWarped, ISource, ITarget)
-
-        loss.backward()
-        return loss
-
-    # take a step of the optimizer
-    optimizer.step(closure)
-
-    # apply the current state to either get the warped map or directly the warped source image
-    if useMap:
-        phiWarped = model(identityMap, ISource)
-    else:
-        cIWarped = model(ISource)
-
-    if iter%1==0:
-        if useMap:
-            energy, similarityEnergy, regEnergy = criterion.get_energy(phiWarped, ISource, ITarget)
-        else:
-            energy, similarityEnergy, regEnergy = criterion.get_energy(cIWarped, ISource, ITarget)
-
-        print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}'
-              .format(iter=iter,
-                      energy=utils.t2np(energy),
-                      similarityE=utils.t2np(similarityEnergy),
-                      regE=utils.t2np(regEnergy)))
-
-    if visualize:
-        if iter%5==0:
-            if useMap:
-                I1Warped = utils.compute_warped_image_multiNC(ISource, phiWarped)
-                vizReg.show_current_images(iter, ISource, ITarget, I1Warped, phiWarped)
-            else:
-                vizReg.show_current_images(iter, ISource, ITarget, cIWarped)
-
-print('time:', time.time() - start)
-
-
+# and now do the optimization
+so.optimize()
 
 if saveSettingsToFile:
     params.write_JSON(modelName + '_settings_clean.json')
