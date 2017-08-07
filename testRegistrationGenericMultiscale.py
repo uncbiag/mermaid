@@ -36,8 +36,8 @@ smoothImages = True
 useRealImages = False
 nrOfIterations = 5 # number of iterations for the optimizer
 #modelName = 'svf'
-#modelName = 'lddmm_shooting'
-modelName = 'lddmm_shooting_scalar_momentum'
+modelName = 'lddmm_shooting'
+#modelName = 'lddmm_shooting_scalar_momentum'
 dim = 2
 
 if useMap:
@@ -76,12 +76,6 @@ assert( len(sz)==dim+2 )
 spacing = 1./(sz[2::]-1) # the first two dimensions are batch size and number of image channels
 print ('Spacing = ' + str( spacing ) )
 
-# some settings for the registration energy
-# Reg[\Phi,\alpha,\gamma] + 1/\sigma^2 Sim[I(1),I_1]
-
-# All of the following manual settings can be removed if desired
-# they will then be replaced by their default setting
-
 # create the source and target image as pyTorch variables
 ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
 ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
@@ -96,20 +90,80 @@ if smoothImages:
     ISource = s.smooth_scalar_field(ISource)
     ITarget = s.smooth_scalar_field(ITarget)
 
+mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,useMap,params)
 
-mo = MO.MultiScaleRegistrationOptimizer(modelName,sz,spacing,useMap,params)
+'''
+params['registration_model']['similarity_measure']['type'] = 'mySSD'
 
+import similarity_measure_factory as sm
 
-#params['registration_model']['similarity_measure']['type'] = 'mySSD'
-#
-#import similarity_measure_factory as sm
-#
-#class mySSD(sm.SimilarityMeasure):
-#    def compute_similarity(self,I0,I1):
-#        print('Computing my SSD')
-#        return ((I0 - I1) ** 2).sum() / (0.1**2) * self.volumeElement
+class mySSD(sm.SimilarityMeasure):
+    def compute_similarity(self,I0,I1):
+        print('Computing my SSD')
+        return ((I0 - I1) ** 2).sum() / (0.1**2) * self.volumeElement
 
-#mo.add_similarity_measure('mySSD', mySSD)
+mo.add_similarity_measure('mySSD', mySSD)
+
+import registration_networks as RN
+import utils
+import image_sampling as IS
+import rungekutta_integrators as RK
+import forward_models as FM
+import regularizer_factory as RF
+
+class MySVFNet(RN.RegistrationNet):
+    def __init__(self,sz,spacing,params):
+        super(MySVFNet, self).__init__(sz,spacing,params)
+        self.v = self.create_registration_parameters()
+        self.integrator = self.create_integrator()
+
+    def create_registration_parameters(self):
+        return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
+
+    def get_registration_parameters(self):
+        return self.v
+
+    def set_registration_parameters(self, p, sz, spacing):
+        self.v.data = p.data
+        self.sz = sz
+        self.spacing = spacing
+
+    def create_integrator(self):
+        cparams = self.params[('forward_model',{},'settings for the forward model')]
+        advection = FM.AdvectImage(self.sz, self.spacing)
+        return RK.RK4(advection.f, advection.u, self.v, cparams)
+
+    def forward(self, I):
+        I1 = self.integrator.solve([I], self.tFrom, self.tTo)
+        return I1[0]
+
+    def upsample_registration_parameters(self, desiredSz):
+        sampler = IS.ResampleImage()
+        vUpsampled,upsampled_spacing=sampler.upsample_image_to_size(self.v,self.spacing,desiredSz)
+        return vUpsampled,upsampled_spacing
+
+    def downsample_registration_parameters(self, desiredSz):
+        sampler = IS.ResampleImage()
+        vDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz)
+        return vDownsampled,downsampled_spacing
+
+class MySVFImageLoss(RN.RegistrationImageLoss):
+    def __init__(self,v,sz,spacing,params):
+        super(MySVFImageLoss, self).__init__(sz,spacing,params)
+        self.v = v
+        cparams = params[('loss',{},'settings for the loss function')]
+        self.regularizer = (RF.RegularizerFactory(self.spacing).
+                            create_regularizer(cparams))
+
+    def compute_regularization_energy(self, I0_source):
+        return self.regularizer.compute_regularizer_multiN(self.v)
+
+myModelName = 'mySVF'
+mo.add_model(myModelName,MySVFNet,MySVFImageLoss)
+mo.set_model(myModelName)
+'''
+
+mo.set_model(modelName)
 
 mo.set_source_image(ISource)
 mo.set_target_image(ITarget)

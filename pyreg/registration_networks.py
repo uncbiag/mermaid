@@ -49,13 +49,11 @@ class RegistrationNet(nn.Module):
     def create_integrator(self):
         pass
 
-    @abstractmethod
     def downsample_registration_parameters(self, desiredSz):
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
     def upsample_registration_parameters(self, desiredSz):
-        pass
+        raise NotImplementedError
 
 class SVFNet(RegistrationNet):
     def __init__(self,sz,spacing,params):

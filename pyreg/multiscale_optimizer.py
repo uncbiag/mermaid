@@ -22,12 +22,15 @@ class Optimizer(object):
        """
     __metaclass__ = ABCMeta
 
-    def __init__(self,modelName,sz,spacing,useMap,params):
-        self.modelName = modelName
+    def __init__(self,sz,spacing,useMap,params):
         self.sz = sz
         self.spacing = spacing
         self.useMap = useMap
         self.params = params
+
+    @abstractmethod
+    def set_model(self,modelName):
+        pass
 
     @abstractmethod
     def optimize(self):
@@ -35,8 +38,8 @@ class Optimizer(object):
 
 class ImageRegistrationOptimizer(Optimizer):
 
-    def __init__(self,modelName,sz,spacing,useMap,params):
-        super(ImageRegistrationOptimizer,self).__init__(modelName,sz,spacing,useMap,params)
+    def __init__(self,sz,spacing,useMap,params):
+        super(ImageRegistrationOptimizer,self).__init__(sz,spacing,useMap,params)
         self.ISource = None
         self.ITarget = None
 
@@ -47,28 +50,36 @@ class ImageRegistrationOptimizer(Optimizer):
         self.ITarget = I
 
 class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
-    def __init__(self,modelName,sz,spacing,useMap,params):
-        super(SingleScaleRegistrationOptimizer,self).__init__(modelName,sz,spacing,useMap,params)
+    def __init__(self,sz,spacing,useMap,params):
+        super(SingleScaleRegistrationOptimizer,self).__init__(sz,spacing,useMap,params)
 
-        mf = MF.ModelFactory(self.sz, self.spacing)
-        self.model, self.criterion = mf.create_registration_model(modelName, params)
-        print(self.model)
+        self.mf = MF.ModelFactory(self.sz, self.spacing)
+
+        self.model = None
+        self.criterion = None
+
+        self.identityMap = None
+        self.optimizer = None
 
         self.nrOfIterations = 1
         self.visualize = True
 
-        self.optimizer = None
+    def set_model(self,modelName):
 
-        if useMap:
+        self.model, self.criterion = self.mf.create_registration_model(modelName, self.params)
+        print(self.model)
+
+        if self.useMap:
             # create the identity map [-1,1]^d, since we will use a map-based implementation
             id = utils.identity_map_multiN(sz)
             self.identityMap = Variable(torch.from_numpy(id), requires_grad=False)
+
 
     def add_similarity_measure(self, simName, simMeasure):
         self.criterion.add_similarity_measure(simName, simMeasure)
 
     def add_model(self, modelName, modelNetworkClass, modelLossClass):
-        self.model.add_model(modelName,modelNetworkClass,modelLossClass)
+        self.mf.add_model(modelName,modelNetworkClass,modelLossClass)
 
     def set_optimization_parameters(self, p):
         self.model.set_registration_parameters(p, self.sz, self.spacing)
@@ -101,6 +112,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
     def optimize(self):
         # do the actual optimization
+
+        if (self.model is None) or (self.criterion is None):
+            raise ValueError('Please specify a model to solve with set_model first')
+
         self.optimizer = CO.LBFGS_LS(self.model.parameters(),
                                 lr=1.0, max_iter=1, max_eval=5,
                                 tolerance_grad=1e-3, tolerance_change=1e-4,
@@ -145,8 +160,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
 
 class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
-    def __init__(self,modelName,sz,spacing,useMap,params):
-        super(MultiScaleRegistrationOptimizer,self).__init__(modelName,sz,spacing,useMap,params)
+    def __init__(self,sz,spacing,useMap,params):
+        super(MultiScaleRegistrationOptimizer,self).__init__(sz,spacing,useMap,params)
         self.scaleFactors = [1.]
         self.scaleIterations = [100]
 
@@ -156,9 +171,14 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.add_model_networkClass = None
         self.add_model_lossClass = None
 
+        self.model_name = None
+
     def add_similarity_measure(self, simName, simMeasure):
         self.addSimName = simName
         self.addSimMeasure = simMeasure
+
+    def set_model(self,modelName):
+        self.model_name = modelName
 
     def add_model(self, add_model_name, add_model_networkClass, add_model_lossClass):
         self.add_model_name = add_model_name
@@ -219,7 +239,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             szC = ISourceC.size() # this assumes the BxCxXxYxZ format
 
-            ssOpt = SingleScaleRegistrationOptimizer(self.modelName,szC,spacingC,self.useMap,self.params)
+            ssOpt = SingleScaleRegistrationOptimizer(szC,spacingC,self.useMap,self.params)
 
             if (self.addSimName is not None) and (self.addSimMeasure is not None):
                 ssOpt.add_similarity_measure(self.addSimName, self.addSimMeasure)
@@ -228,6 +248,9 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                      (self.add_model_networkClass is not None) and
                      (self.add_model_lossClass is not None) ):
                 ssOpt.add_model(self.add_model_name,self.add_model_networkClass,self.add_model_lossClass)
+
+            # now set the actual model we want to solve
+            ssOpt.set_model(self.model_name)
 
             ssOpt.set_source_image(ISourceC)
             ssOpt.set_target_image(ITargetC)
