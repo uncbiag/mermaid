@@ -67,7 +67,7 @@ to define the following methods:
 
 - :meth:`create_registration_parameters`: To set up the registration parameters required by the model. Needs to be torch `Parameter` type as defined in `torch.autograd`
 - :meth:`get_registration_parameter`: simply return the registration parameter
-- :meth:`set_registration_paramters`: to set the paramters, will be needed by the multi-scale optimizer to propagate parameters from one level to the next.
+- :meth:`set_registration_paramters`: to set the parameters, will be needed by the multi-scale optimizer to propagate parameters from one level to the next.
 - :meth:`create_integrator`: since we are dealing with time-dependent problems here, this is to set up (and return!) an integrator for the system that is to be solved.
 - :meth:`forward`: this is the method where all the magic happens. I.e., where we solve the forward problem by integrating the model forward in time.
 - :meth:`upsample_registration_parameters`: method to spatially upsample the registration parameters. Needs to be defined if the multi-scale solver should be used. Does not need to be defined when solving on a single scale.

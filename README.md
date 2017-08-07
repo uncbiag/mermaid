@@ -12,7 +12,7 @@ The goal is to:
 
 # Setup
 
-* To compile the spatial transformer code simply go to the pyreg/libraries directory and exectute 'python build.by'
+* To compile the spatial transformer code simply go to the pyreg/libraries directory and exectute 'python build.py'
 * To run the code import set_pyreg_paths (which will take care of the paths for the libraries)
 * The main registation code example is in testRegistrationGeneric.py
 * To compile the documentation, simply execute 'make html' in the docs directory. This requires an installation of graphviz to render the inheritence diagrams. On OSX this can for example be intalled by 'brew install graphviz'
