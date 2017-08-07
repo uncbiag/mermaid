@@ -1,6 +1,7 @@
 """
 This is a test implementation to see if we can use pyTorch to solve
 LDDMM-style registration problems via automatic differentiation.
+In particular, it demonstrates how to add a custom class and similarity measure.
 
 Contributors:
   Marc Niethammer: mn@cs.unc.edu
@@ -34,16 +35,11 @@ useMap = False # set to true if a map-based implementation should be used
 visualize = True # set to true if intermediate visualizations are desired
 smoothImages = True
 useRealImages = False
-nrOfIterations = 5 # number of iterations for the optimizer
-#modelName = 'svf'
-#modelName = 'lddmm_shooting'
-modelName = 'lddmm_shooting_scalar_momentum'
-dim = 2
 
-if useMap:
-    modelName = modelName + '_map'
-else:
-    modelName = modelName + '_image'
+modelName = 'my_svf'
+multi_scale_scale_factors = [1.0, 0.5, 0.25]
+multi_scale_iterations_per_scale = [50, 100, 100]
+dim = 2
 
 # general parameters
 params = pars.ParameterDict()
@@ -51,9 +47,6 @@ params = pars.ParameterDict()
 if loadSettingsFromFile:
     settingFile = modelName + '_settings.json'
     params.load_JSON(settingFile)
-
-torch.set_num_threads(4) # not sure if this actually affects anything
-print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
 
 if useRealImages:
     I0,I1= eg.CreateRealExampleImages(dim).create_image_pair()
@@ -92,17 +85,18 @@ if smoothImages:
 
 mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,useMap,params)
 
-'''
+# now customize everything
+
 params['registration_model']['similarity_measure']['type'] = 'mySSD'
 
-import similarity_measure_factory as sm
+import similarity_measure_factory as SM
 
-class mySSD(sm.SimilarityMeasure):
+class MySSD(SM.SimilarityMeasure):
     def compute_similarity(self,I0,I1):
         print('Computing my SSD')
         return ((I0 - I1) ** 2).sum() / (0.1**2) * self.volumeElement
 
-mo.add_similarity_measure('mySSD', mySSD)
+mo.add_similarity_measure('mySSD', MySSD)
 
 import registration_networks as RN
 import utils
@@ -158,18 +152,16 @@ class MySVFImageLoss(RN.RegistrationImageLoss):
     def compute_regularization_energy(self, I0_source):
         return self.regularizer.compute_regularizer_multiN(self.v)
 
-myModelName = 'mySVF'
-mo.add_model(myModelName,MySVFNet,MySVFImageLoss)
-mo.set_model(myModelName)
-'''
+mo.add_model(modelName,MySVFNet,MySVFImageLoss)
+mo.set_model(modelName)
 
 mo.set_model(modelName)
 
 mo.set_source_image(ISource)
 mo.set_target_image(ITarget)
 
-mo.set_scale_factors([1.0, 0.5, 0.25])
-mo.set_number_of_iterations_per_scale([50, 100, 100])
+mo.set_scale_factors(multi_scale_scale_factors)
+mo.set_number_of_iterations_per_scale(multi_scale_iterations_per_scale)
 
 # and now do the optimization
 mo.optimize()

@@ -27,6 +27,13 @@ class Optimizer(object):
         self.spacing = spacing
         self.useMap = useMap
         self.params = params
+        self.rel_ftol = 1e-4
+
+    def set_rel_ftol(self,rel_ftol):
+        self.rel_ftol = rel_ftol
+
+    def get_rel_ftol(self):
+        return self.rel_ftol
 
     @abstractmethod
     def set_model(self,modelName):
@@ -42,12 +49,19 @@ class ImageRegistrationOptimizer(Optimizer):
         super(ImageRegistrationOptimizer,self).__init__(sz,spacing,useMap,params)
         self.ISource = None
         self.ITarget = None
+        self.optimizer_name = 'lbfgs_ls'
 
     def set_source_image(self, I):
         self.ISource = I
 
     def set_target_image(self, I):
         self.ITarget = I
+
+    def set_optimizer_by_name(self, optimizer_name):
+        self.optimizer_name = optimizer_name
+
+    def get_optimizer_by_name(self):
+        return self.optimizer_name
 
 class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def __init__(self,sz,spacing,useMap,params):
@@ -116,13 +130,22 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if (self.model is None) or (self.criterion is None):
             raise ValueError('Please specify a model to solve with set_model first')
 
-        self.optimizer = CO.LBFGS_LS(self.model.parameters(),
-                                lr=1.0, max_iter=1, max_eval=5,
-                                tolerance_grad=1e-3, tolerance_change=1e-4,
-                                history_size=5, line_search_fn='backtracking')
+        if self.optimizer_name is None:
+            raise ValueError('Need to select an optimizer')
+        elif self.optimizer_name=='lbfgs_ls':
+            self.optimizer = CO.LBFGS_LS(self.model.parameters(),
+                                    lr=1.0, max_iter=1, max_eval=5,
+                                    tolerance_grad=1e-3, tolerance_change=1e-4,
+                                    history_size=5, line_search_fn='backtracking')
+        elif self.optimizer_name=='adam':
+            self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+        else:
+            raise ValueError('Optimizer = ' + str(self.optimizer_name) + ' not yet supported')
 
         # optimize for a few steps
         start = time.time()
+
+        last_energy = None
 
         for iter in range(self.nrOfIterations):
 
@@ -141,11 +164,32 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 else:
                     energy, similarityEnergy, regEnergy = self.criterion.get_energy(cIWarped, self.ISource, self.ITarget)
 
-                print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}'
-                      .format(iter=iter,
-                              energy=utils.t2np(energy),
-                              similarityE=utils.t2np(similarityEnergy),
-                              regE=utils.t2np(regEnergy)))
+                cur_energy = utils.t2np(energy)
+
+                if last_energy is not None:
+
+                    # relative function toleranc: |f(xi)-f(xi+1)|/(1+|f(xi)|)
+                    rel_f = abs(last_energy-cur_energy)/(1+abs(cur_energy))
+
+                    print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF={relF}'
+                          .format(iter=iter,
+                                energy=cur_energy,
+                                similarityE=utils.t2np(similarityEnergy),
+                                regE=utils.t2np(regEnergy),
+                                relF=rel_f))
+
+                    if rel_f < self.rel_ftol:
+                        print('Reached relative function tolerance of = ' + str( self.rel_ftol ))
+                        break
+
+                else:
+                    print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF=X'
+                          .format(iter=iter,
+                                  energy=cur_energy,
+                                  similarityE=utils.t2np(similarityEnergy),
+                                  regE=utils.t2np(regEnergy)))
+
+                last_energy = cur_energy
 
             if self.visualize:
                 if iter%5==0:
@@ -241,9 +285,6 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             ssOpt = SingleScaleRegistrationOptimizer(szC,spacingC,self.useMap,self.params)
 
-            if (self.addSimName is not None) and (self.addSimMeasure is not None):
-                ssOpt.add_similarity_measure(self.addSimName, self.addSimMeasure)
-
             if ( (self.add_model_name is not None) and
                      (self.add_model_networkClass is not None) and
                      (self.add_model_lossClass is not None) ):
@@ -251,6 +292,12 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             # now set the actual model we want to solve
             ssOpt.set_model(self.model_name)
+
+            if (self.addSimName is not None) and (self.addSimMeasure is not None):
+                ssOpt.add_similarity_measure(self.addSimName, self.addSimMeasure)
+
+            ssOpt.set_optimizer_by_name(self.optimizer_name)
+            ssOpt.set_rel_ftol(self.get_rel_ftol())
 
             ssOpt.set_source_image(ISourceC)
             ssOpt.set_target_image(ITargetC)

@@ -21,7 +21,8 @@ The goal is to:
 
 There is a lot still to do. Here is an incomplete list:
 
-* CUDA implementation of the spatial transformer parts (this can follow the existing 2D spatial transformer code in CUDA)
+- Implement a convergence check for optimizer. Currently just stops after a fixed number of steps
+- CUDA implementation of the spatial transformer parts (this can follow the existing 2D spatial transformer code in CUDA)
 - image-smoothing based on CUDA (I wrote a pyTorch function to do it on the CPU in the Fourier domain)
 - In general, make sure that everything can also run on the GPU (as most of it is standard pyTorch, this should hopefully not be too difficult)
 - Write a more complete documentation (with sphinx and as part of the code)
