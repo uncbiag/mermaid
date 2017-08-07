@@ -62,7 +62,8 @@ We can write everything out as JSON:
     p.write_JSON('test_pars.json')
     p.write_JSON_comments('test_pars_comments.json')
 
- The former command just writes out the settings that were used (and hence are ideal to look up what the parameters that were used for a particular registration model were). The latter command writes out an annotated configuration file that explains all the settings.
+
+The former command just writes out the settings that were used (and hence are ideal to look up what the parameters that were used for a particular registration model were). The latter command writes out an annotated configuration file that explains all the settings.
 
 Lastly, we can of course also read settings by
 
