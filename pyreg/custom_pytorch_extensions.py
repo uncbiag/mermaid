@@ -139,6 +139,7 @@ class InverseFourierConvolution(Function):
         # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
         super(InverseFourierConvolution, self).__init__()
         self.complex_fourier_filter = complex_fourier_filter
+        self.alpha = 0.1
 
     def forward(self, input):
         """
@@ -148,7 +149,7 @@ class InverseFourierConvolution(Function):
         :return: Filtered-image
         """
         # do the filtering in the Fourier domain
-        conv_output = np.fft.ifftn(np.fft.fftn(input.numpy()) / self.complex_fourier_filter)
+        conv_output = np.fft.ifftn(np.fft.fftn(input.numpy()) / (self.alpha + self.complex_fourier_filter))
         # result = abs(conv_output) # should in principle be real
         result = conv_output.real
 
@@ -179,7 +180,7 @@ class InverseFourierConvolution(Function):
         # we use the conjugate because the assumption was that the spatial filter is real
 
         # THe following two lines should be correct
-        grad_input_c = (np.fft.ifftn( np.fft.fftn(numpy_go) / np.conjugate(self.complex_fourier_filter)))
+        grad_input_c = (np.fft.ifftn( np.fft.fftn(numpy_go) / (self.alpha + np.conjugate(self.complex_fourier_filter))))
         grad_input = grad_input_c.real
 
         return torch.FloatTensor(grad_input)

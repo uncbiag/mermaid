@@ -217,35 +217,17 @@ class LDDMMShootingVectorMomentumNet(RegistrationNet):
         self.spacing = spacing
 
     def upsample_registration_parameters(self, desiredSz):
-        # 1) convert momentum to velocity
-        # 2) upsample velocity
-        # 3) convert upsampled velocity to momentum
 
-        raise ValueError('Not yet properly implemented. Run at a single scale instead for now')
-
-        cparams = self.params[('forward_model',{},'settings for the forward model')]
-        smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
-        v = smoother.smooth_vector_field_multiN(self.m)
         sampler = IS.ResampleImage()
-        vUpsampled,upsampled_spacing=sampler.upsample_image_to_size(v,self.spacing,desiredSz)
-        smootherInverse = SF.SmootherFactory(desiredSz,upsampled_spacing).create_smoother(cparams)
-        mUpsampled = smootherInverse.inverse_smooth_vector_field_multiN(vUpsampled)
+        mUpsampled, upsampled_spacing = sampler.upsample_image_to_size(self.m, self.spacing, desiredSz)
+
         return mUpsampled,upsampled_spacing
 
     def downsample_registration_parameters(self, desiredSz):
-        # 1) convert momentum to velocity
-        # 2) downsample velocity
-        # 3) convert downsampled velocity to momentum
 
-        raise ValueError('Not yet properly implemented. Run at a single scale instead for now')
-
-        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
-        v = smoother.smooth_vector_field_multiN(self.m)
         sampler = IS.ResampleImage()
-        vDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz)
-        smootherInverse = SF.SmootherFactory(desiredSz, downsampled_spacing).create_smoother(cparams)
-        mDownsampled = smootherInverse.inverse_smooth_vector_field_multiN(vDownsampled)
+        mDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz)
+
         return mDownsampled, downsampled_spacing
 
 class LDDMMShootingVectorMomentumImageNet(LDDMMShootingVectorMomentumNet):
@@ -322,48 +304,18 @@ class LDDMMShootingScalarMomentumNet(RegistrationNet):
         self.spacing = spacing
 
     def upsample_registration_parameters(self, desiredSz):
-        # 1) convert scalar momentum to velocity
-        # 2) upsample velocity
-        # 3) convert upsampled velocity to scalar momentum
-        # (for this find the scalar momentum which can generate the smoothed velocity)
-
-        raise ValueError('Not yet properly implemented. Run at a single scale instead for now')
-
-        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
-
-        cparams = self.params[('forward_model',{},'settings for the forward model')]
-        smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
-        v = smoother.smooth_vector_field_multiN(m)
 
         sampler = IS.ResampleImage()
-        vUpsampled,upsampled_spacing=sampler.upsample_image_to_size(v,self.spacing,desiredSz)
+        lamUpsampled, upsampled_spacing = sampler.upsample_image_to_size(self.lam, self.spacing, desiredSz)
 
-        mUpsampled = None
-        raise ValueError('TODO: implement velocity field to scalar momentum')
-
-        return mUpsampled,upsampled_spacing
+        return lamUpsampled,upsampled_spacing
 
     def downsample_registration_parameters(self, desiredSz):
-        # 1) convert scalar momentum to velocity
-        # 2) downsample velocity
-        # 3) convert downsampled velocity to scalar momentum
-        # (for this find the scalar momentum which can generate the smoothed velocity)
-
-        raise ValueError('Not yet properly implemented. Run at a single scale instead for now')
-
-        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
-
-        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
-        v = smoother.smooth_vector_field_multiN(m)
 
         sampler = IS.ResampleImage()
-        vDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz)
+        lamDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.lam,self.spacing,desiredSz)
 
-        mUpsampled = None
-        raise ValueError('TODO: implement velocity field to scalar momentum')
-
-        return mDownsampled, downsampled_spacing
+        return lamDownsampled, downsampled_spacing
 
 class LDDMMShootingScalarMomentumImageNet(LDDMMShootingScalarMomentumNet):
     def __init__(self,sz,spacing,params):

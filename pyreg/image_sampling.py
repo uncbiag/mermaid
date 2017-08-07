@@ -34,7 +34,13 @@ class ResampleImage(object):
 
     def __init__(self):
         self.params = MP.ParameterDict()
-        self.params['iter']=5
+        self.params['iter']=0
+
+    def set_iter(self,nrIter):
+        self.params['iter'] = nrIter
+
+    def get_iter(self):
+        return self.params['iter']
 
     def _compute_scaled_size(self, sz, scaling):
         resSz = sz*scaling

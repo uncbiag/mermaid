@@ -110,6 +110,7 @@ class LBFGS_LS(Optimizer):
         # variables cached in state (for tracing)
         d = state.get('d')
         t = state.get('t')
+
         old_dirs = state.get('old_dirs')
         old_stps = state.get('old_stps')
         H_diag = state.get('H_diag')

@@ -11,9 +11,13 @@ class SimilarityMeasure(object):
 
     def __init__(self, spacing, params):
         self.spacing = spacing
+        """pixel/voxel spacing"""
         self.volumeElement = self.spacing.prod()
+        """volume element"""
         self.dim = len(spacing)
+        """image dimension"""
         self.params = params
+        """external parameters"""
 
     def compute_similarity_multiNC(self, I0, I1):
         sz = I0.size()

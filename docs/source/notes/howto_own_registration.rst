@@ -7,7 +7,7 @@ For simplicity we assume that the stationary velocity field registration (SVF) d
 Writing a similarity measure
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Similarity measures are derived from :class:`SimilarityMeasure`. To create a new similarity measure simply derive your own class from :class:`SimilarityMeasure` and implement the method `compute_similarity`. Assume you want to rewrite the sum of squared difference SSD similarity measure then this class will look as follows:
+Similarity measures are derived from :class:`SimilarityMeasure`. To create a new similarity measure simply derive your own class from :class:`SimilarityMeasure` and implement the method :meth:`compute_similarity`. Assume you want to rewrite the sum of squared difference SSD similarity measure then this class will look as follows:
 
 .. code::
 
@@ -18,7 +18,7 @@ Similarity measures are derived from :class:`SimilarityMeasure`. To create a new
 
 Here, `self.volumeElement` is defined in the base class :class:`SimilarityMeasure` and indicates the volume occupied by a pixel or voxel.
 
-As the machinery to include the similarity measure into all available registration methods is rather heavy. There is a convenience method which can be accessed through the optimizer interface.
+As the machinery to include the similarity measure into all available registration methods is rather heavy, there is a convenience method which can be accessed through the optimizer interface.
 
 Assuming the parameter stucture being used is called `params` (a :class:`ParameterDict` object), we can first tell that we want to use our own similarity measure via
 

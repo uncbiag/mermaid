@@ -57,6 +57,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.nrOfIterations = 1
         self.visualize = True
 
+        self.optimizer = None
+
         if useMap:
             # create the identity map [-1,1]^d, since we will use a map-based implementation
             id = utils.identity_map_multiN(sz)
@@ -83,9 +85,23 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def set_number_of_iterations(self, nrIter):
         self.nrOfIterations = nrIter
 
+    def closure(self):
+        self.optimizer.zero_grad()
+        # 1) Forward pass: Compute predicted y by passing x to the model
+        # 2) Compute loss
+        if self.useMap:
+            phiWarped = self.model(self.identityMap, self.ISource)
+            loss = self.criterion(phiWarped, self.ISource, self.ITarget)
+        else:
+            IWarped = self.model(self.ISource)
+            loss = self.criterion(IWarped, self.ISource, self.ITarget)
+
+        loss.backward()
+        return loss
+
     def optimize(self):
         # do the actual optimization
-        optimizer = CO.LBFGS_LS(self.model.parameters(),
+        self.optimizer = CO.LBFGS_LS(self.model.parameters(),
                                 lr=1.0, max_iter=1, max_eval=5,
                                 tolerance_grad=1e-3, tolerance_change=1e-4,
                                 history_size=5, line_search_fn='backtracking')
@@ -95,22 +111,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         for iter in range(self.nrOfIterations):
 
-            def closure():
-                optimizer.zero_grad()
-                # 1) Forward pass: Compute predicted y by passing x to the model
-                # 2) Compute loss
-                if self.useMap:
-                    phiWarped = self.model(self.identityMap, self.ISource)
-                    loss = self.criterion(phiWarped, self.ISource, self.ITarget)
-                else:
-                    IWarped = self.model(self.ISource)
-                    loss = self.criterion(IWarped, self.ISource, self.ITarget)
-
-                loss.backward()
-                return loss
-
             # take a step of the optimizer
-            optimizer.step(closure)
+            self.optimizer.step(self.closure)
 
             # apply the current state to either get the warped map or directly the warped source image
             if self.useMap:
