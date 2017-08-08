@@ -6,6 +6,17 @@ https://github.com/fxia22/stn.pytorch
 
 However, this code extends it so that now also 1D and 3D images can be spatially transformed.
 
+If you want to compile the code on osx with multithreading you will need to use gcc. You can install it with homebrew (brew install gcc)
+
+Once installed set the following two environment variables
+
+export CC=/usr/local/bin/gcc-7
+export CXX=/usr/local/bin/g++-7
+
+Then do
+
+python build.py
+
 # TODO
 
 Also port the cuda code
