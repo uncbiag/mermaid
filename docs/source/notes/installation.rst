@@ -1,7 +1,7 @@
 Installation
 ============
 
-This note briefly describes how to install and use *pytorchregistration*. Since this is all based on pyTorch, the first step if you have not done so yet is to install pyTorch itself. These installation notes are currently for OSX.
+This note briefly describes how to install and use *MERMAID*. Since this is all based on pyTorch, the first step if you have not done so yet is to install pyTorch itself. These installation notes are currently for OSX.
 
 pyTorch installation
 ^^^^^^^^^^^^^^^^^^^^
@@ -35,8 +35,8 @@ This will create a `pytorch` directory. On OSX do the following. (Set NO_CUDA=1 
 
 The `/path/to/anaconda/install` is for me for example `/Users/mn/anaconda`
 
-Installing pytorchregistration
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Installing MERMAID
+^^^^^^^^^^^^^^^^^^
 
 To install the registration package. First check it out from bitbucket:
 

@@ -3,8 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-PyTorchRegistration documentation
-===============================================
+MERMAID: iMagE Registration via AuTomatic diffErentiation [*]_
+============================================================
+
+
 
 .. toctree::
    :glob:
@@ -41,3 +43,4 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 
+.. [*] OK, we just liked the acronym.
