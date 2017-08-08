@@ -9,32 +9,65 @@ from torch.autograd import Variable
 import numpy as np
 
 class RKIntegrator(object):
+    """
+    Abstract base class for Runge-Kutta integration: x' = f(x(t),u(t),t)
+    """
 
     __metaclass__ = ABCMeta
 
     def __init__(self,f,u,pars,params):
+        """
+        Constructor
+        
+        :param f: function to be integrated 
+        :param u: input to the function
+        :param pars: parameters to be passed to the integrator
+        :param params: general ParameterDict() parameters for setting
+        """
 
         self.nrOfTimeSteps = params[('number_of_time_steps', 10,
                                                 'Number of time-steps to integrate the PDE')]
+        """number of time steps for the integration"""
         self.f = f
+        """Function to be integrated"""
 
         if pars is None:
             self.pars = []
         else:
             self.pars = pars
+            """parameters for the integrator"""
 
         if u is None:
             self.u = lambda t,pars: []
         else:
             self.u = u
+            """input for integration"""
 
     def set_number_of_time_steps(self, nr):
+        """
+        Sets the number of time-steps for the integration
+        
+        :param nr: number of timesteps 
+        """
         self.nrOfTimeSteps = nr
 
     def get_number_of_time_steps(self):
+        """
+        Returns the number of time steps that are used for the integration
+        
+        :return: nuber of time steps
+        """
         return self.nrOfTimeSteps
 
     def solve(self,x,fromT,toT):
+        """
+        Solves the differential equation.
+        
+        :param x: initial condition for state of the equation
+        :param fromT: time to start integration from 
+        :param toT: time to end integration
+        :return: Returns state, x, at time toT
+        """
         # arguments need to be list so we can pass multiple variables at the same time
         assert type(x)==list
         timepoints = np.linspace(fromT, toT, self.nrOfTimeSteps + 1)
@@ -49,36 +82,66 @@ class RKIntegrator(object):
         #print( x )
         return x
 
-    def xpyts(self,x,y,v):
+    def _xpyts(self, x, y, v):
         # x plus y times scalar
         return [a+b*v for a,b in zip(x,y)]
 
-    def xts(self,x,v):
+    def _xts(self, x, v):
         # x times scalar
         return [a*v for a in x]
 
-    def xpy(self,x,y):
+    def _xpy(self, x, y):
         return [a+b for a,b in zip(x,y)]
 
     @abstractmethod
     def solve_one_step(self, x, t, dt):
-        # x and output of f are expected to be lists
+        """
+        Abstract method to be implemented by the different Runge-Kutta methods to advance one step. 
+        Both x and the output of f are expected to be lists 
+        
+        :param x: initial state 
+        :param t: initial time
+        :param dt: time increment
+        :return: returns the state at t+dt 
+        """
         pass
 
 class EulerForward(RKIntegrator):
+    """
+    Euler-forward integration
+    """
 
     def solve_one_step(self, x, t, dt):
+        """
+        One step for Euler-forward
+        
+        :param x: state at time t
+        :param t: initial time
+        :param dt: time increment
+        :return: state at x+dt
+        """
         #xp1 = [a+b*dt for a,b in zip(x,self.f(t,x,self.u(t)))]
-        xp1 = self.xpyts(x,self.f(t,x,self.u(t, self.pars), self.pars),dt)
+        xp1 = self._xpyts(x, self.f(t, x, self.u(t, self.pars), self.pars), dt)
         return xp1
 
 class RK4(RKIntegrator):
+    """
+    Runge-Kutta 4 integration
+    """
 
     def solve_one_step(self, x, t, dt):
-        k1 = self.xts( self.f(t,x,self.u(t,self.pars), self.pars), dt )
-        k2 = self.xts( self.f(t+0.5*dt, self.xpyts(x, k1, 0.5), self.u(t+  0.5 * dt, self.pars), self.pars), dt )
-        k3 = self.xts( self.f(t+0.5*dt, self.xpyts(x, k2, 0.5), self.u(t + 0.5 * dt, self.pars), self.pars), dt)
-        k4 = self.xts( self.f(t+dt, self.xpy(x, k3), self.u(t + dt, self.pars), self.pars), dt)
+        """
+        One step for Runge-Kutta 4
+        
+        :param x: state at time t
+        :param t: initial time
+        :param dt: time increment
+        :return: state at x+dt
+        """
+        k1 = self._xts(self.f(t, x, self.u(t, self.pars), self.pars), dt)
+        k2 = self._xts(self.f(t + 0.5 * dt, self._xpyts(x, k1, 0.5), self.u(t + 0.5 * dt, self.pars), self.pars), dt)
+        k3 = self._xts(self.f(t + 0.5 * dt, self._xpyts(x, k2, 0.5), self.u(t + 0.5 * dt, self.pars), self.pars), dt)
+        k4 = self._xts(self.f(t + dt, self._xpy(x, k3), self.u(t + dt, self.pars), self.pars), dt)
 
         # now iterate over all the elements of the list describing state x
         xp1 = []

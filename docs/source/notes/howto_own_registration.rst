@@ -143,6 +143,23 @@ do this by adding it to the multi-scale solver and then setting it (to be used f
     mo.set_model(myModelName)
 
 
+If desired, it is possible to choose a custom optimizer (the default is LBFGS, with some default settings).
+The following selects `adam` as an optimizer and sets one of its optimization parameters. Any optimizer supported
+by pyTorch works in principle. However, be advised that especially the shooting formulations for registration may
+require reasonably sophisticated optimizers for convergence.
+
+.. code::
+
+    mo.set_optimizer(torch.optim.Adam)
+    mo.set_optimizer_params(dict(lr=0.01))
+
+By default visualization output is turned on. But this can be set manually by
+
+.. code::
+
+    mo.set_visualization(True)
+    mo.set_visualize_step(10)
+
 And again as before the model can then be solved
 
 .. code::

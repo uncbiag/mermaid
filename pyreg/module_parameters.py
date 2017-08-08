@@ -1,6 +1,7 @@
 """
-This package implements a simple way of dealing with parameters and providing
-default parameters and comments.
+This package implements a simple way of dealing with parameters, ofproviding
+default parameters and comments, and to keep track of used parameters for 
+registration runs. See the corresponding note for a brief description on how to use it.
 """
 
 import json
@@ -21,30 +22,60 @@ class ParameterDict(object):
             'currentCategoryName = ' + str( self.currentCategoryName) +"\n"
 
     def load_JSON(self, fileName):
+        """
+        Loads a JSON configuration file
+        
+        :param fileName: filename of the configuration to be loaded 
+        """
+
         with open(fileName) as data_file:
             if self.printSettings:
                 print('Loading parameter file = ' + fileName )
             self.ext = json.load(data_file)
 
     def write_JSON(self, fileName):
+        """
+        Writes the JSON configuration to a file
+        
+        :param fileName: filename to write the configuration to  
+        """
+
         with open(fileName, 'w') as outfile:
             if self.printSettings:
                 print('Writing parameter file = ' + fileName )
             json.dump(self.int, outfile, indent=4, sort_keys=True)
 
     def write_JSON_comments(self, fileNameComments):
+        """
+        Writes the JSON commments file. This file will not contain any actual values, but
+        instead descriptions of the settings (if they have been provided). The goal is to
+        provide self-documenting configuration files.
+        
+        :param fileNameComments: filename to write the commented JSON configuration to  
+        """
+
         with open(fileNameComments, 'w') as outfile:
             if self.printSettings:
                 print('Writing parameter file = ' + fileNameComments )
             json.dump(self.com, outfile, indent=4, sort_keys=True)
 
     def print_settings_on(self):
+        """
+        Enable screen output as configurations are read and set.
+        """
         self.printSettings = True
 
     def print_settings_off(self):
+        """
+        Disable screen output as configurations are read and set.
+        """
         self.printSettings = False
 
     def get_print_settings(self):
+        """
+        Current print settings
+        :return: Returns if screen printing is on (True) or off (False)
+        """
         return self.printSettings
 
     def _set_value_of_instance(self, ext, int, com, currentCategoryName):
@@ -215,6 +246,10 @@ class ParameterDict(object):
 
 # test it
 def test_parameter_dict():
+    """
+    Convenience testing script (to be converted to an actual test)
+    """
+
     p = ParameterDict()
 
     # we can directly assign

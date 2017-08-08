@@ -30,8 +30,11 @@ class FD(object):
         """
 
         self.dim = spacing.size
+        """spatial dimension"""
         self.spacing = np.ones( self.dim )
+        """spacing"""
         self.bcNeumannZero = bcNeumannZero # if false then linear interpolation
+        """should Neumann boundary conditions be used? (otherwise linear extrapolation)"""
         if spacing.size==1:
             self.spacing[0] = spacing[0]
         elif spacing.size==2:
@@ -360,15 +363,35 @@ class FD_np(FD):
     """
 
     def __init__(self,spacing,bcNeumannZero=True):
+        """
+        Constructor for numpy finite differences
+        :param spacing: spatial spacing (array with as many entries as there are spatial dimensions)
+        :param bcNeumannZero: Specifies if zero Neumann conditions should be used (if not, uses linear extrapolation)
+        """
         super(FD_np, self).__init__(spacing,bcNeumannZero)
 
     def getdimension(self,I):
+        """
+        Returns the dimension of an image
+        :param I: input image
+        :return: dimension of the input image
+        """
         return I.ndim
 
     def create_zero_array(self, sz):
+        """
+        Creates a zero array
+        :param sz: size of the zero array, e.g., [3,4,2]
+        :return: the zero array
+        """
         return np.zeros( sz )
 
     def get_size_of_array(self, A):
+        """
+        Returns the size (shape in numpy) of an array
+        :param A: input array
+        :return: shape/size
+        """
         return A.shape
 
 
@@ -378,13 +401,33 @@ class FD_torch(FD):
     """
 
     def __init__(self,spacing,bcNeumannZero=True):
+        """
+          Constructor for torch finite differences
+          :param spacing: spatial spacing (array with as many entries as there are spatial dimensions)
+          :param bcNeumannZero: Specifies if zero Neumann conditions should be used (if not, uses linear extrapolation)
+          """
         super(FD_torch, self).__init__(spacing,bcNeumannZero)
 
     def getdimension(self,I):
+        """
+        Returns the dimension of an image
+        :param I: input image
+        :return: dimension of the input image 
+        """
         return I.dim()
 
     def create_zero_array(self, sz):
+        """
+        Creats a zero array
+        :param sz: size of the array, e.g., [3,4,2]
+        :return: the zero array
+        """
         return Variable( torch.zeros( sz ), requires_grad=False )
 
     def get_size_of_array(self, A):
+        """
+        Returns the size (size()) of an array
+        :param A: input array
+        :return: shape/size
+        """
         return A.size()

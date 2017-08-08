@@ -130,30 +130,56 @@ def debug_output(I0, I1, spacing):
     else:
         raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
 
-def show_current_images_1d(iS, iT, iW, iter, phiWarped):
+def show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped):
+
+    if (vizImage is not None) and (phiWarped is not None):
+        sp_s = 231
+        sp_t = 232
+        sp_w = 233
+        sp_p = 235
+        sp_v = 236
+    elif (vizImage is not None):
+        sp_s = 221
+        sp_t = 222
+        sp_w = 223
+        sp_v = 224
+    elif (phiWarped is not None):
+        sp_s = 221
+        sp_t = 222
+        sp_w = 223
+        sp_p = 224
+    else:
+        sp_s = 131
+        sp_t = 132
+        sp_w = 133
 
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')
     plt.style.use('bmh')
 
-    plt.subplot(221)
+    plt.subplot(sp_s)
     plt.plot(utils.t2np(iS))
     plt.title('source image')
 
-    plt.subplot(222)
+    plt.subplot(sp_t)
     plt.plot(utils.t2np(iT))
     plt.title('target image')
 
-    plt.subplot(224)
+    plt.subplot(sp_w)
     plt.plot(utils.t2np(iT),'g',linestyle=':')
     plt.plot(utils.t2np(iS),'r',linestyle='--')
     plt.plot(utils.t2np(iW),linestyle=':')
     plt.title('warped image')
 
     if phiWarped is not None:
-        plt.subplot(223)
+        plt.subplot(sp_p)
         plt.plot(utils.t2np(phiWarped[0,:]))
         plt.title('phi')
+
+    if vizImage is not None:
+        plt.subplot(sp_v)
+        plt.plot(utils.t2np(vizImage))
+        plt.title(vizName)
 
     plt.show()
 
@@ -168,63 +194,106 @@ def checkerboard_2d(I0,I1,nrOfTiles=8):
     cb_image = I0*cb_grid + I1*(1-cb_grid)
     return cb_image
 
-def show_current_images_2d_no_map(iS, iT, iW, iter):
+def show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName):
+
+    if (vizImage is not None):
+        sp_s = 231
+        sp_t = 232
+        sp_w = 233
+        sp_c = 234
+        sp_v = 235
+    else:
+        sp_s = 221
+        sp_t = 222
+        sp_w = 223
+        sp_c = 224
+
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')
     plt.style.use('bmh')
 
-    plt.subplot(221)
+    plt.subplot(sp_s)
     plt.imshow(utils.t2np(iS),cmap='gray')
     plt.colorbar()
     plt.title('source image')
 
-    plt.subplot(222)
+    plt.subplot(sp_t)
     plt.imshow(utils.t2np(iT),cmap='gray')
     plt.colorbar()
     plt.title('target image')
 
-    plt.subplot(223)
+    plt.subplot(sp_w)
     plt.imshow(utils.t2np(iW),cmap='gray')
-
     plt.colorbar()
     plt.title('warped image')
 
-    plt.subplot(224)
+    plt.subplot(sp_c)
     plt.imshow(checkerboard_2d(utils.t2np(iW),utils.t2np(iT)),cmap='gray')
     plt.colorbar()
     plt.title('checkerboard')
 
+    if vizImage is not None:
+        plt.subplot(sp_v)
+        plt.imshow(utils.t2np(vizImage),cmap='gray')
+        plt.colorbar()
+        plt.title(vizName)
+
     plt.show()
 
-def show_current_images_2d_map(iS, iT, iW, iter, phiWarped):
+def show_current_images_2d_map(iS, iT, iW, iter, vizImage, vizName, phiWarped):
+
+    if (vizImage is not None) and (phiWarped is not None):
+        sp_s = 231
+        sp_t = 232
+        sp_w = 233
+        sp_c = 234
+        sp_p = 235
+        sp_v = 236
+    elif (vizImage is not None):
+        sp_s = 231
+        sp_t = 232
+        sp_w = 233
+        sp_c = 234
+        sp_v = 235
+    elif (phiWarped is not None):
+        sp_s = 231
+        sp_t = 232
+        sp_w = 233
+        sp_c = 234
+        sp_p = 235
+    else:
+        sp_s = 221
+        sp_t = 222
+        sp_w = 223
+        sp_c = 224
 
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')
     plt.style.use('bmh')
 
-    plt.subplot(231)
+    plt.subplot(sp_s)
     plt.imshow(utils.t2np(iS),cmap='gray')
     plt.colorbar()
     plt.title('source image')
 
-    plt.subplot(232)
+    plt.subplot(sp_t)
     plt.imshow(utils.t2np(iT),cmap='gray')
     plt.colorbar()
     plt.title('target image')
 
-    plt.subplot(233)
+    plt.subplot(sp_w)
     plt.imshow(utils.t2np(iW),cmap='gray')
 
     plt.colorbar()
     plt.title('warped image')
 
-    plt.subplot(234)
+    plt.subplot(sp_c)
     plt.imshow(checkerboard_2d(utils.t2np(iW), utils.t2np(iT)),cmap='gray')
     plt.colorbar()
     plt.title('checkerboard')
 
     if phiWarped is not None:
-        plt.subplot(235)
+        plt.subplot(sp_p)
         plt.imshow(utils.t2np(iW),cmap='gray')
 
         plt.contour(utils.t2np(phiWarped[0, :, :]), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
@@ -233,15 +302,21 @@ def show_current_images_2d_map(iS, iT, iW, iter, phiWarped):
         plt.colorbar()
         plt.title('warped image + grid')
 
+    if vizImage is not None:
+        plt.subplot(sp_v)
+        plt.imshow(utils.t2np(vizImage), cmap='gray')
+        plt.colorbar()
+        plt.title(vizName)
+
     plt.show()
 
 
-def show_current_images_2d(iS, iT, iW, iter, phiWarped):
+def show_current_images_2d(iS, iT, iW, iter, vizImage, vizName, phiWarped):
 
     if phiWarped is not None:
-        show_current_images_2d_map(iS, iT, iW, iter, phiWarped)
+        show_current_images_2d_map(iS, iT, iW, iter, vizImage, vizName, phiWarped)
     else:
-        show_current_images_2d_no_map(iS, iT, iW, iter)
+        show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName)
 
 
 def show_current_images_3d_simple(iS, iT, iW, iter, phiWarped):
@@ -281,10 +356,18 @@ def show_current_images_3d_simple(iS, iT, iW, iter, phiWarped):
     plt.show()
 
 
-def show_current_images_3d(iS, iT, iW, iter, phiWarped):
+def show_current_images_3d(iS, iT, iW, iter, vizImage, vizName, phiWarped):
 
-    if phiWarped is not None:
+    if (phiWarped is not None) and (vizImage is not None):
+        fig, ax = plt.subplots(5,3)
+        phiw_a = 3
+        vizi_a = 4
+    elif (phiWarped is not None):
         fig, ax = plt.subplots(4,3)
+        phiw_a = 3
+    elif (vizImage is not None):
+        fig, ax = plt.subplots(4,3)
+        vizi_a = 3
     else:
         fig, ax = plt.subplots(3,3)
 
@@ -305,9 +388,14 @@ def show_current_images_3d(iS, iT, iW, iter, phiWarped):
     ivwz = viewers.ImageViewer3D_Sliced(ax[2][2], utils.t2np(iW), 2, 'warped Z', True)
 
     if phiWarped is not None:
-        ivwxc = viewers.ImageViewer3D_Sliced_Contour(ax[3][0], utils.t2np(iW), utils.t2np(phiWarped), 0, 'warped X', True)
-        ivwyc = viewers.ImageViewer3D_Sliced_Contour(ax[3][1], utils.t2np(iW), utils.t2np(phiWarped), 1, 'warped Y', True)
-        ivwzc = viewers.ImageViewer3D_Sliced_Contour(ax[3][2], utils.t2np(iW), utils.t2np(phiWarped), 2, 'warped Z', True)
+        ivwxc = viewers.ImageViewer3D_Sliced_Contour(ax[phiw_a][0], utils.t2np(iW), utils.t2np(phiWarped), 0, 'warped X', True)
+        ivwyc = viewers.ImageViewer3D_Sliced_Contour(ax[phiw_a][1], utils.t2np(iW), utils.t2np(phiWarped), 1, 'warped Y', True)
+        ivwzc = viewers.ImageViewer3D_Sliced_Contour(ax[phiw_a][2], utils.t2np(iW), utils.t2np(phiWarped), 2, 'warped Z', True)
+
+    if vizImage is not None:
+        ivvxc = viewers.ImageViewer3D_Sliced(ax[vizi_a][0], utils.t2np(vizImage), 0, vizName + ' X', True)
+        ivvyc = viewers.ImageViewer3D_Sliced(ax[vizi_a][1], utils.t2np(vizImage), 1, vizName + ' Y', True)
+        ivvzc = viewers.ImageViewer3D_Sliced(ax[vizi_a][2], utils.t2np(vizImage), 2, vizName + ' Z', True)
 
     feh = viewers.FigureEventHandler(fig)
 
@@ -324,14 +412,30 @@ def show_current_images_3d(iS, iT, iW, iter, phiWarped):
     feh.add_axes_event('button_press_event', ax[2][2], ivwz.on_mouse_release, ivwz.get_synchronize, ivwz.set_synchronize)
 
     if phiWarped is not None:
-        feh.add_axes_event('button_press_event', ax[3][0], ivwxc.on_mouse_release, ivwxc.get_synchronize, ivwxc.set_synchronize)
-        feh.add_axes_event('button_press_event', ax[3][1], ivwyc.on_mouse_release, ivwyc.get_synchronize, ivwyc.set_synchronize)
-        feh.add_axes_event('button_press_event', ax[3][2], ivwzc.on_mouse_release, ivwzc.get_synchronize, ivwzc.set_synchronize)
+        feh.add_axes_event('button_press_event', ax[phiw_a][0], ivwxc.on_mouse_release, ivwxc.get_synchronize, ivwxc.set_synchronize)
+        feh.add_axes_event('button_press_event', ax[phiw_a][1], ivwyc.on_mouse_release, ivwyc.get_synchronize, ivwyc.set_synchronize)
+        feh.add_axes_event('button_press_event', ax[phiw_a][2], ivwzc.on_mouse_release, ivwzc.get_synchronize, ivwzc.set_synchronize)
 
-    if phiWarped is not None:
-        feh.synchronize([ax[0][0], ax[1][0], ax[2][0], ax[3][0]])
-        feh.synchronize([ax[0][1], ax[1][1], ax[2][1], ax[3][1]])
-        feh.synchronize([ax[0][2], ax[1][2], ax[2][2], ax[3][2]])
+    if vizImage is not None:
+        feh.add_axes_event('button_press_event', ax[vizi_a][0], ivvxc.on_mouse_release, ivvxc.get_synchronize,
+                           ivvxc.set_synchronize)
+        feh.add_axes_event('button_press_event', ax[vizi_a][1], ivvyc.on_mouse_release, ivvyc.get_synchronize,
+                           ivvyc.set_synchronize)
+        feh.add_axes_event('button_press_event', ax[vizi_a][2], ivvzc.on_mouse_release, ivvzc.get_synchronize,
+                           ivvzc.set_synchronize)
+
+    if (phiWarped is not None) and (vizImage is not None):
+        feh.synchronize([ax[0][0], ax[1][0], ax[2][0], ax[phiw_a][0], ax[vizi_a][0]])
+        feh.synchronize([ax[0][1], ax[1][1], ax[2][1], ax[phiw_a][1], ax[vizi_a][1]])
+        feh.synchronize([ax[0][2], ax[1][2], ax[2][2], ax[phiw_a][2], ax[vizi_a][2]])
+    elif (phiWarped is not None):
+        feh.synchronize([ax[0][0], ax[1][0], ax[2][0], ax[phiw_a][0]])
+        feh.synchronize([ax[0][1], ax[1][1], ax[2][1], ax[phiw_a][1]])
+        feh.synchronize([ax[0][2], ax[1][2], ax[2][2], ax[phiw_a][2]])
+    elif (vizImage is not None):
+        feh.synchronize([ax[0][0], ax[1][0], ax[2][0], ax[vizi_a][0]])
+        feh.synchronize([ax[0][1], ax[1][1], ax[2][1], ax[vizi_a][1]])
+        feh.synchronize([ax[0][2], ax[1][2], ax[2][2], ax[vizi_a][2]])
     else:
         feh.synchronize([ax[0][0], ax[1][0], ax[2][0]])
         feh.synchronize([ax[0][1], ax[1][1], ax[2][1]])
@@ -340,7 +444,7 @@ def show_current_images_3d(iS, iT, iW, iter, phiWarped):
     plt.show()
 
 
-def show_current_images(iter, iS, iT, iW, phiWarped=None):
+def show_current_images(iter, iS, iT, iW, vizImage=None, vizName=None, phiWarped=None):
     """
     Show current 2D registration results in relation to the source and target images
     :param iter: iteration number
@@ -362,11 +466,11 @@ def show_current_images(iter, iS, iT, iW, phiWarped=None):
         pwF = None
 
     if dim==1:
-        show_current_images_1d(iSF, iTF, iWF, iter, pwF)
+        show_current_images_1d(iSF, iTF, iWF, iter, vizImage, vizName, pwF)
     elif dim==2:
-        show_current_images_2d(iSF, iTF, iWF, iter, pwF)
+        show_current_images_2d(iSF, iTF, iWF, iter, vizImage, vizName, pwF)
     elif dim==3:
-        show_current_images_3d(iSF, iTF, iWF, iter, pwF)
+        show_current_images_3d(iSF, iTF, iWF, iter, vizImage, vizName, pwF)
     else:
         raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
 

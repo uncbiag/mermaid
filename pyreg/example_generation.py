@@ -2,9 +2,6 @@
 Package to create example images to test the image registration algorithms
 """
 
-# TODO: convert everything to simple itk and its image format (including spacing)
-# for now, simply get the 3D versions up and running
-
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import utils
@@ -22,6 +19,7 @@ class CreateExample(object):
         :param dim: Desired dimension of the example image 
         """
         self.dim = dim
+        """Spatial dimension"""
 
     @abstractmethod
     def create_image_pair(self,sz=None,params=None):
@@ -88,7 +86,7 @@ class CreateRealExampleImages(CreateExample):
 
     def create_image_pair(self,sz=None,params=None):
         """
-        Loads the two brain images using SimpleITK, normalized them so that the 95-th percentile is as 0.95 and returns them.
+        Loads the two brain images using SimpleITK, normalizes them so that the 95-th percentile is as 0.95 and returns them.
         
         :param sz: Ignored 
         :param params: Ignored

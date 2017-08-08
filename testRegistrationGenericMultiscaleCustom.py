@@ -163,6 +163,10 @@ mo.set_target_image(ITarget)
 mo.set_scale_factors(multi_scale_scale_factors)
 mo.set_number_of_iterations_per_scale(multi_scale_iterations_per_scale)
 
+# now we also pick a custom optimizer
+mo.set_optimizer(torch.optim.Adam)
+mo.set_optimizer_params(dict(lr=0.01))
+
 # and now do the optimization
 mo.optimize()
 

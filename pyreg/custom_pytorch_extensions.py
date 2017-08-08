@@ -73,6 +73,7 @@ class FourierConvolution(Function):
         # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
         super(FourierConvolution,self).__init__()
         self.complex_fourier_filter = complex_fourier_filter
+        """The filter in the Fourier domain"""
 
     def forward(self, input):
         """
@@ -132,14 +133,32 @@ class InverseFourierConvolution(Function):
 
     def __init__(self, complex_fourier_filter):
         """
-        Constructor for the Fouier-based convolution
+        Constructor for the Fouier-based convolution (WARNING: EXPERIMENTAL)
 
         :param complex_fourier_filter: Filter in the Fourier domain as created by *createComplexFourierFilter*
         """
         # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
         super(InverseFourierConvolution, self).__init__()
         self.complex_fourier_filter = complex_fourier_filter
+        """Fourier filter"""
         self.alpha = 0.1
+        """Regularizing weight"""
+
+    def set_alpha(self,alpha):
+        """
+        Sets the regularizing weight
+        
+        :param alpha: regularizing weight
+        """
+        self.alpha = alpha
+
+    def get_alpha(self):
+        """
+        Returns the regularizing weight
+        
+        :return: regularizing weight 
+        """
+        return self.alpha
 
     def forward(self, input):
         """

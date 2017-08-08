@@ -22,8 +22,10 @@ PyTorchRegistration documentation
    example_generation
    finite_differences
    forward_models
+   image_sampling
    model_factory
    module_parameters
+   multiscale_optimizer
    registration_networks
    regularizer_factory
    rungekutta_integrators
