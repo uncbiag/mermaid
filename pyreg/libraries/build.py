@@ -11,7 +11,7 @@ with_cuda = False
 
 extra_compile_args = []
 extra_link_args = []
-with_openmp = True # set this to false if you are using clang on OSX or install gcc
+with_openmp = False # set this to false if you are using clang on OSX or install gcc
 
 if torch.cuda.is_available():
     raise ValueError( 'There is currently no CUDA support. Please adapt the stn.pytorch CUDA code appropriately.')
@@ -25,6 +25,8 @@ if torch.cuda.is_available():
 if with_openmp:
     extra_compile_args += ['-fopenmp']
     extra_link_args += ['-fopenmp']
+else:
+    extra_compile_args += ['-Dno_openmp']
     
 this_file = os.path.dirname(os.path.realpath(__file__))
 print(this_file)

@@ -1,4 +1,7 @@
+#ifndef no_openmp
 #include <omp.h>
+#endif
+
 #include <TH/TH.h>
 #include <stdbool.h>
 #include <stdio.h>
