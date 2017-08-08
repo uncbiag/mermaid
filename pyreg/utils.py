@@ -1,5 +1,5 @@
 """
-Various utility functions
+Various utility functions.
 """
 
 import torch
@@ -18,12 +18,21 @@ def transform_image_to_NC_image_format(I):
     I.e., two dimensions are added (the first one for number of images and the second for the 
     number of channels). As were are dealing with individual single-channel intensity images here, these
     dimensions will be 1x1
+    
     :param I: input image of size, sz
     :return: input image, reshaped to size [1,1] + sz
     '''
     return I.reshape( [1,1] + list(I.shape) )
 
 def compute_normalized_gaussian(X, mu, sig):
+    """
+    Computes a normalized Gaussian
+    
+    :param X: map with coordinates at which to evaluate 
+    :param mu: array indicating the mean
+    :param sig: array indicating the standard deviations for the different dimensions
+    :return: normalized Gaussian
+    """
     dim = len(mu)
     if dim==1:
         g = np.exp(-np.power(X[0,:]-mu[0],2.)/(2*np.power(sig[0],2.)))
@@ -75,30 +84,38 @@ def computeWarpedImage_3d(I0, phi):
     return I1_warped[0, :, :, :, 0]
 '''
 
-def compute_warped_image_multiNC_1d(I0, phi):
+def _compute_warped_image_multiNC_1d(I0, phi):
+
     stn = STN_ND_BCXYZ(1)
     I1_warped = stn(I0, phi)
     return I1_warped
 
-def compute_warped_image_multiNC_2d(I0, phi):
+def _compute_warped_image_multiNC_2d(I0, phi):
     stn = STN_ND_BCXYZ(2)
     I1_warped = stn(I0, phi)
     return I1_warped
 
-def compute_warped_image_multiNC_3d(I0, phi):
+def _compute_warped_image_multiNC_3d(I0, phi):
     stn = STN_ND_BCXYZ(3)
     I1_warped = stn(I0, phi)
     return I1_warped
 
 
 def compute_warped_image_multiNC(I0, phi):
+    """
+    Warps image.
+    
+    :param I0: image to warp, image size BxCxXxYxZ
+    :param phi: map for the warping, size BxdimxXxYxZ 
+    :return: returns the warped image of size BxCxXxYxZ
+    """
     dim = I0.dim()-2
     if dim == 1:
-        return compute_warped_image_multiNC_1d(I0, phi)
+        return _compute_warped_image_multiNC_1d(I0, phi)
     elif dim == 2:
-        return compute_warped_image_multiNC_2d(I0, phi)
+        return _compute_warped_image_multiNC_2d(I0, phi)
     elif dim == 3:
-        return compute_warped_image_multiNC_3d(I0, phi)
+        return _compute_warped_image_multiNC_3d(I0, phi)
     else:
         raise ValueError('Images can only be warped in dimensions 1 to 3')
 
@@ -116,6 +133,15 @@ def computeWarpedImage(I0, phi):
 '''
 
 def compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, sz, spacing):
+    """
+    Computes the vector momentum from the scalar momentum: :math:`m=\\lambda\\nabla I`
+    
+    :param lam: scalar momentum, BxCxXxYxZ
+    :param I: image, BxCxXxYxZ
+    :param sz: size of image
+    :param spacing: spacing of image
+    :return: returns the vector momentum
+    """
     nrOfI = sz[0] # number of images
     m = create_ND_vector_field_variable_multiN(sz[2::], nrOfI)
     for nrI in range(nrOfI):  # loop over all the images
@@ -123,6 +149,15 @@ def compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, sz, spacing):
     return m
 
 def compute_vector_momentum_from_scalar_momentum_multiC(lam, I, sz, spacing):
+    """
+    Computes the vector momentum from the scalar momentum: :math:`m=\\lambda\\nabla I`
+
+    :param lam: scalar momentum, CxXxYxZ
+    :param I: image, CxXxYxZ
+    :param sz: size of image
+    :param spacing: spacing of image
+    :return: returns the vector momentum
+    """
     nrOfC = sz[0]
     m = create_ND_vector_field_variable(sz[1::])
     for c in range(nrOfC): # loop over all the channels and add the results
@@ -130,6 +165,15 @@ def compute_vector_momentum_from_scalar_momentum_multiC(lam, I, sz, spacing):
     return m
 
 def compute_vector_momentum_from_scalar_momentum_singleC(lam, I, sz, spacing):
+    """
+    Computes the vector momentum from the scalar momentum: :math:`m=\\lambda\\nabla I`
+
+    :param lam: scalar momentum, XxYxZ
+    :param I: image, XxYxZ
+    :param sz: size of image
+    :param spacing: spacing of image
+    :return: returns the vector momentum
+    """
     fdt = fd.FD_torch(spacing)
     dim = len(sz)
     m = create_ND_vector_field_variable(sz)
@@ -147,32 +191,64 @@ def compute_vector_momentum_from_scalar_momentum_singleC(lam, I, sz, spacing):
     return m
 
 def create_ND_vector_field_variable_multiN(sz, nrOfI=1):
+    """
+    Create vector field torch Variable of given size
+    
+    :param sz: just the spatial sizes (e.g., [5] in 1D, [5,10] in 2D, [5,10,10] in 3D)
+    :param nrOfI: number of images
+    :return: returns vector field of size nrOfIxdimxXxYxZ
+    """
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
     return Variable(torch.zeros(csz.tolist()), requires_grad=False)
 
 def create_ND_vector_field_variable(sz):
+    """
+    Create vector field torch Variable of given size
+    
+    :param sz: just the spatial sizes (e.g., [5] in 1D, [5,10] in 2D, [5,10,10] in 3D)
+    :return: returns vector field of size dimxXxYxZ
+    """
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([dim]+list(csz))
     return Variable(torch.zeros(csz.tolist()), requires_grad=False)
 
 def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
+    """
+    Create vector field torch Parameter of given size
 
+    :param sz: just the spatial sizes (e.g., [5] in 1D, [5,10] in 2D, [5,10,10] in 3D)
+    :param nrOfI: number of images
+    :return: returns vector field of size nrOfIxdimxXxYxZ
+    """
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
     return Parameter(torch.zeros(csz.tolist()))
 
 def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
+    """
+    Create vector field torch Parameter of given size
 
-    dim = len(sz)
+    :param sz: just the spatial sizes (e.g., [5] in 1D, [5,10] in 2D, [5,10,10] in 3D)
+    :param nrOfI: number of images
+    :param nrOfC: number of channels
+    :return: returns vector field of size nrOfIxnrOfCxXxYxZ
+    """
+
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,nrOfC]+list(csz))
     return Parameter(torch.zeros(csz.tolist()))
 
 def identity_map_multiN(sz):
+    """
+    Create an identity map
+    
+    :param sz: size of an image in BxCxXxYxZ format
+    :return: returns the identity map
+    """
     dim = len(sz)-2
     nrOfI = sz[0]
 
@@ -191,6 +267,12 @@ def identity_map_multiN(sz):
     return id
 
 def identity_map(sz):
+    """
+    Returns an identity map.
+    
+    :param sz: just the spatial dimensions, i.e., XxYxZ
+    :return: returns the identity map of dimension dimxXxYxZ
+    """
     dim = len(sz)
     if dim==1:
         id = np.mgrid[0:sz[0]]
@@ -229,5 +311,11 @@ def identity_map(sz):
     return idnp
 
 def t2np( v ):
+    """
+    Takes a torch array and returns it as a numpy array on the cpu
+    
+    :param v: torch array
+    :return: numpy array
+    """
     return (v.data).cpu().numpy()
 
