@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-MERMAID: iMagE Registration via AuTomatic diffErentiation [*]_
+mermaid: iMagE Registration via AuTomatic diffErentiation [*]_
 ============================================================
 
 
