@@ -200,6 +200,10 @@ class ImageRegistrationOptimizer(Optimizer):
 class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     """
     Optimizer operating on a single scale. Typically this will be the full image resolution.
+    
+    .. todo::
+        Check what the best way to adapt the tolerances for the pre-defined optimizers; 
+        tying it to rel_ftol is not really correct.
     """
 
     def __init__(self,sz,spacing,useMap,params):

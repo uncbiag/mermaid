@@ -1,6 +1,10 @@
 """
 Various utility functions.
+
+.. todo::
+    Reorganize this package in a more meaningful way.
 """
+# TODO
 
 import torch
 from torch.nn.parameter import Parameter
@@ -9,8 +13,6 @@ from libraries.modules.stn_nd import STN_ND_BCXYZ
 
 import numpy as np
 import finite_differences as fd
-
-# TODO: maybe reorganize them in a more meaningful way
 
 def transform_image_to_NC_image_format(I):
     '''

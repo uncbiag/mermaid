@@ -55,12 +55,15 @@ class ModelFactory(object):
         Prints the models that are available and can be created with `create_registration_model`
         """
 
-        print('Known registration models are:')
-        print('   SVF                        : stationary velocity field')
-        print('   LDDMMShooting              : shooting-based LDDMM using the vector momentum')
-        print('   LDDMMShootingScalarMomentum: shooting-based LDDMM using the scalar momentum')
+        print('\nKnown registration models are:')
+        print('   svf_map                              : map-based stationary velocity field')
+        print('   svf_image                            : image-based stationary velocity field')
+        print('   lddmm_shooting_map                   : map-based shooting-based LDDMM using the vector momentum')
+        print('   lddmm_shooting_image                 : image-based shooting-based LDDMM using the vector momentum')
+        print('   lddmm_shooting_scalar_momentum_map   : map-based shooting-based LDDMM using the scalar momentum')
+        print('   lddmm_shooting_scalar_momentum_image : image-based shooting-based LDDMM using the scalar momentum')
 
-        print('All registered models are:')
+        print('\nAll registered models are:')
         print(self.models)
 
     def create_registration_model(self, modelName, params):

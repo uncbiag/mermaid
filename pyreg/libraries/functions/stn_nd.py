@@ -1,4 +1,10 @@
-# functions/add.py
+"""
+Spatial transform functions in 1D, 2D, and 3D.
+
+.. todo::
+    Add CUDA implementation. Could be based of the existing 2D CUDA implementation.
+"""
+
 import torch
 from torch.autograd import Function
 from _ext import my_lib_nd
@@ -6,11 +12,27 @@ from cffi import FFI
 ffi = FFI()
 
 class STNFunction_ND(Function):
+    """
+    Spatial transform function for 1D, 2D, and 3D. In BXYZC format (NOT the format used in the current toolbox).
+    """
     def __init__(self, ndim):
+        """
+        Constructor
+        
+        :param ndim: (int) spatial transformation of the transform 
+        """
         super(STNFunction_ND,self).__init__()
         self.ndim = ndim
+        """spatial dimension"""
         
     def forward(self, input1, input2):
+        """
+        Perform the actual spatial transform
+        
+        :param input1: image in BXYZC format
+        :param input2: spatial transform in BXYZdim format
+        :return: spatially transformed image in BXYZC format
+        """
         self.input1 = input1
         self.input2 = input2
         self.device_c = ffi.new("int *")
@@ -36,6 +58,12 @@ class STNFunction_ND(Function):
         return output
 
     def backward(self, grad_output):
+        """
+        Computes the gradient
+        
+        :param grad_output: grad output from previous "layer" 
+        :return: gradient
+        """
         grad_input1 = torch.zeros(self.input1.size())
         grad_input2 = torch.zeros(self.input2.size())
         #print('backward decice %d' % self.device)
@@ -49,11 +77,26 @@ class STNFunction_ND(Function):
 
 
 class STNFunction_ND_BCXYZ(Function):
+    """
+   Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox).
+   """
     def __init__(self, ndim):
+        """
+        Constructor
+    
+        :param ndim: (int) spatial transformation of the transform 
+        """
         super(STNFunction_ND_BCXYZ,self).__init__()
         self.ndim = ndim
         
-    def forward(self, input1, input2): # input one is image and 2 is the map
+    def forward(self, input1, input2):
+        """
+        Perform the actual spatial transform
+
+        :param input1: image in BCXYZ format
+        :param input2: spatial transform in BdimXYZ format
+        :return: spatially transformed image in BCXYZ format
+        """
         self.input1 = input1
         self.input2 = input2
         self.device_c = ffi.new("int *")
@@ -79,6 +122,12 @@ class STNFunction_ND_BCXYZ(Function):
         return output
 
     def backward(self, grad_output):
+        """
+        Computes the gradient
+
+        :param grad_output: grad output from previous "layer" 
+        :return: gradient
+        """
         grad_input1 = torch.zeros(self.input1.size())
         grad_input2 = torch.zeros(self.input2.size())
         #print('backward decice %d' % self.device)
@@ -93,6 +142,9 @@ class STNFunction_ND_BCXYZ(Function):
 # Old code starts here
 
 class STNFunction(Function):
+    """
+    Legacy 2D implementation. Ignore.
+    """
     def forward(self, input1, input2):
         self.input1 = input1
         self.input2 = input2

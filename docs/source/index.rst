@@ -6,8 +6,6 @@
 mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
 ============================================================
 
-
-
 .. toctree::
    :glob:
    :maxdepth: 1
@@ -33,6 +31,7 @@ mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
    rungekutta_integrators
    similarity_measure_factory
    smoother_factory
+   stn
    utils
    viewers
    visualize_registration_results
@@ -44,3 +43,4 @@ Indices and tables
 * :ref:`modindex`
 
 .. [*] OK, we just liked the acronym.
+

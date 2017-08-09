@@ -1,9 +1,11 @@
 """
 This package implements pytorch functions for Fourier-based convolutions.
-While this may not be relevant for GPU-implementations, convolutions in the spatial 
-domain are slow on CPUs. Hence, this function should be useful for memory-intensive
-models that need to be run on the CPU or CPU-based computations involving convolutions in general.
+While this may not be relevant for GPU-implementations, convolutions in the spatial domain are slow on CPUs. Hence, this function should be useful for memory-intensive models that need to be run on the CPU or CPU-based computations involving convolutions in general.
+
+.. todo::
+  Create a CUDA version of these convolutions functions. There is already a CUDA based FFT implementation available which could be built upon. Alternatively, spatial smoothing may be sufficiently fast on the GPU.
 """
+#TODO
 
 import torch
 from torch.autograd import Function
@@ -20,7 +22,11 @@ def are_indices_close(loc):
     
     :param loc: Index locations as outputted by np.where
     :return: Returns if the indices are roughly closeby or not
+
+    .. todo::
+       There should be a better check for closeness of points. The implemented one is very crude.
     """
+
     # TODO: potentially do a better check here, this one is very crude
     for cloc in loc:
         cMaxDist = (abs(cloc - cloc.max())).max()
@@ -229,6 +235,9 @@ def check_fourier_conv():
     Convenience function to check the gradient. Fails, as pytorch's check appears to have difficulty
     
     :return: True if analytical and numerical gradient are the same
+
+    .. todo::
+       The current check seems to fail in pyTorch. However, the gradient appears to be correct. Potentially an issue with the numerical gradient approximiaton.
     """
     # gradcheck takes a tuple of tensor as input, check if your gradient
     # evaluated with these tensors are close enough to numerical

@@ -230,11 +230,15 @@ class DiffusionSmoother(Smoother):
     def inverse_smooth_scalar_field(self, v, vout=None):
         raise ValueError('Sorry: Inversion of smoothing only supported for Fourier-based filters at the moment')
 
-# TODO: clean up the two Gaussian smoothers
 class GaussianSmoother(Smoother):
     """
     Gaussian smoothing in the spatial domain (hence, SLOW in high dimensions on the CPU at least).
+    
+    .. todo::
+        Clean up the two implementations (spatial and Fourier of the Gaussian smoothers).
+        In particular, assure that all computions are done in physical coordinates. For now these are just in [-1,1]^d
     """
+    # TODO
 
     def __init__(self, sz, spacing, params):
         super(GaussianSmoother,self).__init__(sz,spacing,params)
@@ -284,7 +288,6 @@ class GaussianSpatialSmoother(GaussianSmoother):
         else:
             raise ValueError('Can only create the smoothing kernel in dimensions 1-3')
 
-        # TODO: Potentially do all of the computations in physical coordinates (for now just [-1,1]^d)
     def _create_smoothing_kernel(self, k_sz):
         mus = np.zeros(self.dim)
         stds = np.ones(self.dim)
@@ -293,9 +296,6 @@ class GaussianSpatialSmoother(GaussianSmoother):
 
         return g
 
-    # TODO: See if we can avoid the clone calls somehow
-    # This is likely due to the slicing along the dimension for vector-valued field
-    # TODO: implement a version that can be used for multi-channel multi-image inputs
     def _filter_input_with_padding(self, I, Iout=None):
         if self.dim==1:
             I_4d = I.view([1,1,1]+list(I.size()))

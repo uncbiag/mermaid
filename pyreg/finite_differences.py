@@ -203,9 +203,6 @@ class FD(object):
         """
         pass
 
-    # We are assuming linear interpolation for the values outside the bounds here
-    # TODO: Offer other boundary conditions if desired
-
     def xp(self,I):
         """
         Returns the values for x-index incremented by one (to the right in 1D)

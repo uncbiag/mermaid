@@ -250,7 +250,6 @@ class SVFQuasiMomentumNet(RegistrationNet):
         """
         return self.m
 
-    # TODO: improve interface. Do we need sz as input to the constructors?
     def set_registration_parameters(self, p, sz, spacing):
         """
         Sets the registration parameters (the momentum field)

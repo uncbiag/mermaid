@@ -1,6 +1,11 @@
 """
 Package to allow for resampling of images, for example to support multi-scale solvers.
+
+.. todo::
+  skimage in version 0.14 (not officially released yet, supports 3D up- and downsampling.
+  Should replace this class with the skimage functionality once officially available.
 """
+# TODO
 
 from scipy import ndimage as nd
 import torch
@@ -11,10 +16,6 @@ import smoother_factory as SF
 import module_parameters as MP
 
 import utils
-
-#TODO: skimage in version 0.14 (not officially released yet, support 3D up- and downsampling
-#TODO: should replace this class with the skimage functionality once officially available
-#TODO: We convert here from torch to numpy and back to torch, hence it is not possible to autograd through these transformations
 
 class ResampleImage(object):
     """
@@ -55,10 +56,14 @@ class ResampleImage(object):
 
 
     def _zoom_image_singleC(self,I,spacing,scaling):
+        #TODO
+        """
+        ..todo:: 
+            Replace zoom, so we can backprop through it if necessary
+        """
         sz = np.array(list(I.size()))  # we assume this is a pytorch tensor
         resSzInt = self._compute_scaled_size(sz, scaling)
 
-        # TODO: replace zoom, so we can backprop through it if necessary
         Iz = nd.zoom(I.data.numpy(),scaling,None,order=1,mode='reflect')
         newSpacing = spacing*(sz.astype('float')/resSzInt.astype('float'))
         Iz_t = Variable(torch.from_numpy(Iz),requires_grad=False)
