@@ -2,7 +2,11 @@
 This package includes an lBFGS optimizer which supports different types of line-search, in particular backtracking, which is
 important for the image registration implementations. This implementation is available in the torch git repository
 (but not yet available in the standard release -- as of July 2017)
+
+.. todo::
+    Add support for multiple parameter groups.
 """
+#TODO
 
 import torch
 from functools import reduce

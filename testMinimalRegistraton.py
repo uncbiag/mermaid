@@ -12,7 +12,7 @@ import pyreg.multiscale_optimizer as MO
 
 modelName = 'lddmm_shooting_map'
 useMap = True
-dim = 2
+dim = 1
 nrOfIterations = 500 # number of iterations for the optimizer
 
 # general parameters
@@ -37,4 +37,7 @@ so.set_target_image(ITarget)
 
 # and now do the optimization
 so.optimize()
+
+params.write_JSON(modelName + '_settings_clean.json')
+params.write_JSON_comments(modelName + '_settings_comments.json')
 
