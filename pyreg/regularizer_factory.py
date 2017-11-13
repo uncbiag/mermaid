@@ -8,6 +8,7 @@ import torch
 from torch.autograd import Variable
 
 import finite_differences as fd
+from dataWapper import AdpatVal
 
 class Regularizer(object):
     """
@@ -45,7 +46,7 @@ class Regularizer(object):
         :return: Regularizer energy
         """
         szv = v.size()
-        reg = Variable(torch.zeros(1), requires_grad=False)
+        reg = AdpatVal(Variable(torch.zeros(1), requires_grad=False))
         for nrI in range(szv[0]): # loop over number of images
             reg = reg + self._compute_regularizer(v[nrI, ...])
         return reg
@@ -115,23 +116,26 @@ class HelmholtzRegularizer(Regularizer):
             raise ValueError('Regularizer is currently only supported in dimensions 1 to 3')
 
     def _compute_regularizer_1d(self, v, alpha, gamma):
-        Lv = Variable(torch.zeros(v.size()), requires_grad=False)
-        Lv[0,:] = v[0,:] * gamma - self.fdt.lap(v[0,:]) * alpha
+        Lv = AdpatVal(Variable(torch.zeros(v.size()), requires_grad=False))
+        # None is refer to batch, which is added here for compatibility, the following [0] is used for this reason
+        Lv[0,:] = v[0,:] * gamma - self.fdt.lap(v[None,0,:])[0] * alpha
         # now compute the norm
         return (Lv[0,:] ** 2).sum()*self.volumeElement
 
     def _compute_regularizer_2d(self, v, alpha, gamma):
-        Lv = Variable(torch.zeros(v.size()), requires_grad=False)
+        Lv = AdpatVal(Variable(torch.zeros(v.size()), requires_grad=False))
         for i in [0, 1]:
-            Lv[i,:, :] = v[i,:, :] * gamma - self.fdt.lap(v[i,:, :]) * alpha
+            # None is refer to batch, which is added here for compatibility, the following [0] is used for this reason
+            Lv[i,:, :] = v[i,:, :] * gamma - self.fdt.lap(v[None, i,:, :])[0] * alpha
 
         # now compute the norm
         return (Lv[0,:, :] ** 2 + Lv[1,:, :] ** 2).sum()*self.volumeElement
 
     def _compute_regularizer_3d(self, v, alpha, gamma):
-        Lv = Variable(torch.zeros(v.size()), requires_grad=False)
+        Lv = AdpatVal(Variable(torch.zeros(v.size()), requires_grad=False))
         for i in [0, 1, 2]:
-            Lv[i,:, :, :] = v[i,:, :, :] * gamma - self.fdt.lap(v[i,:, :, :]) * alpha
+            # None is refer to batch, which is added here for compatibility, the following [0] is used for this reason
+            Lv[i,:, :, :] = v[i,:, :, :] * gamma - self.fdt.lap(v[None,i,:, :, :])[0] * alpha
 
         # now compute the norm
         return (Lv[0,:, :, :] ** 2 + Lv[1,:, :, :] ** 2 + Lv[2,:, :, :] ** 2).sum()*self.volumeElement

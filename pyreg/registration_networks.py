@@ -15,7 +15,7 @@ import torch.nn as nn
 
 import rungekutta_integrators as RK
 import forward_models as FM
-
+from dataWapper import AdpatVal
 import regularizer_factory as RF
 import similarity_measure_factory as SM
 
@@ -743,7 +743,7 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
         v = self.smoother.smooth_vector_field_multiN(self.m)
-        reg = (v * self.m).sum() * self.spacing.prod()
+        reg = AdpatVal((v.float() * self.m.float()).sum() * self.spacing.prod())
         return reg
 
 

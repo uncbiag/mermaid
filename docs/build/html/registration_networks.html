@@ -1,0 +1,1573 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Registration networks &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Regularizer factory" href="regularizer_factory.html"/>
+        <link rel="prev" title="Multiscale optimizer" href="multiscale_optimizer.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Registration networks</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/registration_networks.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="registration-networks">
+<h1>Registration networks<a class="headerlink" href="#registration-networks" title="Permalink to this headline">¶</a></h1>
+digraph inheritance79ae3558ba {
+rankdir=LR;
+size=&quot;8.0, 12.0&quot;;
+  &quot;registration_networks.LDDMMShootingScalarMomentumImageLoss&quot; [URL=&quot;#registration_networks.LDDMMShootingScalarMomentumImageLoss&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization of the loss to scalar-momentum LDDMM on images&quot;];
+  &quot;registration_networks.RegistrationImageLoss&quot; -&gt; &quot;registration_networks.LDDMMShootingScalarMomentumImageLoss&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.LDDMMShootingScalarMomentumImageNet&quot; [URL=&quot;#registration_networks.LDDMMShootingScalarMomentumImageNet&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization of scalar-momentum LDDMM to image-based matching&quot;];
+  &quot;registration_networks.LDDMMShootingScalarMomentumNet&quot; -&gt; &quot;registration_networks.LDDMMShootingScalarMomentumImageNet&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.LDDMMShootingScalarMomentumMapLoss&quot; [URL=&quot;#registration_networks.LDDMMShootingScalarMomentumMapLoss&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization of the loss function to scalar-momentum LDDMM for maps.&quot;];
+  &quot;registration_networks.RegistrationMapLoss&quot; -&gt; &quot;registration_networks.LDDMMShootingScalarMomentumMapLoss&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.LDDMMShootingScalarMomentumMapNet&quot; [URL=&quot;#registration_networks.LDDMMShootingScalarMomentumMapNet&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization of scalar-momentum LDDMM registration to map-based image matching&quot;];
+  &quot;registration_networks.LDDMMShootingScalarMomentumNet&quot; -&gt; &quot;registration_networks.LDDMMShootingScalarMomentumMapNet&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.LDDMMShootingScalarMomentumNet&quot; [URL=&quot;#registration_networks.LDDMMShootingScalarMomentumNet&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization of the registration network to registrations with scalar momentum. Provides an integrator&quot;];
+  &quot;registration_networks.RegistrationNet&quot; -&gt; &quot;registration_networks.LDDMMShootingScalarMomentumNet&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.LDDMMShootingVectorMomentumImageLoss&quot; [URL=&quot;#registration_networks.LDDMMShootingVectorMomentumImageLoss&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization of the image loss to vector-momentum LDDMM&quot;];
+  &quot;registration_networks.RegistrationImageLoss&quot; -&gt; &quot;registration_networks.LDDMMShootingVectorMomentumImageLoss&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.LDDMMShootingVectorMomentumImageNet&quot; [URL=&quot;#registration_networks.LDDMMShootingVectorMomentumImageNet&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization of vector-momentum LDDMM for direct image matching.&quot;];
+  &quot;registration_networks.LDDMMShootingVectorMomentumNet&quot; -&gt; &quot;registration_networks.LDDMMShootingVectorMomentumImageNet&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.LDDMMShootingVectorMomentumMapLoss&quot; [URL=&quot;#registration_networks.LDDMMShootingVectorMomentumMapLoss&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization of the loss for map-based vector momumentum. Image similarity is computed based on warping the source&quot;];
+  &quot;registration_networks.RegistrationMapLoss&quot; -&gt; &quot;registration_networks.LDDMMShootingVectorMomentumMapLoss&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.LDDMMShootingVectorMomentumMapNet&quot; [URL=&quot;#registration_networks.LDDMMShootingVectorMomentumMapNet&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization for map-based vector-momentum where the map itself is advected&quot;];
+  &quot;registration_networks.LDDMMShootingVectorMomentumNet&quot; -&gt; &quot;registration_networks.LDDMMShootingVectorMomentumMapNet&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.LDDMMShootingVectorMomentumNet&quot; [URL=&quot;#registration_networks.LDDMMShootingVectorMomentumNet&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization to vector-momentum-based shooting for LDDMM&quot;];
+  &quot;registration_networks.RegistrationNet&quot; -&gt; &quot;registration_networks.LDDMMShootingVectorMomentumNet&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.RegistrationImageLoss&quot; [URL=&quot;#registration_networks.RegistrationImageLoss&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization for image-based registration losses&quot;];
+  &quot;registration_networks.RegistrationLoss&quot; -&gt; &quot;registration_networks.RegistrationImageLoss&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.RegistrationLoss&quot; [URL=&quot;#registration_networks.RegistrationLoss&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Abstract base class to define a loss function for image registration&quot;];
+  &quot;torch.nn.modules.module.Module&quot; -&gt; &quot;registration_networks.RegistrationLoss&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.RegistrationMapLoss&quot; [URL=&quot;#registration_networks.RegistrationMapLoss&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization for map-based registration losses&quot;];
+  &quot;registration_networks.RegistrationLoss&quot; -&gt; &quot;registration_networks.RegistrationMapLoss&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.RegistrationNet&quot; [URL=&quot;#registration_networks.RegistrationNet&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Abstract base-class for all the registration networks&quot;];
+  &quot;torch.nn.modules.module.Module&quot; -&gt; &quot;registration_networks.RegistrationNet&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.SVFImageLoss&quot; [URL=&quot;#registration_networks.SVFImageLoss&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Loss specialization for image-based SVF&quot;];
+  &quot;registration_networks.RegistrationImageLoss&quot; -&gt; &quot;registration_networks.SVFImageLoss&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.SVFImageNet&quot; [URL=&quot;#registration_networks.SVFImageNet&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization for SVF-based image registration&quot;];
+  &quot;registration_networks.SVFNet&quot; -&gt; &quot;registration_networks.SVFImageNet&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.SVFMapLoss&quot; [URL=&quot;#registration_networks.SVFMapLoss&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization of the loss function for SVF to a map-based solution&quot;];
+  &quot;registration_networks.RegistrationMapLoss&quot; -&gt; &quot;registration_networks.SVFMapLoss&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.SVFMapNet&quot; [URL=&quot;#registration_networks.SVFMapNet&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Network specialization to a map-based SVF&quot;];
+  &quot;registration_networks.SVFNet&quot; -&gt; &quot;registration_networks.SVFMapNet&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.SVFNet&quot; [URL=&quot;#registration_networks.SVFNet&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Base class for SVF-type registrations. Provides a velocity field (as a parameter) and an integrator&quot;];
+  &quot;registration_networks.RegistrationNet&quot; -&gt; &quot;registration_networks.SVFNet&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.SVFQuasiMomentumImageLoss&quot; [URL=&quot;#registration_networks.SVFQuasiMomentumImageLoss&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Loss function specialization for the image-based quasi-momentum SVF implementation.&quot;];
+  &quot;registration_networks.RegistrationImageLoss&quot; -&gt; &quot;registration_networks.SVFQuasiMomentumImageLoss&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.SVFQuasiMomentumImageNet&quot; [URL=&quot;#registration_networks.SVFQuasiMomentumImageNet&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Specialization for image registation&quot;];
+  &quot;registration_networks.SVFQuasiMomentumNet&quot; -&gt; &quot;registration_networks.SVFQuasiMomentumImageNet&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;registration_networks.SVFQuasiMomentumNet&quot; [URL=&quot;#registration_networks.SVFQuasiMomentumNet&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Attempt at parameterizing SVF with a momentum-like vector field (EXPERIMENTAL, not working yet)&quot;];
+  &quot;registration_networks.RegistrationNet&quot; -&gt; &quot;registration_networks.SVFQuasiMomentumNet&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;torch.nn.modules.module.Module&quot; [fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,tooltip=&quot;Base class for all neural network modules.&quot;];
+}
+<span class="target" id="module-registration_networks"></span><p>Defines different registration methods as pyTorch networks.
+Currently implemented:</p>
+<blockquote>
+<div><ul class="simple">
+<li>SVFImageNet: image-based stationary velocity field</li>
+<li>SVFMapNet: map-based stationary velocity field</li>
+<li>SVFQuasiMomentumImageNet: EXPERIMENTAL (not working yet): SVF which is parameterized by a momentum</li>
+<li>LDDMMShootingVectorMomentumImageNet: image-based LDDMM using the vector-momentum parameterization</li>
+<li>LDDMMShootingVectorMomentumImageNet: map-based LDDMM using the vector-momentum parameterization</li>
+<li>LDDMMShootingScalarMomentumImageNet: image-based LDDMM using the scalar-momentum parameterization</li>
+<li>LDDMMShootingScalarMomentumImageNet: map-based LDDMM using the scalar-momentum parameterization</li>
+</ul>
+</div></blockquote>
+<dl class="class">
+<dt id="registration_networks.RegistrationNet">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">RegistrationNet</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationNet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract base-class for all the registration networks</p>
+<dl class="attribute">
+<dt id="registration_networks.RegistrationNet.sz">
+<code class="descname">sz</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.RegistrationNet.sz" title="Permalink to this definition">¶</a></dt>
+<dd><p>image size</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.RegistrationNet.spacing">
+<code class="descname">spacing</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.RegistrationNet.spacing" title="Permalink to this definition">¶</a></dt>
+<dd><p>image spacing</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.RegistrationNet.params">
+<code class="descname">params</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.RegistrationNet.params" title="Permalink to this definition">¶</a></dt>
+<dd><p>ParameterDict() object for the parameters</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.RegistrationNet.tFrom">
+<code class="descname">tFrom</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.RegistrationNet.tFrom" title="Permalink to this definition">¶</a></dt>
+<dd><p>time to solve a model from</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.RegistrationNet.tTo">
+<code class="descname">tTo</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.RegistrationNet.tTo" title="Permalink to this definition">¶</a></dt>
+<dd><p>time to solve a model to</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.RegistrationNet.nrOfImages">
+<code class="descname">nrOfImages</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.RegistrationNet.nrOfImages" title="Permalink to this definition">¶</a></dt>
+<dd><p>the number of images, i.e., the batch size B</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.RegistrationNet.nrOfChannels">
+<code class="descname">nrOfChannels</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.RegistrationNet.nrOfChannels" title="Permalink to this definition">¶</a></dt>
+<dd><p>the number of image channels, i.e., C</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.RegistrationNet.create_registration_parameters">
+<code class="descname">create_registration_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationNet.create_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationNet.create_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method to create the registration parameters over which should be optimized. They need to be of type torch Parameter()</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.RegistrationNet.get_registration_parameters">
+<code class="descname">get_registration_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationNet.get_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationNet.get_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method to return the registration parameters</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">returns the registration parameters</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.RegistrationNet.set_registration_parameters">
+<code class="descname">set_registration_parameters</code><span class="sig-paren">(</span><em>p</em>, <em>sz</em>, <em>spacing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationNet.set_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationNet.set_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method to set the registration parameters externally. This can for example be useful when the optimizer should be initialized at a specific value</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>p</strong> – parameter to be set</li>
+<li><strong>sz</strong> – size of the image the parameter corresponds to</li>
+<li><strong>spacing</strong> – spacing of the image the parameter corresponds to</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.RegistrationNet.create_integrator">
+<code class="descname">create_integrator</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationNet.create_integrator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationNet.create_integrator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method to create an integrator for time-integration of a model</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.RegistrationNet.downsample_registration_parameters">
+<code class="descname">downsample_registration_parameters</code><span class="sig-paren">(</span><em>desiredSz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationNet.downsample_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationNet.downsample_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to downsample the registration parameters spatially to a desired size. Should be overwritten by a derived class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>desiredSz</strong> – desired size in XxZxZ format, e.g., [50,100,40]</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">should return a tuple (downsampled_image,downsampled_spacing)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.RegistrationNet.upsample_registration_parameters">
+<code class="descname">upsample_registration_parameters</code><span class="sig-paren">(</span><em>desiredSz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationNet.upsample_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationNet.upsample_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to upsample the registration parameters spatially to a desired size. Should be overwritten by a derived class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>desiredSz</strong> – desired size in XxZxZ format, e.g., [50,100,40]</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">should return a tuple (upsampled_image,upsampled_spacing)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.RegistrationNet.get_parameter_image_and_name_to_visualize">
+<code class="descname">get_parameter_image_and_name_to_visualize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationNet.get_parameter_image_and_name_to_visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationNet.get_parameter_image_and_name_to_visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to specify an image that should be visualized including its caption.
+This will typically be related to the parameter of a model. This method should be overwritten by a derived class</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">should return a tuple (image,desired_caption)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.SVFNet">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">SVFNet</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFNet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for SVF-type registrations. Provides a velocity field (as a parameter) and an integrator</p>
+<dl class="attribute">
+<dt id="registration_networks.SVFNet.v">
+<code class="descname">v</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFNet.v" title="Permalink to this definition">¶</a></dt>
+<dd><p>velocity field that will be optimized over</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.SVFNet.integrator">
+<code class="descname">integrator</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFNet.integrator" title="Permalink to this definition">¶</a></dt>
+<dd><p>integrator to do the time-integration</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFNet.create_registration_parameters">
+<code class="descname">create_registration_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFNet.create_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFNet.create_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates the velocity field that is being optimized over</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">velocity field parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFNet.get_registration_parameters">
+<code class="descname">get_registration_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFNet.get_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFNet.get_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the velocity field parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">velocity field parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFNet.set_registration_parameters">
+<code class="descname">set_registration_parameters</code><span class="sig-paren">(</span><em>p</em>, <em>sz</em>, <em>spacing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFNet.set_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFNet.set_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the velocity field registration parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>p</strong> – velocity field</li>
+<li><strong>sz</strong> – size of the corresponding image</li>
+<li><strong>spacing</strong> – spacing of the corresponding image</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFNet.get_parameter_image_and_name_to_visualize">
+<code class="descname">get_parameter_image_and_name_to_visualize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFNet.get_parameter_image_and_name_to_visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFNet.get_parameter_image_and_name_to_visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the velocity field parameter magnitude image and a name</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns the tuple (velocity_magnitude_image,name)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFNet.upsample_registration_parameters">
+<code class="descname">upsample_registration_parameters</code><span class="sig-paren">(</span><em>desiredSz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFNet.upsample_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFNet.upsample_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Upsamples the velocity field to a desired size</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>desiredSz</strong> – desired size of the upsampled velocity field</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns a tuple (upsampled_image,upsampled_spacing)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFNet.downsample_registration_parameters">
+<code class="descname">downsample_registration_parameters</code><span class="sig-paren">(</span><em>desiredSz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFNet.downsample_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFNet.downsample_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Downsamples the velocity field to a desired size</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>desiredSz</strong> – desired size of the downsampled velocity field</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns a tuple (downsampled_image,downsampled_spacing)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.SVFImageNet">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">SVFImageNet</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFImageNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFImageNet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization for SVF-based image registration</p>
+<dl class="method">
+<dt id="registration_networks.SVFImageNet.create_integrator">
+<code class="descname">create_integrator</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFImageNet.create_integrator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFImageNet.create_integrator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates an integrator for the advection equation of the image</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">returns this integrator</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFImageNet.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFImageNet.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFImageNet.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solves the image-based advection equation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – initial condition for the image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns the image at the final time (tTo)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.SVFQuasiMomentumNet">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">SVFQuasiMomentumNet</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFQuasiMomentumNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFQuasiMomentumNet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attempt at parameterizing SVF with a momentum-like vector field (EXPERIMENTAL, not working yet)</p>
+<dl class="attribute">
+<dt id="registration_networks.SVFQuasiMomentumNet.m">
+<code class="descname">m</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFQuasiMomentumNet.m" title="Permalink to this definition">¶</a></dt>
+<dd><p>momentum parameter</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.SVFQuasiMomentumNet.smoother">
+<code class="descname">smoother</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFQuasiMomentumNet.smoother" title="Permalink to this definition">¶</a></dt>
+<dd><p>smoother to go from momentum to velocity</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.SVFQuasiMomentumNet.v">
+<code class="descname">v</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFQuasiMomentumNet.v" title="Permalink to this definition">¶</a></dt>
+<dd><p>corresponding velocity field</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.SVFQuasiMomentumNet.integrator">
+<code class="descname">integrator</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFQuasiMomentumNet.integrator" title="Permalink to this definition">¶</a></dt>
+<dd><p>integrator to solve the forward model</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFQuasiMomentumNet.create_registration_parameters">
+<code class="descname">create_registration_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFQuasiMomentumNet.create_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFQuasiMomentumNet.create_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates the registration parameters (the momentum field) and returns them</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">momentum field</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFQuasiMomentumNet.get_registration_parameters">
+<code class="descname">get_registration_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFQuasiMomentumNet.get_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFQuasiMomentumNet.get_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the registration parameters (the momentum field)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">momentum field</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFQuasiMomentumNet.set_registration_parameters">
+<code class="descname">set_registration_parameters</code><span class="sig-paren">(</span><em>p</em>, <em>sz</em>, <em>spacing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFQuasiMomentumNet.set_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFQuasiMomentumNet.set_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the registration parameters (the momentum field)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>p</strong> – momentum field</li>
+<li><strong>sz</strong> – corresponding image size</li>
+<li><strong>spacing</strong> – corresponding image spacing</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFQuasiMomentumNet.get_parameter_image_and_name_to_visualize">
+<code class="descname">get_parameter_image_and_name_to_visualize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFQuasiMomentumNet.get_parameter_image_and_name_to_visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFQuasiMomentumNet.get_parameter_image_and_name_to_visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the momentum magnitude image and <span class="math">\(|m|\)</span> as the image caption</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns a tuple (magnitude_m,name)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFQuasiMomentumNet.upsample_registration_parameters">
+<code class="descname">upsample_registration_parameters</code><span class="sig-paren">(</span><em>desiredSz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFQuasiMomentumNet.upsample_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFQuasiMomentumNet.upsample_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFQuasiMomentumNet.downsample_registration_parameters">
+<code class="descname">downsample_registration_parameters</code><span class="sig-paren">(</span><em>desiredSz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFQuasiMomentumNet.downsample_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFQuasiMomentumNet.downsample_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.SVFQuasiMomentumImageNet">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">SVFQuasiMomentumImageNet</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFQuasiMomentumImageNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFQuasiMomentumImageNet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization for image registation</p>
+<dl class="method">
+<dt id="registration_networks.SVFQuasiMomentumImageNet.create_integrator">
+<code class="descname">create_integrator</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFQuasiMomentumImageNet.create_integrator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFQuasiMomentumImageNet.create_integrator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates the integrator that solve the advection equation (based on the smoothed momentum)
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFQuasiMomentumImageNet.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFQuasiMomentumImageNet.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFQuasiMomentumImageNet.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solves the model by first smoothing the momentum field and then using it as the velocity for the advection equation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – initial condition for the image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns the image at the final time point (tTo)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.RegistrationLoss">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">RegistrationLoss</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationLoss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationLoss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract base class to define a loss function for image registration</p>
+<dl class="attribute">
+<dt id="registration_networks.RegistrationLoss.spacing">
+<code class="descname">spacing</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.RegistrationLoss.spacing" title="Permalink to this definition">¶</a></dt>
+<dd><p>image spacing</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.RegistrationLoss.sz">
+<code class="descname">sz</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.RegistrationLoss.sz" title="Permalink to this definition">¶</a></dt>
+<dd><p>image size</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.RegistrationLoss.params">
+<code class="descname">params</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.RegistrationLoss.params" title="Permalink to this definition">¶</a></dt>
+<dd><p>ParameterDict() paramters</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.RegistrationLoss.smFactory">
+<code class="descname">smFactory</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.RegistrationLoss.smFactory" title="Permalink to this definition">¶</a></dt>
+<dd><p>factory to create similarity measures on the fly</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.RegistrationLoss.similarityMeasure">
+<code class="descname">similarityMeasure</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.RegistrationLoss.similarityMeasure" title="Permalink to this definition">¶</a></dt>
+<dd><p>the similarity measure itself</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.RegistrationLoss.add_similarity_measure">
+<code class="descname">add_similarity_measure</code><span class="sig-paren">(</span><em>simName</em>, <em>simMeasure</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationLoss.add_similarity_measure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationLoss.add_similarity_measure" title="Permalink to this definition">¶</a></dt>
+<dd><p>To add a custom similarity measure to the similarity measure factory</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>simName</strong> – desired name of the similarity measure (string)</li>
+<li><strong>simMeasure</strong> – similarity measure itself (to instantiate an object)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.RegistrationLoss.compute_similarity_energy">
+<code class="descname">compute_similarity_energy</code><span class="sig-paren">(</span><em>I1_warped</em>, <em>I1_target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationLoss.compute_similarity_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationLoss.compute_similarity_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computing the image matching energy based on the selected similarity measure</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>I1_warped</strong> – warped image at time tTo</li>
+<li><strong>I1_target</strong> – target image to register to</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">returns the value for image similarity energy</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.RegistrationLoss.compute_regularization_energy">
+<code class="descname">compute_regularization_energy</code><span class="sig-paren">(</span><em>I0_source</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationLoss.compute_regularization_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationLoss.compute_regularization_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method computing the regularization energy based on the registration parameters and (if desired) the initial image</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I0_source</strong> – Initial image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">should return the valie for the regularization energy</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.RegistrationImageLoss">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">RegistrationImageLoss</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationImageLoss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationImageLoss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization for image-based registration losses</p>
+<dl class="method">
+<dt id="registration_networks.RegistrationImageLoss.get_energy">
+<code class="descname">get_energy</code><span class="sig-paren">(</span><em>I1_warped</em>, <em>I0_source</em>, <em>I1_target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationImageLoss.get_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationImageLoss.get_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the overall registration energy as E = E_sim + E_reg</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>I1_warped</strong> – warped image</li>
+<li><strong>I0_source</strong> – source image</li>
+<li><strong>I1_target</strong> – target image</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">return the energy value</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.RegistrationImageLoss.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>I1_warped</em>, <em>I0_source</em>, <em>I1_target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationImageLoss.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationImageLoss.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the loss by evaluating the energy
+:param I1_warped: warped image
+:param I0_source: source image
+:param I1_target: target image
+:return: registration energy</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.RegistrationMapLoss">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">RegistrationMapLoss</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationMapLoss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationMapLoss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization for map-based registration losses</p>
+<dl class="method">
+<dt id="registration_networks.RegistrationMapLoss.get_energy">
+<code class="descname">get_energy</code><span class="sig-paren">(</span><em>phi1</em>, <em>I0_source</em>, <em>I1_target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationMapLoss.get_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationMapLoss.get_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the energy by warping the source image via the map and then comparing it to the target image</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>phi1</strong> – map (mapping the source image to the target image, defined in the space of the target image)</li>
+<li><strong>I0_source</strong> – source image</li>
+<li><strong>I1_target</strong> – target image</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">registration energy</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.RegistrationMapLoss.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>phi1</em>, <em>I0_source</em>, <em>I1_target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#RegistrationMapLoss.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.RegistrationMapLoss.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the loss function value by evaluating the registration energy</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>phi1</strong> – map (mapping the source image to the target image, defined in the space of the target image)</li>
+<li><strong>I0_source</strong> – source image</li>
+<li><strong>I1_target</strong> – target image</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">returns the value of the loss function (i.e., the registration energy)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.SVFImageLoss">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">SVFImageLoss</code><span class="sig-paren">(</span><em>v</em>, <em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFImageLoss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFImageLoss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loss specialization for image-based SVF</p>
+<dl class="attribute">
+<dt id="registration_networks.SVFImageLoss.v">
+<code class="descname">v</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFImageLoss.v" title="Permalink to this definition">¶</a></dt>
+<dd><p>veclocity field parameter</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.SVFImageLoss.regularizer">
+<code class="descname">regularizer</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFImageLoss.regularizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>regularizer to compute the regularization energy</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFImageLoss.compute_regularization_energy">
+<code class="descname">compute_regularization_energy</code><span class="sig-paren">(</span><em>I0_source</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFImageLoss.compute_regularization_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFImageLoss.compute_regularization_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computing the regularization energy</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I0_source</strong> – source image (not used)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns the regularization energy</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.SVFQuasiMomentumImageLoss">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">SVFQuasiMomentumImageLoss</code><span class="sig-paren">(</span><em>m</em>, <em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFQuasiMomentumImageLoss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFQuasiMomentumImageLoss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loss function specialization for the image-based quasi-momentum SVF implementation.
+Essentially the same as for SVF but has to smooth the momentum field first to obtain the velocity field.</p>
+<dl class="attribute">
+<dt id="registration_networks.SVFQuasiMomentumImageLoss.m">
+<code class="descname">m</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFQuasiMomentumImageLoss.m" title="Permalink to this definition">¶</a></dt>
+<dd><p>vector momentum</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.SVFQuasiMomentumImageLoss.regularizer">
+<code class="descname">regularizer</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFQuasiMomentumImageLoss.regularizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>regularizer to compute the regularization energy</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.SVFQuasiMomentumImageLoss.smoother">
+<code class="descname">smoother</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFQuasiMomentumImageLoss.smoother" title="Permalink to this definition">¶</a></dt>
+<dd><p>smoother to convert from momentum to velocity</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFQuasiMomentumImageLoss.compute_regularization_energy">
+<code class="descname">compute_regularization_energy</code><span class="sig-paren">(</span><em>I0_source</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFQuasiMomentumImageLoss.compute_regularization_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFQuasiMomentumImageLoss.compute_regularization_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the regularization energy from the momentum</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I0_source</strong> – not used</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns the regularization energy</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.SVFMapNet">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">SVFMapNet</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFMapNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFMapNet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Network specialization to a map-based SVF</p>
+<dl class="method">
+<dt id="registration_networks.SVFMapNet.create_integrator">
+<code class="descname">create_integrator</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFMapNet.create_integrator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFMapNet.create_integrator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates an integrator to solve a map-based advection equation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">returns this integrator</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFMapNet.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>phi</em>, <em>I0_source</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFMapNet.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFMapNet.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solved the map-based equation forward</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>phi</strong> – initial condition for the map</li>
+<li><strong>I0_source</strong> – not used</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">returns the map at time tTo</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.SVFMapLoss">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">SVFMapLoss</code><span class="sig-paren">(</span><em>v</em>, <em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFMapLoss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFMapLoss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization of the loss function for SVF to a map-based solution</p>
+<dl class="attribute">
+<dt id="registration_networks.SVFMapLoss.v">
+<code class="descname">v</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFMapLoss.v" title="Permalink to this definition">¶</a></dt>
+<dd><p>velocity field parameter</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.SVFMapLoss.regularizer">
+<code class="descname">regularizer</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.SVFMapLoss.regularizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>regularizer to compute the regularization energy</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.SVFMapLoss.compute_regularization_energy">
+<code class="descname">compute_regularization_energy</code><span class="sig-paren">(</span><em>I0_source</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#SVFMapLoss.compute_regularization_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.SVFMapLoss.compute_regularization_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the regularizaton energy from the velocity field parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I0_source</strong> – not used</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns the regularization energy</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.LDDMMShootingVectorMomentumNet">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">LDDMMShootingVectorMomentumNet</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumNet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization to vector-momentum-based shooting for LDDMM</p>
+<dl class="attribute">
+<dt id="registration_networks.LDDMMShootingVectorMomentumNet.m">
+<code class="descname">m</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumNet.m" title="Permalink to this definition">¶</a></dt>
+<dd><p>vector momentum</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.LDDMMShootingVectorMomentumNet.integrator">
+<code class="descname">integrator</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumNet.integrator" title="Permalink to this definition">¶</a></dt>
+<dd><p>integrator to solve EPDiff variant</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingVectorMomentumNet.create_registration_parameters">
+<code class="descname">create_registration_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumNet.create_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumNet.create_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates the vector momentum parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns the vector momentum parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingVectorMomentumNet.get_registration_parameters">
+<code class="descname">get_registration_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumNet.get_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumNet.get_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the vector momentum parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">vector momentum</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingVectorMomentumNet.set_registration_parameters">
+<code class="descname">set_registration_parameters</code><span class="sig-paren">(</span><em>p</em>, <em>sz</em>, <em>spacing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumNet.set_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumNet.set_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the vector momentum registration parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>p</strong> – vector momentum</li>
+<li><strong>sz</strong> – size of image</li>
+<li><strong>spacing</strong> – spacing of image</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingVectorMomentumNet.get_parameter_image_and_name_to_visualize">
+<code class="descname">get_parameter_image_and_name_to_visualize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumNet.get_parameter_image_and_name_to_visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumNet.get_parameter_image_and_name_to_visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a magnitude image for the momentum and returns it with name <span class="math">\(|m|\)</span></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns tuple (m_magnitude_image,name)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingVectorMomentumNet.upsample_registration_parameters">
+<code class="descname">upsample_registration_parameters</code><span class="sig-paren">(</span><em>desiredSz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumNet.upsample_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumNet.upsample_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Upsamples the vector-momentum parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>desiredSz</strong> – desired size of the upsampled momentum</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns tuple (upsampled_momentum,upsampled_spacing)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingVectorMomentumNet.downsample_registration_parameters">
+<code class="descname">downsample_registration_parameters</code><span class="sig-paren">(</span><em>desiredSz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumNet.downsample_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumNet.downsample_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Downsamples the vector-momentum parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>desiredSz</strong> – desired size of the downsampled momentum</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns tuple (downsampled_momentum,downsampled_spacing)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.LDDMMShootingVectorMomentumImageNet">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">LDDMMShootingVectorMomentumImageNet</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumImageNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumImageNet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization of vector-momentum LDDMM for direct image matching.</p>
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingVectorMomentumImageNet.create_integrator">
+<code class="descname">create_integrator</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumImageNet.create_integrator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumImageNet.create_integrator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates integrator to solve EPDiff together with an advevtion equation for the image</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">returns this integrator</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingVectorMomentumImageNet.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumImageNet.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumImageNet.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Integrates EPDiff plus advection equation for image forward</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Initial condition for image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns the image at time tTo</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.LDDMMShootingVectorMomentumImageLoss">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">LDDMMShootingVectorMomentumImageLoss</code><span class="sig-paren">(</span><em>m</em>, <em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumImageLoss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumImageLoss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization of the image loss to vector-momentum LDDMM</p>
+<dl class="attribute">
+<dt id="registration_networks.LDDMMShootingVectorMomentumImageLoss.m">
+<code class="descname">m</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumImageLoss.m" title="Permalink to this definition">¶</a></dt>
+<dd><p>momentum</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.LDDMMShootingVectorMomentumImageLoss.smoother">
+<code class="descname">smoother</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumImageLoss.smoother" title="Permalink to this definition">¶</a></dt>
+<dd><p>smoother to convert from momentum to velocity</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingVectorMomentumImageLoss.compute_regularization_energy">
+<code class="descname">compute_regularization_energy</code><span class="sig-paren">(</span><em>I0_source</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumImageLoss.compute_regularization_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumImageLoss.compute_regularization_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the regularzation energy based on the inital momentum
+:param I0_source: not used
+:return: regularization energy</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.LDDMMShootingVectorMomentumMapNet">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">LDDMMShootingVectorMomentumMapNet</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumMapNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumMapNet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization for map-based vector-momentum where the map itself is advected</p>
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingVectorMomentumMapNet.create_integrator">
+<code class="descname">create_integrator</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumMapNet.create_integrator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumMapNet.create_integrator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates an integrator for EPDiff + advection equation for the map</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">returns this integrator</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingVectorMomentumMapNet.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>phi</em>, <em>I0_source</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumMapNet.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumMapNet.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solves EPDiff + advection equation forward and returns the map at time tTo</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>phi</strong> – initial condition for the map</li>
+<li><strong>I0_source</strong> – not used</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">returns the map at time tTo</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.LDDMMShootingVectorMomentumMapLoss">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">LDDMMShootingVectorMomentumMapLoss</code><span class="sig-paren">(</span><em>m</em>, <em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumMapLoss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumMapLoss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization of the loss for map-based vector momumentum. Image similarity is computed based on warping the source
+image with the advected map.</p>
+<dl class="attribute">
+<dt id="registration_networks.LDDMMShootingVectorMomentumMapLoss.m">
+<code class="descname">m</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumMapLoss.m" title="Permalink to this definition">¶</a></dt>
+<dd><p>vector momentum</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.LDDMMShootingVectorMomentumMapLoss.smoother">
+<code class="descname">smoother</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumMapLoss.smoother" title="Permalink to this definition">¶</a></dt>
+<dd><p>smoother to obtain the velocity field from the momentum field</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingVectorMomentumMapLoss.compute_regularization_energy">
+<code class="descname">compute_regularization_energy</code><span class="sig-paren">(</span><em>I0_source</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingVectorMomentumMapLoss.compute_regularization_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingVectorMomentumMapLoss.compute_regularization_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Commputes the regularization energy from the initial vector momentum</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I0_source</strong> – not used</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns the regularization energy</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.LDDMMShootingScalarMomentumNet">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">LDDMMShootingScalarMomentumNet</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumNet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization of the registration network to registrations with scalar momentum. Provides an integrator
+and the scalar momentum parameter.</p>
+<dl class="attribute">
+<dt id="registration_networks.LDDMMShootingScalarMomentumNet.lam">
+<code class="descname">lam</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumNet.lam" title="Permalink to this definition">¶</a></dt>
+<dd><p>scalar momentum</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.LDDMMShootingScalarMomentumNet.integrator">
+<code class="descname">integrator</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumNet.integrator" title="Permalink to this definition">¶</a></dt>
+<dd><p>integrator to integrate EPDiff and associated equations (for image or map)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingScalarMomentumNet.create_registration_parameters">
+<code class="descname">create_registration_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumNet.create_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumNet.create_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates the scalar momentum registration parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns this scalar momentum parameter</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingScalarMomentumNet.get_registration_parameters">
+<code class="descname">get_registration_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumNet.get_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumNet.get_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the scalar momentum registration parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">scalar momentum</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingScalarMomentumNet.set_registration_parameters">
+<code class="descname">set_registration_parameters</code><span class="sig-paren">(</span><em>p</em>, <em>sz</em>, <em>spacing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumNet.set_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumNet.set_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the scalar momentum registration parameter</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>p</strong> – scalar momentum</li>
+<li><strong>sz</strong> – image size</li>
+<li><strong>spacing</strong> – image spacing</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingScalarMomentumNet.get_parameter_image_and_name_to_visualize">
+<code class="descname">get_parameter_image_and_name_to_visualize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumNet.get_parameter_image_and_name_to_visualize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumNet.get_parameter_image_and_name_to_visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an image of the scalar momentum (magnitude over all channels) and ‘lambda’ as name</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns tuple (lamda_magnitude,lambda_name)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingScalarMomentumNet.upsample_registration_parameters">
+<code class="descname">upsample_registration_parameters</code><span class="sig-paren">(</span><em>desiredSz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumNet.upsample_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumNet.upsample_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Upsample the scalar momentum</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>desiredSz</strong> – desired size to be upsampled to, e.g., [100,50,40]</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns a tuple (upsampled_scalar_momentum,upsampled_spacing)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingScalarMomentumNet.downsample_registration_parameters">
+<code class="descname">downsample_registration_parameters</code><span class="sig-paren">(</span><em>desiredSz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumNet.downsample_registration_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumNet.downsample_registration_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Downsample the scalar momentum</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>desiredSz</strong> – desired size to be downsampled to, e.g., [40,20,10]</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns a tuple (downsampled_scalar_momentum,downsampled_spacing)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.LDDMMShootingScalarMomentumImageNet">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">LDDMMShootingScalarMomentumImageNet</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumImageNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumImageNet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization of scalar-momentum LDDMM to image-based matching</p>
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingScalarMomentumImageNet.create_integrator">
+<code class="descname">create_integrator</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumImageNet.create_integrator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumImageNet.create_integrator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates an integrator integrating the scalar momentum conservation law and an advection equation for the image</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">returns this integrator</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingScalarMomentumImageNet.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumImageNet.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumImageNet.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solved the scalar momentum forward equation and returns the image at time tTo</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – initial image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">image at time tTo</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.LDDMMShootingScalarMomentumImageLoss">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">LDDMMShootingScalarMomentumImageLoss</code><span class="sig-paren">(</span><em>lam</em>, <em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumImageLoss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumImageLoss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization of the loss to scalar-momentum LDDMM on images</p>
+<dl class="attribute">
+<dt id="registration_networks.LDDMMShootingScalarMomentumImageLoss.lam">
+<code class="descname">lam</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumImageLoss.lam" title="Permalink to this definition">¶</a></dt>
+<dd><p>scalar momentum</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.LDDMMShootingScalarMomentumImageLoss.smoother">
+<code class="descname">smoother</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumImageLoss.smoother" title="Permalink to this definition">¶</a></dt>
+<dd><p>smoother to go from momentum to velocity</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingScalarMomentumImageLoss.compute_regularization_energy">
+<code class="descname">compute_regularization_energy</code><span class="sig-paren">(</span><em>I0_source</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumImageLoss.compute_regularization_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumImageLoss.compute_regularization_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I0_source</strong> – source image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns the regularization energy</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.LDDMMShootingScalarMomentumMapNet">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">LDDMMShootingScalarMomentumMapNet</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumMapNet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumMapNet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization of scalar-momentum LDDMM registration to map-based image matching</p>
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingScalarMomentumMapNet.create_integrator">
+<code class="descname">create_integrator</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumMapNet.create_integrator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumMapNet.create_integrator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates an integrator integrating the scalar conservation law for the scalar momentum,
+the advection equation for the image and the advection equation for the map,</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">returns this integrator</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingScalarMomentumMapNet.forward">
+<code class="descname">forward</code><span class="sig-paren">(</span><em>phi</em>, <em>I0_source</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumMapNet.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumMapNet.forward" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solves the scalar conservation law and the two advection equations forward in time.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>phi</strong> – initial condition for the map</li>
+<li><strong>I0_source</strong> – initial condition for the image</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">returns the map at time tTo</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="registration_networks.LDDMMShootingScalarMomentumMapLoss">
+<em class="property">class </em><code class="descclassname">registration_networks.</code><code class="descname">LDDMMShootingScalarMomentumMapLoss</code><span class="sig-paren">(</span><em>lam</em>, <em>sz</em>, <em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumMapLoss"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumMapLoss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization of the loss function to scalar-momentum LDDMM for maps.</p>
+<dl class="attribute">
+<dt id="registration_networks.LDDMMShootingScalarMomentumMapLoss.lam">
+<code class="descname">lam</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumMapLoss.lam" title="Permalink to this definition">¶</a></dt>
+<dd><p>scalar momentum</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="registration_networks.LDDMMShootingScalarMomentumMapLoss.smoother">
+<code class="descname">smoother</code><em class="property"> = None</em><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumMapLoss.smoother" title="Permalink to this definition">¶</a></dt>
+<dd><p>smoother to go from momentum to velocity</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="registration_networks.LDDMMShootingScalarMomentumMapLoss.compute_regularization_energy">
+<code class="descname">compute_regularization_energy</code><span class="sig-paren">(</span><em>I0_source</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/registration_networks.html#LDDMMShootingScalarMomentumMapLoss.compute_regularization_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#registration_networks.LDDMMShootingScalarMomentumMapLoss.compute_regularization_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the regularizaton energy from the initial vector momentum as computed from the scalar momentum</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I0_source</strong> – initial image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns the regularization energy</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="regularizer_factory.html" class="btn btn-neutral float-right" title="Regularizer factory" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="multiscale_optimizer.html" class="btn btn-neutral" title="Multiscale optimizer" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

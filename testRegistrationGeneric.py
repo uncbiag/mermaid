@@ -14,9 +14,8 @@ Contributors:
 from __future__ import print_function
 import torch
 from torch.autograd import Variable
-
+from pyreg.dataWapper import CUDA_ON, MyTensor, AdpatVal
 import numpy as np
-
 import set_pyreg_paths
 
 import pyreg.example_generation as eg
@@ -24,24 +23,11 @@ import pyreg.module_parameters as pars
 
 import pyreg.smoother_factory as SF
 import pyreg.multiscale_optimizer as MO
+from configParsers import *
+import pyreg.visualize_registration_results as vizReg
 
 # load settings from file
-loadSettingsFromFile = False
-saveSettingsToFile = True
 
-# select the desired dimension of the registration
-useMap = True# set to true if a map-based implementation should be used
-visualize = True # set to true if intermediate visualizations are desired
-smoothImages = False
-useRealImages = False
-nrOfIterations = 500 # number of iterations for the optimizer
-
-#modelName = 'svf'
-#modelName = 'svf_quasi_momentum'
-modelName = 'lddmm_shooting'
-#modelName = 'lddmm_shooting_scalar_momentum'
-
-dim = 1
 
 if useMap:
     modelName = modelName + '_map'
@@ -55,14 +41,14 @@ if loadSettingsFromFile:
     settingFile = modelName + '_settings.json'
     params.load_JSON(settingFile)
 
-torch.set_num_threads(4) # not sure if this actually affects anything
+torch.set_num_threads(1) # not sure if this actually affects anything
 print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
 
 if useRealImages:
     I0,I1= eg.CreateRealExampleImages(dim).create_image_pair()
 
 else:
-    szEx = np.tile( 50, dim )         # size of the desired images: (sz)^dim
+    szEx = np.tile(img_len, dim)         # size of the desired images: (sz)^dim
 
     params['square_example_images']=({},'Settings for example image generation')
     params['square_example_images']['len_s'] = szEx.min()/6
@@ -80,20 +66,25 @@ spacing = 1./(sz[2::]-1) # the first two dimensions are batch size and number of
 print ('Spacing = ' + str( spacing ) )
 
 # create the source and target image as pyTorch variables
-ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
-ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
+
+
+ISource = AdpatVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
+ITarget = AdpatVal(Variable(torch.from_numpy(I1), requires_grad=False))
+
 
 if smoothImages:
     # smooth both a little bit
     cparams = params[('image_smoothing',{},'general settings to pre-smooth images')]
     cparams[('smoother',{})]
-    cparams['smoother']['type']='gaussian'
-    cparams['smoother']['gaussianStd']=0.05
+    cparams['smoother']['type']= smoothType
+    cparams['smoother']['gaussianStd']=gaussianStd
     s = SF.SmootherFactory( sz[2::], spacing ).create_smoother(cparams)
+    #vizReg.show_current_images(0, ISource, ITarget, ISource, None, None, None)
     ISource = s.smooth_scalar_field(ISource)
     ITarget = s.smooth_scalar_field(ITarget)
+    #vizReg.show_current_images(0, ISource, ITarget, ISource, None, None, None)
 
-params['registration_model']['similarity_measure']['sigma']=0.1
+params['registration_model']['similarity_measure']['sigma']=simMeasureSigma
 
 so = MO.SingleScaleRegistrationOptimizer(sz,spacing,useMap,params)
 so.set_model(modelName)

@@ -1,7 +1,11 @@
 #include <stdbool.h>
 #include <stdio.h>
-#include "my_lib_cuda_kernel.h"
+#include "my_lib_cuda_kernel_2D.h"
 
+
+const int bdx =8;
+const int bdy = 16;
+//const int bdz =4;
 #define real float
 
 // Bilinear sampling is done in BHWD (coalescing is not obvious in BDHW)
@@ -21,7 +25,7 @@ __device__ void getTopLeft(float x, int width, int& point, float& weight)
    weight = 1 - (xcoord - point);
 }
 
-__device__ bool between(int value, int lowerBound, int upperBound)
+__device__ bool between_2D(int value, int lowerBound, int upperBound)
 {
    return (value >= lowerBound && value <= upperBound);
 }
@@ -38,43 +42,54 @@ __device__ void sumReduceShMem(volatile float s[])
    if(threadIdx.x<1) { s[threadIdx.x] = s[threadIdx.x] + s[threadIdx.x+1]; }
 }
 
-__global__ void bilinearSamplingFromGrid(float* inputImages_data, int inputImages_strideBatch, int inputImages_strideChannels, int inputImages_strideHeight, int inputImages_strideWidth,
+
+
+__global__ void bilinearSamplingFromGrid_2D(float* inputImages_data, int inputImages_strideBatch, int inputImages_strideChannels, int inputImages_strideHeight, int inputImages_strideWidth,
                                          float* grids_data, int grids_strideBatch, int grids_strideYX, int grids_strideHeight, int grids_strideWidth,
                                          float* output_data, int output_strideBatch, int output_strideChannels, int output_strideHeight, int output_strideWidth,
-                                         int inputImages_channels, int inputImages_height, int inputImages_width, int output_width)
-{
+                                         int inputImages_channels, int inputImages_height, int inputImages_width, int output_height, int output_width)
    // each (32,16) block 16 output pixels (for coalescing the grid read)
    // x,y = coordinates (xOut = blockIdx.x*16+blockDim.y+threadIdx.y)
    // z = batch index
-   // threadIdx.x : used for features (coalescing is trivial)
-      
-   const int xOut = blockIdx.x*blockDim.y+threadIdx.y;
-   const bool withinImageBounds = xOut < output_width;
-   const bool withinGridBounds = blockIdx.x*blockDim.y + threadIdx.x / 2 < output_width;
-   const int yOut = blockIdx.y;
-   const int width = inputImages_width;
-   const int height = inputImages_height;
+   /////////////////////////////// threadIdx.x : used for features (coalescing is trivial)
+   
+   // dim3 blocks((sz1+15)/16, sz2, sz3);
+   // dim3 threads(32,16);
+   ///*output->size[2]*/int sz1
+   /*output->size[1] int sz2,
+   output->size[0]int sz3,*/
+   //dim3 blocks((sz1+15)/16, (sz2+15)/16, sz3);  x: w/8, y: h/16, z: batch
+   //dim3 threads(4,8,16);  x: c 4, y w:8, z h 16
+   // threadIdx.x: only 2 of the blockDim.x is used in the grids part, but all of the threadIdx.x can be used in the sampling parts, so it is used in two parts for different propose
+   {
+  // block(h,w, b)
+  //threads(h,w);
+  // batch channel  x  y
+  //  0      1      2  3 
+
+
+    const int wOut = blockIdx.y*blockDim.y+threadIdx.y;
+   const int hOut = blockIdx.x*blockDim.x+threadIdx.x;
+   //const int idInBlock = threadIdx.x + threadIdx.y*blockDim.x;
+   const bool withinImageBounds = wOut < output_width && hOut < output_height; // asume the size of input is the same as the output
+   //const bool withinGridBounds = blockIdx.x*blockDim.y + idInBlock < output_width;//.........................
    
    const int b = blockIdx.z;
-   
-   float yf,xf;
-
-   __shared__ float gridData[32];
-   if (threadIdx.y==0 && withinGridBounds)
-   {
-      gridData[threadIdx.x] = grids_data[b*grids_strideBatch + yOut*grids_strideHeight + xOut*grids_strideWidth + threadIdx.x];
+   float yf=0;
+   float xf=0;
+   if(withinImageBounds){
+      int grid_address =b*grids_strideBatch + hOut*grids_strideHeight + wOut*grids_strideWidth; // here we use the address of the 0th channel
+      xf = grids_data[grid_address];
+      yf = grids_data[grid_address + grids_strideYX];  // address of the 1st channel
    }
-   __syncthreads();
-   if(!withinImageBounds) return;
-   yf = gridData[threadIdx.y*2];
-   xf = gridData[threadIdx.y*2+1];
-   
+   else
+      return;
    int yInTopLeft, xInTopLeft;
    float yWeightTopLeft, xWeightTopLeft;
    getTopLeft(xf, inputImages_width, xInTopLeft, xWeightTopLeft);
    getTopLeft(yf, inputImages_height, yInTopLeft, yWeightTopLeft);
    
-   const int outAddress = output_strideBatch * b + output_strideHeight * yOut + output_strideWidth * xOut;
+   const int outAddress = output_strideBatch * b + output_strideHeight * hOut + output_strideWidth * wOut;
    const int inTopLeftAddress = inputImages_strideBatch * b + inputImages_strideHeight * yInTopLeft + inputImages_strideWidth * xInTopLeft;
    const int inTopRightAddress = inTopLeftAddress + inputImages_strideWidth;
    const int inBottomLeftAddress = inTopLeftAddress + inputImages_strideHeight;
@@ -86,64 +101,53 @@ __global__ void bilinearSamplingFromGrid(float* inputImages_data, int inputImage
    float inBottomLeft=0;
    float inBottomRight=0;
 
-   bool topLeftIsIn = between(xInTopLeft, 0, width-1) && between(yInTopLeft, 0, height-1);
-   bool topRightIsIn = between(xInTopLeft+1, 0, width-1) && between(yInTopLeft, 0, height-1);
-   bool bottomLeftIsIn = between(xInTopLeft, 0, width-1) && between(yInTopLeft+1, 0, height-1);
-   bool bottomRightIsIn = between(xInTopLeft+1, 0, width-1) && between(yInTopLeft+1, 0, height-1);
+   bool topLeftIsIn = between_2D(xInTopLeft, 0, inputImages_width-1) && between_2D(yInTopLeft, 0, inputImages_height-1);
+   bool topRightIsIn = between_2D(xInTopLeft+1, 0, inputImages_width-1) && between_2D(yInTopLeft, 0, inputImages_height-1);
+   bool bottomLeftIsIn = between_2D(xInTopLeft, 0, inputImages_width-1) && between_2D(yInTopLeft+1, 0, inputImages_height-1);
+   bool bottomRightIsIn = between_2D(xInTopLeft+1, 0, inputImages_width-1) && between_2D(yInTopLeft+1, 0, inputImages_height-1);
 
    // interpolation happens here
-   for(int t=threadIdx.x; t<inputImages_channels; t+= blockDim.x)
+   for(int t=0; t<inputImages_channels; t++)
    {
-      if(topLeftIsIn) inTopLeft = inputImages_data[inTopLeftAddress + t];
-      if(topRightIsIn) inTopRight = inputImages_data[inTopRightAddress + t];
-      if(bottomLeftIsIn) inBottomLeft = inputImages_data[inBottomLeftAddress + t];
-      if(bottomRightIsIn) inBottomRight = inputImages_data[inBottomRightAddress + t];
+      if(topLeftIsIn) inTopLeft = inputImages_data[inTopLeftAddress + t*inputImages_strideChannels];
+      if(topRightIsIn) inTopRight = inputImages_data[inTopRightAddress + t*inputImages_strideChannels];
+      if(bottomLeftIsIn) inBottomLeft = inputImages_data[inBottomLeftAddress + t*inputImages_strideChannels];
+      if(bottomRightIsIn) inBottomRight = inputImages_data[inBottomRightAddress + t*inputImages_strideChannels];
 
       v = xWeightTopLeft * yWeightTopLeft * inTopLeft
-        + (1 - xWeightTopLeft) * yWeightTopLeft * inTopRight
-        + xWeightTopLeft * (1 - yWeightTopLeft) * inBottomLeft
-        + (1 - xWeightTopLeft) * (1 - yWeightTopLeft) * inBottomRight;
-      
-      output_data[outAddress + t] = v;
-   }
-}
+       + (1 - xWeightTopLeft) * yWeightTopLeft * inTopRight
+       + xWeightTopLeft * (1 - yWeightTopLeft) * inBottomLeft
+       + (1 - xWeightTopLeft) * (1 - yWeightTopLeft) * inBottomRight;
+       output_data[outAddress + t*output_strideChannels] = v;
+    }
+  }
 
-template<bool onlyGrid> __global__ void backwardBilinearSampling(float* inputImages_data, int inputImages_strideBatch, int inputImages_strideChannels, int inputImages_strideHeight, int inputImages_strideWidth,
+
+
+
+template<bool onlyGrid> __global__ void backwardBilinearSampling_2D(float* inputImages_data, int inputImages_strideBatch, int inputImages_strideChannels, int inputImages_strideHeight, int inputImages_strideWidth,
                                          float* gradInputImages_data, int gradInputImages_strideBatch, int gradInputImages_strideChannels, int gradInputImages_strideHeight, int gradInputImages_strideWidth,
                                          float* grids_data, int grids_strideBatch, int grids_strideYX, int grids_strideHeight, int grids_strideWidth,
                                          float* gradGrids_data, int gradGrids_strideBatch, int gradGrids_strideYX, int gradGrids_strideHeight, int gradGrids_strideWidth,
                                          float* gradOutput_data, int gradOutput_strideBatch, int gradOutput_strideChannels, int gradOutput_strideHeight, int gradOutput_strideWidth,
-                                         int inputImages_channels, int inputImages_height, int inputImages_width, int gradOutput_width)
+                                         int inputImages_channels, int inputImages_height, int inputImages_width, int output_height, int output_width)
 {
-   // each (32,16) block 16 output pixels (for coalescing the grid read)
-   // x,y = coordinates
-   // z = batch index
-   // threads : used for features
-      
-   const int xOut = blockIdx.x*blockDim.y+threadIdx.y;
-   const bool withinImageBounds = xOut < gradOutput_width;
-   const bool withinGridBounds = blockIdx.x*blockDim.y + threadIdx.x / 2 < gradOutput_width;
-
-   const int yOut = blockIdx.y;
-   const int width = inputImages_width;
-   const int height = inputImages_height;
+   const int wOut = blockIdx.y*blockDim.y+threadIdx.y;
+   const int hOut = blockIdx.x*blockDim.x+threadIdx.x;
+   //const int idInBlock = threadIdx.x + threadIdx.y*blockDim.x;
+   const bool withinImageBounds = wOut < output_width && hOut < output_height;
+   //const bool withinGridBounds = blockIdx.x*blockDim.y + idInBlock < output_width;//.........................
    
    const int b = blockIdx.z;
-   
    float yf,xf;
-
-   __shared__ float gridData[32];
-   if (threadIdx.y==0 && withinGridBounds)
-   {
-      gridData[threadIdx.x] = grids_data[b*grids_strideBatch + yOut*grids_strideHeight + xOut*grids_strideWidth + threadIdx.x];
-   }
-   __syncthreads();
+   int grid_address =b*grids_strideBatch + hOut*grids_strideHeight + wOut*grids_strideWidth; // here we use the address of the 0th channel
+   float gradyf=0;
+   float gradxf=0;
 
    if(withinImageBounds)
    {
-      yf = gridData[threadIdx.y*2];
-      xf = gridData[threadIdx.y*2+1];
-      
+      xf = grids_data[grid_address];
+      yf = grids_data[grid_address + grids_strideYX];  // address of the 1st channel
 
       
       int yInTopLeft, xInTopLeft;
@@ -161,117 +165,99 @@ template<bool onlyGrid> __global__ void backwardBilinearSampling(float* inputIma
       const int gradInputImagesBottomLeftAddress = gradInputImagesTopLeftAddress + gradInputImages_strideHeight;
       const int gradInputImagesBottomRightAddress = gradInputImagesBottomLeftAddress + gradInputImages_strideWidth;
 
-      const int gradOutputAddress = gradOutput_strideBatch * b + gradOutput_strideHeight * yOut + gradOutput_strideWidth * xOut;
+      const int gradOutputAddress = gradOutput_strideBatch * b + gradOutput_strideHeight * hOut + gradOutput_strideWidth * wOut;
 
       float topLeftDotProduct = 0;
       float topRightDotProduct = 0;
       float bottomLeftDotProduct = 0;
       float bottomRightDotProduct = 0;
 
-      bool topLeftIsIn = between(xInTopLeft, 0, width-1) && between(yInTopLeft, 0, height-1);
-      bool topRightIsIn = between(xInTopLeft+1, 0, width-1) && between(yInTopLeft, 0, height-1);
-      bool bottomLeftIsIn = between(xInTopLeft, 0, width-1) && between(yInTopLeft+1, 0, height-1);
-      bool bottomRightIsIn = between(xInTopLeft+1, 0, width-1) && between(yInTopLeft+1, 0, height-1);
+      bool topLeftIsIn = between_2D(xInTopLeft, 0, inputImages_width-1) && between_2D(yInTopLeft, 0, inputImages_height-1);
+      bool topRightIsIn = between_2D(xInTopLeft+1, 0, inputImages_width-1) && between_2D(yInTopLeft, 0, inputImages_height-1);
+      bool bottomLeftIsIn = between_2D(xInTopLeft, 0, inputImages_width-1) && between_2D(yInTopLeft+1, 0, inputImages_height-1);
+      bool bottomRightIsIn = between_2D(xInTopLeft+1, 0, inputImages_width-1) && between_2D(yInTopLeft+1, 0, inputImages_height-1);
 
       /*
          In that loop we accumulate
          - gradients into the gradInputImages array with atomic adds
          - we compute the dot product that we need for the grid gradient
       */
+      // f(x,y) = (1-x)(1-y)f(0,0) + x(1-y)f(1,0)+(1-x)yf(0,1) + xyf(1,1)      xf,yf is used in channels,  so have channel times accumulations
+      // xWeightTopLeft = (1-x)
 
-      for(int t=threadIdx.x; t<inputImages_channels; t+= blockDim.x)
+      for(int t=0; t<inputImages_channels; t++)
       {
-         float gradOutValue = gradOutput_data[gradOutputAddress + t];
-         // bool between(int value, int lowerBound, int upperBound)
+        int tch = t*gradInputImages_strideChannels;
+         float gradOutValue = gradOutput_data[gradOutputAddress + t*gradOutput_strideChannels];
+         // bool between_2D(int value, int lowerBound, int upperBound)
          if(topLeftIsIn)
          {
-            float inTopLeft = inputImages_data[inTopLeftAddress + t];
+            float inTopLeft = inputImages_data[inTopLeftAddress + tch];
             topLeftDotProduct += inTopLeft * gradOutValue;
-            if(!onlyGrid) atomicAdd(&gradInputImages_data[gradInputImagesTopLeftAddress + t], xWeightTopLeft * yWeightTopLeft * gradOutValue);
+            if(!onlyGrid) atomicAdd(&gradInputImages_data[gradInputImagesTopLeftAddress + tch], xWeightTopLeft * yWeightTopLeft * gradOutValue);
          }
 
          if(topRightIsIn)
          {
-            float inTopRight = inputImages_data[inTopRightAddress + t];
+            float inTopRight = inputImages_data[inTopRightAddress + tch];
             topRightDotProduct += inTopRight * gradOutValue;
-            if(!onlyGrid) atomicAdd(&gradInputImages_data[gradInputImagesTopRightAddress + t], (1 - xWeightTopLeft) * yWeightTopLeft * gradOutValue);
+            if(!onlyGrid) atomicAdd(&gradInputImages_data[gradInputImagesTopRightAddress + tch], (1 - xWeightTopLeft) * yWeightTopLeft * gradOutValue);
          }
 
          if(bottomLeftIsIn)
          {
-            float inBottomLeft = inputImages_data[inBottomLeftAddress + t];
+            float inBottomLeft = inputImages_data[inBottomLeftAddress + tch];
             bottomLeftDotProduct += inBottomLeft * gradOutValue;
-            if(!onlyGrid) atomicAdd(&gradInputImages_data[gradInputImagesBottomLeftAddress + t], xWeightTopLeft * (1 - yWeightTopLeft) * gradOutValue);
+            if(!onlyGrid) atomicAdd(&gradInputImages_data[gradInputImagesBottomLeftAddress + tch], xWeightTopLeft * (1 - yWeightTopLeft) * gradOutValue);
          }
 
          if(bottomRightIsIn)
          {
-            float inBottomRight = inputImages_data[inBottomRightAddress + t];
+            float inBottomRight = inputImages_data[inBottomRightAddress + tch];
             bottomRightDotProduct += inBottomRight * gradOutValue;
-            if(!onlyGrid) atomicAdd(&gradInputImages_data[gradInputImagesBottomRightAddress + t], (1 - xWeightTopLeft) * (1 - yWeightTopLeft) * gradOutValue);
+            if(!onlyGrid) atomicAdd(&gradInputImages_data[gradInputImagesBottomRightAddress + tch], (1 - xWeightTopLeft) * (1 - yWeightTopLeft) * gradOutValue);
          }
       }
 
-      /*
-         Here we reduce the dot product and compute the grid gradient before writing it.
-      */
-
-      /* could do shuffles and use no shmem at all but cuda arch is 2.0 */
-      __shared__ volatile float __shmem[16][32];
-      __shmem[threadIdx.y][threadIdx.x] = topLeftDotProduct;
-      sumReduceShMem(__shmem[threadIdx.y]);
-      topLeftDotProduct = __shmem[threadIdx.y][0];
-
-      __shmem[threadIdx.y][threadIdx.x] = topRightDotProduct;
-      sumReduceShMem(__shmem[threadIdx.y]);
-      topRightDotProduct = __shmem[threadIdx.y][0];
-
-      __shmem[threadIdx.y][threadIdx.x] = bottomLeftDotProduct;
-      sumReduceShMem(__shmem[threadIdx.y]);
-      bottomLeftDotProduct = __shmem[threadIdx.y][0];
-
-      __shmem[threadIdx.y][threadIdx.x] = bottomRightDotProduct;
-      sumReduceShMem(__shmem[threadIdx.y]);
-      bottomRightDotProduct = __shmem[threadIdx.y][0];
-
-      yf = - xWeightTopLeft * topLeftDotProduct + xWeightTopLeft * bottomLeftDotProduct - (1-xWeightTopLeft) * topRightDotProduct + (1-xWeightTopLeft) * bottomRightDotProduct;
-      xf = - yWeightTopLeft * topLeftDotProduct + yWeightTopLeft * topRightDotProduct - (1-yWeightTopLeft) * bottomLeftDotProduct + (1-yWeightTopLeft) * bottomRightDotProduct;
-
-      if(threadIdx.x==0)
-      {
-         gridData[threadIdx.y*2] = yf * (inputImages_height-1) / 2;
-         gridData[threadIdx.y*2+1] = xf * (inputImages_width-1) / 2;
-      }
-   }// must put a big if condition in order not to hang at __syncthreads()...
-   __syncthreads();
-
-   if(threadIdx.y==0 && withinGridBounds)      
-       gradGrids_data[b*gradGrids_strideBatch + yOut*gradGrids_strideHeight + xOut*gradGrids_strideWidth + threadIdx.x] = gridData[threadIdx.x];   
+      gradyf = - xWeightTopLeft * topLeftDotProduct + xWeightTopLeft * bottomLeftDotProduct - (1-xWeightTopLeft) * topRightDotProduct + (1-xWeightTopLeft) * bottomRightDotProduct;
+      gradxf = - yWeightTopLeft * topLeftDotProduct + yWeightTopLeft * topRightDotProduct - (1-yWeightTopLeft) * bottomLeftDotProduct + (1-yWeightTopLeft) * bottomRightDotProduct;
+      gradGrids_data[grid_address] = gradxf * (inputImages_width-1) / 2;
+      gradGrids_data[grid_address+grids_strideYX] = gradyf * (inputImages_height-1) / 2;  
+    }
+     
 }
+
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int BilinearSamplerBHWD_updateOutput_cuda_kernel(/*output->size[2]*/int sz1,
-                                                 /*output->size[1]*/int sz2,
+
+
+
+int BilinearSamplerBCWH_updateOutput_cuda_kernel_2D(/*output->size[2]*/int szw,
+                                                 /*output->size[1]*/int szc,
                                                  /*output->size[0]*/int sz3,
                                                  /*THCudaTensor_size(state, inputImages, 3)*/int ic,
-                                                 /*THCudaTensor_size(state, inputImages, 1)*/int ih,
-                                                 /*THCudaTensor_size(state, inputImages, 2)*/int iw,
+                                                 /*THCudaTensor_size(state, inputImages, 1)*/int iw,
+                                                 /*THCudaTensor_size(state, inputImages, 2)*/int ih,
                                                  /*THCudaTensor_size(state, output, 2)*/int ow,
-                                                 /*THCudaTensor *inputImages*/float *inputImages, int isb, int isc, int ish, int isw, 
-                                                 /*THCudaTensor *grids*/float *grids, int gsb, int gsc, int gsh, int gsw, 
-                                                 /*THCudaTensor *output*/float *output, int osb, int osc, int osh, int osw, 
+                                                 /*THCudaTensor_size(state, output, 2)*/int oh,
+                                                 /*THCudaTensor *inputImages*/float *inputImages, int isb, int isc, int isw, int ish, 
+                                                 /*THCudaTensor *grids*/float *grids, int gsb, int gsc, int gsw, int gsh, 
+                                                 /*THCudaTensor *output*/float *output, int osb, int osc, int osw, int osh, 
                                                  /*THCState_getCurrentStream(state)*/cudaStream_t stream)
 {
+  // batch channel x y
+  //  0      1     2 3 
    //dim3 blocks((output->size[2]+15)/16, output->size[1], output->size[0]);
-   dim3 blocks((sz1+15)/16, sz2, sz3);
-   dim3 threads(32,16);
+   dim3 blocks((ih+bdx-1)/bdx, (iw+bdy-1)/bdy, sz3);
+   dim3 threads(bdx,bdy);
+   //printf(" iw, ih, ow, oh  %d %d %d %d",iw,ih,ow,oh);
 
    /* assume BHWD */
-   bilinearSamplingFromGrid <<< blocks, threads, 0, /*THCState_getCurrentStream(state)*/stream >>> (
+   bilinearSamplingFromGrid_2D <<< blocks, threads, 0, /*THCState_getCurrentStream(state)*/stream >>> (
                                                     /*THCudaTensor_data(state, inputImages)*/inputImages, 
                                                     /*THCudaTensor_stride(state, inputImages, 0)*/isb,
                                                     /*THCudaTensor_stride(state, inputImages, 3)*/isc, 
@@ -290,7 +276,7 @@ int BilinearSamplerBHWD_updateOutput_cuda_kernel(/*output->size[2]*/int sz1,
                                                     /*THCudaTensor_size(state, inputImages, 3)*/ic,
                                                     /*THCudaTensor_size(state, inputImages, 1)*/ih, 
                                                     /*THCudaTensor_size(state, inputImages, 2)*/iw,
-                                                    /*THCudaTensor_size(state, output, 2)*/ow);
+                                                    /*THCudaTensor_size(state, output, 2)*/oh, ow);
 
 
   // check for errors
@@ -303,18 +289,25 @@ int BilinearSamplerBHWD_updateOutput_cuda_kernel(/*output->size[2]*/int sz1,
   return 1;
 }
 
-int BilinearSamplerBHWD_updateGradInput_cuda_kernel(/*gradOutput->size[2]*/int sz1, 
-                                                    /*gradOutput->size[1]*/int sz2,
+
+
+
+
+
+
+int BilinearSamplerBCWH_updateGradInput_cuda_kernel_2D(/*gradOutput->size[2]*/int szw, 
+                                                    /*gradOutput->size[1]*/int szc,
                                                     /*gradOutput->size[0]*/int sz3,
                                                     /*THCudaTensor_size(state, inputImages, 3)*/int ic,
-                                                    /*THCudaTensor_size(state, inputImages, 1)*/int ih,
-                                                    /*THCudaTensor_size(state, inputImages, 2)*/int iw,
+                                                    /*THCudaTensor_size(state, inputImages, 1)*/int iw,
+                                                    /*THCudaTensor_size(state, inputImages, 2)*/int ih,
                                                     /*THCudaTensor_size(state, gradOutput, 2)*/int gow,
-                                                    /*THCudaTensor *inputImages*/float *inputImages, int isb, int isc, int ish, int isw, 
-                                                    /*THCudaTensor *grids*/float *grids, int gsb, int gsc, int gsh, int gsw, 
-                                                    /*THCudaTensor *gradInputImages*/float *gradInputImages, int gisb, int gisc, int gish, int gisw,
-                                                    /*THCudaTensor *gradGrids*/float *gradGrids, int ggsb, int ggsc, int ggsh, int ggsw,
-                                                    /*THCudaTensor *gradOutput*/float *gradOutput, int gosb, int gosc, int gosh, int gosw,
+                                                    /*THCudaTensor_size(state, gradOutput, 2)*/int goh,
+                                                    /*THCudaTensor *inputImages*/float *inputImages, int isb, int isc, int isw, int ish, 
+                                                    /*THCudaTensor *grids*/float *grids, int gsb, int gsc, int gsw, int gsh, 
+                                                    /*THCudaTensor *gradInputImages*/float *gradInputImages, int gisb, int gisc, int gisw, int gish,
+                                                    /*THCudaTensor *gradGrids*/float *gradGrids, int ggsb, int ggsc, int ggsw, int ggsh,
+                                                    /*THCudaTensor *gradOutput*/float *gradOutput, int gosb, int gosc, int gosw, int gosh,
                                                     /*THCState_getCurrentStream(state)*/cudaStream_t stream)
 {
 //  THCState *state = getCutorchState(L);
@@ -325,10 +318,12 @@ int BilinearSamplerBHWD_updateGradInput_cuda_kernel(/*gradOutput->size[2]*/int s
 //  THCudaTensor *gradOutput = (THCudaTensor *)luaT_checkudata(L, 6, "torch.CudaTensor");
 
    //dim3 blocks((gradOutput->size[2]+15)/16, gradOutput->size[1], gradOutput->size[0]);
-   dim3 blocks((sz1+15)/16, sz2, sz3);
-   dim3 threads(32,16);
+   dim3 blocks((ih+bdx-1)/bdx, (iw+bdy-1)/bdy, sz3);
+   dim3 threads(bdx,bdy);
+   //int grids_channels=2;
+   //printf("ow %d gsh %d  gsc %d osh %d osc %d\n",ow,gsh,gsc,osh,osc);
 
-   backwardBilinearSampling <false> <<< blocks, threads, 0, /*THCState_getCurrentStream(state)*/stream >>> (
+   backwardBilinearSampling_2D <false> <<< blocks, threads, 0, /*THCState_getCurrentStream(state)*/stream >>> (
                                                       /*THCudaTensor_data(state, inputImages)*/inputImages, 
                                                       /*THCudaTensor_stride(state, inputImages, 0)*/isb,
                                                       /*THCudaTensor_stride(state, inputImages, 3)*/isc,
@@ -357,7 +352,7 @@ int BilinearSamplerBHWD_updateGradInput_cuda_kernel(/*gradOutput->size[2]*/int s
                                                       /*THCudaTensor_size(state, inputImages, 3)*/ic,
                                                       /*THCudaTensor_size(state, inputImages, 1)*/ih, 
                                                       /*THCudaTensor_size(state, inputImages, 2)*/iw,
-                                                      /*THCudaTensor_size(state, gradOutput, 2)*/gow);
+                                                      /*THCudaTensor_size(state, gradOutput, 2)*/goh,gow);
 
 
 
@@ -371,18 +366,19 @@ int BilinearSamplerBHWD_updateGradInput_cuda_kernel(/*gradOutput->size[2]*/int s
   return 1;
 }
 
-int BilinearSamplerBHWD_updateGradInputOnlyGrid_cuda_kernel(
-                                        /*gradOutput->size[2]*/int sz1, 
-                                        /*gradOutput->size[1]*/int sz2,
+int BilinearSamplerBCWH_updateGradInputOnlyGrid_cuda_kernel_2D(
+                                        /*gradOutput->size[2]*/int szw, 
+                                        /*gradOutput->size[1]*/int szc,
                                         /*gradOutput->size[0]*/int sz3,
                                         /*THCudaTensor_size(state, inputImages, 3)*/int ic,
-                                        /*THCudaTensor_size(state, inputImages, 1)*/int ih,
-                                        /*THCudaTensor_size(state, inputImages, 2)*/int iw,
+                                        /*THCudaTensor_size(state, inputImages, 1)*/int iw,
+                                        /*THCudaTensor_size(state, inputImages, 2)*/int ih,
                                         /*THCudaTensor_size(state, gradOutput, 2)*/int gow,
-                                        /*THCudaTensor *inputImages*/float *inputImages, int isb, int isc, int ish, int isw, 
-                                        /*THCudaTensor *grids*/float *grids, int gsb, int gsc, int gsh, int gsw, 
-                                        /*THCudaTensor *gradGrids*/float *gradGrids, int ggsb, int ggsc, int ggsh, int ggsw,
-                                        /*THCudaTensor *gradOutput*/float *gradOutput, int gosb, int gosc, int gosh, int gosw,
+                                        /*THCudaTensor_size(state, gradOutput, 2)*/int goh,
+                                        /*THCudaTensor *inputImages*/float *inputImages, int isb, int isc, int isw, int ish, 
+                                        /*THCudaTensor *grids*/float *grids, int gsb, int gsc, int gsw, int gsh, 
+                                        /*THCudaTensor *gradGrids*/float *gradGrids, int ggsb, int ggsc, int ggsw, int ggsh,
+                                        /*THCudaTensor *gradOutput*/float *gradOutput, int gosb, int gosc, int gosw, int gosh,
                                         /*THCState_getCurrentStream(state)*/cudaStream_t stream)
 {
 //  THCState *state = getCutorchState(L);
@@ -392,10 +388,12 @@ int BilinearSamplerBHWD_updateGradInputOnlyGrid_cuda_kernel(
 //  THCudaTensor *gradOutput = (THCudaTensor *)luaT_checkudata(L, 6, "torch.CudaTensor");
 
    //dim3 blocks((gradOutput->size[2]+15)/16, gradOutput->size[1], gradOutput->size[0]);
-   dim3 blocks((sz1+15)/16, sz2, sz3);
-   dim3 threads(32,16);
+   dim3 blocks((ih+bdx-1)/bdx, (iw+bdy-1)/bdy, sz3);
+   dim3 threads(bdx,bdy);
+   //int grids_channels=2;
+   //printf("ow %d gsh %d  gsc %d osh %d osc %d\n",ow,gsh,gsc,osh,osc);
 
-   backwardBilinearSampling <true> <<< blocks, threads, 0, /*THCState_getCurrentStream(state)*/stream >>> (
+   backwardBilinearSampling_2D <true> <<< blocks, threads, 0, /*THCState_getCurrentStream(state)*/stream >>> (
                                                       /*THCudaTensor_data(state, inputImages)*/inputImages, 
                                                       /*THCudaTensor_stride(state, inputImages, 0)*/isb,
                                                       /*THCudaTensor_stride(state, inputImages, 3)*/isc,
@@ -424,7 +422,7 @@ int BilinearSamplerBHWD_updateGradInputOnlyGrid_cuda_kernel(
                                                       /*THCudaTensor_size(state, inputImages, 3)*/ic,
                                                       /*THCudaTensor_size(state, inputImages, 1)*/ih, 
                                                       /*THCudaTensor_size(state, inputImages, 2)*/iw,
-                                                      /*THCudaTensor_size(state, gradOutput, 2)*/gow);
+                                                      /*THCudaTensor_size(state, gradOutput, 2)*/goh, gow);
 
 
 
@@ -437,6 +435,10 @@ int BilinearSamplerBHWD_updateGradInputOnlyGrid_cuda_kernel(
   }
   return 1;
 }
+
+
+
+
 
 #ifdef __cplusplus
 }

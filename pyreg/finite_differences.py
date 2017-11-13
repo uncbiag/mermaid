@@ -9,7 +9,7 @@ from abc import ABCMeta, abstractmethod
 
 import torch
 from torch.autograd import Variable
-
+from dataWapper import MyTensor, AdpatVal
 import numpy as np
 
 class FD(object):
@@ -159,16 +159,20 @@ class FD(object):
     def lap(self, I):
         """
         Compute the Lapacian of an image
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
         
-        :param I: Input image
+        :param I: Input image [batch, X,Y,Z]
         :return: Returns the Laplacian
         """
         ndim = self.getdimension(I)
-        if ndim == 1:
+        if ndim == 1+1:
             return self.ddXc(I)
-        elif ndim == 2:
+        elif ndim == 2+1:
             return (self.ddXc(I) + self.ddYc(I))
-        elif ndim == 3:
+        elif ndim == 3+1:
             return (self.ddXc(I) + self.ddYc(I) + self.ddZc(I))
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
@@ -205,68 +209,88 @@ class FD(object):
 
     def xp(self,I):
         """
+
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
+
+
         Returns the values for x-index incremented by one (to the right in 1D)
         
-        :param I: Input image
+        :param I: Input image [batch, X, Y,Z]
         :return: Image with values at an x-index one larger
         """
         rxp = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
-        if ndim == 1:
-            rxp[0:-1] = I[1:]
+        if ndim == 1+1:
+            rxp[:,0:-1] = I[:,1:]
             if self.bcNeumannZero:
-                rxp[-1] = I[-1]
+                rxp[:,-1] = I[:,-1]
             else:
-                rxp[-1] = 2*I[-1]-I[-2]
-        elif ndim == 2:
-            rxp[0:-1,:] = I[1:,:]
+                rxp[:,-1] = 2*I[:,-1]-I[:,-2]
+        elif ndim == 2+1:
+            rxp[:,0:-1,:] = I[:,1:,:]
             if self.bcNeumannZero:
-                rxp[-1,:] = I[-1,:]
+                rxp[:,-1,:] = I[:,-1,:]
             else:
-                rxp[-1,:] = 2*I[-1,:]-I[-2,:]
-        elif ndim == 3:
-            rxp[0:-1,:,:] = I[1:,:,:]
+                rxp[:,-1,:] = 2*I[:,-1,:]-I[:,-2,:]
+        elif ndim == 3+1:
+            rxp[:,0:-1,:,:] = I[:,1:,:,:]
             if self.bcNeumannZero:
-                rxp[-1,:,:] = I[-1,:,:]
+                rxp[:,-1,:,:] = I[:,-1,:,:]
             else:
-                rxp[-1,:,:] = 2*I[-1,:,:]-I[-2,:,:]
+                rxp[:,-1,:,:] = 2*I[:,-1,:,:]-I[:,-2,:,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rxp
 
     def xm(self,I):
         """
+
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
+
         Returns the values for x-index decremented by one (to the left in 1D)
         
-        :param I: Input image
+        :param I: Input image [batch, X, Y, Z]
         :return: Image with values at an x-index one smaller
         """
         rxm = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
-        if ndim == 1:
-            rxm[1:] = I[0:-1]
+        if ndim == 1+1:
+            rxm[:,1:] = I[:,0:-1]
             if self.bcNeumannZero:
-                rxm[0] = I[0]
+                rxm[:,0] = I[:,0]
             else:
-                rxm[0] = 2*I[0]-I[1]
-        elif ndim == 2:
-            rxm[1:,:] = I[0:-1,:]
+                rxm[:,0] = 2*I[:,0]-I[:,1]
+        elif ndim == 2+1:
+            rxm[:,1:,:] = I[:,0:-1,:]
             if self.bcNeumannZero:
-                rxm[0,:] = I[0,:]
+                rxm[:,0,:] = I[:,0,:]
             else:
-                rxm[0,:] = 2*I[0,:]-I[1,:]
-        elif ndim == 3:
-            rxm[1:,:,:] = I[0:-1,:,:]
+                rxm[:,0,:] = 2*I[:,0,:]-I[:,1,:]
+        elif ndim == 3+1:
+            rxm[:,1:,:,:] = I[:,0:-1,:,:]
             if self.bcNeumannZero:
-                rxm[0,:,:] = I[0,:,:]
+                rxm[:,0,:,:] = I[:,0,:,:]
             else:
-                rxm[0,:,:] = 2*I[0,:,:]-I[1,:,:]
+                rxm[:,0,:,:] = 2*I[:,0,:,:]-I[:,1,:,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rxm
 
     def yp(self, I):
         """
+
+
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
+
         Same as xp, but for the y direction
         
         :param I: Input image
@@ -274,18 +298,18 @@ class FD(object):
         """
         ryp = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
-        if ndim == 2:
-            ryp[:,0:-1] = I[:,1:]
+        if ndim == 2+1:
+            ryp[:,:,0:-1] = I[:,:,1:]
             if self.bcNeumannZero:
-                ryp[:,-1] = I[:,-1]
+                ryp[:,:,-1] = I[:,:,-1]
             else:
-                ryp[:,-1] = 2*I[:,-1]-I[:,-2]
-        elif ndim == 3:
-            ryp[:,0:-1,:] = I[:,1:,:]
+                ryp[:,:,-1] = 2*I[:,:,-1]-I[:,:,-2]
+        elif ndim == 3+1:
+            ryp[:,:,0:-1,:] = I[:,:,1:,:]
             if self.bcNeumannZero:
-                ryp[:,-1,:] = I[:,-1,:]
+                ryp[:,:,-1,:] = I[:,:,-1,:]
             else:
-                ryp[:,-1,:] = 2*I[:,-1,:]-I[:,-2,:]
+                ryp[:,:,-1,:] = 2*I[:,:,-1,:]-I[:,:,-2,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return ryp
@@ -293,24 +317,33 @@ class FD(object):
     def ym(self, I):
         """
         Same as xm, but for the y direction
-        
-        :param I: Input image
+
+
+
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
+
+        Returns the values for x-index decremented by one (to the left in 1D)
+
+        :param I: Input image [batch, X, Y, Z]
         :return: Image with values at y-index one smaller
         """
         rym = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
-        if ndim == 2:
-            rym[:,1:] = I[:,0:-1]
+        if ndim == 2+1:
+            rym[:,:,1:] = I[:,:,0:-1]
             if self.bcNeumannZero:
-                rym[:,0] = I[:,0]
+                rym[:,:,0] = I[:,:,0]
             else:
-                rym[:,0] = 2*I[:,0]-I[:,1]
-        elif ndim == 3:
-            rym[:,1:,:] = I[:,0:-1,:]
+                rym[:,:,0] = 2*I[:,:,0]-I[:,:,1]
+        elif ndim == 3+1:
+            rym[:,:,1:,:] = I[:,:,0:-1,:]
             if self.bcNeumannZero:
-                rym[:,0,:] = I[:,0,:]
+                rym[:,:,0,:] = I[:,:,0,:]
             else:
-                rym[:,0,:] = 2*I[:,0,:]-I[:,1,:]
+                rym[:,:,0,:] = 2*I[:,:,0,:]-I[:,:,1,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rym
@@ -319,17 +352,24 @@ class FD(object):
         """
         Same as xp, but for the z direction
         
-        :param I: Input image
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
+
+        Returns the values for x-index decremented by one (to the left in 1D)
+
+        :param I: Input image [batch, X, Y, Z]
         :return: Image with values at z-index one larger
         """
         rzp = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
-        if ndim == 3:
-            rzp[:,:,0:-1] = I[:,:,1:]
+        if ndim == 3+1:
+            rzp[:,:,:,0:-1] = I[:,:,:,1:]
             if self.bcNeumannZero:
-                rzp[:,:,-1] = I[:,:,-1]
+                rzp[:,:,:,-1] = I[:,:,:,-1]
             else:
-                rzp[:,:,-1] = 2*I[:,:,-1]-I[:,:,-2]
+                rzp[:,:,:,-1] = 2*I[:,:,:,-1]-I[:,:,:,-2]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rzp
@@ -338,17 +378,24 @@ class FD(object):
         """
         Same as xm, but for the z direction
         
-        :param I: Input image
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
+
+        Returns the values for x-index decremented by one (to the left in 1D)
+
+        :param I: Input image [batch, X, Y, Z]
         :return: Image with values at z-index one smaller
         """
         rzm = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
-        if ndim == 3:
-            rzm[:,:,1:] = I[:,:,0:-1]
+        if ndim == 3+1:
+            rzm[:,:,:,1:] = I[:,:,:,0:-1]
             if self.bcNeumannZero:
-                rzm[:,:,0] = I[:,:,0]
+                rzm[:,:,:,0] = I[:,:,:,0]
             else:
-                rzm[:,:,0] = 2*I[:,:,0]-I[:,:,1]
+                rzm[:,:,:,0] = 2*I[:,:,:,0]-I[:,:,:,1]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rzm
@@ -419,7 +466,7 @@ class FD_torch(FD):
         :param sz: size of the array, e.g., [3,4,2]
         :return: the zero array
         """
-        return Variable( torch.zeros( sz ), requires_grad=False )
+        return  AdpatVal(Variable(MyTensor(sz).zero_(), requires_grad=False))
 
     def get_size_of_array(self, A):
         """

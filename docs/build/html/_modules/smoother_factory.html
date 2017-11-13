@@ -1,0 +1,727 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>smoother_factory &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>smoother_factory</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for smoother_factory</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This package implements various types of smoothers.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Variable</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">global_list</span> <span class="k">import</span> <span class="n">CUDA_ON</span><span class="p">,</span> <span class="n">MyTensor</span><span class="p">,</span> <span class="n">AdpatVal</span>
+<span class="kn">import</span> <span class="nn">finite_differences</span> <span class="k">as</span> <span class="nn">fd</span>
+<span class="kn">import</span> <span class="nn">utils</span>
+<span class="kn">from</span> <span class="nn">cml</span> <span class="k">import</span> <span class="n">smoothType</span>
+<span class="kn">import</span> <span class="nn">custom_pytorch_extensions</span> <span class="k">as</span> <span class="nn">ce</span>
+
+<div class="viewcode-block" id="Smoother"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.Smoother">[docs]</a><span class="k">class</span> <span class="nc">Smoother</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Abstract base class defining the general smoother interface.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">ABCMeta</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sz</span> <span class="o">=</span> <span class="n">sz</span>
+        <span class="sd">&quot;&quot;&quot;image size&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span> <span class="o">=</span> <span class="n">spacing</span>
+        <span class="sd">&quot;&quot;&quot;image spacing&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">FD_torch</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span> <span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;finite difference support for torch&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">volumeElement</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span>
+        <span class="sd">&quot;&quot;&quot;volume of pixel/voxel&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">spacing</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;dimension&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="sd">&quot;&quot;&quot;ParameterDict() parameter object holding various configuration options&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Smoother.smooth_scalar_field"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.Smoother.smooth_scalar_field">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">smooth_scalar_field</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">Iout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Abstract method to smooth a scalar field. Only this method should be overwritten in derived classes.</span>
+<span class="sd">        </span>
+<span class="sd">        :param I: input image to smooth </span>
+<span class="sd">        :param Iout: if not None then result is returned in this variable</span>
+<span class="sd">        :return: should return the a smoothed scalar field, image dimension XxYxZ</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Smoother.inverse_smooth_scalar_field"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.Smoother.inverse_smooth_scalar_field">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">inverse_smooth_scalar_field</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">Iout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Experimental abstract method (NOT PROPERLY TESTED) to apply &quot;inverse&quot;-smoothing to a scalar field</span>
+<span class="sd">        </span>
+<span class="sd">        :param I: input image to inverse smooth </span>
+<span class="sd">        :param Iout: if not None then result is returned in this variable</span>
+<span class="sd">        :return: should return the inverse-smoothed scalar field, image dimension XxYxZ</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Smoother.smooth_scalar_field_multiNC"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.Smoother.smooth_scalar_field_multiNC">[docs]</a>    <span class="k">def</span> <span class="nf">smooth_scalar_field_multiNC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">Iout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Smoothes a scalar field of dimension BxCxXxYxZ (i.e, can smooth a batch and multi-channel images)</span>
+<span class="sd">        </span>
+<span class="sd">        :param I: input image to smooth </span>
+<span class="sd">        :param Iout: if not None then result is returned in this variable</span>
+<span class="sd">        :return: smoothed image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">Iout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">Is</span> <span class="o">=</span> <span class="n">Iout</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Is</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span><span class="n">sz</span><span class="p">)</span><span class="o">.</span><span class="n">zero_</span><span class="p">(),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">nrI</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>  <span class="c1"># loop over all the images</span>
+            <span class="n">Is</span><span class="p">[</span><span class="n">nrI</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_scalar_field_multiC</span><span class="p">(</span><span class="n">I</span><span class="p">[</span><span class="n">nrI</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">Is</span></div>
+
+<div class="viewcode-block" id="Smoother.smooth_scalar_field_multiC"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.Smoother.smooth_scalar_field_multiC">[docs]</a>    <span class="k">def</span> <span class="nf">smooth_scalar_field_multiC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">Iout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Smoothes a scalar field of dimension CxXxYxZ (i.e, can smooth multi-channel images)</span>
+
+<span class="sd">        :param I: input image to smooth </span>
+<span class="sd">        :param Iout: if not None then result is returned in this variable</span>
+<span class="sd">        :return: smoothed image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">Iout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">Is</span> <span class="o">=</span> <span class="n">Iout</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Is</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span><span class="n">sz</span><span class="p">)</span><span class="o">.</span><span class="n">zero_</span><span class="p">(),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">nrC</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>  <span class="c1"># loop over all the channels, just advect them all the same</span>
+            <span class="n">Is</span><span class="p">[</span><span class="n">nrC</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_scalar_field</span><span class="p">(</span><span class="n">I</span><span class="p">[</span><span class="n">nrC</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">Is</span></div>
+
+<div class="viewcode-block" id="Smoother.inverse_smooth_vector_field_multiN"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.Smoother.inverse_smooth_vector_field_multiN">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_smooth_vector_field_multiN</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">vout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Inverse-smoothes (EXPERIMENTAL, NOT PROPERLY TESTED) a vector field of dimension NxdimxXxYxZ</span>
+<span class="sd">        </span>
+<span class="sd">        :param v: vector field to smooth</span>
+<span class="sd">        :param vout: if not None then result is returned in this variable</span>
+<span class="sd">        :return: smoothed vector field</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">vout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ISv</span> <span class="o">=</span> <span class="n">vout</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ISv</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">.</span><span class="n">zero_</span><span class="p">()))</span>
+
+        <span class="k">for</span> <span class="n">nrI</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span> <span class="c1"># loop over all images</span>
+            <span class="n">ISv</span><span class="p">[</span><span class="n">nrI</span><span class="p">,</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inverse_smooth_vector_field</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">nrI</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">ISv</span></div>
+
+<div class="viewcode-block" id="Smoother.inverse_smooth_vector_field"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.Smoother.inverse_smooth_vector_field">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_smooth_vector_field</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">vout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Inverse-smoothes (EXPERIMENTAL, NOT PROPERLY TESTED) a vector field of dimension dimxXxYxZ</span>
+
+<span class="sd">        :param v: vector field to smooth</span>
+<span class="sd">        :param vout: if not None then result is returned in this variable</span>
+<span class="sd">        :return: smoothed vector field</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">vout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inverse_smooth_scalar_field</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="c1"># if one dimensional, default to scalar-field smoothing</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inverse_smooth_scalar_field</span><span class="p">(</span><span class="n">v</span><span class="p">,</span><span class="n">vout</span><span class="p">)</span> <span class="c1"># if one dimensional, default to scalar-field smoothing</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">vout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">ISv</span> <span class="o">=</span> <span class="n">vout</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ISv</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">.</span><span class="n">zero_</span><span class="p">()))</span>
+
+            <span class="c1"># smooth every dimension individually</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">):</span>
+                <span class="n">ISv</span><span class="p">[</span><span class="n">d</span><span class="p">,</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inverse_smooth_scalar_field</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">d</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">ISv</span></div>
+
+<div class="viewcode-block" id="Smoother.smooth_vector_field_multiN"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.Smoother.smooth_vector_field_multiN">[docs]</a>    <span class="k">def</span> <span class="nf">smooth_vector_field_multiN</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">vout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Smoothes a vector field of dimension NxdimxXxYxZ</span>
+
+<span class="sd">        :param v: vector field to smooth</span>
+<span class="sd">        :param vout: if not None then result is returned in this variable</span>
+<span class="sd">        :return: smoothed vector field</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">vout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">Sv</span> <span class="o">=</span> <span class="n">vout</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Sv</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">.</span><span class="n">zero_</span><span class="p">()))</span>
+
+        <span class="k">if</span> <span class="n">CUDA_ON</span><span class="p">:</span>
+            <span class="n">Sv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_scalar_field</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="c1"># else:</span>
+        <span class="c1">#     for nrI in range(sz[0]): #loop over all the images</span>
+        <span class="c1">#         Sv[nrI,...] = self.smooth_vector_field(v[nrI, ...])</span>
+
+        <span class="k">return</span> <span class="n">Sv</span></div>
+
+<div class="viewcode-block" id="Smoother.smooth_vector_field"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.Smoother.smooth_vector_field">[docs]</a>    <span class="k">def</span> <span class="nf">smooth_vector_field</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">vout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Smoothes a vector field of dimension dimxXxYxZ</span>
+
+<span class="sd">        :param v: vector field to smooth</span>
+<span class="sd">        :param vout: if not None then result is returned in this variable</span>
+<span class="sd">        :return: smoothed vector field</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">vout</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_scalar_field</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="c1"># if one dimensional, default to scalar-field smoothing</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_scalar_field</span><span class="p">(</span><span class="n">v</span><span class="p">,</span><span class="n">vout</span><span class="p">)</span> <span class="c1"># if one dimensional, default to scalar-field smoothing</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">vout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">Sv</span> <span class="o">=</span> <span class="n">vout</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">Sv</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">())</span><span class="o">.</span><span class="n">zero_</span><span class="p">()))</span>
+
+            <span class="c1">#smooth every dimension individually</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">):</span>
+                <span class="n">Sv</span><span class="p">[</span><span class="n">d</span><span class="p">,</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_scalar_field</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">d</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">Sv</span></div></div>
+
+<div class="viewcode-block" id="DiffusionSmoother"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.DiffusionSmoother">[docs]</a><span class="k">class</span> <span class="nc">DiffusionSmoother</span><span class="p">(</span><span class="n">Smoother</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Smoothing by solving the diffusion equation iteratively.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DiffusionSmoother</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iter</span> <span class="o">=</span> <span class="n">params</span><span class="p">[(</span><span class="s1">&#39;iter&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;Number of iterations&#39;</span> <span class="p">)]</span>
+        <span class="sd">&quot;&quot;&quot;number of iterations&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="DiffusionSmoother.set_iter"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.DiffusionSmoother.set_iter">[docs]</a>    <span class="k">def</span> <span class="nf">set_iter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="nb">iter</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the number of iterations for the diffusion smoother</span>
+<span class="sd">        </span>
+<span class="sd">        :param iter: number of iterations </span>
+<span class="sd">        :return: returns the number of iterations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iter</span> <span class="o">=</span> <span class="nb">iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;iter&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iter</span></div>
+
+<div class="viewcode-block" id="DiffusionSmoother.get_iter"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.DiffusionSmoother.get_iter">[docs]</a>    <span class="k">def</span> <span class="nf">get_iter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the set number of iterations</span>
+<span class="sd">        </span>
+<span class="sd">        :return: number of iterations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">iter</span></div>
+
+<div class="viewcode-block" id="DiffusionSmoother.smooth_scalar_field"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.DiffusionSmoother.smooth_scalar_field">[docs]</a>    <span class="k">def</span> <span class="nf">smooth_scalar_field</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">vout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Smoothes a scalar field of dimension XxYxZ</span>
+<span class="sd">        </span>
+<span class="sd">        :param v: input image </span>
+<span class="sd">        :param vout: if not None returns the result in this variable</span>
+<span class="sd">        :return: smoothed image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># basically just solving the heat equation for a few steps</span>
+        <span class="k">if</span> <span class="n">vout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">Sv</span> <span class="o">=</span> <span class="n">vout</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Sv</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
+        <span class="c1"># now iterate and average based on the neighbors</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">iter</span><span class="o">*</span><span class="mi">2</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">):</span> <span class="c1"># so that we smooth the same indepdenent of dimension</span>
+            <span class="c1"># multiply with smallest h^2 and divide by 2^dim to assure stability</span>
+            <span class="n">Sv</span> <span class="o">=</span> <span class="n">Sv</span> <span class="o">+</span> <span class="mf">0.5</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">lap</span><span class="p">(</span><span class="n">Sv</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">**</span><span class="mi">2</span> <span class="c1"># multiply with smallest h^2 to assure stability</span>
+        <span class="k">return</span> <span class="n">Sv</span></div>
+
+<div class="viewcode-block" id="DiffusionSmoother.inverse_smooth_scalar_field"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.DiffusionSmoother.inverse_smooth_scalar_field">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_smooth_scalar_field</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">vout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Sorry: Inversion of smoothing only supported for Fourier-based filters at the moment&#39;</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="GaussianSmoother"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.GaussianSmoother">[docs]</a><span class="k">class</span> <span class="nc">GaussianSmoother</span><span class="p">(</span><span class="n">Smoother</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gaussian smoothing in the spatial domain (hence, SLOW in high dimensions on the CPU at least).</span>
+<span class="sd">    </span>
+<span class="sd">    .. todo::</span>
+<span class="sd">        Clean up the two implementations (spatial and Fourier of the Gaussian smoothers).</span>
+<span class="sd">        In particular, assure that all computions are done in physical coordinates. For now these are just in [-1,1]^d</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># TODO</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GaussianSmoother</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GaussianSpatialSmoother"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.GaussianSpatialSmoother">[docs]</a><span class="k">class</span> <span class="nc">GaussianSpatialSmoother</span><span class="p">(</span><span class="n">GaussianSmoother</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GaussianSpatialSmoother</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_sz_h</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># params[(&#39;k_sz_h&#39;, None, &#39;size of the kernel&#39; )]</span>
+        <span class="sd">&quot;&quot;&quot;size of half the smoothing kernel&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filter</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;smoothing filter&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="GaussianSpatialSmoother.set_k_sz_h"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.GaussianSpatialSmoother.set_k_sz_h">[docs]</a>    <span class="k">def</span> <span class="nf">set_k_sz_h</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">k_sz_h</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the size of half the smoothing kernel</span>
+<span class="sd">        </span>
+<span class="sd">        :param k_sz_h: size of half the kernel as array </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k_sz_h</span> <span class="o">=</span> <span class="n">k_sz_h</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;k_sz_h&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_sz_h</span></div>
+
+<div class="viewcode-block" id="GaussianSpatialSmoother.get_k_sz_h"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.GaussianSpatialSmoother.get_k_sz_h">[docs]</a>    <span class="k">def</span> <span class="nf">get_k_sz_h</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the size of half the smoothing kernel</span>
+<span class="sd">        </span>
+<span class="sd">        :return: return half the smoothing kernel size </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_sz_h</span></div>
+
+    <span class="k">def</span> <span class="nf">_create_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_sz_h</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">k_sz</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="mi">5</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int&#39;</span><span class="p">)</span>  <span class="c1"># default kernel size</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">k_sz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_sz_h</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># this is to assure that the kernel is odd size</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">smoothingKernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_smoothing_kernel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">k_sz</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">k_sz</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span>
+        <span class="c1">##################################3</span>
+        <span class="n">k_sz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k_sz</span>
+        <span class="n">sz</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1">###################################</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filter</span> <span class="o">=</span><span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">smoothingKernel</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">([</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">sz</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">k_sz</span><span class="p">[</span><span class="mi">0</span><span class="p">]])))</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filter</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">smoothingKernel</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">([</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">sz</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">k_sz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">k_sz</span><span class="p">[</span><span class="mi">1</span><span class="p">]])))</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">filter</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">smoothingKernel</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">([</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">sz</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">k_sz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">k_sz</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">k_sz</span><span class="p">[</span><span class="mi">2</span><span class="p">]])))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Can only create the smoothing kernel in dimensions 1-3&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_create_smoothing_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k_sz</span><span class="p">):</span>
+        <span class="n">mus</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+        <span class="n">stds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">identity_map</span><span class="p">(</span><span class="n">k_sz</span><span class="p">)</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">compute_normalized_gaussian</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">mus</span><span class="p">,</span> <span class="n">stds</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">g</span>
+
+    <span class="k">def</span> <span class="nf">_filter_input_with_padding</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">Iout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">I_4d</span> <span class="o">=</span> <span class="n">I</span><span class="o">.</span><span class="n">view</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="nb">list</span><span class="p">(</span><span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+            <span class="n">I_pad</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">I_4d</span><span class="p">,(</span><span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;replicate&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">I_sz</span> <span class="o">=</span> <span class="n">I_pad</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">Iout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">Iout</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">conv1d</span><span class="p">(</span><span class="n">I_pad</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span><span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+                <span class="k">return</span> <span class="n">Iout</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">F</span><span class="o">.</span><span class="n">conv1d</span><span class="p">(</span><span class="n">I_pad</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span><span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+            <span class="n">I_pad</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">I</span><span class="p">,(</span><span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;replicate&#39;</span><span class="p">)</span>
+            <span class="n">I_sz</span> <span class="o">=</span> <span class="n">I_pad</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">Iout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">Iout</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">I_pad</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span><span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+                <span class="k">return</span> <span class="n">Iout</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">F</span><span class="o">.</span><span class="n">conv2d</span><span class="p">(</span><span class="n">I_pad</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span><span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+            <span class="n">I_pad</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">I</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                 <span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                 <span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">required_padding</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;replicate&#39;</span><span class="p">)</span>
+            <span class="n">I_sz</span> <span class="o">=</span> <span class="n">I_pad</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">Iout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">Iout</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">conv3d</span><span class="p">(</span><span class="n">I_pad</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">4</span><span class="p">]),</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">F</span><span class="o">.</span><span class="n">conv3d</span><span class="p">(</span><span class="n">I_pad</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="n">I_sz</span><span class="p">[</span><span class="mi">4</span><span class="p">]),</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Can only perform padding in dimensions 1-3&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GaussianSpatialSmoother.smooth_scalar_field"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.GaussianSpatialSmoother.smooth_scalar_field">[docs]</a>    <span class="k">def</span> <span class="nf">smooth_scalar_field</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">vout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Smooth the scalar field using Gaussian smoothing in the spatial domain</span>
+<span class="sd">        </span>
+<span class="sd">        :param v: image to smooth</span>
+<span class="sd">        :param vout: if not None returns the result in this variable</span>
+<span class="sd">        :return: smoothed image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sz</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_filter</span><span class="p">()</span>
+        <span class="c1"># just doing a Gaussian smoothing</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filter_input_with_padding</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">vout</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GaussianSpatialSmoother.inverse_smooth_scalar_field"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.GaussianSpatialSmoother.inverse_smooth_scalar_field">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_smooth_scalar_field</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">vout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Not yet implemented </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Sorry: Inversion of smoothing only supported for Fourier-based filters at the moment&#39;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="GaussianFourierSmoother"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.GaussianFourierSmoother">[docs]</a><span class="k">class</span> <span class="nc">GaussianFourierSmoother</span><span class="p">(</span><span class="n">GaussianSmoother</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions</span>
+<span class="sd">    than spatial Gaussian smoothing on the CPU in large dimensions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GaussianFourierSmoother</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gaussianStd</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">ext</span><span class="p">[</span><span class="s1">&#39;gaussianStd&#39;</span><span class="p">]</span>
+        <span class="sd">&quot;&quot;&quot;stanard deviation of Gaussian&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">FFilter</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="sd">&quot;&quot;&quot;filter in Fourier domain&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_create_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="n">mus</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+        <span class="n">stds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gaussianStd</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">identity_map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">)</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">compute_normalized_gaussian</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">mus</span><span class="p">,</span> <span class="n">stds</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">FFilter</span> <span class="o">=</span> <span class="n">ce</span><span class="o">.</span><span class="n">create_complex_fourier_filter</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GaussianFourierSmoother.set_gaussian_std"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.GaussianFourierSmoother.set_gaussian_std">[docs]</a>    <span class="k">def</span> <span class="nf">set_gaussian_std</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">gstd</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the standard deviation of the Gaussian filter</span>
+<span class="sd">        </span>
+<span class="sd">        :param gstd: standard deviation </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gaussianStd</span> <span class="o">=</span> <span class="n">gstd</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;gaussian_std&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gaussianStd</span></div>
+
+<div class="viewcode-block" id="GaussianFourierSmoother.get_gaussian_std"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.GaussianFourierSmoother.get_gaussian_std">[docs]</a>    <span class="k">def</span> <span class="nf">get_gaussian_std</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the standard deviation of the Gaussian filter</span>
+<span class="sd">        </span>
+<span class="sd">        :return: standard deviation of Gaussian filter </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">gaussianStd</span></div>
+
+<div class="viewcode-block" id="GaussianFourierSmoother.smooth_scalar_field"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.GaussianFourierSmoother.smooth_scalar_field">[docs]</a>    <span class="k">def</span> <span class="nf">smooth_scalar_field</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">vout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Smooth the scalar field using Gaussian smoothing in the Fourier domain</span>
+
+<span class="sd">        :param v: image to smooth</span>
+<span class="sd">        :param vout: if not None returns the result in this variable</span>
+<span class="sd">        :return: smoothed image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># just doing a Gaussian smoothing</span>
+        <span class="c1"># we need to instantiate a new filter function here every time for the autograd to work</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">FFilter</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_filter</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">vout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">vout</span> <span class="o">=</span> <span class="n">ce</span><span class="o">.</span><span class="n">fourier_convolution</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">FFilter</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">vout</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ce</span><span class="o">.</span><span class="n">fourier_convolution</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">FFilter</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GaussianFourierSmoother.inverse_smooth_scalar_field"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.GaussianFourierSmoother.inverse_smooth_scalar_field">[docs]</a>    <span class="k">def</span> <span class="nf">inverse_smooth_scalar_field</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">vout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Inverse-smooth the scalar field using Gaussian smoothing in the Fourier domain</span>
+<span class="sd">        (with the inverse of the Fourier transform of the Gaussian; EXPERIMENTAL, requires regularization</span>
+<span class="sd">        to avoid divisions by zero. DO NOT USE AT THE MOMENT.)</span>
+
+<span class="sd">        :param v: image to inverse-smooth</span>
+<span class="sd">        :param vout: if not None returns the result in this variable</span>
+<span class="sd">        :return: inverse-smoothed image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">FFilter</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_filter</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">vout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">vout</span> <span class="o">=</span> <span class="n">ce</span><span class="o">.</span><span class="n">inverse_fourier_convolution</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">FFilter</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">vout</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ce</span><span class="o">.</span><span class="n">inverse_fourier_convolution</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">FFilter</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="SmootherFactory"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.SmootherFactory">[docs]</a><span class="k">class</span> <span class="nc">SmootherFactory</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Factory to quickly create different types of smoothers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span> <span class="o">=</span> <span class="n">spacing</span>
+        <span class="sd">&quot;&quot;&quot;spatial spacing of image&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sz</span> <span class="o">=</span> <span class="n">sz</span>
+        <span class="sd">&quot;&quot;&quot;size of image&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span> <span class="n">spacing</span> <span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;dimension of image&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">default_smoother_type</span> <span class="o">=</span> <span class="n">smoothType</span>
+        <span class="sd">&quot;&quot;&quot;default smoother used for smoothing&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SmootherFactory.set_default_smoother_type_to_gaussian"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.SmootherFactory.set_default_smoother_type_to_gaussian">[docs]</a>    <span class="k">def</span> <span class="nf">set_default_smoother_type_to_gaussian</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the default smoother type to Gaussian smoothing in the Fourier domain</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">default_smoother_type</span> <span class="o">=</span> <span class="s1">&#39;gaussian&#39;</span></div>
+
+<div class="viewcode-block" id="SmootherFactory.set_default_smoother_type_to_diffusion"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.SmootherFactory.set_default_smoother_type_to_diffusion">[docs]</a>    <span class="k">def</span> <span class="nf">set_default_smoother_type_to_diffusion</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the default smoother type to diffusion smoothing </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">default_smoother_type</span> <span class="o">=</span> <span class="s1">&#39;diffusion&#39;</span></div>
+
+<div class="viewcode-block" id="SmootherFactory.set_default_smoother_type_to_gaussianSpatial"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.SmootherFactory.set_default_smoother_type_to_gaussianSpatial">[docs]</a>    <span class="k">def</span> <span class="nf">set_default_smoother_type_to_gaussianSpatial</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the default smoother type to Gaussian smoothing in the spatial domain</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">default_smoother_type</span> <span class="o">=</span> <span class="s1">&#39;gaussianSpatial&#39;</span></div>
+
+<div class="viewcode-block" id="SmootherFactory.create_smoother"><a class="viewcode-back" href="../smoother_factory.html#smoother_factory.SmootherFactory.create_smoother">[docs]</a>    <span class="k">def</span> <span class="nf">create_smoother</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create the desired smoother</span>
+<span class="sd">        :param params: ParamterDict() object to hold paramters which should be passed on</span>
+<span class="sd">        :return: returns the smoother</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">cparams</span> <span class="o">=</span> <span class="n">params</span><span class="p">[(</span><span class="s1">&#39;smoother&#39;</span><span class="p">,{})]</span>
+        <span class="n">smootherType</span> <span class="o">=</span> <span class="n">cparams</span><span class="p">[(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_smoother_type</span><span class="p">,</span>
+                                          <span class="s1">&#39;type of smoother (difusion/gaussian/gaussianSpatial)&#39;</span> <span class="p">)]</span>
+        <span class="k">if</span> <span class="n">smootherType</span><span class="o">==</span><span class="s1">&#39;diffusion&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">DiffusionSmoother</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span><span class="n">cparams</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">smootherType</span><span class="o">==</span><span class="s1">&#39;gaussian&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">GaussianFourierSmoother</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span><span class="n">cparams</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">smootherType</span><span class="o">==</span><span class="s1">&#39;gaussianSpatial&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">GaussianSpatialSmoother</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span><span class="n">cparams</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span> <span class="s1">&#39;Smoother: &#39;</span> <span class="o">+</span> <span class="n">smoothType</span> <span class="o">+</span> <span class="s1">&#39; not known&#39;</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

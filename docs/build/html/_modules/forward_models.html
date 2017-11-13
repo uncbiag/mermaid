@@ -1,0 +1,914 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>forward_models &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>forward_models</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for forward_models</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Package defining various dynamic forward models as well as convenience methods to generate the</span>
+<span class="sd">right hand sides (RHS) of the related partial differential equations.</span>
+
+<span class="sd">Currently, the following forward models are implemented:</span>
+<span class="sd">    #. An advection equation for images</span>
+<span class="sd">    #. An advection equation for maps</span>
+<span class="sd">    #. The EPDiff-equation parameterized using the vector-valued momentum for images</span>
+<span class="sd">    #. The EPDiff-equation parameterized using the vector-valued momentum for maps</span>
+<span class="sd">    #. The EPDiff-equation parameterized using the scalar-valued momentum for images</span>
+<span class="sd">    #. The EPDiff-equation parameterized using the scalar-valued momentum for maps</span>
+<span class="sd">    </span>
+<span class="sd">The images are expected to be tensors of dimension: BxCxXxYxZ (or BxCxX in 1D and BxCxXxY in 2D),</span>
+<span class="sd">where B is the batch-size, C the number of channels, and X, Y, and Z are the spatial coordinate indices.</span>
+
+<span class="sd">Futhermore the following (RHSs) are provided</span>
+<span class="sd">    #. Image advection</span>
+<span class="sd">    #. Map advection</span>
+<span class="sd">    #. Scalar conservation law</span>
+<span class="sd">    #. EPDiff</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">finite_differences</span> <span class="k">as</span> <span class="nn">fd</span>
+<span class="kn">import</span> <span class="nn">smoother_factory</span> <span class="k">as</span> <span class="nn">sf</span>
+<span class="kn">import</span> <span class="nn">utils</span>
+<span class="kn">from</span> <span class="nn">global_list</span> <span class="k">import</span> <span class="n">MyTensor</span><span class="p">,</span> <span class="n">AdpatVal</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Variable</span>
+
+<div class="viewcode-block" id="RHSLibrary"><a class="viewcode-back" href="../forward_models.html#forward_models.RHSLibrary">[docs]</a><span class="k">class</span> <span class="nc">RHSLibrary</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convenience class to quickly generate various right hand sides (RHSs) of popular partial differential </span>
+<span class="sd">    equations. In this way new forward models can be written with minimal code duplication.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">use_neumann_BC_for_map</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor</span>
+<span class="sd">        </span>
+<span class="sd">        :param spacing: Spacing for the images. This will be an array with 1, 2, or 3 entries in 1D, 2D, and 3D respectively. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span> <span class="o">=</span> <span class="n">spacing</span>
+        <span class="sd">&quot;&quot;&quot;spatial spacing&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">FD_torch</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span> <span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;torch finite differencing support&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fdt_le</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">FD_torch</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;torch finite differencing support w/ linear extrapolation&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;spatial dimension&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_neumann_BC_for_map</span> <span class="o">=</span> <span class="n">use_neumann_BC_for_map</span>
+        <span class="sd">&quot;&quot;&quot;If True uses zero Neumann boundary conditions also for evolutions of the map, if False uses linear extrapolation&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="RHSLibrary.rhs_advect_image_multiNC"><a class="viewcode-back" href="../forward_models.html#forward_models.RHSLibrary.rhs_advect_image_multiNC">[docs]</a>    <span class="k">def</span> <span class="nf">rhs_advect_image_multiNC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">I</span><span class="p">,</span><span class="n">v</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Advects a batch of images which can be multi-channel. Expected image format here, is </span>
+<span class="sd">        BxCxXxYxZ, where B is the number of images (batch size), C, the number of channels</span>
+<span class="sd">        per image and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)</span>
+<span class="sd">        </span>
+<span class="sd">        :math:`-\\nabla I^Tv`</span>
+
+<span class="sd">        </span>
+<span class="sd">        :param I: Image batch</span>
+<span class="sd">        :param v: Velocity fields (this will be one velocity field per image)</span>
+<span class="sd">        :return: Returns the RHS of the advection equations involved</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">rhs_ret</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span> <span class="n">sz</span> <span class="p">)</span><span class="o">.</span><span class="n">zero_</span><span class="p">(),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="c1">#for nrI in range(sz[0]): # loop over all the images</span>
+        <span class="c1">#########################################  here assume the input is the grey image</span>
+        <span class="k">if</span> <span class="n">sz</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_rhs_advect_oneC_image</span><span class="p">(</span><span class="n">I</span><span class="p">,</span><span class="n">v</span><span class="p">,</span><span class="n">rhs_ret</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">nrI</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>  <span class="c1"># loop over all the images</span>
+                <span class="n">rhs_ret</span><span class="p">[</span><span class="n">nrI</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rhs_advect_image_multiC</span><span class="p">(</span><span class="n">I</span><span class="p">[</span><span class="n">nrI</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="n">nrI</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">rhs_ret</span></div>
+
+    <span class="k">def</span> <span class="nf">_rhs_advect_image_multiC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">I</span><span class="p">,</span><span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Similar to *_rhs_advect_image_multiNC*, but only for one multi-channel image at at time.</span>
+
+<span class="sd">        :param I: Multi-channel image: CxXxYxZ</span>
+<span class="sd">        :param v: Same velocity field applied to each channel</span>
+<span class="sd">        :return: Returns the RHS of the advection equation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">rhs_ret</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span> <span class="n">sz</span> <span class="p">)</span><span class="o">.</span><span class="n">zero_</span><span class="p">(),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">nrC</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span> <span class="c1"># loop over all the channels, just advect them all the same</span>
+            <span class="n">rhs_ret</span><span class="p">[</span><span class="n">nrC</span><span class="p">,</span><span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rhs_advect_image_singleC</span><span class="p">(</span><span class="n">I</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="n">nrC</span><span class="p">,</span><span class="o">...</span><span class="p">],</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rhs_ret</span>
+
+    <span class="k">def</span> <span class="nf">_rhs_advect_image_singleC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Similar to *_rhs_advect_image_multiC*, but only for one channel at a time.</span>
+
+<span class="sd">        :param I: One-channel input image: XxYxZ</span>
+<span class="sd">        :param v: velocity field</span>
+<span class="sd">        :return: Returns the RHS of the advection equation for one channel</span>
+<span class="sd">        ##############   additional None channel is for batch</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only supported up to dimension 3&#39;</span><span class="p">)</span>
+
+
+    <span class="c1">################################################################################################################3</span>
+    <span class="k">def</span> <span class="nf">_rhs_advect_oneC_image</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">I</span><span class="p">,</span><span class="n">v</span><span class="p">,</span><span class="n">rhs_ret</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Similar to *_rhs_advect_image_multiC*, but only for one channel at a time.</span>
+<span class="sd">        </span>
+<span class="sd">        :param I: One-channel input image: XxYxZ </span>
+<span class="sd">        :param v: velocity field</span>
+<span class="sd">        :return: Returns the RHS of the advection equation for one channel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">rhs_ret</span><span class="p">[:]</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">I</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">])</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">rhs_ret</span><span class="p">[:]</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">I</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">])</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">I</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">])</span><span class="o">*</span><span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span><span class="o">...</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">rhs_ret</span><span class="p">[:]</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">I</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">])</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">I</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">])</span><span class="o">*</span><span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span><span class="o">...</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">I</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">])</span><span class="o">*</span><span class="n">v</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span><span class="o">...</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only supported up to dimension 3&#39;</span><span class="p">)</span>
+
+    <span class="c1">################################################################################################################3</span>
+
+
+<div class="viewcode-block" id="RHSLibrary.rhs_scalar_conservation_multiNC"><a class="viewcode-back" href="../forward_models.html#forward_models.RHSLibrary.rhs_scalar_conservation_multiNC">[docs]</a>    <span class="k">def</span> <span class="nf">rhs_scalar_conservation_multiNC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Scalar conservation law for a batch of images which can be multi-channel. Expected image format here, is </span>
+<span class="sd">        BxCxXxYxZ, where B is the number of images (batch size), C, the number of channels</span>
+<span class="sd">        per image and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)</span>
+<span class="sd">        </span>
+<span class="sd">        :math:`-div(Iv)`</span>
+
+<span class="sd">        :param I: Image batch</span>
+<span class="sd">        :param v: Velocity fields (this will be one velocity field per image)</span>
+<span class="sd">        :return: Returns the RHS of the scalar conservation law equations involved</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">rhs_ret</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span> <span class="n">sz</span> <span class="p">)</span><span class="o">.</span><span class="n">zero_</span><span class="p">(),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="c1"># for nrI in range(sz[0]):  # loop over all the images</span>
+        <span class="c1">#     rhs_ret[nrI, ...] = self._rhs_scalar_conservation_multiC(I[nrI, ...], v[nrI, ...])</span>
+        <span class="c1"># return rhs_ret</span>
+        <span class="k">if</span> <span class="n">sz</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_rhs_scalar_OneC_conservation</span><span class="p">(</span><span class="n">I</span><span class="p">,</span><span class="n">v</span><span class="p">,</span><span class="n">rhs_ret</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">nrI</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>  <span class="c1"># loop over all the images</span>
+                <span class="n">rhs_ret</span><span class="p">[</span><span class="n">nrI</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rhs_scalar_conservation_multiC</span><span class="p">(</span><span class="n">I</span><span class="p">[</span><span class="n">nrI</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="n">nrI</span><span class="p">,</span> <span class="o">...</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">rhs_ret</span></div>
+
+    <span class="k">def</span> <span class="nf">_rhs_scalar_conservation_multiC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">I</span><span class="p">,</span><span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Similar to *_rhs_scalar_conservation_multiNC*, but only for one multi-channel image at at time.</span>
+
+<span class="sd">        :param I: Multi-channel image: CxXxYxZ</span>
+<span class="sd">        :param v: Same velocity field applied to each channel</span>
+<span class="sd">        :return: Returns the RHS of the scalar-conservation law equation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">I</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">rhs_ret</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span> <span class="n">sz</span> <span class="p">)</span><span class="o">.</span><span class="n">zero_</span><span class="p">(),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">nrC</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>  <span class="c1"># loop over all the channels, just advect them all the same</span>
+            <span class="n">rhs_ret</span><span class="p">[</span><span class="n">nrC</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rhs_scalar_conservation_singleC</span><span class="p">(</span><span class="n">I</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="n">nrC</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rhs_ret</span>
+
+    <span class="k">def</span> <span class="nf">_rhs_scalar_conservation_singleC</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">I</span><span class="p">,</span><span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Similar to *_rhs_scalar_conservation_multiC*, but only for one channel at a time.</span>
+
+<span class="sd">        :param I: One-channel input image: XxYxZ </span>
+<span class="sd">        :param v: velocity field</span>
+<span class="sd">        :return: Returns the RHS of the scalar-conservation law equation for one channel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">I</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="mi">0</span><span class="p">,:])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">I</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="mi">0</span><span class="p">,:,:])</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">I</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="mi">1</span><span class="p">,:,:])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">I</span><span class="o">*</span> <span class="n">v</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="mi">0</span><span class="p">,:,:,:])</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">I</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="mi">1</span><span class="p">,:,:,:])</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">I</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span><span class="mi">2</span><span class="p">,:,:,:])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only supported up to dimension 3&#39;</span><span class="p">)</span>
+
+
+    <span class="c1">################################################################################################################3</span>
+    <span class="k">def</span> <span class="nf">_rhs_scalar_OneC_conservation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">I</span><span class="p">,</span><span class="n">v</span><span class="p">,</span><span class="n">rhs_ret</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Similar to *_rhs_scalar_conservation_multiC*, but only for one channel at a time.</span>
+
+<span class="sd">        :param I: One-channel input image: XxYxZ</span>
+<span class="sd">        :param v: velocity field</span>
+<span class="sd">        :return: Returns the RHS of the scalar-conservation law equation for one channel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">rhs_ret</span><span class="p">[:]</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">I</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span><span class="o">*</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+            <span class="n">rhs_ret</span><span class="p">[:]</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">I</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span><span class="o">*</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">])</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">I</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span><span class="o">*</span><span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span><span class="o">...</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+            <span class="n">rhs_ret</span><span class="p">[:]</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">I</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span><span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">])</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">I</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span><span class="o">*</span><span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span><span class="o">...</span><span class="p">])</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">I</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span><span class="o">*</span><span class="n">v</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span><span class="o">...</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only supported up to dimension 3&#39;</span><span class="p">)</span>
+
+    <span class="c1">################################################################################################################3</span>
+
+
+<div class="viewcode-block" id="RHSLibrary.rhs_advect_map_multiN"><a class="viewcode-back" href="../forward_models.html#forward_models.RHSLibrary.rhs_advect_map_multiN">[docs]</a>    <span class="k">def</span> <span class="nf">rhs_advect_map_multiN</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Advects a set of N maps (for N images). Expected format here, is </span>
+<span class="sd">        BxCxXxYxZ, where B is the number of images/maps (batch size), C, the number of channels</span>
+<span class="sd">        per (here the spatial dimension for the map coordinate functions), </span>
+<span class="sd">        and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)</span>
+
+<span class="sd">        :math:`-D\\phi v`</span>
+
+<span class="sd">        :param phi: map batch</span>
+<span class="sd">        :param v: Velocity fields (this will be one velocity field per map)</span>
+<span class="sd">        :return: Returns the RHS of the advection equations involved</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">phi</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">rhs_ret</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span> <span class="n">sz</span> <span class="p">)</span><span class="o">.</span><span class="n">zero_</span><span class="p">(),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="c1"># for nrI in range(sz[0]):  # loop over all the images</span>
+        <span class="c1">#     rhs_ret[nrI, ...] = self._rhs_advect_map_singleN(phi[nrI, ...], v[nrI, ...])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rhs_advect_map_singleN</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span><span class="n">rhs_ret</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rhs_ret</span></div>
+
+    <span class="k">def</span> <span class="nf">_rhs_advect_map_singleN</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">phi</span><span class="p">,</span><span class="n">v</span><span class="p">,</span><span class="n">rhsphi</span><span class="p">):</span>  <span class="c1">##########</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_neumann_BC_for_map</span><span class="p">:</span>
+            <span class="n">fdc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span> <span class="c1"># use zero Neumann boundary conditions</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fdc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt_le</span> <span class="c1"># do linear extrapolation</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">rhsphi</span><span class="p">[:]</span><span class="o">=</span> <span class="o">-</span><span class="n">fdc</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:])</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+            <span class="c1">#rhsphi = Variable(MyTensor( phi.size() ).zero_(), requires_grad=False)</span>
+            <span class="n">rhsphi</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:,</span> <span class="p">:])</span> <span class="o">+</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:,</span> <span class="p">:]))</span>
+            <span class="n">rhsphi</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,:,</span> <span class="p">:])</span> <span class="o">+</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,:,</span> <span class="p">:]))</span>
+            <span class="c1">#return rhsphi</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+            <span class="c1">#rhsphi = Variable(MyTensor( phi.size() ).zero_(), requires_grad=False)</span>
+            <span class="n">rhsphi</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">+</span>
+                                   <span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">+</span>
+                                   <span class="n">v</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]))</span>
+
+            <span class="n">rhsphi</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">+</span>
+                                   <span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">+</span>
+                                   <span class="n">v</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]))</span>
+
+            <span class="n">rhsphi</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">+</span>
+                                   <span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">+</span>
+                                   <span class="n">v</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">fdc</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">phi</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,:,</span> <span class="p">:,</span> <span class="p">:]))</span>
+            <span class="c1">#return rhsphi</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only supported up to dimension 3&#39;</span><span class="p">)</span>
+
+
+
+
+<div class="viewcode-block" id="RHSLibrary.rhs_epdiff_multiN"><a class="viewcode-back" href="../forward_models.html#forward_models.RHSLibrary.rhs_epdiff_multiN">[docs]</a>    <span class="k">def</span> <span class="nf">rhs_epdiff_multiN</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Computes the right hand side of the EPDiff equation for of N momenta (for N images). </span>
+<span class="sd">        Expected format here, is BxCxXxYxZ, where B is the number of momenta (batch size), C, </span>
+<span class="sd">        the number of channels per (here the spatial dimension for the momenta), </span>
+<span class="sd">        and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)</span>
+
+<span class="sd">        :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`</span>
+
+<span class="sd">        :param m: momenta batch</span>
+<span class="sd">        :param v: Velocity fields (this will be one velocity field per momentum)</span>
+<span class="sd">        :return: Returns the RHS of the EPDiff equations involved</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">sz</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">rhs_ret</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span> <span class="n">sz</span> <span class="p">)</span><span class="o">.</span><span class="n">zero_</span><span class="p">(),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="c1"># for nrI in range(sz[0]):  # loop over all the images</span>
+        <span class="c1">#     rhs_ret[nrI, ...] = self._rhs_epdiff_singleN(m[nrI, ...], v[nrI, ...])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_rhs_epdiff_singleN</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">rhs_ret</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rhs_ret</span></div>
+
+    <span class="k">def</span> <span class="nf">_rhs_epdiff_singleN</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span><span class="n">rhsm</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">rhsm</span><span class="p">[:]</span><span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:])</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="c1">#rhsm = Variable(MyTensor(m.size()).zero_(), requires_grad=False)</span>
+            <span class="c1"># (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)</span>
+            <span class="n">rhsm</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+                             <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+                             <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+                             <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+
+            <span class="n">rhsm</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+                             <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+                             <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+                             <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+            <span class="c1">#return rhsm</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1">#rhsm = Variable(MyTensor(m.size()).zero_(), requires_grad=False)</span>
+            <span class="c1"># (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)</span>
+            <span class="n">rhsm</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span>
+
+            <span class="n">rhsm</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span>
+
+            <span class="n">rhsm</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dXc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dYc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">m</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">*</span> <span class="n">v</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span>
+                                <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span><span class="o">.</span><span class="n">dZc</span><span class="p">(</span><span class="n">v</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span> <span class="o">*</span> <span class="n">m</span><span class="p">[:,</span><span class="mi">2</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span>
+            <span class="c1">#return rhsm</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only supported up to dimension &#39;</span><span class="p">)</span></div>
+
+
+    <span class="c1"># def _rhs_epdiff_singleN(self,m,v):</span>
+    <span class="c1">#     if self.dim==1:</span>
+    <span class="c1">#         return -self.fdt.dXc(m[:,0] * v[0,:]) - self.fdt.dXc(v[0,:]) * m[0,:]</span>
+    <span class="c1">#     elif self.dim==2:</span>
+    <span class="c1">#         rhsm = Variable(MyTensor( m.size() ).zero_(), requires_grad=False)</span>
+    <span class="c1">#          # (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)</span>
+    <span class="c1">#         rhsm[0,:, :] = (-self.fdt.dXc(m[0,:, :] * v[0,:, :])</span>
+    <span class="c1">#                          - self.fdt.dYc(m[0,:, :] * v[1,:, :])</span>
+    <span class="c1">#                          - self.fdt.dXc(v[0,:, :]) * m[0,:, :]</span>
+    <span class="c1">#                          - self.fdt.dXc(v[1,:, :]) * m[1,:, :])</span>
+    <span class="c1">#</span>
+    <span class="c1">#         rhsm[1,:, :] = (-self.fdt.dXc(m[1,:, :] * v[0,:, :])</span>
+    <span class="c1">#                          - self.fdt.dYc(m[1,:, :] * v[1,:, :])</span>
+    <span class="c1">#                          - self.fdt.dYc(v[0,:, :]) * m[0,:, :]</span>
+    <span class="c1">#                          - self.fdt.dYc(v[1,:, :]) * m[1,:, :])</span>
+    <span class="c1">#         return rhsm</span>
+    <span class="c1">#     elif self.dim==3:</span>
+    <span class="c1">#         rhsm = Variable(MyTensor( m.size() ).zero_(), requires_grad=False)</span>
+    <span class="c1">#         # (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)</span>
+    <span class="c1">#         rhsm[0,:, :, :] = (-self.fdt.dXc(m[0,:, :, :] * v[0,:, :, :])</span>
+    <span class="c1">#                             - self.fdt.dYc(m[0,:, :, :] * v[1,:, :, :])</span>
+    <span class="c1">#                             - self.fdt.dZc(m[0,:, :, :] * v[2,:, :, :])</span>
+    <span class="c1">#                             - self.fdt.dXc(v[0,:, :, :]) * m[0,:, :, :]</span>
+    <span class="c1">#                             - self.fdt.dXc(v[1,:, :, :]) * m[1,:, :, :]</span>
+    <span class="c1">#                             - self.fdt.dXc(v[2,:, :, :]) * m[2,:, :, :])</span>
+    <span class="c1">#</span>
+    <span class="c1">#         rhsm[1,:, :, :] = (-self.fdt.dXc(m[1,:, :, :] * v[0,:, :, :])</span>
+    <span class="c1">#                             - self.fdt.dYc(m[1,:, :, :] * v[1,:, :, :])</span>
+    <span class="c1">#                             - self.fdt.dZc(m[1,:, :, :] * v[2,:, :, :])</span>
+    <span class="c1">#                             - self.fdt.dYc(v[0,:, :, :]) * m[0,:, :, :]</span>
+    <span class="c1">#                             - self.fdt.dYc(v[1,:, :, :]) * m[1,:, :, :]</span>
+    <span class="c1">#                             - self.fdt.dYc(v[2,:, :, :]) * m[2,:, :, :])</span>
+    <span class="c1">#</span>
+    <span class="c1">#         rhsm[2,:, :, :] = (-self.fdt.dXc(m[2,:, :, :] * v[0,:, :, :])</span>
+    <span class="c1">#                             - self.fdt.dYc(m[2,:, :, :] * v[1,:, :, :])</span>
+    <span class="c1">#                             - self.fdt.dZc(m[2,:, :, :] * v[2,:, :, :])</span>
+    <span class="c1">#                             - self.fdt.dZc(v[0,:, :, :]) * m[0,:, :, :]</span>
+    <span class="c1">#                             - self.fdt.dZc(v[1,:, :, :]) * m[1,:, :, :]</span>
+    <span class="c1">#                             - self.fdt.dZc(v[2,:, :, :]) * m[2,:, :, :])</span>
+    <span class="c1">#         return rhsm</span>
+    <span class="c1">#     else:</span>
+    <span class="c1">#         raise ValueError(&#39;Only supported up to dimension 3&#39;)</span>
+
+<div class="viewcode-block" id="ForwardModel"><a class="viewcode-back" href="../forward_models.html#forward_models.ForwardModel">[docs]</a><span class="k">class</span> <span class="nc">ForwardModel</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Abstract forward model class. Should never be instantiated.</span>
+<span class="sd">    Derived classes require the definition of f(self,t,x,u,pars) and u(self,t,pars).</span>
+<span class="sd">    These functions will be used for integration: x&#39;(t) = f(t,x(t),u(t))</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">ABCMeta</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Constructor of abstract forward model class</span>
+<span class="sd">        </span>
+<span class="sd">        :param sz: size of images</span>
+<span class="sd">        :param spacing: numpy array for spacing in x,y,z directions</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">spacing</span><span class="o">.</span><span class="n">size</span> <span class="c1"># spatial dimension of the problem</span>
+        <span class="sd">&quot;&quot;&quot;spatial dimension&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span> <span class="o">=</span> <span class="n">spacing</span>
+        <span class="sd">&quot;&quot;&quot;spatial spacing&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sz</span> <span class="o">=</span> <span class="n">sz</span>
+        <span class="sd">&quot;&quot;&quot;image size (BxCxXxYxZ)&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="sd">&quot;&quot;&quot;ParameterDict instance holding parameters&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span> <span class="o">=</span> <span class="n">RHSLibrary</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;rhs library support&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">&gt;</span><span class="mi">3</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">&lt;</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Forward models are currently only supported in dimensions 1 to 3&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fdt</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">FD_torch</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span> <span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;torch finite difference support&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ForwardModel.f"><a class="viewcode-back" href="../forward_models.html#forward_models.ForwardModel.f">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">x</span><span class="p">,</span><span class="n">u</span><span class="p">,</span><span class="n">pars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to be integrated</span>
+<span class="sd">        </span>
+<span class="sd">        :param t: time</span>
+<span class="sd">        :param x: state</span>
+<span class="sd">        :param u: input</span>
+<span class="sd">        :param pars: optional parameters</span>
+<span class="sd">        :return: the function value, should return a list (to support easy concatenations of states)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="ForwardModel.u"><a class="viewcode-back" href="../forward_models.html#forward_models.ForwardModel.u">[docs]</a>    <span class="k">def</span> <span class="nf">u</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">pars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        External input</span>
+<span class="sd">        </span>
+<span class="sd">        :param t: time</span>
+<span class="sd">        :param pars: parameters</span>
+<span class="sd">        :return: the external input</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[]</span></div></div>
+
+
+<div class="viewcode-block" id="AdvectMap"><a class="viewcode-back" href="../forward_models.html#forward_models.AdvectMap">[docs]</a><span class="k">class</span> <span class="nc">AdvectMap</span><span class="p">(</span><span class="n">ForwardModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Forward model to advect an n-D map using a transport equation: :math:`\\Phi_t + D\\Phi v = 0`.</span>
+<span class="sd">    v is treated as an external argument and \Phi is the state</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">AdvectMap</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AdvectMap.u"><a class="viewcode-back" href="../forward_models.html#forward_models.AdvectMap.u">[docs]</a>    <span class="k">def</span> <span class="nf">u</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">,</span> <span class="n">pars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        External input, to hold the velocity field</span>
+<span class="sd">        </span>
+<span class="sd">        :param t: time (ignored; not time-dependent) </span>
+<span class="sd">        :param pars: assumes an n-D velocity field is passed as the only input argument</span>
+<span class="sd">        :return: Simply returns this velocity field</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">pars</span></div>
+
+<div class="viewcode-block" id="AdvectMap.f"><a class="viewcode-back" href="../forward_models.html#forward_models.AdvectMap.f">[docs]</a>    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">pars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to be integrated, i.e., right hand side of transport equation: </span>
+<span class="sd">        </span>
+<span class="sd">        :math:`-D\\phi v`</span>
+<span class="sd">        </span>
+<span class="sd">        :param t: time (ignored; not time-dependent) </span>
+<span class="sd">        :param x: state, here the map, \Phi, itself (assumes 3D-5D array; [nrI,0,:,:] x-coors; [nrI,1,:,:] y-coors; ...</span>
+<span class="sd">        :param u: external input, will be the velocity field here</span>
+<span class="sd">        :param pars: ignored (does not expect any additional inputs)</span>
+<span class="sd">        :return: right hand side [phi]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">rhs_advect_map_multiN</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">u</span><span class="p">)]</span></div></div>
+
+<div class="viewcode-block" id="AdvectImage"><a class="viewcode-back" href="../forward_models.html#forward_models.AdvectImage">[docs]</a><span class="k">class</span> <span class="nc">AdvectImage</span><span class="p">(</span><span class="n">ForwardModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Forward model to advect an image using a transport equation: :math:`I_t + \\nabla I^Tv = 0`.</span>
+<span class="sd">    v is treated as an external argument and I is the state</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">AdvectImage</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="AdvectImage.u"><a class="viewcode-back" href="../forward_models.html#forward_models.AdvectImage.u">[docs]</a>    <span class="k">def</span> <span class="nf">u</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">,</span> <span class="n">pars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        External input, to hold the velocity field</span>
+<span class="sd">        </span>
+<span class="sd">        :param t: time (ignored; not time-dependent) </span>
+<span class="sd">        :param pars: assumes an n-D velocity field is passed as the only input argument</span>
+<span class="sd">        :return: Simply returns this velocity field</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">pars</span></div>
+
+<div class="viewcode-block" id="AdvectImage.f"><a class="viewcode-back" href="../forward_models.html#forward_models.AdvectImage.f">[docs]</a>    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">pars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to be integrated, i.e., right hand side of transport equation: :math:`-\\nabla I^T v`</span>
+<span class="sd">        </span>
+<span class="sd">        :param t: time (ignored; not time-dependent) </span>
+<span class="sd">        :param x: state, here the image, I, itself (supports multiple images and channels)</span>
+<span class="sd">        :param u: external input, will be the velocity field here</span>
+<span class="sd">        :param pars: ignored (does not expect any additional inputs)</span>
+<span class="sd">        :return: right hand side [I]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">rhs_advect_image_multiNC</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">u</span><span class="p">)]</span></div></div>
+
+
+<div class="viewcode-block" id="EPDiffImage"><a class="viewcode-back" href="../forward_models.html#forward_models.EPDiffImage">[docs]</a><span class="k">class</span> <span class="nc">EPDiffImage</span><span class="p">(</span><span class="n">ForwardModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Forward model for the EPdiff equation. State is the momentum, m, and the image I:</span>
+<span class="sd">    :math:`(m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:`v=Km`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:`I_t+\\nabla I^Tv=0`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EPDiffImage</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">smoother</span> <span class="o">=</span> <span class="n">sf</span><span class="o">.</span><span class="n">SmootherFactory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">[</span><span class="mi">2</span><span class="p">::],</span><span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">)</span><span class="o">.</span><span class="n">create_smoother</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+<div class="viewcode-block" id="EPDiffImage.f"><a class="viewcode-back" href="../forward_models.html#forward_models.EPDiffImage.f">[docs]</a>    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">pars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to be integrated, i.e., right hand side of the EPDiff equation: </span>
+<span class="sd">        :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`</span>
+<span class="sd">        </span>
+<span class="sd">        :math:`-\\nabla I^Tv`</span>
+<span class="sd">        </span>
+<span class="sd">        :param t: time (ignored; not time-dependent) </span>
+<span class="sd">        :param x: state, here the vector momentum, m, and the image, I</span>
+<span class="sd">        :param u: ignored, no external input</span>
+<span class="sd">        :param pars: ignored (does not expect any additional inputs)</span>
+<span class="sd">        :return: right hand side [m,I]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># assume x[0] is m and x[1] is I for the state</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">I</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smoother</span><span class="o">.</span><span class="n">smooth_vector_field_multiN</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+        <span class="c1"># print(&#39;max(|v|) = &#39; + str( v.abs().max() ))</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">rhs_epdiff_multiN</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">v</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">rhs_advect_image_multiNC</span><span class="p">(</span><span class="n">I</span><span class="p">,</span><span class="n">v</span><span class="p">)]</span></div></div>
+
+
+<div class="viewcode-block" id="EPDiffMap"><a class="viewcode-back" href="../forward_models.html#forward_models.EPDiffMap">[docs]</a><span class="k">class</span> <span class="nc">EPDiffMap</span><span class="p">(</span><span class="n">ForwardModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Forward model for the EPDiff equation. State is the momentum, m, and the transform, :math:`\\phi` </span>
+<span class="sd">    (mapping the source image to the target image).</span>
+<span class="sd">    :math:`(m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:`v=Km`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:`\\phi_t+D\\phi v=0`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EPDiffMap</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">smoother</span> <span class="o">=</span> <span class="n">sf</span><span class="o">.</span><span class="n">SmootherFactory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">[</span><span class="mi">2</span><span class="p">::],</span><span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">)</span><span class="o">.</span><span class="n">create_smoother</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+<div class="viewcode-block" id="EPDiffMap.f"><a class="viewcode-back" href="../forward_models.html#forward_models.EPDiffMap.f">[docs]</a>    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">pars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to be integrated, i.e., right hand side of the EPDiff equation:</span>
+<span class="sd">        :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm&#39;</span>
+<span class="sd">        </span>
+<span class="sd">        :math:`-D\\phi v`</span>
+<span class="sd">        </span>
+<span class="sd">        :param t: time (ignored; not time-dependent) </span>
+<span class="sd">        :param x: state, here the image, vector momentum, m, and the map, :math:`\\phi`</span>
+<span class="sd">        :param u: ignored, no external input</span>
+<span class="sd">        :param pars: ignored (does not expect any additional inputs)</span>
+<span class="sd">        :return: right hand side [m,phi]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># assume x[0] is m and x[1] is phi for the state</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smoother</span><span class="o">.</span><span class="n">smooth_vector_field_multiN</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+        <span class="c1"># print(&#39;max(|v|) = &#39; + str( v.abs().max() ))</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">rhs_epdiff_multiN</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="n">v</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">rhs_advect_map_multiN</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span><span class="n">v</span><span class="p">)]</span></div></div>
+
+<div class="viewcode-block" id="EPDiffScalarMomentum"><a class="viewcode-back" href="../forward_models.html#forward_models.EPDiffScalarMomentum">[docs]</a><span class="k">class</span> <span class="nc">EPDiffScalarMomentum</span><span class="p">(</span><span class="n">ForwardModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base class for scalar momentum EPDiff solutions. Defines a smoother that can be commonly used.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EPDiffScalarMomentum</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">smoother</span> <span class="o">=</span> <span class="n">sf</span><span class="o">.</span><span class="n">SmootherFactory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">[</span><span class="mi">2</span><span class="p">::],</span><span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">)</span><span class="o">.</span><span class="n">create_smoother</span><span class="p">(</span><span class="n">params</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EPDiffScalarMomentumImage"><a class="viewcode-back" href="../forward_models.html#forward_models.EPDiffScalarMomentumImage">[docs]</a><span class="k">class</span> <span class="nc">EPDiffScalarMomentumImage</span><span class="p">(</span><span class="n">EPDiffScalarMomentum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Forward model for the scalar momentum EPdiff equation. State is the scalar momentum, lam, and the image I</span>
+<span class="sd">    :math:`(m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:`v=Km`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:&#39;m=\\lambda\\nabla I`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:`I_t+\\nabla I^Tv=0`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:`\\lambda_t + div(\\lambda v)=0`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EPDiffScalarMomentumImage</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+
+<div class="viewcode-block" id="EPDiffScalarMomentumImage.f"><a class="viewcode-back" href="../forward_models.html#forward_models.EPDiffScalarMomentumImage.f">[docs]</a>    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">pars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to be integrated, i.e., right hand side of the EPDiff equation:</span>
+<span class="sd">        </span>
+<span class="sd">        :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`</span>
+<span class="sd">        </span>
+<span class="sd">        :math:`-\\nabla I^Tv`</span>
+<span class="sd">        </span>
+<span class="sd">        :math: `-div(\\lambda v)`</span>
+<span class="sd">        </span>
+<span class="sd">        :param t: time (ignored; not time-dependent) </span>
+<span class="sd">        :param x: state, here the scalar momentum, lam, and the image, I, itself</span>
+<span class="sd">        :param u: no external input</span>
+<span class="sd">        :param pars: ignored (does not expect any additional inputs)</span>
+<span class="sd">        :return: right hand side [lam,I]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># assume x[0] is \lambda and x[1] is I for the state</span>
+        <span class="n">lam</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">I</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># now compute the momentum</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">compute_vector_momentum_from_scalar_momentum_multiNC</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">)</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smoother</span><span class="o">.</span><span class="n">smooth_vector_field_multiN</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+        <span class="c1"># advection for I, scalar-conservation law for lam</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">rhs_scalar_conservation_multiNC</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span><span class="n">v</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">rhs_advect_image_multiNC</span><span class="p">(</span><span class="n">I</span><span class="p">,</span><span class="n">v</span><span class="p">)]</span></div></div>
+
+
+<div class="viewcode-block" id="EPDiffScalarMomentumMap"><a class="viewcode-back" href="../forward_models.html#forward_models.EPDiffScalarMomentumMap">[docs]</a><span class="k">class</span> <span class="nc">EPDiffScalarMomentumMap</span><span class="p">(</span><span class="n">EPDiffScalarMomentum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Forward model for the scalar momentum EPDiff equation. State is the scalar momentum, lam, the image, I, and the transform, phi.</span>
+<span class="sd">    :math:`(m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:`v=Km`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:`m=\\lambda\\nabla I`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:`I_t+\\nabla I^Tv=0`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:`\\lambda_t + div(\\lambda v)=0`</span>
+<span class="sd">    </span>
+<span class="sd">    :math:`\\Phi_t+D\\Phi v=0`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EPDiffScalarMomentumMap</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="EPDiffScalarMomentumMap.f"><a class="viewcode-back" href="../forward_models.html#forward_models.EPDiffScalarMomentumMap.f">[docs]</a>    <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">pars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to be integrated, i.e., right hand side of the EPDiff equation:</span>
+<span class="sd">        </span>
+<span class="sd">        :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`</span>
+<span class="sd">        </span>
+<span class="sd">        :math:`-\\nabla I^Tv`</span>
+<span class="sd">        </span>
+<span class="sd">        :math:`-div(\\lambda v)`</span>
+<span class="sd">        </span>
+<span class="sd">        :math:`-D\\Phi v`</span>
+<span class="sd">        </span>
+<span class="sd">        :param t: time (ignored; not time-dependent) </span>
+<span class="sd">        :param x: state, here the scalar momentum, lam, the image, I, and the transform, :math:`\\phi`</span>
+<span class="sd">        :param u: ignored, no external input</span>
+<span class="sd">        :param pars: ignored (does not expect any additional inputs)</span>
+<span class="sd">        :return: right hand side [lam,I,phi]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># assume x[0] is lam and x[1] is I and x[2] is phi for the state</span>
+        <span class="n">lam</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">I</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">phi</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="c1"># now compute the momentum</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">compute_vector_momentum_from_scalar_momentum_multiNC</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">)</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smoother</span><span class="o">.</span><span class="n">smooth_vector_field_multiN</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">rhs_scalar_conservation_multiNC</span><span class="p">(</span><span class="n">lam</span><span class="p">,</span><span class="n">v</span><span class="p">),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">rhs_advect_image_multiNC</span><span class="p">(</span><span class="n">I</span><span class="p">,</span><span class="n">v</span><span class="p">),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">rhs_advect_map_multiN</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span><span class="n">v</span><span class="p">)]</span></div></div>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

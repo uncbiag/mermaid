@@ -1,0 +1,718 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Finite differences &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Forward models" href="forward_models.html"/>
+        <link rel="prev" title="Example generation" href="example_generation.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_generation.html">Example generation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Finite differences</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/finite_differences.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="finite-differences">
+<h1>Finite differences<a class="headerlink" href="#finite-differences" title="Permalink to this headline">¶</a></h1>
+<img src="_images/inheritance-01d2528b4fe1d05882809eae5ed8a2b296d8c182.png" alt="Inheritance diagram of finite_differences" usemap="#inheritancee11df5fc95" class="inheritance"/>
+<map id="inheritancee11df5fc95" name="inheritancee11df5fc95">
+<area shape="rect" id="node1" href="#finite_differences.FD" target="_top" title="*FD* is the abstract class for finite differences. It includes most of the actual finite difference code, " alt="" coords="5,29,149,53"/>
+<area shape="rect" id="node2" href="#finite_differences.FD_np" target="_top" title="Defnitions of the abstract methods for numpy" alt="" coords="204,5,370,29"/>
+<area shape="rect" id="node3" href="#finite_differences.FD_torch" target="_top" title="Defnitions of the abstract methods for torch" alt="" coords="197,53,377,77"/>
+</map>
+<span class="target" id="module-finite_differences"></span><p><em>finite_difference.py</em> is the main package to compute finite differences in
+1D, 2D, and 3D on numpy arrays (class FD_np) and pytorch tensors (class FD_torch).
+The package supports first and second order derivatives and Neumann and linear extrapolation
+boundary conditions (though the latter have not been tested extensively yet).</p>
+<dl class="class">
+<dt id="finite_differences.FD">
+<em class="property">class </em><code class="descclassname">finite_differences.</code><code class="descname">FD</code><span class="sig-paren">(</span><em>spacing</em>, <em>bcNeumannZero=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>FD</em> is the abstract class for finite differences. It includes most of the actual finite difference code,
+but requires the definition (in a derived class) of the methods <em>get_dimension</em>, <em>create_zero_array</em>, and <em>get_size_of_array</em>.
+In this way the numpy and pytorch versions can easily be derived.</p>
+<dl class="attribute">
+<dt id="finite_differences.FD.dim">
+<code class="descname">dim</code><em class="property"> = None</em><a class="headerlink" href="#finite_differences.FD.dim" title="Permalink to this definition">¶</a></dt>
+<dd><p>spatial dimension</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="finite_differences.FD.bcNeumannZero">
+<code class="descname">bcNeumannZero</code><em class="property"> = None</em><a class="headerlink" href="#finite_differences.FD.bcNeumannZero" title="Permalink to this definition">¶</a></dt>
+<dd><p>should Neumann boundary conditions be used? (otherwise linear extrapolation)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="finite_differences.FD.spacing">
+<code class="descname">spacing</code><em class="property"> = None</em><a class="headerlink" href="#finite_differences.FD.spacing" title="Permalink to this definition">¶</a></dt>
+<dd><p>spacing</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.dXb">
+<code class="descname">dXb</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.dXb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.dXb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Backward difference in x direction:
+<span class="math">\(\frac{dI(i)}{dx}\approx\frac{I_i-I_{i-1}}{h_x}\)</span></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the first derivative in x direction using backward differences</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.dXf">
+<code class="descname">dXf</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.dXf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.dXf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Forward difference in x direction:
+<span class="math">\(\frac{dI(i)}{dx}\approx\frac{I_{i+1}-I_{i}}{h_x}\)</span></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the first derivative in x direction using forward differences</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.dXc">
+<code class="descname">dXc</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.dXc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.dXc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Central difference in x direction:
+<span class="math">\(\frac{dI(i)}{dx}\approx\frac{I_{i+1}-I_{i-1}}{2h_x}\)</span></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the first derivative in x direction using central differences</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.ddXc">
+<code class="descname">ddXc</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.ddXc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.ddXc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Second deriative in x direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the second derivative in x direction</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.dYb">
+<code class="descname">dYb</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.dYb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.dYb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as dXb, but for the y direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the first derivative in y direction using backward differences</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.dYf">
+<code class="descname">dYf</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.dYf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.dYf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as dXf, but for the y direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the first derivative in y direction using forward differences</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.dYc">
+<code class="descname">dYc</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.dYc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.dYc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as dXc, but for the y direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the first derivative in y direction using central differences</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.ddYc">
+<code class="descname">ddYc</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.ddYc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.ddYc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as ddXc, but for the y direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the second derivative in the y direction</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.dZb">
+<code class="descname">dZb</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.dZb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.dZb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as dXb, but for the z direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the first derivative in the z direction using backward differences</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.dZf">
+<code class="descname">dZf</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.dZf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.dZf" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as dXf, but for the z direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the first derivative in the z direction using forward differences</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.dZc">
+<code class="descname">dZc</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.dZc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.dZc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as dXc, but for the z direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the first derivative in the z direction using central differences</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.ddZc">
+<code class="descname">ddZc</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.ddZc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.ddZc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as ddXc, but for the z direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input iamge</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the second derivative in the z direction</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.lap">
+<code class="descname">lap</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.lap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.lap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the Lapacian of an image</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the Laplacian</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.getdimension">
+<code class="descname">getdimension</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.getdimension"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.getdimension" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method to return the dimension of an input image I</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the dimension of the image I</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.create_zero_array">
+<code class="descname">create_zero_array</code><span class="sig-paren">(</span><em>sz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.create_zero_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.create_zero_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method to create a zero array of a given size, sz. E.g., sz=[10,2,5]</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>sz</strong> – Size array</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns a zero array of the specified size</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.get_size_of_array">
+<code class="descname">get_size_of_array</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.get_size_of_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.get_size_of_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method to return the size of an array (as a vector)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>A</strong> – Input array</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns its size (e.g., [5,10] or [3,4,6]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.xp">
+<code class="descname">xp</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.xp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.xp" title="Permalink to this definition">¶</a></dt>
+<dd><p>IMPORTANT:
+ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
+<p>Returns the values for x-index incremented by one (to the right in 1D)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Image with values at an x-index one larger</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.xm">
+<code class="descname">xm</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.xm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.xm" title="Permalink to this definition">¶</a></dt>
+<dd><p>IMPORTANT:
+ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
+<p>Returns the values for x-index decremented by one (to the left in 1D)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Image with values at an x-index one smaller</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.yp">
+<code class="descname">yp</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.yp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.yp" title="Permalink to this definition">¶</a></dt>
+<dd><p>IMPORTANT:
+ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
+<p>Same as xp, but for the y direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Image with values at y-index one larger</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.ym">
+<code class="descname">ym</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.ym"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.ym" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as xm, but for the y direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Image with values at y-index one smaller</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.zp">
+<code class="descname">zp</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.zp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.zp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as xp, but for the z direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Image with values at z-index one larger</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD.zm">
+<code class="descname">zm</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.zm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.zm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Same as xm, but for the z direction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Image with values at z-index one smaller</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="finite_differences.FD_np">
+<em class="property">class </em><code class="descclassname">finite_differences.</code><code class="descname">FD_np</code><span class="sig-paren">(</span><em>spacing</em>, <em>bcNeumannZero=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD_np"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD_np" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defnitions of the abstract methods for numpy</p>
+<dl class="method">
+<dt id="finite_differences.FD_np.getdimension">
+<code class="descname">getdimension</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD_np.getdimension"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD_np.getdimension" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the dimension of an image
+:param I: input image
+:return: dimension of the input image</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD_np.create_zero_array">
+<code class="descname">create_zero_array</code><span class="sig-paren">(</span><em>sz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD_np.create_zero_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD_np.create_zero_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a zero array
+:param sz: size of the zero array, e.g., [3,4,2]
+:return: the zero array</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD_np.get_size_of_array">
+<code class="descname">get_size_of_array</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD_np.get_size_of_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD_np.get_size_of_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the size (shape in numpy) of an array
+:param A: input array
+:return: shape/size</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="finite_differences.FD_torch">
+<em class="property">class </em><code class="descclassname">finite_differences.</code><code class="descname">FD_torch</code><span class="sig-paren">(</span><em>spacing</em>, <em>bcNeumannZero=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD_torch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD_torch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defnitions of the abstract methods for torch</p>
+<dl class="method">
+<dt id="finite_differences.FD_torch.getdimension">
+<code class="descname">getdimension</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD_torch.getdimension"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD_torch.getdimension" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the dimension of an image
+:param I: input image
+:return: dimension of the input image</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD_torch.create_zero_array">
+<code class="descname">create_zero_array</code><span class="sig-paren">(</span><em>sz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD_torch.create_zero_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD_torch.create_zero_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creats a zero array
+:param sz: size of the array, e.g., [3,4,2]
+:return: the zero array</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="finite_differences.FD_torch.get_size_of_array">
+<code class="descname">get_size_of_array</code><span class="sig-paren">(</span><em>A</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD_torch.get_size_of_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD_torch.get_size_of_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the size (size()) of an array
+:param A: input array
+:return: shape/size</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="forward_models.html" class="btn btn-neutral float-right" title="Forward models" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="example_generation.html" class="btn btn-neutral" title="Example generation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

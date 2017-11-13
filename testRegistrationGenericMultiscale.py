@@ -24,25 +24,9 @@ import pyreg.module_parameters as pars
 import pyreg.smoother_factory as SF
 
 import pyreg.multiscale_optimizer as MO
+from configParsers import *
+from pyreg.dataWapper import AdpatVal
 
-# load settings from file
-loadSettingsFromFile = False
-saveSettingsToFile = True
-
-# select the desired dimension of the registration
-useMap = False # set to true if a map-based implementation should be used
-visualize = True # set to true if intermediate visualizations are desired
-smoothImages = True
-useRealImages = False
-
-#modelName = 'svf'
-#modelName = 'lddmm_shooting'
-modelName = 'lddmm_shooting_scalar_momentum'
-
-multi_scale_scale_factors = [1.0, 0.5, 0.25]
-multi_scale_iterations_per_scale = [50, 100, 100]
-
-dim = 2
 
 if useMap:
     modelName = modelName + '_map'
@@ -63,7 +47,7 @@ if useRealImages:
     I0,I1= eg.CreateRealExampleImages(dim).create_image_pair()
 
 else:
-    szEx = np.tile( 50, dim )         # size of the desired images: (sz)^dim
+    szEx = np.tile( img_len, dim )         # size of the desired images: (sz)^dim
 
     params['square_example_images']=({},'Settings for example image generation')
     params['square_example_images']['len_s'] = szEx.min()/6
@@ -81,15 +65,15 @@ spacing = 1./(sz[2::]-1) # the first two dimensions are batch size and number of
 print ('Spacing = ' + str( spacing ) )
 
 # create the source and target image as pyTorch variables
-ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
-ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
+ISource = AdpatVal(Variable( torch.from_numpy( I0.copy() ), requires_grad=False ))
+ITarget = AdpatVal(Variable( torch.from_numpy( I1 ), requires_grad=False ))
 
 if smoothImages:
     # smooth both a little bit
     cparams = params[('image_smoothing',{},'general settings to pre-smooth images')]
     cparams[('smoother',{})]
-    cparams['smoother']['type']='gaussian'
-    cparams['smoother']['gaussianStd']=0.05
+    cparams['smoother']['type']= smoothType
+    cparams['smoother']['gaussianStd']= gaussianStd
     s = SF.SmootherFactory( sz[2::], spacing ).create_smoother(cparams)
     ISource = s.smooth_scalar_field(ISource)
     ITarget = s.smooth_scalar_field(ITarget)

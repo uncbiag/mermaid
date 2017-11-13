@@ -1,0 +1,5 @@
+<map id="inheritance723252f5a3" name="inheritance723252f5a3">
+<area shape="rect" id="node1" href="#regularizer_factory.HelmholtzRegularizer" target="_top" title="Implements a Helmholtz regularizer" alt="" coords="300,53,562,77"/>
+<area shape="rect" id="node2" href="#regularizer_factory.Regularizer" target="_top" title="Abstract regularizer base class" alt="" coords="28,53,230,77"/>
+<area shape="rect" id="node3" href="#regularizer_factory.RegularizerFactory" target="_top" title="Regularizer factory to instantiate a regularizer by name." alt="" coords="5,5,252,29"/>
+</map>

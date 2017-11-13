@@ -1,0 +1,518 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>module_parameters &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>module_parameters</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for module_parameters</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This package implements a simple way of dealing with parameters, ofproviding</span>
+<span class="sd">default parameters and comments, and to keep track of used parameters for </span>
+<span class="sd">registration runs. See the corresponding note for a brief description on how to use it.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
+
+<div class="viewcode-block" id="ParameterDict"><a class="viewcode-back" href="../module_parameters.html#module_parameters.ParameterDict">[docs]</a><span class="k">class</span> <span class="nc">ParameterDict</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ext</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">int</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">com</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currentCategoryName</span> <span class="o">=</span> <span class="s1">&#39;root&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">printSettings</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+        <span class="k">return</span> <span class="s1">&#39;ext = &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> \
+            <span class="s1">&#39;int = &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">int</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> \
+            <span class="s1">&#39;com = &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="fm">__str__</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> \
+            <span class="s1">&#39;currentCategoryName = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentCategoryName</span><span class="p">)</span> <span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+
+<div class="viewcode-block" id="ParameterDict.load_JSON"><a class="viewcode-back" href="../module_parameters.html#module_parameters.ParameterDict.load_JSON">[docs]</a>    <span class="k">def</span> <span class="nf">load_JSON</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Loads a JSON configuration file</span>
+<span class="sd">        </span>
+<span class="sd">        :param fileName: filename of the configuration to be loaded </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fileName</span><span class="p">)</span> <span class="k">as</span> <span class="n">data_file</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">printSettings</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Loading parameter file = &#39;</span> <span class="o">+</span> <span class="n">fileName</span> <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ext</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_file</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ParameterDict.write_JSON"><a class="viewcode-back" href="../module_parameters.html#module_parameters.ParameterDict.write_JSON">[docs]</a>    <span class="k">def</span> <span class="nf">write_JSON</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileName</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the JSON configuration to a file</span>
+<span class="sd">        </span>
+<span class="sd">        :param fileName: filename to write the configuration to  </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fileName</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">printSettings</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Writing parameter file = &#39;</span> <span class="o">+</span> <span class="n">fileName</span> <span class="p">)</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">int</span><span class="p">,</span> <span class="n">outfile</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ParameterDict.write_JSON_comments"><a class="viewcode-back" href="../module_parameters.html#module_parameters.ParameterDict.write_JSON_comments">[docs]</a>    <span class="k">def</span> <span class="nf">write_JSON_comments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileNameComments</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Writes the JSON commments file. This file will not contain any actual values, but</span>
+<span class="sd">        instead descriptions of the settings (if they have been provided). The goal is to</span>
+<span class="sd">        provide self-documenting configuration files.</span>
+<span class="sd">        </span>
+<span class="sd">        :param fileNameComments: filename to write the commented JSON configuration to  </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fileNameComments</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">printSettings</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Writing parameter file = &#39;</span> <span class="o">+</span> <span class="n">fileNameComments</span> <span class="p">)</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="p">,</span> <span class="n">outfile</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ParameterDict.print_settings_on"><a class="viewcode-back" href="../module_parameters.html#module_parameters.ParameterDict.print_settings_on">[docs]</a>    <span class="k">def</span> <span class="nf">print_settings_on</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Enable screen output as configurations are read and set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">printSettings</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="ParameterDict.print_settings_off"><a class="viewcode-back" href="../module_parameters.html#module_parameters.ParameterDict.print_settings_off">[docs]</a>    <span class="k">def</span> <span class="nf">print_settings_off</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Disable screen output as configurations are read and set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">printSettings</span> <span class="o">=</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="ParameterDict.get_print_settings"><a class="viewcode-back" href="../module_parameters.html#module_parameters.ParameterDict.get_print_settings">[docs]</a>    <span class="k">def</span> <span class="nf">get_print_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Current print settings</span>
+<span class="sd">        :return: Returns if screen printing is on (True) or off (False)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">printSettings</span></div>
+
+    <span class="k">def</span> <span class="nf">_set_value_of_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">com</span><span class="p">,</span> <span class="n">currentCategoryName</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ext</span> <span class="o">=</span> <span class="n">ext</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">int</span> <span class="o">=</span> <span class="nb">int</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">com</span> <span class="o">=</span> <span class="n">com</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currentCategoryName</span> <span class="o">=</span> <span class="n">currentCategoryName</span>
+
+    <span class="k">def</span> <span class="nf">__missing__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="c1"># if key cannot be found</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Could not find key = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span> <span class="n">key</span> <span class="p">)</span> <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key_or_keyTuple</span><span class="p">):</span>
+        <span class="c1"># getting an item based on key</span>
+        <span class="c1"># here the key can be three different things</span>
+        <span class="c1"># 1) simply a text key (then returns the current value)</span>
+        <span class="c1"># 2) A 2-tuple (keyname,defaultvalue)</span>
+        <span class="c1"># 3) A 3-tuple (keyname,defaultvalue,comment)</span>
+
+        <span class="c1"># returns a ParDicts object if we are accessing a category (i.e., a dictionary)</span>
+        <span class="c1"># returns just the value if it is a regular value</span>
+
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">key_or_keyTuple</span><span class="p">)</span><span class="o">==</span><span class="nb">tuple</span><span class="p">:</span>
+            <span class="c1"># here, we need to distinguish cases 2) and 3)</span>
+            <span class="n">lT</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">key_or_keyTuple</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">lT</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+                <span class="c1"># treat this as if it would only be the keyword</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_current_key</span><span class="p">(</span><span class="n">key_or_keyTuple</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">lT</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+                <span class="c1"># treat this as keyword + default value</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_current_key</span><span class="p">(</span><span class="n">key_or_keyTuple</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                             <span class="n">key_or_keyTuple</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">lT</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+                <span class="c1"># treat this as keyword + default value + comment</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_current_key</span><span class="p">(</span><span class="n">key_or_keyTuple</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                             <span class="n">key_or_keyTuple</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                             <span class="n">key_or_keyTuple</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Tuple of incorrect size&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># now we just want to return it (there is no default value or comment)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_current_key</span><span class="p">(</span><span class="n">key_or_keyTuple</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">valueTuple</span><span class="p">):</span>
+        <span class="c1"># to set an item</span>
+        <span class="c1"># valueTuple is either a 2-tuple (actual value, comment)</span>
+        <span class="c1"># or it is simply a comment, then this key becomes a category</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">valueTuple</span><span class="p">)</span><span class="o">==</span><span class="nb">tuple</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">valueTuple</span><span class="p">)</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">valueTuple</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">comment</span> <span class="o">=</span> <span class="n">valueTuple</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">valueTuple</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">comment</span> <span class="o">=</span> <span class="n">valueTuple</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Expected a 2-tuple as input&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># not a tuple</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">valueTuple</span>
+            <span class="n">comment</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">==</span><span class="nb">dict</span><span class="p">:</span>
+            <span class="c1"># only add if this is an empty dictionary</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_current_category</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">comment</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Can only add empty dictionaries&#39;</span><span class="p">)</span>
+            <span class="c1"># we are assigning a category</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># now we have to set an actual value (not a category)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_current_key</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">comment</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_set_current_category</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">comment</span><span class="p">):</span>
+        <span class="n">currentCategoryName</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentCategoryName</span> <span class="o">+</span> <span class="s1">&#39;.&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">[</span><span class="n">key</span><span class="p">])</span><span class="o">!=</span><span class="nb">dict</span><span class="p">):</span>
+            <span class="c1"># we do not want to over-write any settings here</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">printSettings</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Creating new category: &#39;</span> <span class="o">+</span> <span class="n">currentCategoryName</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">int</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="n">comment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">comment</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s1">&#39;__doc__&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">comment</span>
+
+    <span class="k">def</span> <span class="nf">_set_current_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">comment</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">printSettings</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Overwriting key = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;; category = &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentCategoryName</span> <span class="o">+</span> <span class="s1">&#39;; value =  &#39;</span> <span class="o">+</span>
+                      <span class="nb">str</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; -&gt; &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Creating key = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;; category = &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentCategoryName</span> <span class="o">+</span> <span class="s1">&#39;; value = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">int</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">if</span> <span class="n">comment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">comment</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">comment</span>
+
+
+    <span class="k">def</span> <span class="nf">_get_current_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">defaultValue</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">comment</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="c1"># returns a ParDicts object if we are accessing a category (i.e., a dictionary)</span>
+        <span class="c1"># returns just the value if it is a regular value</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">==</span><span class="nb">dict</span><span class="p">:</span>
+                <span class="c1"># this is a category, need to create a ParDicts object to return</span>
+                <span class="c1"># if the key already exists in int and com keep it otherwise initialize it to empty</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">int</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">int</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">=</span><span class="p">{}</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">=</span><span class="p">{}</span>
+                    <span class="k">if</span> <span class="n">comment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">comment</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s1">&#39;__doc__&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">comment</span>
+
+                <span class="n">newpar</span> <span class="o">=</span> <span class="n">ParameterDict</span><span class="p">()</span>
+                <span class="n">currentCategoryName</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentCategoryName</span> <span class="o">+</span> <span class="s1">&#39;.&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="n">newpar</span><span class="o">.</span><span class="n">_set_value_of_instance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">int</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">currentCategoryName</span><span class="p">)</span>
+
+                <span class="k">return</span> <span class="n">newpar</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># just a regular value which we can return</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">int</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="k">if</span> <span class="n">comment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">comment</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">comment</span>
+
+                <span class="k">return</span> <span class="n">value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># does not have the key, create it via the default value</span>
+            <span class="k">if</span> <span class="n">defaultValue</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="c1"># then make it a dictionary</span>
+                <span class="n">defaultValue</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="c1"># if defaultValue is not None:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">defaultValue</span><span class="p">)</span><span class="o">==</span><span class="nb">dict</span><span class="p">:</span>
+                <span class="c1"># make sure it is empty and if it is create a category</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">defaultValue</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_set_current_category</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">comment</span><span class="p">)</span>
+                    <span class="c1"># and now we need to return it</span>
+                    <span class="n">newpar</span> <span class="o">=</span> <span class="n">ParameterDict</span><span class="p">()</span>
+                    <span class="n">currentCategoryName</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentCategoryName</span> <span class="o">+</span> <span class="s1">&#39;.&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                    <span class="n">newpar</span><span class="o">.</span><span class="n">_set_value_of_instance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">int</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">currentCategoryName</span><span class="p">)</span>
+
+                    <span class="k">return</span> <span class="n">newpar</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot create a default key of type dict()&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># now we can create it and return it</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ext</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">=</span><span class="n">defaultValue</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">int</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">=</span><span class="n">defaultValue</span>
+                <span class="k">if</span> <span class="n">comment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">comment</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">com</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">=</span><span class="n">comment</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">printSettings</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Using default value = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">defaultValue</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; for key = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; of category = &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentCategoryName</span>  <span class="p">)</span>
+
+                <span class="k">return</span> <span class="n">defaultValue</span></div>
+            <span class="c1">#else:</span>
+            <span class="c1">#    raise ValueError(&#39;Cannot create key = &#39; + str(key) + &#39; without a default value&#39;)</span>
+
+
+<span class="c1"># test it</span>
+<div class="viewcode-block" id="test_parameter_dict"><a class="viewcode-back" href="../module_parameters.html#module_parameters.test_parameter_dict">[docs]</a><span class="k">def</span> <span class="nf">test_parameter_dict</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convenience testing script (to be converted to an actual test)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="n">ParameterDict</span><span class="p">()</span>
+
+    <span class="c1"># we can directly assign</span>
+    <span class="n">p</span><span class="p">[</span><span class="s1">&#39;registration_model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">({},</span><span class="s1">&#39;general settings for registration models&#39;</span><span class="p">)</span>
+    <span class="n">p</span><span class="p">[</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;similarity_measure&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">({},</span><span class="s1">&#39;settings for the similarity measures&#39;</span><span class="p">)</span>
+    <span class="n">p</span><span class="p">[</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;similarity_measure&#39;</span><span class="p">][</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;ssd&#39;</span><span class="p">,</span><span class="s1">&#39;similarity measure type&#39;</span><span class="p">)</span>
+    <span class="c1"># we can also ask for a parameter and use a default parameter if it does not exist</span>
+    <span class="n">p</span><span class="p">[</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][(</span><span class="s1">&#39;nrOfIterations&#39;</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="s1">&#39;number of iterations&#39;</span><span class="p">)]</span>
+
+    <span class="c1"># we can also create a new category with default values if it does not exist yet</span>
+    <span class="n">p</span><span class="p">[(</span><span class="s1">&#39;new_category&#39;</span><span class="p">,{},</span><span class="s1">&#39;this is a new category&#39;</span><span class="p">)]</span>
+    <span class="n">p</span><span class="p">[(</span><span class="s1">&#39;registration_model&#39;</span><span class="p">,{},</span><span class="s1">&#39;this category already existed&#39;</span><span class="p">)]</span>
+
+    <span class="c1"># and we can print everything of course</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+    <span class="c1"># lastly we can write it all out as json</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">write_JSON</span><span class="p">(</span><span class="s1">&#39;test_pars.json&#39;</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">write_JSON_comments</span><span class="p">(</span><span class="s1">&#39;test_pars_comments.json&#39;</span><span class="p">)</span></div>
+
+
+
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

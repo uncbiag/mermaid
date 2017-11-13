@@ -25,21 +25,8 @@ import pyreg.module_parameters as pars
 import pyreg.smoother_factory as SF
 
 import pyreg.multiscale_optimizer as MO
+from configParsers import *
 
-# load settings from file
-loadSettingsFromFile = False
-saveSettingsToFile = True
-
-# select the desired dimension of the registration
-useMap = False # set to true if a map-based implementation should be used
-visualize = True # set to true if intermediate visualizations are desired
-smoothImages = True
-useRealImages = False
-
-modelName = 'my_svf'
-multi_scale_scale_factors = [1.0, 0.5, 0.25]
-multi_scale_iterations_per_scale = [50, 100, 100]
-dim = 2
 
 # general parameters
 params = pars.ParameterDict()
@@ -77,8 +64,8 @@ if smoothImages:
     # smooth both a little bit
     cparams = params[('image_smoothing',{},'general settings to pre-smooth images')]
     cparams[('smoother',{})]
-    cparams['smoother']['type']='gaussian'
-    cparams['smoother']['gaussianStd']=0.05
+    cparams['smoother']['type']= smoothType
+    cparams['smoother']['gaussianStd']= gaussianStd
     s = SF.SmootherFactory( sz[2::], spacing ).create_smoother(cparams)
     ISource = s.smooth_scalar_field(ISource)
     ITarget = s.smooth_scalar_field(ITarget)
@@ -89,7 +76,7 @@ mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,useMap,params)
 
 params['registration_model']['similarity_measure']['type'] = 'mySSD'
 
-import similarity_measure_factory as SM
+import pyreg.similarity_measure_factory as SM
 
 class MySSD(SM.SimilarityMeasure):
     def compute_similarity(self,I0,I1):
@@ -98,12 +85,12 @@ class MySSD(SM.SimilarityMeasure):
 
 mo.add_similarity_measure('mySSD', MySSD)
 
-import registration_networks as RN
-import utils
-import image_sampling as IS
-import rungekutta_integrators as RK
-import forward_models as FM
-import regularizer_factory as RF
+import pyreg.registration_networks as RN
+import pyreg.utils as utils
+import pyreg.image_sampling as IS
+import pyreg.rungekutta_integrators as RK
+import pyreg.forward_models as FM
+import pyreg.regularizer_factory as RF
 
 class MySVFNet(RN.RegistrationNet):
     def __init__(self,sz,spacing,params):

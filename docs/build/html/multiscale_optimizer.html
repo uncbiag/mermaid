@@ -1,0 +1,904 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Multiscale optimizer &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Registration networks" href="registration_networks.html"/>
+        <link rel="prev" title="Parameter module" href="module_parameters.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Multiscale optimizer</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/multiscale_optimizer.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="multiscale-optimizer">
+<h1>Multiscale optimizer<a class="headerlink" href="#multiscale-optimizer" title="Permalink to this headline">¶</a></h1>
+digraph inheritancecefe36f890 {
+rankdir=LR;
+size=&quot;8.0, 12.0&quot;;
+  &quot;multiscale_optimizer.ImageRegistrationOptimizer&quot; [URL=&quot;#multiscale_optimizer.ImageRegistrationOptimizer&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Optimization class for image registration.&quot;];
+  &quot;multiscale_optimizer.Optimizer&quot; -&gt; &quot;multiscale_optimizer.ImageRegistrationOptimizer&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;multiscale_optimizer.MultiScaleRegistrationOptimizer&quot; [URL=&quot;#multiscale_optimizer.MultiScaleRegistrationOptimizer&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Class to perform multi-scale optimization. Essentially puts a loop around multiple calls of the&quot;];
+  &quot;multiscale_optimizer.ImageRegistrationOptimizer&quot; -&gt; &quot;multiscale_optimizer.MultiScaleRegistrationOptimizer&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;multiscale_optimizer.Optimizer&quot; [URL=&quot;#multiscale_optimizer.Optimizer&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Abstract optimizer base class.&quot;];
+  &quot;multiscale_optimizer.SingleScaleRegistrationOptimizer&quot; [URL=&quot;#multiscale_optimizer.SingleScaleRegistrationOptimizer&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Optimizer operating on a single scale. Typically this will be the full image resolution.&quot;];
+  &quot;multiscale_optimizer.ImageRegistrationOptimizer&quot; -&gt; &quot;multiscale_optimizer.SingleScaleRegistrationOptimizer&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+}
+<span class="target" id="module-multiscale_optimizer"></span><p>This package enables easy single-scale and multi-scale optimization support.</p>
+<dl class="class">
+<dt id="multiscale_optimizer.Optimizer">
+<em class="property">class </em><code class="descclassname">multiscale_optimizer.</code><code class="descname">Optimizer</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>useMap</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#Optimizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.Optimizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract optimizer base class.</p>
+<dl class="attribute">
+<dt id="multiscale_optimizer.Optimizer.sz">
+<code class="descname">sz</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.Optimizer.sz" title="Permalink to this definition">¶</a></dt>
+<dd><p>image size</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.Optimizer.spacing">
+<code class="descname">spacing</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.Optimizer.spacing" title="Permalink to this definition">¶</a></dt>
+<dd><p>image spacing</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.Optimizer.useMap">
+<code class="descname">useMap</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.Optimizer.useMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>makes use of map</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.Optimizer.params">
+<code class="descname">params</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.Optimizer.params" title="Permalink to this definition">¶</a></dt>
+<dd><p>general parameters</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.Optimizer.rel_ftol">
+<code class="descname">rel_ftol</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.Optimizer.rel_ftol" title="Permalink to this definition">¶</a></dt>
+<dd><p>relative termination tolerance for optimizer</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.Optimizer.set_rel_ftol">
+<code class="descname">set_rel_ftol</code><span class="sig-paren">(</span><em>rel_ftol</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#Optimizer.set_rel_ftol"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.Optimizer.set_rel_ftol" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the relative termination tolerance: <a href="#id1"><span class="problematic" id="id2">|f(x_i)-f(x_{i-1})|</span></a>/f(x_i)&lt;tol</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>rel_ftol</strong> – relative termination tolerance for optimizer</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.Optimizer.get_rel_ftol">
+<code class="descname">get_rel_ftol</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#Optimizer.get_rel_ftol"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.Optimizer.get_rel_ftol" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the optimizer termination tolerance</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.Optimizer.set_model">
+<code class="descname">set_model</code><span class="sig-paren">(</span><em>modelName</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#Optimizer.set_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.Optimizer.set_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method to select the model which should be optimized by name</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>modelName</strong> – name (string) of the model that should be solved</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.Optimizer.optimize">
+<code class="descname">optimize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#Optimizer.optimize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.Optimizer.optimize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method to start the optimization</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer">
+<em class="property">class </em><code class="descclassname">multiscale_optimizer.</code><code class="descname">ImageRegistrationOptimizer</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>useMap</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optimization class for image registration.</p>
+<dl class="attribute">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.ISource">
+<code class="descname">ISource</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.ISource" title="Permalink to this definition">¶</a></dt>
+<dd><p>source image</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.ITarget">
+<code class="descname">ITarget</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.ITarget" title="Permalink to this definition">¶</a></dt>
+<dd><p>target image</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.optimizer_name">
+<code class="descname">optimizer_name</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.optimizer_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>name of the optimizer to use</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.optimizer_params">
+<code class="descname">optimizer_params</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.optimizer_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>parameters that should be passed to the optimizer</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.optimizer">
+<code class="descname">optimizer</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.optimizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>optimizer object itself (to be instantiated)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.visualize">
+<code class="descname">visualize</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>if True figures are created during the run</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.visualize_step">
+<code class="descname">visualize_step</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.visualize_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>how often the figures are updated; each self.visualize_step-th iteration</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.turn_visualization_on">
+<code class="descname">turn_visualization_on</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.turn_visualization_on"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.turn_visualization_on" title="Permalink to this definition">¶</a></dt>
+<dd><p>Turns on visualization during the run</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.turn_visualization_off">
+<code class="descname">turn_visualization_off</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.turn_visualization_off"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.turn_visualization_off" title="Permalink to this definition">¶</a></dt>
+<dd><p>Turns off visualization during the run</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.set_visualization">
+<code class="descname">set_visualization</code><span class="sig-paren">(</span><em>vis</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.set_visualization"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.set_visualization" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set if visualization should be on (True) or off (False)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>vis</strong> – visualization status on (True) or off (False)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.get_visualization">
+<code class="descname">get_visualization</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.get_visualization"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.get_visualization" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the visualization status</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns True if visualizations will be displayed and False otherwise</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.set_visualize_step">
+<code class="descname">set_visualize_step</code><span class="sig-paren">(</span><em>nr_step</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.set_visualize_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.set_visualize_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set after how many steps a visualization should be updated</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nr_step</strong> – </td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.get_visualize_step">
+<code class="descname">get_visualize_step</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.get_visualize_step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.get_visualize_step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns after how many steps visualizations are updated</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">after how many steps visualizations are updated</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.set_source_image">
+<code class="descname">set_source_image</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.set_source_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.set_source_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setting the source image which should be deformed to match the target image</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – source image</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.set_target_image">
+<code class="descname">set_target_image</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.set_target_image"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.set_target_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Setting the target image which the source image should match after registration</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – target image</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.set_optimizer_by_name">
+<code class="descname">set_optimizer_by_name</code><span class="sig-paren">(</span><em>optimizer_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.set_optimizer_by_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.set_optimizer_by_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the desired optimizer by name (only lbfgs and adam are currently supported)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>optimizer_name</strong> – name of the optimizer (string) to be used</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.get_optimizer_by_name">
+<code class="descname">get_optimizer_by_name</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.get_optimizer_by_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.get_optimizer_by_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the name (string) of the optimizer that was selected</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">name (string) of the optimizer</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.set_optimizer">
+<code class="descname">set_optimizer</code><span class="sig-paren">(</span><em>opt</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.set_optimizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.set_optimizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the optimizer. Not by name, but instead by passing the optimizer object which should be instantiated</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>opt</strong> – optimizer object</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.get_optimizer">
+<code class="descname">get_optimizer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.get_optimizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.get_optimizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the optimizer object which was set to perform the optimization</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">optimizer object</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.ImageRegistrationOptimizer.set_optimizer_params">
+<code class="descname">set_optimizer_params</code><span class="sig-paren">(</span><em>opt_params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#ImageRegistrationOptimizer.set_optimizer_params"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.ImageRegistrationOptimizer.set_optimizer_params" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the desired parameters of the optimizer. This is done by passing a dictionary, for example, dict(lr=0.01)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>opt_params</strong> – dictionary holding the parameters of an optimizer</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer">
+<em class="property">class </em><code class="descclassname">multiscale_optimizer.</code><code class="descname">SingleScaleRegistrationOptimizer</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>useMap</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optimizer operating on a single scale. Typically this will be the full image resolution.</p>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">Check what the best way to adapt the tolerances for the pre-defined optimizers;
+tying it to rel_ftol is not really correct.</p>
+</div>
+<dl class="attribute">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.mf">
+<code class="descname">mf</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.mf" title="Permalink to this definition">¶</a></dt>
+<dd><p>model factory which will be used to create the model and its loss function</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.model">
+<code class="descname">model</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.model" title="Permalink to this definition">¶</a></dt>
+<dd><p>the model itself</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.criterion">
+<code class="descname">criterion</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.criterion" title="Permalink to this definition">¶</a></dt>
+<dd><p>the loss function</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.identityMap">
+<code class="descname">identityMap</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.identityMap" title="Permalink to this definition">¶</a></dt>
+<dd><p>identity map, will be needed for map-based solutions</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.optimizer_instance">
+<code class="descname">optimizer_instance</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.optimizer_instance" title="Permalink to this definition">¶</a></dt>
+<dd><p>the optimizer instance to perform the actual optimization</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.nrOfIterations">
+<code class="descname">nrOfIterations</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.nrOfIterations" title="Permalink to this definition">¶</a></dt>
+<dd><p>the maximum number of iterations for the optimizer</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.terminal_flag">
+<code class="descname">terminal_flag</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.terminal_flag" title="Permalink to this definition">¶</a></dt>
+<dd><p>the evaluation information</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.set_model">
+<code class="descname">set_model</code><span class="sig-paren">(</span><em>modelName</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer.set_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.set_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the model that should be solved</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>modelName</strong> – name of the model that should be solved (string)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.add_similarity_measure">
+<code class="descname">add_similarity_measure</code><span class="sig-paren">(</span><em>simName</em>, <em>simMeasure</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer.add_similarity_measure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.add_similarity_measure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a custom similarity measure.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>simName</strong> – name of the similarity measure (string)</li>
+<li><strong>simMeasure</strong> – similarity measure itself (class object that can be instantiated)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.add_model">
+<code class="descname">add_model</code><span class="sig-paren">(</span><em>modelName</em>, <em>modelNetworkClass</em>, <em>modelLossClass</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer.add_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.add_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a custom model and its loss function</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>modelName</strong> – name of the model to be added (string)</li>
+<li><strong>modelNetworkClass</strong> – registration model itself (class object that can be instantiated)</li>
+<li><strong>modelLossClass</strong> – registration loss (class object that can be instantiated)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.set_model_parameters">
+<code class="descname">set_model_parameters</code><span class="sig-paren">(</span><em>p</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer.set_model_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.set_model_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the parameters of the registration model</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>p</strong> – parameters</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.get_model_parameters">
+<code class="descname">get_model_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer.get_model_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.get_model_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the parameters of the model</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">model parameters</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.upsample_model_parameters">
+<code class="descname">upsample_model_parameters</code><span class="sig-paren">(</span><em>desiredSize</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer.upsample_model_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.upsample_model_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Upsamples the model parameters</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>desiredSize</strong> – desired size after upsampling, e.g., [100,20,50]</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns a tuple (upsampled_parameters,upsampled_spacing)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.downsample_model_parameters">
+<code class="descname">downsample_model_parameters</code><span class="sig-paren">(</span><em>desiredSize</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer.downsample_model_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.downsample_model_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Downsamples the model parameters</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>desiredSize</strong> – desired size after downsampling, e.g., [50,50,40]</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns a tuple (downsampled_parameters,downsampled_spacing)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.set_number_of_iterations">
+<code class="descname">set_number_of_iterations</code><span class="sig-paren">(</span><em>nrIter</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer.set_number_of_iterations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.set_number_of_iterations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the number of iterations of the optimizer</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>nrIter</strong> – number of iterations</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.get_number_of_iterations">
+<code class="descname">get_number_of_iterations</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer.get_number_of_iterations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.get_number_of_iterations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the number of iterations of the solver</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">number of set iterations</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.analysis">
+<code class="descname">analysis</code><span class="sig-paren">(</span><em>energy</em>, <em>similarityEnergy</em>, <em>regEnergy</em>, <em>Warped</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer.analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.analysis" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.optimize">
+<code class="descname">optimize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer.optimize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.optimize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Do the single scale optimization</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer">
+<em class="property">class </em><code class="descclassname">multiscale_optimizer.</code><code class="descname">MultiScaleRegistrationOptimizer</code><span class="sig-paren">(</span><em>sz</em>, <em>spacing</em>, <em>useMap</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#MultiScaleRegistrationOptimizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to perform multi-scale optimization. Essentially puts a loop around multiple calls of the
+single scale optimizer and starts with the registration of downsampled images. When moving up
+the hierarchy, the registration parameters are upsampled from the solution at the previous lower resolution</p>
+<dl class="attribute">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.scaleFactors">
+<code class="descname">scaleFactors</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.scaleFactors" title="Permalink to this definition">¶</a></dt>
+<dd><p>At what image scales optimization should be computed</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.scaleIterations">
+<code class="descname">scaleIterations</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.scaleIterations" title="Permalink to this definition">¶</a></dt>
+<dd><p>number of iterations per scale</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.addSimName">
+<code class="descname">addSimName</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.addSimName" title="Permalink to this definition">¶</a></dt>
+<dd><p>name of the similarity measure to be added</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.addSimMeasure">
+<code class="descname">addSimMeasure</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.addSimMeasure" title="Permalink to this definition">¶</a></dt>
+<dd><p>similarity measure itself that should be added</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.add_model_name">
+<code class="descname">add_model_name</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.add_model_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>name of the model that should be added</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.add_model_networkClass">
+<code class="descname">add_model_networkClass</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.add_model_networkClass" title="Permalink to this definition">¶</a></dt>
+<dd><p>network object of the model to be added</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.add_model_lossClass">
+<code class="descname">add_model_lossClass</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.add_model_lossClass" title="Permalink to this definition">¶</a></dt>
+<dd><p>loss object of the model to be added</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.model_name">
+<code class="descname">model_name</code><em class="property"> = None</em><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.model_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>name of the model to be added (if specified by name; gets dominated by specifying an optimizer directly</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.add_similarity_measure">
+<code class="descname">add_similarity_measure</code><span class="sig-paren">(</span><em>simName</em>, <em>simMeasure</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#MultiScaleRegistrationOptimizer.add_similarity_measure"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.add_similarity_measure" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a custom similarity measure</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>simName</strong> – name of the similarity measure (string)</li>
+<li><strong>simMeasure</strong> – the similarity measure itself (an object that can be instantiated)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.set_model">
+<code class="descname">set_model</code><span class="sig-paren">(</span><em>modelName</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#MultiScaleRegistrationOptimizer.set_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.set_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the model to be optimized over by name</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>modelName</strong> – the name of the model (string)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.add_model">
+<code class="descname">add_model</code><span class="sig-paren">(</span><em>add_model_name</em>, <em>add_model_networkClass</em>, <em>add_model_lossClass</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#MultiScaleRegistrationOptimizer.add_model"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.add_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a custom model to be optimized over</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>add_model_name</strong> – name of the model (string)</li>
+<li><strong>add_model_networkClass</strong> – network model itself (as an object that can be instantiated)</li>
+<li><strong>add_model_lossClass</strong> – loss of the model (as an object that can be instantiated)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.set_scale_factors">
+<code class="descname">set_scale_factors</code><span class="sig-paren">(</span><em>scaleFactors</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#MultiScaleRegistrationOptimizer.set_scale_factors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.set_scale_factors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the scale factors for the solution. Should be in decending order, e.g., [1.0, 0.5, 0.25]</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>scaleFactors</strong> – scale factors for the multi-scale solution hierarchy</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.set_number_of_iterations_per_scale">
+<code class="descname">set_number_of_iterations_per_scale</code><span class="sig-paren">(</span><em>scaleIterations</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#MultiScaleRegistrationOptimizer.set_number_of_iterations_per_scale"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.set_number_of_iterations_per_scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the number of iterations that will be performed per scale of the multi-resolution hierarchy. E.g, [50,100,200]</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>scaleIterations</strong> – number of iterations per scale (array)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="multiscale_optimizer.MultiScaleRegistrationOptimizer.optimize">
+<code class="descname">optimize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#MultiScaleRegistrationOptimizer.optimize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer.optimize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform the actual multi-scale optimization</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="registration_networks.html" class="btn btn-neutral float-right" title="Registration networks" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="module_parameters.html" class="btn btn-neutral" title="Parameter module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

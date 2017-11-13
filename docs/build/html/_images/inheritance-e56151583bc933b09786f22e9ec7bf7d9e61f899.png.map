@@ -1,0 +1,6 @@
+<map id="inheritancec3624e0e1e" name="inheritancec3624e0e1e">
+<area shape="rect" id="node1" href="#similarity_measure_factory.NCCSimilarity" target="_top" title="Computes a normalized&#45;cross correlation based similarity measure between two images." alt="" coords="386,29,652,53"/>
+<area shape="rect" id="node2" href="#similarity_measure_factory.SimilarityMeasure" target="_top" title="Abstract base class for a similarity measure" alt="" coords="28,53,316,77"/>
+<area shape="rect" id="node3" href="#similarity_measure_factory.SSDSimilarity" target="_top" title="Sum of squared differences (SSD) similarity measure." alt="" coords="387,77,651,101"/>
+<area shape="rect" id="node4" href="#similarity_measure_factory.SimilarityMeasureFactory" target="_top" title="Factory to quickly generate similarity measures that can then be used by the different registration algorithms." alt="" coords="5,5,338,29"/>
+</map>
