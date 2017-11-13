@@ -6,14 +6,14 @@
 #optimName:     lbfgs_ls, adam
 
 [boolType]
-CUDA_ON = True
+CUDA_ON = False
 USE_FLOAT16 = False
 loadSettingsFromFile = False
 saveSettingsToFile = True
 useMap = False
 visualize = True
-smoothImages = True
-useRealImages = False
+smoothImages = False
+useRealImages = True
 
 
 [floatType]
@@ -27,7 +27,7 @@ nrOfIterations = 50
 img_len =150
 
 [strType]
-modelName = lddmm_shooting_scalar_momentum
+modelName = lddmm_shooting 
 smoothType = gaussian
 optimName = lbfgs_ls
 

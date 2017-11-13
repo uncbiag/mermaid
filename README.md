@@ -6,16 +6,20 @@ Gpu version of proj mermaid
 
 # Setup
 
-* To compile the spatial transformer code simply go to the pyreg/libraries directory and exectute 'sh make_cuda.sh'
-* To run the code import set_pyreg_paths 
+* To compile the spatial transformer code simply go to the pyreg/libraries directory \
+  for gpu user: execute 'sh make_cuda.sh'
+  for cpu user: execute 'sh make_cpu.sh'
+* pip install pytorch-fft
+* go config to set CUDA_ON
 
 # How to run
 * run testRegistrationGeneric.py/testRegistrationMultiscale.py 
-* settings are put together in config.txt.
+* settings are put together in config.txt
 * use float32 in most cases !!!, float16 is not stable
 * !!!!!!!!!!!!  most part of the codes has been examined. if fails, contact zyshen021@gmail.com
     
 # Lastest Modification
+  * 11.13    fix to adpat device
   * 11.12    optimize, fix bugs, 
   * 10.31:   unitest stn is added, see test_stn_cpu.py and test_stn_gpu.py
   * 10.29:   1D, 2D and 3D cuda STN have been implemented. see pyreg.libraries.functions.stn_nd
