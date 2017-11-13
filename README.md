@@ -10,7 +10,8 @@ Gpu version of proj mermaid
 * To run the code import set_pyreg_paths 
 
 # How to run
-* run testRegistrationGeneric.py/testRegistrationMultiscale.py settings are put together in config.txt.
+* run testRegistrationGeneric.py/testRegistrationMultiscale.py 
+* settings are put together in config.txt.
 * use float32 in most cases !!!, float16 is not stable
 * !!!!!!!!!!!!  most part of the codes has been examined. if fails, contact zyshen021@gmail.com
     
@@ -38,6 +39,7 @@ Gpu version of proj mermaid
   
     
 # To Do
+  * make svf_quasi_momentum stable
   * add smoothing unittest
   * modify other testRegistration*
   * add Tensorboard
