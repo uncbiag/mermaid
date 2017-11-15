@@ -200,7 +200,7 @@ int BilinearSamplerBCW_updateOutput_cuda_kernel_1D(/*output->size[2]*/int szw,
   // batch channel x y
   //  0      1     2 3 
    //dim3 blocks((output->size[2]+15)/16, output->size[1], output->size[0]);
-   dim3 blocks((iw+bdx-1)/bdx, sz3);
+   dim3 blocks((ow+bdx-1)/bdx, sz3);
    dim3 threads(bdx);
 
    /* assume BHWD */
@@ -259,7 +259,7 @@ int BilinearSamplerBCW_updateGradInput_cuda_kernel_1D(/*gradOutput->size[2]*/int
 //  THCudaTensor *gradOutput = (THCudaTensor *)luaT_checkudata(L, 6, "torch.CudaTensor");
 
    //dim3 blocks((gradOutput->size[2]+15)/16, gradOutput->size[1], gradOutput->size[0]);
-   dim3 blocks((iw+bdx-1)/bdx,sz3);
+   dim3 blocks((gow+bdx-1)/bdx,sz3);
    dim3 threads(bdx);
    //int grids_channels=2;
    //printf("ggsc %d\n szc %d\n, sz3 %d",ggsc, szc,sz3);
@@ -321,7 +321,7 @@ int BilinearSamplerBCW_updateGradInputOnlyGrid_cuda_kernel_1D(
 //  THCudaTensor *gradOutput = (THCudaTensor *)luaT_checkudata(L, 6, "torch.CudaTensor");
 
    //dim3 blocks((gradOutput->size[2]+15)/16, gradOutput->size[1], gradOutput->size[0]);
-   dim3 blocks((iw+bdx-1)/bdx, szc, sz3);
+   dim3 blocks((gow+bdx-1)/bdx, szc, sz3);
    dim3 threads(bdx);
    //int grids_channels=2;
    //printf("ow %d gsh %d  gsc %d osh %d osc %d\n",ow,gsh,gsc,osh,osc);

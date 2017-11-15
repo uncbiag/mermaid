@@ -14,7 +14,7 @@ Contributors:
 from __future__ import print_function
 import torch
 from torch.autograd import Variable
-
+from time import time
 import numpy as np
 
 import set_pyreg_paths
@@ -27,7 +27,7 @@ import pyreg.multiscale_optimizer as MO
 from configParsers import *
 from pyreg.dataWapper import AdpatVal
 
-
+since = time()
 if useMap:
     modelName = modelName + '_map'
 else:
@@ -94,3 +94,6 @@ mo.optimize()
 if saveSettingsToFile:
     params.write_JSON(modelName + '_settings_clean.json')
     params.write_JSON_comments(modelName + '_settings_comments.json')
+
+
+print("time{}".format(time()-since))

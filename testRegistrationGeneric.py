@@ -17,7 +17,7 @@ from torch.autograd import Variable
 from pyreg.dataWapper import CUDA_ON, MyTensor, AdpatVal
 import numpy as np
 import set_pyreg_paths
-
+from time import time
 import pyreg.example_generation as eg
 import pyreg.module_parameters as pars
 
@@ -27,7 +27,7 @@ from configParsers import *
 import pyreg.visualize_registration_results as vizReg
 
 # load settings from file
-
+since = time()
 
 if useMap:
     modelName = modelName + '_map'
@@ -101,3 +101,7 @@ so.optimize()
 if saveSettingsToFile:
     params.write_JSON(modelName + '_settings_clean.json')
     params.write_JSON_comments(modelName + '_settings_comments.json')
+
+time_elapsed = time() - since
+
+print('time: {}'.format(time_elapsed))

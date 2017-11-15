@@ -630,5 +630,5 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             if currentScaleNumber != nrOfScales - 1:
                 # we need to revert the downsampling to the next higher level
                 scaleTo = reverseScales[currentScaleNumber + 1]
-                desiredUpsampleSz = self.get_desired_size_from_scale(self.ISource.size()[2::], scaleTo)
+                desiredUpsampleSz = self._get_desired_size_from_scale(self.ISource.size()[2::], scaleTo)
                 upsampledParameters, upsampledSpacing = ssOpt.upsample_model_parameters(desiredUpsampleSz)
