@@ -184,10 +184,11 @@
 
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Function</span>
-<span class="kn">from</span> <span class="nn">pyreg.libraries._ext</span> <span class="k">import</span> <span class="n">my_lib_nd</span><span class="p">,</span> <span class="n">my_lib_1D</span><span class="p">,</span> <span class="n">my_lib_2D</span><span class="p">,</span> <span class="n">my_lib_3D</span>
 <span class="kn">from</span> <span class="nn">cffi</span> <span class="k">import</span> <span class="n">FFI</span>
-<span class="kn">from</span> <span class="nn">pyreg.global_list</span> <span class="k">import</span> <span class="n">USE_CUDA</span><span class="p">,</span> <span class="n">STNTensor</span><span class="p">,</span> <span class="n">STNVal</span>
-
+<span class="kn">from</span> <span class="nn">pyreg.dataWarper</span> <span class="k">import</span> <span class="n">USE_CUDA</span><span class="p">,</span> <span class="n">STNTensor</span><span class="p">,</span> <span class="n">STNVal</span>
+<span class="k">if</span> <span class="n">USE_CUDA</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">pyreg.libraries._ext</span> <span class="k">import</span> <span class="n">my_lib_1D</span><span class="p">,</span> <span class="n">my_lib_2D</span><span class="p">,</span> <span class="n">my_lib_3D</span>
+<span class="kn">from</span> <span class="nn">pyreg.libraries._ext</span> <span class="k">import</span> <span class="n">my_lib_nd</span>
 <span class="n">ffi</span> <span class="o">=</span> <span class="n">FFI</span><span class="p">()</span>
 
 
@@ -202,7 +203,7 @@
 
 <span class="sd">        :param ndim: (int) spatial transformation of the transform</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">STNFunction_ND_BCXYZ</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">STNFunction_ND_BCXYZ</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="n">ndim</span>
 
 <div class="viewcode-block" id="STNFunction_ND_BCXYZ.forward_stn"><a class="viewcode-back" href="../../../stn.html#libraries.functions.stn_nd.STNFunction_ND_BCXYZ.forward_stn">[docs]</a>    <span class="k">def</span> <span class="nf">forward_stn</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input1</span><span class="p">,</span> <span class="n">input2</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">ndim</span><span class="p">,</span> <span class="n">device_c</span><span class="p">,</span> <span class="n">use_cuda</span><span class="o">=</span><span class="n">USE_CUDA</span><span class="p">):</span>
@@ -258,6 +259,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">device_c</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">forward_stn</span><span class="p">(</span><span class="n">input1</span><span class="p">,</span> <span class="n">input2</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">device_c</span><span class="p">)</span>
+        <span class="c1"># print(STNVal(output, ini=-1).sum())</span>
         <span class="k">return</span> <span class="n">STNVal</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">ini</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="STNFunction_ND_BCXYZ.backward"><a class="viewcode-back" href="../../../stn.html#libraries.functions.stn_nd.STNFunction_ND_BCXYZ.backward">[docs]</a>    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">):</span>
@@ -273,6 +275,7 @@
         <span class="c1"># print grad_output.view(1, -1).sum()</span>
         <span class="c1"># print(&#39;backward decice %d&#39; % self.device)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">backward_stn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input2</span><span class="p">,</span> <span class="n">grad_input1</span><span class="p">,</span> <span class="n">grad_input2</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">device_c</span><span class="p">)</span>
+        <span class="c1"># print( STNVal(grad_input1, ini=-1).sum(), STNVal(grad_input2, ini=-1).sum())</span>
         <span class="k">return</span> <span class="n">STNVal</span><span class="p">(</span><span class="n">grad_input1</span><span class="p">,</span> <span class="n">ini</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span> <span class="n">STNVal</span><span class="p">(</span><span class="n">grad_input2</span><span class="p">,</span> <span class="n">ini</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span></div></div>
 
 
@@ -289,7 +292,7 @@
 
 <span class="sd">        :param ndim: (int) spatial transformation of the transform</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">STNFunction_ND</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">STNFunction_ND</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ndim</span> <span class="o">=</span> <span class="n">ndim</span>
         <span class="sd">&quot;&quot;&quot;spatial dimension&quot;&quot;&quot;</span>
 
@@ -429,7 +432,7 @@
       <script type="text/javascript" src="../../../_static/jquery.js"></script>
       <script type="text/javascript" src="../../../_static/underscore.js"></script>
       <script type="text/javascript" src="../../../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

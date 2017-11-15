@@ -238,7 +238,7 @@ to define the following methods:</p>
 <p>Let’s start with the simplest possible class first</p>
 <div class="code highlight-default"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MySVFNet</span><span class="p">(</span><span class="n">RN</span><span class="o">.</span><span class="n">RegistrationNet</span><span class="p">):</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">MySVFNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MySVFNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_registration_parameters</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">integrator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_integrator</span><span class="p">()</span>
 
@@ -276,7 +276,7 @@ method that needs to be defined is <code class="xref py py-meth docutils literal
 for example look like this</p>
 <div class="code highlight-default"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MySVFImageLoss</span><span class="p">(</span><span class="n">RN</span><span class="o">.</span><span class="n">RegistrationImageLoss</span><span class="p">):</span>
 <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">v</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-    <span class="nb">super</span><span class="p">(</span><span class="n">MySVFImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">MySVFImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">v</span> <span class="o">=</span> <span class="n">v</span>
     <span class="n">cparams</span> <span class="o">=</span> <span class="n">params</span><span class="p">[(</span><span class="s1">&#39;loss&#39;</span><span class="p">,{},</span><span class="s1">&#39;settings for the loss function&#39;</span><span class="p">)]</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">regularizer</span> <span class="o">=</span> <span class="p">(</span><span class="n">RF</span><span class="o">.</span><span class="n">RegularizerFactory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">)</span><span class="o">.</span>
@@ -374,7 +374,7 @@ require reasonably sophisticated optimizers for convergence.</p>
       <script type="text/javascript" src="../_static/jquery.js"></script>
       <script type="text/javascript" src="../_static/underscore.js"></script>
       <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

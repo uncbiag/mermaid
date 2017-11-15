@@ -192,7 +192,7 @@
 
 <span class="kn">import</span> <span class="nn">rungekutta_integrators</span> <span class="k">as</span> <span class="nn">RK</span>
 <span class="kn">import</span> <span class="nn">forward_models</span> <span class="k">as</span> <span class="nn">FM</span>
-<span class="kn">from</span> <span class="nn">global_list</span> <span class="k">import</span> <span class="n">AdpatVal</span>
+<span class="kn">from</span> <span class="nn">dataWarper</span> <span class="k">import</span> <span class="n">AdaptVal</span>
 <span class="kn">import</span> <span class="nn">regularizer_factory</span> <span class="k">as</span> <span class="nn">RF</span>
 <span class="kn">import</span> <span class="nn">similarity_measure_factory</span> <span class="k">as</span> <span class="nn">SM</span>
 
@@ -217,7 +217,7 @@
 <span class="sd">        :param spacing: spatial spacing, e.g., [0.1,0.1,0.2]</span>
 <span class="sd">        :param params: ParameterDict() object to hold general parameters</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">RegistrationNet</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RegistrationNet</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sz</span> <span class="o">=</span> <span class="n">sz</span>
         <span class="sd">&quot;&quot;&quot;image size&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span> <span class="o">=</span> <span class="n">spacing</span>
@@ -300,7 +300,7 @@
 <span class="sd">    Base class for SVF-type registrations. Provides a velocity field (as a parameter) and an integrator</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SVFNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SVFNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_registration_parameters</span><span class="p">()</span>
         <span class="sd">&quot;&quot;&quot;velocity field that will be optimized over&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">integrator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_integrator</span><span class="p">()</span>
@@ -371,7 +371,7 @@
 <span class="sd">    Specialization for SVF-based image registration</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SVFImageNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SVFImageNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
 
 <div class="viewcode-block" id="SVFImageNet.create_integrator"><a class="viewcode-back" href="../registration_networks.html#registration_networks.SVFImageNet.create_integrator">[docs]</a>    <span class="k">def</span> <span class="nf">create_integrator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -399,7 +399,7 @@
 <span class="sd">    Attempt at parameterizing SVF with a momentum-like vector field (EXPERIMENTAL, not working yet)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SVFQuasiMomentumNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SVFQuasiMomentumNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_registration_parameters</span><span class="p">()</span>
         <span class="sd">&quot;&quot;&quot;momentum parameter&quot;&quot;&quot;</span>
         <span class="n">cparams</span> <span class="o">=</span> <span class="n">params</span><span class="p">[(</span><span class="s1">&#39;forward_model&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;settings for the forward model&#39;</span><span class="p">)]</span>
@@ -464,7 +464,7 @@
 <span class="sd">    Specialization for image registation</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SVFQuasiMomentumImageNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SVFQuasiMomentumImageNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
 
 <div class="viewcode-block" id="SVFQuasiMomentumImageNet.create_integrator"><a class="viewcode-back" href="../registration_networks.html#registration_networks.SVFQuasiMomentumImageNet.create_integrator">[docs]</a>    <span class="k">def</span> <span class="nf">create_integrator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -500,7 +500,7 @@
 <span class="sd">        :param spacing: image spacing</span>
 <span class="sd">        :param params: ParameterDict() object to hold and keep track of general parameters</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">RegistrationLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RegistrationLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span> <span class="o">=</span> <span class="n">spacing</span>
         <span class="sd">&quot;&quot;&quot;image spacing&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sz</span> <span class="o">=</span> <span class="n">sz</span>
@@ -552,7 +552,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">RegistrationImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RegistrationImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
 
 <div class="viewcode-block" id="RegistrationImageLoss.get_energy"><a class="viewcode-back" href="../registration_networks.html#registration_networks.RegistrationImageLoss.get_energy">[docs]</a>    <span class="k">def</span> <span class="nf">get_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I1_warped</span><span class="p">,</span> <span class="n">I0_source</span><span class="p">,</span> <span class="n">I1_target</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -585,7 +585,7 @@
 <span class="sd">    Specialization for map-based registration losses</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">RegistrationMapLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RegistrationMapLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
 
 <div class="viewcode-block" id="RegistrationMapLoss.get_energy"><a class="viewcode-back" href="../registration_networks.html#registration_networks.RegistrationMapLoss.get_energy">[docs]</a>    <span class="k">def</span> <span class="nf">get_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">phi1</span><span class="p">,</span> <span class="n">I0_source</span><span class="p">,</span> <span class="n">I1_target</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -628,7 +628,7 @@
 <span class="sd">        :param spacing: spacing of image</span>
 <span class="sd">        :param params: general parameters via ParameterDict()</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SVFImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SVFImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">v</span> <span class="o">=</span> <span class="n">v</span>
         <span class="sd">&quot;&quot;&quot;veclocity field parameter&quot;&quot;&quot;</span>
 
@@ -662,7 +662,7 @@
 <span class="sd">        :param spacing: image spacing</span>
 <span class="sd">        :param params: ParameterDict() parameters</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SVFQuasiMomentumImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SVFQuasiMomentumImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">m</span>
         <span class="sd">&quot;&quot;&quot;vector momentum&quot;&quot;&quot;</span>
 
@@ -691,7 +691,7 @@
 <span class="sd">    Network specialization to a map-based SVF </span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SVFMapNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SVFMapNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
 
 <div class="viewcode-block" id="SVFMapNet.create_integrator"><a class="viewcode-back" href="../registration_networks.html#registration_networks.SVFMapNet.create_integrator">[docs]</a>    <span class="k">def</span> <span class="nf">create_integrator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -720,7 +720,7 @@
 <span class="sd">    Specialization of the loss function for SVF to a map-based solution</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">v</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SVFMapLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SVFMapLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">v</span> <span class="o">=</span> <span class="n">v</span>
         <span class="sd">&quot;&quot;&quot;velocity field parameter&quot;&quot;&quot;</span>
 
@@ -745,7 +745,7 @@
 <span class="sd">    Specialization to vector-momentum-based shooting for LDDMM</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingVectorMomentumNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingVectorMomentumNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_registration_parameters</span><span class="p">()</span>
         <span class="sd">&quot;&quot;&quot;vector momentum&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">integrator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_integrator</span><span class="p">()</span>
@@ -820,7 +820,7 @@
 <span class="sd">    Specialization of vector-momentum LDDMM for direct image matching.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingVectorMomentumImageNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingVectorMomentumImageNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
 
 <div class="viewcode-block" id="LDDMMShootingVectorMomentumImageNet.create_integrator"><a class="viewcode-back" href="../registration_networks.html#registration_networks.LDDMMShootingVectorMomentumImageNet.create_integrator">[docs]</a>    <span class="k">def</span> <span class="nf">create_integrator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -849,7 +849,7 @@
 <span class="sd">    Specialization of the image loss to vector-momentum LDDMM</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">m</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingVectorMomentumImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingVectorMomentumImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">m</span>
         <span class="sd">&quot;&quot;&quot;momentum&quot;&quot;&quot;</span>
 
@@ -873,7 +873,7 @@
 <span class="sd">    Specialization for map-based vector-momentum where the map itself is advected</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingVectorMomentumMapNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingVectorMomentumMapNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
 
 <div class="viewcode-block" id="LDDMMShootingVectorMomentumMapNet.create_integrator"><a class="viewcode-back" href="../registration_networks.html#registration_networks.LDDMMShootingVectorMomentumMapNet.create_integrator">[docs]</a>    <span class="k">def</span> <span class="nf">create_integrator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -904,7 +904,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">m</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingVectorMomentumMapLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingVectorMomentumMapLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">m</span>
         <span class="sd">&quot;&quot;&quot;vector momentum&quot;&quot;&quot;</span>
 
@@ -920,7 +920,7 @@
 <span class="sd">        :return: returns the regularization energy</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">smoother</span><span class="o">.</span><span class="n">smooth_vector_field_multiN</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="p">)</span>
-        <span class="n">reg</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">((</span><span class="n">v</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">float</span><span class="p">())</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="o">.</span><span class="n">prod</span><span class="p">())</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="n">AdaptVal</span><span class="p">((</span><span class="n">v</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">float</span><span class="p">())</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="o">.</span><span class="n">prod</span><span class="p">())</span>
         <span class="k">return</span> <span class="n">reg</span></div></div>
 
 
@@ -930,7 +930,7 @@
 <span class="sd">    and the scalar momentum parameter.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingScalarMomentumNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingScalarMomentumNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lam</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_registration_parameters</span><span class="p">()</span>
         <span class="sd">&quot;&quot;&quot;scalar momentum&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">integrator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_integrator</span><span class="p">()</span>
@@ -1005,7 +1005,7 @@
 <span class="sd">    Specialization of scalar-momentum LDDMM to image-based matching</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingScalarMomentumImageNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingScalarMomentumImageNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
 
 <div class="viewcode-block" id="LDDMMShootingScalarMomentumImageNet.create_integrator"><a class="viewcode-back" href="../registration_networks.html#registration_networks.LDDMMShootingScalarMomentumImageNet.create_integrator">[docs]</a>    <span class="k">def</span> <span class="nf">create_integrator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1033,7 +1033,7 @@
 <span class="sd">    Specialization of the loss to scalar-momentum LDDMM on images</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">lam</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingScalarMomentumImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingScalarMomentumImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lam</span> <span class="o">=</span> <span class="n">lam</span>
         <span class="sd">&quot;&quot;&quot;scalar momentum&quot;&quot;&quot;</span>
 
@@ -1059,7 +1059,7 @@
 <span class="sd">    Specialization of scalar-momentum LDDMM registration to map-based image matching</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingScalarMomentumMapNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingScalarMomentumMapNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
 
 <div class="viewcode-block" id="LDDMMShootingScalarMomentumMapNet.create_integrator"><a class="viewcode-back" href="../registration_networks.html#registration_networks.LDDMMShootingScalarMomentumMapNet.create_integrator">[docs]</a>    <span class="k">def</span> <span class="nf">create_integrator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -1089,7 +1089,7 @@
 <span class="sd">    Specialization of the loss function to scalar-momentum LDDMM for maps. </span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">lam</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingScalarMomentumMapLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LDDMMShootingScalarMomentumMapLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lam</span> <span class="o">=</span> <span class="n">lam</span>
         <span class="sd">&quot;&quot;&quot;scalar momentum&quot;&quot;&quot;</span>
 
@@ -1155,7 +1155,7 @@
       <script type="text/javascript" src="../_static/jquery.js"></script>
       <script type="text/javascript" src="../_static/underscore.js"></script>
       <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

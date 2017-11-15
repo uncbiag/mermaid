@@ -179,17 +179,13 @@
             
   <div class="section" id="spatial-transforms">
 <h1>Spatial transforms<a class="headerlink" href="#spatial-transforms" title="Permalink to this headline">¶</a></h1>
-digraph inheritancef295c66f34 {
-rankdir=LR;
-size=&quot;8.0, 12.0&quot;;
-  &quot;libraries.functions.stn_nd.STNFunction&quot; [URL=&quot;#libraries.functions.stn_nd.STNFunction&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Legacy 2D implementation. Ignore.&quot;];
-  &quot;torch.autograd.function.Function&quot; -&gt; &quot;libraries.functions.stn_nd.STNFunction&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;libraries.functions.stn_nd.STNFunction_ND&quot; [URL=&quot;#libraries.functions.stn_nd.STNFunction_ND&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Spatial transform function for 1D, 2D, and 3D. In BXYZC format (NOT the format used in the current toolbox).&quot;];
-  &quot;torch.autograd.function.Function&quot; -&gt; &quot;libraries.functions.stn_nd.STNFunction_ND&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;libraries.functions.stn_nd.STNFunction_ND_BCXYZ&quot; [URL=&quot;#libraries.functions.stn_nd.STNFunction_ND_BCXYZ&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox).&quot;];
-  &quot;torch.autograd.function.Function&quot; -&gt; &quot;libraries.functions.stn_nd.STNFunction_ND_BCXYZ&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;torch.autograd.function.Function&quot; [fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,tooltip=&quot;Records operation history and defines formulas for differentiating ops.&quot;];
-}
+<img src="_images/inheritance-a9c802d8b67eb600af98a4af4ab4843d05a4af94.png" alt="Inheritance diagram of libraries.functions.stn_nd" usemap="#inheritancef295c66f34" class="inheritance"/>
+<map id="inheritancef295c66f34" name="inheritancef295c66f34">
+<area shape="rect" id="node1" href="#libraries.functions.stn_nd.STNFunction" target="_top" title="Legacy 2D implementation. Ignore." alt="" coords="305,5,555,29"/>
+<area shape="rect" id="node2" title="Records operation history and defines formulas for differentiating ops." alt="" coords="5,53,218,77"/>
+<area shape="rect" id="node3" href="#libraries.functions.stn_nd.STNFunction_ND" target="_top" title="Spatial transform function for 1D, 2D, and 3D. In BXYZC format (NOT the format used in the current toolbox)." alt="" coords="292,53,569,77"/>
+<area shape="rect" id="node4" href="#libraries.functions.stn_nd.STNFunction_ND_BCXYZ" target="_top" title="Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox)." alt="" coords="266,101,595,125"/>
+</map>
 <span class="target" id="module-libraries.functions.stn_nd"></span><p>Spatial transform functions in 1D, 2D, and 3D.</p>
 <div class="admonition-todo admonition" id="index-0">
 <p class="first admonition-title">Todo</p>
@@ -313,17 +309,13 @@ size=&quot;8.0, 12.0&quot;;
 
 </dd></dl>
 
-digraph inheritance298438dab3 {
-rankdir=LR;
-size=&quot;8.0, 12.0&quot;;
-  &quot;libraries.modules.stn_nd.STN&quot; [URL=&quot;#libraries.modules.stn_nd.STN&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Old legacy code for the standard 2D spatial transform. Ignore for now.&quot;];
-  &quot;torch.nn.modules.module.Module&quot; -&gt; &quot;libraries.modules.stn_nd.STN&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;libraries.modules.stn_nd.STN_ND&quot; [URL=&quot;#libraries.modules.stn_nd.STN_ND&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Legacy code for nD spatial transforms. Ignore for now. Implements spatial transforms, but in BXYZC format.&quot;];
-  &quot;torch.nn.modules.module.Module&quot; -&gt; &quot;libraries.modules.stn_nd.STN_ND&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;libraries.modules.stn_nd.STN_ND_BCXYZ&quot; [URL=&quot;#libraries.modules.stn_nd.STN_ND_BCXYZ&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Spatial transform code for nD spatial transoforms. Uses the BCXYZ image format.&quot;];
-  &quot;torch.nn.modules.module.Module&quot; -&gt; &quot;libraries.modules.stn_nd.STN_ND_BCXYZ&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;torch.nn.modules.module.Module&quot; [fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,tooltip=&quot;Base class for all neural network modules.&quot;];
-}
+<img src="_images/inheritance-2afc5fa14929be2c2a0978b9b5a29967e9df25a9.png" alt="Inheritance diagram of libraries.modules.stn_nd" usemap="#inheritance298438dab3" class="inheritance"/>
+<map id="inheritance298438dab3" name="inheritance298438dab3">
+<area shape="rect" id="node1" href="#libraries.modules.stn_nd.STN" target="_top" title="Old legacy code for the standard 2D spatial transform. Ignore for now." alt="" coords="311,5,507,29"/>
+<area shape="rect" id="node2" title="Base class for all neural network modules." alt="" coords="5,53,224,77"/>
+<area shape="rect" id="node3" href="#libraries.modules.stn_nd.STN_ND" target="_top" title="Legacy code for nD spatial transforms. Ignore for now. Implements spatial transforms, but in BXYZC format." alt="" coords="298,53,521,77"/>
+<area shape="rect" id="node4" href="#libraries.modules.stn_nd.STN_ND_BCXYZ" target="_top" title="Spatial transform code for nD spatial transoforms. Uses the BCXYZ image format." alt="" coords="272,101,547,125"/>
+</map>
 <span class="target" id="module-libraries.modules.stn_nd"></span><p>This package implements spatial transformations in 1D, 2D, and 3D.
 This is needed for the map-based registrations for example.</p>
 <div class="admonition-todo admonition" id="index-1">
@@ -478,7 +470,7 @@ to be accounted for, as we use the BxCxXxYxZ image format and BxdimxXxYxZ for th
       <script type="text/javascript" src="_static/jquery.js"></script>
       <script type="text/javascript" src="_static/underscore.js"></script>
       <script type="text/javascript" src="_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

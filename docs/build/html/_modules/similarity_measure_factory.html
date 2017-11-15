@@ -182,7 +182,7 @@
 <span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Variable</span>
-<span class="kn">from</span> <span class="nn">global_list</span> <span class="k">import</span> <span class="n">AdpatVal</span>
+<span class="kn">from</span> <span class="nn">dataWarper</span> <span class="k">import</span> <span class="n">AdaptVal</span>
 
 <div class="viewcode-block" id="SimilarityMeasure"><a class="viewcode-back" href="../similarity_measure_factory.html#similarity_measure_factory.SimilarityMeasure">[docs]</a><span class="k">class</span> <span class="nc">SimilarityMeasure</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -250,7 +250,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SSDSimilarity</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SSDSimilarity</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">=</span> <span class="n">params</span><span class="p">[(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span>
                                         <span class="s1">&#39;1/sigma^2 is the weight in front of the similarity measure&#39;</span><span class="p">)]</span>
         <span class="sd">&quot;&quot;&quot;1/sigma^2 is a balancing constant&quot;&quot;&quot;</span>
@@ -279,7 +279,7 @@
 <span class="sd">        :param I1: second image</span>
 <span class="sd">        :return: SSD</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">AdpatVal</span><span class="p">(((</span><span class="n">I0</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="o">-</span> <span class="n">I1</span><span class="o">.</span><span class="n">float</span><span class="p">())</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">volumeElement</span><span class="p">)</span></div></div>
+        <span class="k">return</span> <span class="n">AdaptVal</span><span class="p">(((</span><span class="n">I0</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="o">-</span> <span class="n">I1</span><span class="o">.</span><span class="n">float</span><span class="p">())</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">volumeElement</span><span class="p">)</span></div></div>
 
 <div class="viewcode-block" id="NCCSimilarity"><a class="viewcode-back" href="../similarity_measure_factory.html#similarity_measure_factory.NCCSimilarity">[docs]</a><span class="k">class</span> <span class="nc">NCCSimilarity</span><span class="p">(</span><span class="n">SimilarityMeasure</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -288,7 +288,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">NCCSimilarity</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">NCCSimilarity</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">=</span> <span class="n">params</span><span class="p">[(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span>
                                         <span class="s1">&#39;1/sigma^2 is the weight in front of the similarity measure&#39;</span><span class="p">)]</span>
         <span class="sd">&quot;&quot;&quot;1/sigma^2 is a balancing constant&quot;&quot;&quot;</span>
@@ -433,7 +433,7 @@
       <script type="text/javascript" src="../_static/jquery.js"></script>
       <script type="text/javascript" src="../_static/underscore.js"></script>
       <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

@@ -186,7 +186,7 @@
 
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Variable</span>
-<span class="kn">from</span> <span class="nn">global_list</span> <span class="k">import</span> <span class="n">MyTensor</span><span class="p">,</span> <span class="n">AdpatVal</span>
+<span class="kn">from</span> <span class="nn">dataWarper</span> <span class="k">import</span> <span class="n">MyTensor</span><span class="p">,</span> <span class="n">AdaptVal</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <div class="viewcode-block" id="FD"><a class="viewcode-back" href="../finite_differences.html#finite_differences.FD">[docs]</a><span class="k">class</span> <span class="nc">FD</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -336,11 +336,14 @@
 <div class="viewcode-block" id="FD.lap"><a class="viewcode-back" href="../finite_differences.html#finite_differences.FD.lap">[docs]</a>    <span class="k">def</span> <span class="nf">lap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute the Lapacian of an image</span>
+<span class="sd">        !!!!!!!!!!!</span>
+<span class="sd">        IMPORTANT:</span>
+<span class="sd">        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.</span>
+<span class="sd">        THIS IS FOR COMPUTATIONAL EFFICIENCY.</span>
 <span class="sd">        </span>
-<span class="sd">        :param I: Input image</span>
+<span class="sd">        :param I: Input image [batch, X,Y,Z]</span>
 <span class="sd">        :return: Returns the Laplacian</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1">########################################################    may need to add 1 here in the future ##################################</span>
         <span class="n">ndim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getdimension</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ddXc</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>
@@ -392,7 +395,7 @@
 
 <span class="sd">        Returns the values for x-index incremented by one (to the right in 1D)</span>
 <span class="sd">        </span>
-<span class="sd">        :param I: Input image</span>
+<span class="sd">        :param I: Input image [batch, X, Y,Z]</span>
 <span class="sd">        :return: Image with values at an x-index one larger</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">rxp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_zero_array</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_size_of_array</span><span class="p">(</span> <span class="n">I</span> <span class="p">)</span> <span class="p">)</span>
@@ -429,7 +432,7 @@
 
 <span class="sd">        Returns the values for x-index decremented by one (to the left in 1D)</span>
 <span class="sd">        </span>
-<span class="sd">        :param I: Input image</span>
+<span class="sd">        :param I: Input image [batch, X, Y, Z]</span>
 <span class="sd">        :return: Image with values at an x-index one smaller</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">rxm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_zero_array</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_size_of_array</span><span class="p">(</span> <span class="n">I</span> <span class="p">)</span> <span class="p">)</span>
@@ -491,8 +494,17 @@
 <div class="viewcode-block" id="FD.ym"><a class="viewcode-back" href="../finite_differences.html#finite_differences.FD.ym">[docs]</a>    <span class="k">def</span> <span class="nf">ym</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Same as xm, but for the y direction</span>
-<span class="sd">        </span>
-<span class="sd">        :param I: Input image</span>
+
+
+
+<span class="sd">        !!!!!!!!!!!</span>
+<span class="sd">        IMPORTANT:</span>
+<span class="sd">        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.</span>
+<span class="sd">        THIS IS FOR COMPUTATIONAL EFFICIENCY.</span>
+
+<span class="sd">        Returns the values for x-index decremented by one (to the left in 1D)</span>
+
+<span class="sd">        :param I: Input image [batch, X, Y, Z]</span>
 <span class="sd">        :return: Image with values at y-index one smaller</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">rym</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_zero_array</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_size_of_array</span><span class="p">(</span> <span class="n">I</span> <span class="p">)</span> <span class="p">)</span>
@@ -517,7 +529,14 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Same as xp, but for the z direction</span>
 <span class="sd">        </span>
-<span class="sd">        :param I: Input image</span>
+<span class="sd">        !!!!!!!!!!!</span>
+<span class="sd">        IMPORTANT:</span>
+<span class="sd">        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.</span>
+<span class="sd">        THIS IS FOR COMPUTATIONAL EFFICIENCY.</span>
+
+<span class="sd">        Returns the values for x-index decremented by one (to the left in 1D)</span>
+
+<span class="sd">        :param I: Input image [batch, X, Y, Z]</span>
 <span class="sd">        :return: Image with values at z-index one larger</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">rzp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_zero_array</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_size_of_array</span><span class="p">(</span> <span class="n">I</span> <span class="p">)</span> <span class="p">)</span>
@@ -536,7 +555,14 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Same as xm, but for the z direction</span>
 <span class="sd">        </span>
-<span class="sd">        :param I: Input image</span>
+<span class="sd">        !!!!!!!!!!!</span>
+<span class="sd">        IMPORTANT:</span>
+<span class="sd">        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.</span>
+<span class="sd">        THIS IS FOR COMPUTATIONAL EFFICIENCY.</span>
+
+<span class="sd">        Returns the values for x-index decremented by one (to the left in 1D)</span>
+
+<span class="sd">        :param I: Input image [batch, X, Y, Z]</span>
 <span class="sd">        :return: Image with values at z-index one smaller</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">rzm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_zero_array</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_size_of_array</span><span class="p">(</span> <span class="n">I</span> <span class="p">)</span> <span class="p">)</span>
@@ -563,7 +589,7 @@
 <span class="sd">        :param spacing: spatial spacing (array with as many entries as there are spatial dimensions)</span>
 <span class="sd">        :param bcNeumannZero: Specifies if zero Neumann conditions should be used (if not, uses linear extrapolation)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">FD_np</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">spacing</span><span class="p">,</span><span class="n">bcNeumannZero</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FD_np</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">spacing</span><span class="p">,</span><span class="n">bcNeumannZero</span><span class="p">)</span>
 
 <div class="viewcode-block" id="FD_np.getdimension"><a class="viewcode-back" href="../finite_differences.html#finite_differences.FD_np.getdimension">[docs]</a>    <span class="k">def</span> <span class="nf">getdimension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">I</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -601,7 +627,7 @@
 <span class="sd">          :param spacing: spatial spacing (array with as many entries as there are spatial dimensions)</span>
 <span class="sd">          :param bcNeumannZero: Specifies if zero Neumann conditions should be used (if not, uses linear extrapolation)</span>
 <span class="sd">          &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">FD_torch</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">spacing</span><span class="p">,</span><span class="n">bcNeumannZero</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FD_torch</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">spacing</span><span class="p">,</span><span class="n">bcNeumannZero</span><span class="p">)</span>
 
 <div class="viewcode-block" id="FD_torch.getdimension"><a class="viewcode-back" href="../finite_differences.html#finite_differences.FD_torch.getdimension">[docs]</a>    <span class="k">def</span> <span class="nf">getdimension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">I</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -617,7 +643,7 @@
 <span class="sd">        :param sz: size of the array, e.g., [3,4,2]</span>
 <span class="sd">        :return: the zero array</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span>  <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span><span class="n">sz</span><span class="p">)</span><span class="o">.</span><span class="n">zero_</span><span class="p">(),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span></div>
+        <span class="k">return</span>  <span class="n">AdaptVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">MyTensor</span><span class="p">(</span><span class="n">sz</span><span class="p">)</span><span class="o">.</span><span class="n">zero_</span><span class="p">(),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="FD_torch.get_size_of_array"><a class="viewcode-back" href="../finite_differences.html#finite_differences.FD_torch.get_size_of_array">[docs]</a>    <span class="k">def</span> <span class="nf">get_size_of_array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">A</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -673,7 +699,7 @@
       <script type="text/javascript" src="../_static/jquery.js"></script>
       <script type="text/javascript" src="../_static/underscore.js"></script>
       <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

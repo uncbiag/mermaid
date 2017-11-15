@@ -179,26 +179,19 @@
             
   <div class="section" id="forward-models">
 <h1>Forward models<a class="headerlink" href="#forward-models" title="Permalink to this headline">¶</a></h1>
-digraph inheritancea870ec6bf9 {
-rankdir=LR;
-size=&quot;8.0, 12.0&quot;;
-  &quot;forward_models.AdvectImage&quot; [URL=&quot;#forward_models.AdvectImage&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Forward model to advect an image using a transport equation: :math:`I_t + \nabla I^Tv = 0`.&quot;];
-  &quot;forward_models.ForwardModel&quot; -&gt; &quot;forward_models.AdvectImage&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;forward_models.AdvectMap&quot; [URL=&quot;#forward_models.AdvectMap&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Forward model to advect an n-D map using a transport equation: :math:`\Phi_t + D\Phi v = 0`.&quot;];
-  &quot;forward_models.ForwardModel&quot; -&gt; &quot;forward_models.AdvectMap&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;forward_models.EPDiffImage&quot; [URL=&quot;#forward_models.EPDiffImage&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Forward model for the EPdiff equation. State is the momentum, m, and the image I:&quot;];
-  &quot;forward_models.ForwardModel&quot; -&gt; &quot;forward_models.EPDiffImage&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;forward_models.EPDiffMap&quot; [URL=&quot;#forward_models.EPDiffMap&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Forward model for the EPDiff equation. State is the momentum, m, and the transform, :math:`\phi` &quot;];
-  &quot;forward_models.ForwardModel&quot; -&gt; &quot;forward_models.EPDiffMap&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;forward_models.EPDiffScalarMomentum&quot; [URL=&quot;#forward_models.EPDiffScalarMomentum&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Base class for scalar momentum EPDiff solutions. Defines a smoother that can be commonly used.&quot;];
-  &quot;forward_models.ForwardModel&quot; -&gt; &quot;forward_models.EPDiffScalarMomentum&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;forward_models.EPDiffScalarMomentumImage&quot; [URL=&quot;#forward_models.EPDiffScalarMomentumImage&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Forward model for the scalar momentum EPdiff equation. State is the scalar momentum, lam, and the image I&quot;];
-  &quot;forward_models.EPDiffScalarMomentum&quot; -&gt; &quot;forward_models.EPDiffScalarMomentumImage&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;forward_models.EPDiffScalarMomentumMap&quot; [URL=&quot;#forward_models.EPDiffScalarMomentumMap&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Forward model for the scalar momentum EPDiff equation. State is the scalar momentum, lam, the image, I, and the transform, phi.&quot;];
-  &quot;forward_models.EPDiffScalarMomentum&quot; -&gt; &quot;forward_models.EPDiffScalarMomentumMap&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;forward_models.ForwardModel&quot; [URL=&quot;#forward_models.ForwardModel&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Abstract forward model class. Should never be instantiated.&quot;];
-  &quot;forward_models.RHSLibrary&quot; [URL=&quot;#forward_models.RHSLibrary&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Convenience class to quickly generate various right hand sides (RHSs) of popular partial differential &quot;];
-}
+<img src="_images/inheritance-41c12a3dec94020e2b9001d13f27b3c3e17b3055.png" alt="Inheritance diagram of forward_models" usemap="#inheritancea870ec6bf9" class="inheritance"/>
+<map id="inheritancea870ec6bf9" name="inheritancea870ec6bf9">
+<area shape="rect" id="node1" href="#forward_models.AdvectImage" target="_top" title="Forward model to advect an image using a transport equation: :math:`I_t + 
+abla I^Tv = 0`." alt="" coords="256,5,430,26"/>
+<area shape="rect" id="node2" href="#forward_models.ForwardModel" target="_top" title="Abstract forward model class. Should never be instantiated." alt="" coords="5,89,185,110"/>
+<area shape="rect" id="node3" href="#forward_models.AdvectMap" target="_top" title="Forward model to advect an n&#45;D map using a transport equation: :math:`Phi_t + DPhi v = 0`." alt="" coords="261,47,425,68"/>
+<area shape="rect" id="node4" href="#forward_models.EPDiffImage" target="_top" title="Forward model for the EPdiff equation. State is the momentum, m, and the image I:" alt="" coords="257,89,428,110"/>
+<area shape="rect" id="node5" href="#forward_models.EPDiffMap" target="_top" title="Forward model for the EPDiff equation. State is the momentum, m, and the transform, :math:`phi` " alt="" coords="262,131,423,153"/>
+<area shape="rect" id="node6" href="#forward_models.EPDiffScalarMomentum" target="_top" title="Base class for scalar momentum EPDiff solutions. Defines a smoother that can be commonly used." alt="" coords="227,174,458,195"/>
+<area shape="rect" id="node7" href="#forward_models.EPDiffScalarMomentumImage" target="_top" title="Forward model for the scalar momentum EPdiff equation. State is the scalar momentum, lam, and the image I" alt="" coords="500,153,763,174"/>
+<area shape="rect" id="node8" href="#forward_models.EPDiffScalarMomentumMap" target="_top" title="Forward model for the scalar momentum EPDiff equation. State is the scalar momentum, lam, the image, I, and the transform, phi." alt="" coords="505,195,758,216"/>
+<area shape="rect" id="node9" href="#forward_models.RHSLibrary" target="_top" title="Convenience class to quickly generate various right hand sides (RHSs) of popular partial differential " alt="" coords="12,47,178,68"/>
+</map>
 <span class="target" id="module-forward_models"></span><p>Package defining various dynamic forward models as well as convenience methods to generate the
 right hand sides (RHS) of the related partial differential equations.</p>
 <dl class="docutils">
@@ -265,7 +258,9 @@ equations. In this way new forward models can be written with minimal code dupli
 <code class="descname">rhs_advect_image_multiNC</code><span class="sig-paren">(</span><em>I</em>, <em>v</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/forward_models.html#RHSLibrary.rhs_advect_image_multiNC"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#forward_models.RHSLibrary.rhs_advect_image_multiNC" title="Permalink to this definition">¶</a></dt>
 <dd><p>Advects a batch of images which can be multi-channel. Expected image format here, is
 BxCxXxYxZ, where B is the number of images (batch size), C, the number of channels
-per image and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)</p>
+per image and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)
+if the channel size is 1, then a fast version will be used, which batch can be calculate in one loop
+otherwise the traditional loop batch and loop channel way will be used</p>
 <p><span class="math">\(-\nabla I^Tv\)</span></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -290,6 +285,8 @@ per image and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)
 <dd><p>Scalar conservation law for a batch of images which can be multi-channel. Expected image format here, is
 BxCxXxYxZ, where B is the number of images (batch size), C, the number of channels
 per image and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)</p>
+<p>if the channel size is 1, then a fast version will be used, which batch can be calculate in one loop
+otherwise the traditional loop batch and loop channel way will be used</p>
 <p><span class="math">\(-div(Iv)\)</span></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -315,6 +312,7 @@ per image and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)
 BxCxXxYxZ, where B is the number of images/maps (batch size), C, the number of channels
 per (here the spatial dimension for the map coordinate functions),
 and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)</p>
+<p>new fast version is implemented, where batch is no longer calculated separately</p>
 <p><span class="math">\(-D\phi v\)</span></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -340,6 +338,7 @@ and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)</p>
 Expected format here, is BxCxXxYxZ, where B is the number of momenta (batch size), C,
 the number of channels per (here the spatial dimension for the momenta),
 and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)</p>
+<p>a new version, where batch is no longer calculated separately</p>
 <p><span class="math">\(-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm\)</span></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -761,7 +760,7 @@ v is treated as an external argument and I is the state</p>
       <script type="text/javascript" src="_static/jquery.js"></script>
       <script type="text/javascript" src="_static/underscore.js"></script>
       <script type="text/javascript" src="_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

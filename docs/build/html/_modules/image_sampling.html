@@ -193,6 +193,7 @@
 <span class="kn">import</span> <span class="nn">module_parameters</span> <span class="k">as</span> <span class="nn">MP</span>
 
 <span class="kn">import</span> <span class="nn">utils</span>
+<span class="kn">from</span> <span class="nn">dataWarper</span> <span class="k">import</span> <span class="n">AdaptVal</span>
 
 <div class="viewcode-block" id="ResampleImage"><a class="viewcode-back" href="../image_sampling.html#image_sampling.ResampleImage">[docs]</a><span class="k">class</span> <span class="nc">ResampleImage</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -291,7 +292,7 @@
             <span class="nb">print</span><span class="p">(</span><span class="n">desiredSizeNC</span><span class="p">)</span>
             <span class="k">raise</span><span class="p">(</span><span class="s1">&#39;For upsampling sizes need to increase&#39;</span><span class="p">)</span>
 
-        <span class="n">idDes</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">identity_map_multiN</span><span class="p">(</span><span class="n">desiredSizeNC</span><span class="p">)))</span>
+        <span class="n">idDes</span> <span class="o">=</span> <span class="n">AdaptVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">identity_map_multiN</span><span class="p">(</span><span class="n">desiredSizeNC</span><span class="p">))))</span>
         <span class="n">newspacing</span> <span class="o">=</span> <span class="n">spacing</span><span class="o">*</span><span class="p">(</span><span class="n">sz</span><span class="p">[</span><span class="mi">2</span><span class="p">::]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">)</span><span class="o">/</span><span class="n">desiredSizeNC</span><span class="p">[</span><span class="mi">2</span><span class="p">::]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">))</span>
 
         <span class="c1"># now use this map for resampling</span>
@@ -326,7 +327,7 @@
         <span class="n">smoother</span> <span class="o">=</span> <span class="n">SF</span><span class="o">.</span><span class="n">DiffusionSmoother</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
         <span class="n">smoothedImage_multiNC</span> <span class="o">=</span> <span class="n">smoother</span><span class="o">.</span><span class="n">smooth_scalar_field_multiNC</span><span class="p">(</span><span class="n">I</span><span class="p">)</span>
 
-        <span class="n">idDes</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">identity_map_multiN</span><span class="p">(</span><span class="n">desiredSizeNC</span><span class="p">)))</span>
+        <span class="n">idDes</span> <span class="o">=</span> <span class="n">AdaptVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">identity_map_multiN</span><span class="p">(</span><span class="n">desiredSizeNC</span><span class="p">))))</span>
         <span class="n">newspacing</span> <span class="o">=</span> <span class="n">spacing</span><span class="o">*</span><span class="p">(</span><span class="n">sz</span><span class="p">[</span><span class="mi">2</span><span class="p">::]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">)</span><span class="o">/</span><span class="n">desiredSizeNC</span><span class="p">[</span><span class="mi">2</span><span class="p">::]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">))</span>
 
         <span class="c1"># now use this map for resampling</span>
@@ -530,7 +531,7 @@
       <script type="text/javascript" src="../_static/jquery.js"></script>
       <script type="text/javascript" src="../_static/underscore.js"></script>
       <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

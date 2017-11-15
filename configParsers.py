@@ -7,8 +7,10 @@ import ConfigParser
 import json
 
 print(os.getcwd())
+this_directory = os.path.dirname(__file__)
+# __file__ is the absolute path to the current python file.
 configParser = ConfigParser.RawConfigParser()
-configParser.readfp(open(r'./config.txt'))
+configParser.readfp(open(os.path.join(this_directory,r'./config.txt')))
 
 sec_name = 'boolType'
 CUDA_ON = configParser.getboolean(sec_name, 'CUDA_ON')

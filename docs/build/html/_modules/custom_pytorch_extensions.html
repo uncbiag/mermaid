@@ -189,8 +189,9 @@
 <span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Variable</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">gradcheck</span>
-<span class="kn">import</span> <span class="nn">pytorch_fft.fft</span> <span class="k">as</span> <span class="nn">fft</span>
-<span class="kn">from</span> <span class="nn">global_list</span> <span class="k">import</span> <span class="n">USE_CUDA</span><span class="p">,</span> <span class="n">FFTVal</span><span class="p">,</span><span class="n">AdpatVal</span>
+<span class="kn">from</span> <span class="nn">dataWarper</span> <span class="k">import</span> <span class="n">USE_CUDA</span><span class="p">,</span> <span class="n">FFTVal</span><span class="p">,</span><span class="n">AdaptVal</span>
+<span class="k">if</span> <span class="n">USE_CUDA</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pytorch_fft.fft</span> <span class="k">as</span> <span class="nn">fft</span>
 
 <span class="kn">import</span> <span class="nn">utils</span>
 
@@ -226,6 +227,7 @@
 <span class="sd">    :return: Returns the complex coefficients for the filter in the Fourier domain</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># we assume this is a spatial filter, F, hence conj(F(w))=F(-w)</span>
+    <span class="n">sz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sz</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">enforceMaxSymmetry</span><span class="p">:</span>
         <span class="n">maxIndex</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unravel_index</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">spatial_filter</span><span class="p">),</span> <span class="n">spatial_filter</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
         <span class="n">maxValue</span> <span class="o">=</span> <span class="n">spatial_filter</span><span class="p">[</span><span class="n">maxIndex</span><span class="p">]</span>
@@ -258,7 +260,13 @@
 
 
 <div class="viewcode-block" id="create_cuda_filter"><a class="viewcode-back" href="../custom_pytorch_extensions.html#custom_pytorch_extensions.create_cuda_filter">[docs]</a><span class="k">def</span> <span class="nf">create_cuda_filter</span><span class="p">(</span><span class="n">spatial_filter</span><span class="p">,</span> <span class="n">sz</span><span class="p">):</span>
-    <span class="n">fftn</span> <span class="o">=</span> <span class="n">cu_fftn</span><span class="p">(</span><span class="n">sz</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    create cuda version filter, another one dimension is added for computational convenient</span>
+<span class="sd">    :param spatial_filter:</span>
+<span class="sd">    :param sz:</span>
+<span class="sd">    :return: cuda filter</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fftn</span> <span class="o">=</span> <span class="n">sel_fftn</span><span class="p">(</span><span class="n">sz</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
     <span class="n">spatial_filter_th</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">spatial_filter</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
     <span class="n">spatial_filter_th</span> <span class="o">=</span> <span class="n">spatial_filter_th</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
     <span class="n">spatial_filter_th_cell</span> <span class="o">=</span> <span class="n">fftn</span><span class="p">(</span><span class="n">spatial_filter_th</span><span class="p">)</span>
@@ -268,25 +276,56 @@
 <div class="viewcode-block" id="create_numpy_filter"><a class="viewcode-back" href="../custom_pytorch_extensions.html#custom_pytorch_extensions.create_numpy_filter">[docs]</a><span class="k">def</span> <span class="nf">create_numpy_filter</span><span class="p">(</span><span class="n">spatial_filter</span><span class="p">,</span> <span class="n">sz</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">spatial_filter</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="n">sz</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="cu_fftn"><a class="viewcode-back" href="../custom_pytorch_extensions.html#custom_pytorch_extensions.cu_fftn">[docs]</a><span class="k">def</span> <span class="nf">cu_fftn</span><span class="p">(</span><span class="n">dim</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">f</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">rfft</span>
-    <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="n">f</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">rfft2</span>
-    <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-        <span class="n">f</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">rfft3</span>
+<div class="viewcode-block" id="sel_fftn"><a class="viewcode-back" href="../custom_pytorch_extensions.html#custom_pytorch_extensions.sel_fftn">[docs]</a><span class="k">def</span> <span class="nf">sel_fftn</span><span class="p">(</span><span class="n">dim</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    sel the gpu and cpu version of the fft</span>
+<span class="sd">    :param dim:</span>
+<span class="sd">    :return: function pointer</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">USE_CUDA</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">rfft</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">rfft2</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">rfft3</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only 3D cuda fft supported&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">f</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only 3D cuda fft supported&#39;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">f</span></div>
-<div class="viewcode-block" id="cu_ifftn"><a class="viewcode-back" href="../custom_pytorch_extensions.html#custom_pytorch_extensions.cu_ifftn">[docs]</a><span class="k">def</span> <span class="nf">cu_ifftn</span><span class="p">(</span><span class="n">dim</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">f</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">irfft</span>
-    <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="n">f</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">irfft2</span>
-    <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-        <span class="n">f</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">irfft3</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft2</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only 3D cpu fft supported&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">f</span></div>
+<div class="viewcode-block" id="sel_ifftn"><a class="viewcode-back" href="../custom_pytorch_extensions.html#custom_pytorch_extensions.sel_ifftn">[docs]</a><span class="k">def</span> <span class="nf">sel_ifftn</span><span class="p">(</span><span class="n">dim</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    select the cpu and gpu version of the ifft</span>
+<span class="sd">    :param dim:</span>
+<span class="sd">    :return: function pointer</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">USE_CUDA</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">irfft</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">irfft2</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">fft</span><span class="o">.</span><span class="n">irfft3</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only 3D cuda fft supported&#39;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only 3D cuda fft supported&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifft2</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only 3D cpu ifft supported&#39;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">f</span></div>
 
 <div class="viewcode-block" id="FourierConvolution"><a class="viewcode-back" href="../custom_pytorch_extensions.html#custom_pytorch_extensions.FourierConvolution">[docs]</a><span class="k">class</span> <span class="nc">FourierConvolution</span><span class="p">(</span><span class="n">Function</span><span class="p">):</span>
@@ -301,18 +340,24 @@
 <span class="sd">        :param complex_fourier_filter: Filter in the Fourier domain as created by *createComplexFourierFilter*</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># we assume this is a spatial filter, F, hence conj(F(w))=F(-w)</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">FourierConvolution</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FourierConvolution</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span> <span class="o">=</span> <span class="n">complex_fourier_filter</span>
         <span class="k">if</span> <span class="n">USE_CUDA</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">complex_fourier_filter</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">fftn</span> <span class="o">=</span> <span class="n">cu_fftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span> <span class="o">=</span> <span class="n">cu_ifftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">complex_fourier_filter</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">complex_fourier_filter</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fftn</span> <span class="o">=</span> <span class="n">sel_fftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span> <span class="o">=</span> <span class="n">sel_ifftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+
         <span class="sd">&quot;&quot;&quot;The filter in the Fourier domain&quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="FourierConvolution.forward"><a class="viewcode-back" href="../custom_pytorch_extensions.html#custom_pytorch_extensions.FourierConvolution.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">input</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Performs the Fourier-based filtering</span>
-<span class="sd">        </span>
+<span class="sd">        the 3d cpu fft is implemented in fftn, to avoid fusing with batch and channel, here 3d is calcuated in loop</span>
+<span class="sd">        1d 2d cpu works well because fft and fft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt</span>
+
+<span class="sd">        in gpu implementation, the rfft is used for efficiency, which means the filter should be symmetric</span>
 <span class="sd">        :param input: Image</span>
 <span class="sd">        :return: Filtered-image</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -328,10 +373,23 @@
             <span class="n">f_conv_imag</span> <span class="o">=</span> <span class="n">f_input_imag</span> <span class="o">*</span> <span class="n">f_filter_real</span>
             <span class="n">conv_ouput_real</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">f_conv_real</span><span class="p">,</span> <span class="n">f_conv_imag</span><span class="p">)</span>
             <span class="n">result</span> <span class="o">=</span> <span class="n">conv_ouput_real</span>
+
             <span class="k">return</span> <span class="n">FFTVal</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">ini</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">conv_output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span><span class="p">)</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">conv_output</span><span class="o">.</span><span class="n">real</span>  <span class="c1"># should in principle be real</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">&lt;</span><span class="mi">3</span><span class="p">:</span>
+                <span class="n">conv_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span><span class="p">)</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">conv_output</span><span class="o">.</span><span class="n">real</span>  <span class="c1"># should in principle be real</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">]):</span>
+                    <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">]):</span>
+                        <span class="n">conv_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="nb">input</span><span class="p">[</span><span class="n">batch</span><span class="p">,</span><span class="n">ch</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span><span class="p">)</span>
+                        <span class="n">result</span><span class="p">[</span><span class="n">batch</span><span class="p">,</span><span class="n">ch</span><span class="p">]</span> <span class="o">=</span> <span class="n">conv_output</span><span class="o">.</span><span class="n">real</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cpu fft smooth should be 1d-3d&quot;</span><span class="p">)</span>
+
+
+
             <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
             <span class="c1"># print( &#39;max(imag) = &#39; + str( (abs( conv_output.imag )).max() ) )</span>
             <span class="c1"># print( &#39;max(real) = &#39; + str( (abs( conv_output.real )).max() ) )</span>
@@ -343,7 +401,10 @@
 <div class="viewcode-block" id="FourierConvolution.backward"><a class="viewcode-back" href="../custom_pytorch_extensions.html#custom_pytorch_extensions.FourierConvolution.backward">[docs]</a>    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grad_output</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Computes the gradient</span>
-<span class="sd">        </span>
+<span class="sd">         the 3d cpu ifft is implemented in ifftn, to avoid fusing with batch and channel, here 3d is calcuated in loop</span>
+<span class="sd">        1d 2d cpu works well because ifft and ifft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt</span>
+
+<span class="sd">        in gpu implementation, the irfft is used for efficiency, which means the filter should be symmetric</span>
 <span class="sd">        :param grad_output: Gradient output of previous layer</span>
 <span class="sd">        :return: Gradient including the Fourier-based convolution</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -374,7 +435,7 @@
             <span class="n">f_conv_real</span> <span class="o">=</span> <span class="n">f_go_real</span> <span class="o">*</span> <span class="n">f_filter_real</span>
             <span class="n">f_conv_conj_imag</span> <span class="o">=</span> <span class="n">f_go_imag</span> <span class="o">*</span> <span class="n">f_filter_real</span>
             <span class="n">grad_input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">f_conv_real</span><span class="p">,</span> <span class="n">f_conv_conj_imag</span><span class="p">)</span>
-            <span class="c1"># print((grad_input* grad_input).sum())</span>
+            <span class="c1"># print(grad_input)</span>
             <span class="c1"># print((grad_input[0,0,12:15]))</span>
 
             <span class="k">return</span> <span class="n">FFTVal</span><span class="p">(</span><span class="n">grad_input</span><span class="p">,</span> <span class="n">ini</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
@@ -383,9 +444,20 @@
             <span class="n">numpy_go</span> <span class="o">=</span> <span class="n">grad_output</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
             <span class="c1"># we use the conjugate because the assumption was that the spatial filter is real</span>
             <span class="c1"># THe following two lines should be correct</span>
-            <span class="n">grad_input_c</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">numpy_go</span><span class="p">)))</span>
-            <span class="n">grad_input</span> <span class="o">=</span> <span class="n">grad_input_c</span><span class="o">.</span><span class="n">real</span>
-            <span class="c1"># print((grad_input* grad_input).sum())</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">grad_input_c</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">numpy_go</span><span class="p">)))</span>
+                <span class="n">grad_input</span> <span class="o">=</span> <span class="n">grad_input_c</span><span class="o">.</span><span class="n">real</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">grad_input</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">numpy_go</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+                <span class="k">assert</span> <span class="n">grad_output</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="mi">5</span>
+                <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">grad_output</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">]):</span>
+                    <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">grad_output</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">]):</span>
+                        <span class="n">grad_input_c</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span><span class="p">)</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">numpy_go</span><span class="p">[</span><span class="n">batch</span><span class="p">,</span><span class="n">ch</span><span class="p">])))</span>
+                        <span class="n">grad_input</span><span class="p">[</span><span class="n">batch</span><span class="p">,</span><span class="n">ch</span><span class="p">]</span> <span class="o">=</span> <span class="n">grad_input_c</span><span class="o">.</span><span class="n">real</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cpu fft smooth should be 1d-3d&quot;</span><span class="p">)</span>
+            <span class="c1"># print(grad_input)</span>
+
             <span class="c1"># print((grad_input[0,0,12:15]))</span>
             <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">grad_input</span><span class="p">)</span></div></div>
             <span class="c1"># print( &#39;grad max(imag) = &#39; + str( (abs( grad_input_c.imag )).max() ) )</span>
@@ -407,12 +479,14 @@
 <span class="sd">        :param complex_fourier_filter: Filter in the Fourier domain as created by *createComplexFourierFilter*</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># we assume this is a spatial filter, F, hence conj(F(w))=F(-w)</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">InverseFourierConvolution</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">InverseFourierConvolution</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span> <span class="o">=</span> <span class="n">complex_fourier_filter</span>
         <span class="k">if</span> <span class="n">USE_CUDA</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">complex_fourier_filter</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span><span class="o">-</span><span class="mi">1</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">fftn</span> <span class="o">=</span> <span class="n">cu_fftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span> <span class="o">=</span> <span class="n">cu_ifftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">complex_fourier_filter</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">complex_fourier_filter</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fftn</span> <span class="o">=</span> <span class="n">sel_fftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span> <span class="o">=</span> <span class="n">sel_ifftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
         <span class="sd">&quot;&quot;&quot;Fourier filter&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.1</span>
         <span class="sd">&quot;&quot;&quot;Regularizing weight&quot;&quot;&quot;</span>
@@ -455,9 +529,20 @@
             <span class="n">result</span> <span class="o">=</span> <span class="n">conv_ouput_real</span>
             <span class="k">return</span> <span class="n">FFTVal</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">ini</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">conv_output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span><span class="p">))</span>
-            <span class="c1"># result = abs(conv_output) # should in principle be real</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">conv_output</span><span class="o">.</span><span class="n">real</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">&lt;</span><span class="mi">3</span><span class="p">:</span>
+                <span class="n">conv_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span><span class="p">))</span>
+                <span class="c1"># result = abs(conv_output) # should in principle be real</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">conv_output</span><span class="o">.</span><span class="n">real</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">]):</span>
+                    <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">]):</span>
+                        <span class="n">conv_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="nb">input</span><span class="p">[</span><span class="n">batch</span><span class="p">,</span><span class="n">ch</span><span class="p">]</span><span class="o">.</span><span class="n">numpy</span><span class="p">())</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span><span class="p">))</span>
+                        <span class="n">result</span><span class="p">[</span><span class="n">batch</span><span class="p">,</span> <span class="n">ch</span><span class="p">]</span> <span class="o">=</span> <span class="n">conv_output</span><span class="o">.</span><span class="n">real</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cpu fft smooth should be 1d-3d&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
 
 
@@ -498,8 +583,18 @@
             <span class="n">numpy_go</span> <span class="o">=</span> <span class="n">grad_output</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
             <span class="c1"># we use the conjugate because the assumption was that the spatial filter is real</span>
             <span class="c1"># THe following two lines should be correct</span>
-            <span class="n">grad_input_c</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">numpy_go</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span><span class="p">))))</span>
-            <span class="n">grad_input</span> <span class="o">=</span> <span class="n">grad_input_c</span><span class="o">.</span><span class="n">real</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">&lt;</span><span class="mi">3</span><span class="p">:</span>
+                <span class="n">grad_input_c</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">numpy_go</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span><span class="p">))))</span>
+                <span class="n">grad_input</span> <span class="o">=</span> <span class="n">grad_input_c</span><span class="o">.</span><span class="n">real</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">grad_input</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">numpy_go</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">grad_output</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">]):</span>
+                    <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">grad_output</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">1</span><span class="p">]):</span>
+                        <span class="n">grad_input_c</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">ifftn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fftn</span><span class="p">(</span><span class="n">numpy_go</span><span class="p">[</span><span class="n">batch</span><span class="p">,</span><span class="n">ch</span><span class="p">])</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">alpha</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">conjugate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complex_fourier_filter</span><span class="p">))))</span>
+                        <span class="n">grad_input</span><span class="p">[</span><span class="n">batch</span><span class="p">,</span> <span class="n">ch</span><span class="p">]</span> <span class="o">=</span> <span class="n">grad_input_c</span><span class="o">.</span><span class="n">real</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;cpu fft smooth should be 1d-3d&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span><span class="n">grad_input</span><span class="p">)</span></div></div>
 
 
@@ -549,8 +644,8 @@
     <span class="nb">id</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">identity_map</span><span class="p">(</span><span class="n">sz</span><span class="p">)</span>
     <span class="n">g</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">utils</span><span class="o">.</span><span class="n">compute_normalized_gaussian</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">mus</span><span class="p">,</span> <span class="n">stds</span><span class="p">)</span>
     <span class="n">FFilter</span> <span class="o">=</span> <span class="n">create_complex_fourier_filter</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">sz</span><span class="p">)</span>
-    <span class="nb">input</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="nb">list</span><span class="p">(</span><span class="n">sz</span><span class="p">)),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
-    <span class="n">test</span> <span class="o">=</span> <span class="n">gradcheck</span><span class="p">(</span><span class="n">FourierConvolution</span><span class="p">(</span><span class="n">FFilter</span><span class="p">),</span> <span class="nb">input</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">)</span>
+    <span class="nb">input</span> <span class="o">=</span> <span class="n">AdaptVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">sz</span><span class="p">)),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+    <span class="n">test</span> <span class="o">=</span> <span class="n">gradcheck</span><span class="p">(</span><span class="n">FourierConvolution</span><span class="p">(</span><span class="n">FFilter</span><span class="p">),</span> <span class="nb">input</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">4</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">test</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="check_run_forward_and_backward"><a class="viewcode-back" href="../custom_pytorch_extensions.html#custom_pytorch_extensions.check_run_forward_and_backward">[docs]</a><span class="k">def</span> <span class="nf">check_run_forward_and_backward</span><span class="p">():</span>
@@ -615,7 +710,7 @@
       <script type="text/javascript" src="../_static/jquery.js"></script>
       <script type="text/javascript" src="../_static/underscore.js"></script>
       <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

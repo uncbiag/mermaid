@@ -179,20 +179,15 @@
             
   <div class="section" id="smoother-factory">
 <h1>Smoother factory<a class="headerlink" href="#smoother-factory" title="Permalink to this headline">¶</a></h1>
-digraph inheritance0ec39afeac {
-rankdir=LR;
-size=&quot;8.0, 12.0&quot;;
-  &quot;smoother_factory.DiffusionSmoother&quot; [URL=&quot;#smoother_factory.DiffusionSmoother&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Smoothing by solving the diffusion equation iteratively.&quot;];
-  &quot;smoother_factory.Smoother&quot; -&gt; &quot;smoother_factory.DiffusionSmoother&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;smoother_factory.GaussianFourierSmoother&quot; [URL=&quot;#smoother_factory.GaussianFourierSmoother&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Performs Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions&quot;];
-  &quot;smoother_factory.GaussianSmoother&quot; -&gt; &quot;smoother_factory.GaussianFourierSmoother&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;smoother_factory.GaussianSmoother&quot; [URL=&quot;#smoother_factory.GaussianSmoother&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Gaussian smoothing in the spatial domain (hence, SLOW in high dimensions on the CPU at least).&quot;];
-  &quot;smoother_factory.Smoother&quot; -&gt; &quot;smoother_factory.GaussianSmoother&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;smoother_factory.GaussianSpatialSmoother&quot; [URL=&quot;#smoother_factory.GaussianSpatialSmoother&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;];
-  &quot;smoother_factory.GaussianSmoother&quot; -&gt; &quot;smoother_factory.GaussianSpatialSmoother&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;smoother_factory.Smoother&quot; [URL=&quot;#smoother_factory.Smoother&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Abstract base class defining the general smoother interface.&quot;];
-  &quot;smoother_factory.SmootherFactory&quot; [URL=&quot;#smoother_factory.SmootherFactory&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Factory to quickly create different types of smoothers.&quot;];
-}
+<img src="_images/inheritance-96c6775b0d07a2cceb810d03de567889d666fc3e.png" alt="Inheritance diagram of smoother_factory" usemap="#inheritance0ec39afeac" class="inheritance"/>
+<map id="inheritance0ec39afeac" name="inheritance0ec39afeac">
+<area shape="rect" id="node1" href="#smoother_factory.DiffusionSmoother" target="_top" title="Smoothing by solving the diffusion equation iteratively." alt="" coords="254,26,465,48"/>
+<area shape="rect" id="node2" href="#smoother_factory.Smoother" target="_top" title="Abstract base class defining the general smoother interface." alt="" coords="25,48,190,69"/>
+<area shape="rect" id="node4" href="#smoother_factory.GaussianSmoother" target="_top" title="Gaussian smoothing in the spatial domain (hence, SLOW in high dimensions on the CPU at least)." alt="" coords="252,69,467,90"/>
+<area shape="rect" id="node3" href="#smoother_factory.GaussianFourierSmoother" target="_top" title="Performs Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions" alt="" coords="510,48,763,69"/>
+<area shape="rect" id="node5" href="#smoother_factory.GaussianSpatialSmoother" target="_top" title="smoother_factory.GaussianSpatialSmoother" alt="" coords="511,90,763,112"/>
+<area shape="rect" id="node6" href="#smoother_factory.SmootherFactory" target="_top" title="Factory to quickly create different types of smoothers." alt="" coords="5,5,209,26"/>
+</map>
 <span class="target" id="module-smoother_factory"></span><p>This package implements various types of smoothers.</p>
 <dl class="class">
 <dt id="smoother_factory.Smoother">
@@ -364,6 +359,7 @@ size=&quot;8.0, 12.0&quot;;
 <dt id="smoother_factory.Smoother.smooth_vector_field_multiN">
 <code class="descname">smooth_vector_field_multiN</code><span class="sig-paren">(</span><em>v</em>, <em>vout=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/smoother_factory.html#Smoother.smooth_vector_field_multiN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#smoother_factory.Smoother.smooth_vector_field_multiN" title="Permalink to this definition">¶</a></dt>
 <dd><p>Smoothes a vector field of dimension NxdimxXxYxZ</p>
+<p>a new version, where channels are separately calcualted during filtering time, so channel loop is not needed</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -759,7 +755,7 @@ to avoid divisions by zero. DO NOT USE AT THE MOMENT.)</p>
       <script type="text/javascript" src="_static/jquery.js"></script>
       <script type="text/javascript" src="_static/underscore.js"></script>
       <script type="text/javascript" src="_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

@@ -179,17 +179,13 @@
             
   <div class="section" id="multiscale-optimizer">
 <h1>Multiscale optimizer<a class="headerlink" href="#multiscale-optimizer" title="Permalink to this headline">¶</a></h1>
-digraph inheritancecefe36f890 {
-rankdir=LR;
-size=&quot;8.0, 12.0&quot;;
-  &quot;multiscale_optimizer.ImageRegistrationOptimizer&quot; [URL=&quot;#multiscale_optimizer.ImageRegistrationOptimizer&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Optimization class for image registration.&quot;];
-  &quot;multiscale_optimizer.Optimizer&quot; -&gt; &quot;multiscale_optimizer.ImageRegistrationOptimizer&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;multiscale_optimizer.MultiScaleRegistrationOptimizer&quot; [URL=&quot;#multiscale_optimizer.MultiScaleRegistrationOptimizer&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Class to perform multi-scale optimization. Essentially puts a loop around multiple calls of the&quot;];
-  &quot;multiscale_optimizer.ImageRegistrationOptimizer&quot; -&gt; &quot;multiscale_optimizer.MultiScaleRegistrationOptimizer&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;multiscale_optimizer.Optimizer&quot; [URL=&quot;#multiscale_optimizer.Optimizer&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Abstract optimizer base class.&quot;];
-  &quot;multiscale_optimizer.SingleScaleRegistrationOptimizer&quot; [URL=&quot;#multiscale_optimizer.SingleScaleRegistrationOptimizer&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Optimizer operating on a single scale. Typically this will be the full image resolution.&quot;];
-  &quot;multiscale_optimizer.ImageRegistrationOptimizer&quot; -&gt; &quot;multiscale_optimizer.SingleScaleRegistrationOptimizer&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-}
+<img src="_images/inheritance-ec8f8a5df72b57f4040e0373280baddec637e240.png" alt="Inheritance diagram of multiscale_optimizer" usemap="#inheritancecefe36f890" class="inheritance"/>
+<map id="inheritancecefe36f890" name="inheritancecefe36f890">
+<area shape="rect" id="node1" href="#multiscale_optimizer.ImageRegistrationOptimizer" target="_top" title="Optimization class for image registration." alt="" coords="204,23,451,43"/>
+<area shape="rect" id="node3" href="#multiscale_optimizer.MultiScaleRegistrationOptimizer" target="_top" title="Class to perform multi&#45;scale optimization. Essentially puts a loop around multiple calls of the" alt="" coords="493,4,760,23"/>
+<area shape="rect" id="node4" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer" target="_top" title="Optimizer operating on a single scale. Typically this will be the full image resolution." alt="" coords="490,43,764,62"/>
+<area shape="rect" id="node2" href="#multiscale_optimizer.Optimizer" target="_top" title="Abstract optimizer base class." alt="" coords="4,23,165,43"/>
+</map>
 <span class="target" id="module-multiscale_optimizer"></span><p>This package enables easy single-scale and multi-scale optimization support.</p>
 <dl class="class">
 <dt id="multiscale_optimizer.Optimizer">
@@ -674,7 +670,13 @@ tying it to rel_ftol is not really correct.</p>
 <dl class="method">
 <dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.analysis">
 <code class="descname">analysis</code><span class="sig-paren">(</span><em>energy</em>, <em>similarityEnergy</em>, <em>regEnergy</em>, <em>Warped</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/multiscale_optimizer.html#SingleScaleRegistrationOptimizer.analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#multiscale_optimizer.SingleScaleRegistrationOptimizer.analysis" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>print out the and visualize the result
+:param energy:
+:param similarityEnergy:
+:param regEnergy:
+:param Warped:
+:return:</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="multiscale_optimizer.SingleScaleRegistrationOptimizer.optimize">
@@ -882,7 +884,7 @@ the hierarchy, the registration parameters are upsampled from the solution at th
       <script type="text/javascript" src="_static/jquery.js"></script>
       <script type="text/javascript" src="_static/underscore.js"></script>
       <script type="text/javascript" src="_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

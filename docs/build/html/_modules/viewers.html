@@ -398,7 +398,7 @@
     <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">ABCMeta</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">data</span> <span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span><span class="n">data</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span><span class="n">data</span><span class="p">)</span>
 
 <div class="viewcode-block" id="ImageViewer3D.previous_slice"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D.previous_slice">[docs]</a>    <span class="nd">@abstractmethod</span>
     <span class="k">def</span> <span class="nf">previous_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -484,7 +484,7 @@
         <span class="sd">&quot;&quot;&quot;slice index to display&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">showColorbar</span> <span class="o">=</span> <span class="n">showColorbar</span>
         <span class="sd">&quot;&quot;&quot;dispaly colorbar True/False&quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D_Sliced</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span><span class="n">data</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D_Sliced</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span><span class="n">data</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_get_slice_at_dimension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
         <span class="c1"># slicing a along a given dimension at index, index</span>
@@ -569,7 +569,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">phi</span> <span class="o">=</span> <span class="n">phi</span>
         <span class="sd">&quot;&quot;&quot;map&quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D_Sliced_Contour</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span><span class="n">data</span><span class="p">,</span> <span class="n">sliceDim</span><span class="p">,</span> <span class="n">textStr</span><span class="p">,</span> <span class="n">showColorbar</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D_Sliced_Contour</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span><span class="n">data</span><span class="p">,</span> <span class="n">sliceDim</span><span class="p">,</span> <span class="n">textStr</span><span class="p">,</span> <span class="n">showColorbar</span><span class="p">)</span>
 
 <div class="viewcode-block" id="ImageViewer3D_Sliced_Contour.get_phi_slice_at_dimension"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced_Contour.get_phi_slice_at_dimension">[docs]</a>    <span class="k">def</span> <span class="nf">get_phi_slice_at_dimension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">index</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -696,7 +696,7 @@
       <script type="text/javascript" src="../_static/jquery.js"></script>
       <script type="text/javascript" src="../_static/underscore.js"></script>
       <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

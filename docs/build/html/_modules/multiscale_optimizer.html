@@ -189,11 +189,12 @@
 
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="k">import</span> <span class="n">Variable</span>
-<span class="kn">from</span> <span class="nn">global_list</span> <span class="k">import</span> <span class="n">USE_CUDA</span><span class="p">,</span> <span class="n">AdpatVal</span>
+<span class="kn">from</span> <span class="nn">dataWarper</span> <span class="k">import</span> <span class="n">USE_CUDA</span><span class="p">,</span> <span class="n">AdaptVal</span>
 <span class="kn">import</span> <span class="nn">model_factory</span> <span class="k">as</span> <span class="nn">MF</span>
 <span class="kn">import</span> <span class="nn">image_sampling</span> <span class="k">as</span> <span class="nn">IS</span>
 <span class="kn">from</span> <span class="nn">MyAdam</span> <span class="k">import</span> <span class="n">MyAdam</span>
-<span class="kn">from</span> <span class="nn">cml</span> <span class="k">import</span> <span class="n">optimName</span>
+<span class="kn">from</span> <span class="nn">configParsers</span> <span class="k">import</span> <span class="n">optimName</span><span class="p">,</span> <span class="n">visualize</span>
+
 
 <div class="viewcode-block" id="Optimizer"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.Optimizer">[docs]</a><span class="k">class</span> <span class="nc">Optimizer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -201,7 +202,7 @@
 <span class="sd">       &quot;&quot;&quot;</span>
     <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">ABCMeta</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">useMap</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">useMap</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Constructor.</span>
 <span class="sd">        </span>
@@ -218,10 +219,10 @@
         <span class="sd">&quot;&quot;&quot;makes use of map&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">params</span>
         <span class="sd">&quot;&quot;&quot;general parameters&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rel_ftol</span> <span class="o">=</span> <span class="mf">1e-4</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rel_ftol</span> <span class="o">=</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">4</span>
         <span class="sd">&quot;&quot;&quot;relative termination tolerance for optimizer&quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="Optimizer.set_rel_ftol"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.Optimizer.set_rel_ftol">[docs]</a>    <span class="k">def</span> <span class="nf">set_rel_ftol</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">rel_ftol</span><span class="p">):</span>
+<div class="viewcode-block" id="Optimizer.set_rel_ftol"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.Optimizer.set_rel_ftol">[docs]</a>    <span class="k">def</span> <span class="nf">set_rel_ftol</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rel_ftol</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Sets the relative termination tolerance: |f(x_i)-f(x_{i-1})|/f(x_i)&lt;tol</span>
 <span class="sd">        </span>
@@ -236,7 +237,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel_ftol</span></div>
 
 <div class="viewcode-block" id="Optimizer.set_model"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.Optimizer.set_model">[docs]</a>    <span class="nd">@abstractmethod</span>
-    <span class="k">def</span> <span class="nf">set_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">modelName</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">set_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">modelName</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Abstract method to select the model which should be optimized by name</span>
 <span class="sd">        </span>
@@ -257,20 +258,20 @@
 <span class="sd">    Optimization class for image registration.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">useMap</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">ImageRegistrationOptimizer</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">useMap</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">useMap</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ImageRegistrationOptimizer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">useMap</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ISource</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="sd">&quot;&quot;&quot;source image&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ITarget</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="sd">&quot;&quot;&quot;target image&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_name</span> <span class="o">=</span> <span class="n">optimName</span> <span class="c1">#&#39;lbfgs_ls&#39;#&#39;&#39;lbfgs_ls&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_name</span> <span class="o">=</span> <span class="n">optimName</span>  <span class="c1"># &#39;lbfgs_ls&#39;#&#39;&#39;lbfgs_ls&#39;</span>
         <span class="sd">&quot;&quot;&quot;name of the optimizer to use&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_params</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="sd">&quot;&quot;&quot;parameters that should be passed to the optimizer&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="sd">&quot;&quot;&quot;optimizer object itself (to be instantiated)&quot;&quot;&quot;</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">visualize</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">visualize</span> <span class="o">=</span> <span class="n">visualize</span>
         <span class="sd">&quot;&quot;&quot;if True figures are created during the run&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">visualize_step</span> <span class="o">=</span> <span class="mi">10</span>
         <span class="sd">&quot;&quot;&quot;how often the figures are updated; each self.visualize_step-th iteration&quot;&quot;&quot;</span>
@@ -287,7 +288,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">visualize</span> <span class="o">=</span> <span class="kc">False</span></div>
 
-<div class="viewcode-block" id="ImageRegistrationOptimizer.set_visualization"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.ImageRegistrationOptimizer.set_visualization">[docs]</a>    <span class="k">def</span> <span class="nf">set_visualization</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">vis</span><span class="p">):</span>
+<div class="viewcode-block" id="ImageRegistrationOptimizer.set_visualization"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.ImageRegistrationOptimizer.set_visualization">[docs]</a>    <span class="k">def</span> <span class="nf">set_visualization</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vis</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set if visualization should be on (True) or off (False)</span>
 <span class="sd">        </span>
@@ -303,7 +304,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">visualize</span></div>
 
-<div class="viewcode-block" id="ImageRegistrationOptimizer.set_visualize_step"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.ImageRegistrationOptimizer.set_visualize_step">[docs]</a>    <span class="k">def</span> <span class="nf">set_visualize_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">nr_step</span><span class="p">):</span>
+<div class="viewcode-block" id="ImageRegistrationOptimizer.set_visualize_step"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.ImageRegistrationOptimizer.set_visualize_step">[docs]</a>    <span class="k">def</span> <span class="nf">set_visualize_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nr_step</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set after how many steps a visualization should be updated</span>
 <span class="sd">        </span>
@@ -351,7 +352,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_name</span></div>
 
-<div class="viewcode-block" id="ImageRegistrationOptimizer.set_optimizer"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.ImageRegistrationOptimizer.set_optimizer">[docs]</a>    <span class="k">def</span> <span class="nf">set_optimizer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">opt</span><span class="p">):</span>
+<div class="viewcode-block" id="ImageRegistrationOptimizer.set_optimizer"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.ImageRegistrationOptimizer.set_optimizer">[docs]</a>    <span class="k">def</span> <span class="nf">set_optimizer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">opt</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set the optimizer. Not by name, but instead by passing the optimizer object which should be instantiated</span>
 <span class="sd">        </span>
@@ -367,7 +368,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span></div>
 
-<div class="viewcode-block" id="ImageRegistrationOptimizer.set_optimizer_params"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.ImageRegistrationOptimizer.set_optimizer_params">[docs]</a>    <span class="k">def</span> <span class="nf">set_optimizer_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">opt_params</span><span class="p">):</span>
+<div class="viewcode-block" id="ImageRegistrationOptimizer.set_optimizer_params"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.ImageRegistrationOptimizer.set_optimizer_params">[docs]</a>    <span class="k">def</span> <span class="nf">set_optimizer_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">opt_params</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set the desired parameters of the optimizer. This is done by passing a dictionary, for example, dict(lr=0.01)</span>
 <span class="sd">        </span>
@@ -385,8 +386,8 @@
 <span class="sd">        tying it to rel_ftol is not really correct.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">useMap</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">SingleScaleRegistrationOptimizer</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">useMap</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">useMap</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SingleScaleRegistrationOptimizer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">useMap</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">mf</span> <span class="o">=</span> <span class="n">MF</span><span class="o">.</span><span class="n">ModelFactory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">)</span>
         <span class="sd">&quot;&quot;&quot;model factory which will be used to create the model and its loss function&quot;&quot;&quot;</span>
@@ -405,15 +406,15 @@
         <span class="sd">&quot;&quot;&quot;the maximum number of iterations for the optimizer&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">iter_count</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">rec_energy</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span> <span class="n">rec_similarityEnergy</span> <span class="o">=</span><span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rec_regEnergy</span><span class="o">=</span><span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rec_phiWarped</span><span class="o">=</span><span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rec_IWarped</span> <span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rec_similarityEnergy</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rec_regEnergy</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rec_phiWarped</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rec_IWarped</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">last_energy</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">terminal_flag</span> <span class="o">=</span><span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">terminal_flag</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="sd">&quot;&quot;&quot;the evaluation information&quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="SingleScaleRegistrationOptimizer.set_model"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.SingleScaleRegistrationOptimizer.set_model">[docs]</a>    <span class="k">def</span> <span class="nf">set_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">modelName</span><span class="p">):</span>
+<div class="viewcode-block" id="SingleScaleRegistrationOptimizer.set_model"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.SingleScaleRegistrationOptimizer.set_model">[docs]</a>    <span class="k">def</span> <span class="nf">set_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">modelName</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Sets the model that should be solved</span>
 <span class="sd">        </span>
@@ -426,9 +427,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">useMap</span><span class="p">:</span>
             <span class="c1"># create the identity map [-1,1]^d, since we will use a map-based implementation</span>
             <span class="nb">id</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">identity_map_multiN</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">identityMap</span> <span class="o">=</span> <span class="n">AdpatVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="nb">id</span><span class="p">),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span></div>
-
-
+            <span class="bp">self</span><span class="o">.</span><span class="n">identityMap</span> <span class="o">=</span> <span class="n">AdaptVal</span><span class="p">(</span><span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="nb">id</span><span class="p">),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="SingleScaleRegistrationOptimizer.add_similarity_measure"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.SingleScaleRegistrationOptimizer.add_similarity_measure">[docs]</a>    <span class="k">def</span> <span class="nf">add_similarity_measure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simName</span><span class="p">,</span> <span class="n">simMeasure</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -447,7 +446,7 @@
 <span class="sd">        :param modelNetworkClass: registration model itself (class object that can be instantiated)</span>
 <span class="sd">        :param modelLossClass: registration loss (class object that can be instantiated)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mf</span><span class="o">.</span><span class="n">add_model</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span><span class="n">modelNetworkClass</span><span class="p">,</span><span class="n">modelLossClass</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mf</span><span class="o">.</span><span class="n">add_model</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span> <span class="n">modelNetworkClass</span><span class="p">,</span> <span class="n">modelLossClass</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SingleScaleRegistrationOptimizer.set_model_parameters"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.SingleScaleRegistrationOptimizer.set_model_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">set_model_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -512,16 +511,26 @@
         <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">useMap</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">iter_count</span> <span class="o">%</span> <span class="mi">1</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">rec_energy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rec_similarityEnergy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rec_regEnergy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="o">.</span><span class="n">get_energy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rec_phiWarped</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ISource</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ITarget</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">iter_count</span> <span class="o">%</span> <span class="mi">1</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rec_energy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rec_similarityEnergy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rec_regEnergy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="o">.</span><span class="n">get_energy</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">rec_phiWarped</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ISource</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ITarget</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">iter_count</span> <span class="o">%</span> <span class="mi">1</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">rec_energy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rec_similarityEnergy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rec_regEnergy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="o">.</span><span class="n">get_energy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rec_IWarped</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ISource</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ITarget</span><span class="p">)</span>
-
+                <span class="bp">self</span><span class="o">.</span><span class="n">rec_energy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rec_similarityEnergy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rec_regEnergy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="o">.</span><span class="n">get_energy</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">rec_IWarped</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ISource</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ITarget</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">loss</span>
 
 <div class="viewcode-block" id="SingleScaleRegistrationOptimizer.analysis"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.SingleScaleRegistrationOptimizer.analysis">[docs]</a>    <span class="k">def</span> <span class="nf">analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">energy</span><span class="p">,</span> <span class="n">similarityEnergy</span><span class="p">,</span> <span class="n">regEnergy</span><span class="p">,</span> <span class="n">Warped</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        print out the and visualize the result</span>
+<span class="sd">        :param energy:</span>
+<span class="sd">        :param similarityEnergy:</span>
+<span class="sd">        :param regEnergy:</span>
+<span class="sd">        :param Warped:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">cur_energy</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">energy</span><span class="o">.</span><span class="n">float</span><span class="p">())</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_energy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -539,7 +548,8 @@
             <span class="c1"># check if relative convergence tolerance is reached</span>
             <span class="k">if</span> <span class="n">rel_f</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel_ftol</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Reached relative function tolerance of = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rel_ftol</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">terminal_flag</span> <span class="o">=</span><span class="mi">0</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">terminal_flag</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 
         <span class="k">else</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Iter </span><span class="si">{iter}</span><span class="s1">: E=</span><span class="si">{energy}</span><span class="s1">, similarityE=</span><span class="si">{similarityE}</span><span class="s1">, regE=</span><span class="si">{regE}</span><span class="s1">, relF=n/a&#39;</span>
@@ -572,22 +582,22 @@
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Warning: optimizer name = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer_name</span><span class="p">)</span> <span class="o">+</span>
                       <span class="s1">&#39; specified, but ignored since optimizer was set explicitly&#39;</span><span class="p">)</span>
-            <span class="n">opt_instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer_params</span><span class="p">)</span>
+            <span class="n">opt_instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer_params</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">opt_instance</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># select it by name</span>
-            <span class="c1">#TODO: Check what the best way to adapt the tolerances is here; tying it to rel_ftol is not really correct</span>
+            <span class="c1"># TODO: Check what the best way to adapt the tolerances is here; tying it to rel_ftol is not really correct</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Need to select an optimizer&#39;</span><span class="p">)</span>
             <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_name</span> <span class="o">==</span> <span class="s1">&#39;lbfgs_ls&#39;</span><span class="p">:</span>
                 <span class="n">opt_instance</span> <span class="o">=</span> <span class="n">CO</span><span class="o">.</span><span class="n">LBFGS_LS</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span>
-                                         <span class="n">lr</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_eval</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
-                                         <span class="n">tolerance_grad</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rel_ftol</span><span class="o">*</span><span class="mi">10</span><span class="p">,</span> <span class="n">tolerance_change</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rel_ftol</span><span class="p">,</span>
-                                         <span class="n">history_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">line_search_fn</span><span class="o">=</span><span class="s1">&#39;backtracking&#39;</span><span class="p">)</span>
+                                           <span class="n">lr</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">max_iter</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_eval</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                                           <span class="n">tolerance_grad</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rel_ftol</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span> <span class="n">tolerance_change</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rel_ftol</span><span class="p">,</span>
+                                           <span class="n">history_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">line_search_fn</span><span class="o">=</span><span class="s1">&#39;backtracking&#39;</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">opt_instance</span>
             <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer_name</span> <span class="o">==</span> <span class="s1">&#39;adam&#39;</span><span class="p">:</span>
-                <span class="n">opt_instance</span> <span class="o">=</span> <span class="n">MyAdam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">betas</span><span class="o">=</span><span class="p">(</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.999</span><span class="p">),</span> <span class="n">eps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rel_ftol</span><span class="p">,</span>
-                                              <span class="n">weight_decay</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">opt_instance</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">betas</span><span class="o">=</span><span class="p">(</span><span class="mf">0.9</span><span class="p">,</span> <span class="mf">0.999</span><span class="p">),</span> <span class="n">eps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">rel_ftol</span><span class="p">,</span>
+                                      <span class="n">weight_decay</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">opt_instance</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Optimizer = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">optimizer_name</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; not yet supported&#39;</span><span class="p">)</span>
@@ -604,7 +614,6 @@
         <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">USE_CUDA</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-
 
         <span class="bp">self</span><span class="o">.</span><span class="n">last_energy</span> <span class="o">=</span> <span class="kc">None</span>
 
@@ -623,10 +632,9 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">rec_phiWarped</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">terminal_flag</span><span class="p">:</span>
                 <span class="k">break</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">iter_count</span> <span class="o">=</span> <span class="nb">iter</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">iter_count</span> <span class="o">=</span> <span class="nb">iter</span><span class="o">+</span><span class="mi">1</span>
 
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;time:&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span></div></div>
-
 
 
 <div class="viewcode-block" id="MultiScaleRegistrationOptimizer"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.MultiScaleRegistrationOptimizer">[docs]</a><span class="k">class</span> <span class="nc">MultiScaleRegistrationOptimizer</span><span class="p">(</span><span class="n">ImageRegistrationOptimizer</span><span class="p">):</span>
@@ -636,8 +644,8 @@
 <span class="sd">    the hierarchy, the registration parameters are upsampled from the solution at the previous lower resolution</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">useMap</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">MultiScaleRegistrationOptimizer</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">useMap</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">useMap</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MultiScaleRegistrationOptimizer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">,</span> <span class="n">useMap</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scaleFactors</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.</span><span class="p">]</span>
         <span class="sd">&quot;&quot;&quot;At what image scales optimization should be computed&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scaleIterations</span> <span class="o">=</span> <span class="p">[</span><span class="mi">100</span><span class="p">]</span>
@@ -667,7 +675,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addSimName</span> <span class="o">=</span> <span class="n">simName</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addSimMeasure</span> <span class="o">=</span> <span class="n">simMeasure</span></div>
 
-<div class="viewcode-block" id="MultiScaleRegistrationOptimizer.set_model"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.MultiScaleRegistrationOptimizer.set_model">[docs]</a>    <span class="k">def</span> <span class="nf">set_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">modelName</span><span class="p">):</span>
+<div class="viewcode-block" id="MultiScaleRegistrationOptimizer.set_model"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.MultiScaleRegistrationOptimizer.set_model">[docs]</a>    <span class="k">def</span> <span class="nf">set_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">modelName</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set the model to be optimized over by name</span>
 <span class="sd">        </span>
@@ -706,13 +714,12 @@
     <span class="k">def</span> <span class="nf">_get_desired_size_from_scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origSz</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
 
         <span class="n">osz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">origSz</span><span class="p">))</span>
-        <span class="n">dsz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">osz</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int&#39;</span><span class="p">)</span>
+        <span class="n">dsz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">osz</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;int&#39;</span><span class="p">)</span>
         <span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">osz</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim</span><span class="p">):</span>
-            <span class="n">dsz</span><span class="p">[</span><span class="n">d</span><span class="p">]</span><span class="o">=</span><span class="nb">round</span><span class="p">(</span><span class="n">scale</span><span class="o">*</span><span class="n">osz</span><span class="p">[</span><span class="n">d</span><span class="p">])</span>
+            <span class="n">dsz</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">scale</span> <span class="o">*</span> <span class="n">osz</span><span class="p">[</span><span class="n">d</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="n">dsz</span>
-
 
 <div class="viewcode-block" id="MultiScaleRegistrationOptimizer.optimize"><a class="viewcode-back" href="../multiscale_optimizer.html#multiscale_optimizer.MultiScaleRegistrationOptimizer.optimize">[docs]</a>    <span class="k">def</span> <span class="nf">optimize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -728,7 +735,7 @@
         <span class="n">nrOfScales</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scaleFactors</span><span class="p">)</span>
 
         <span class="c1"># check that we have the right number of iteration parameters</span>
-        <span class="k">assert</span><span class="p">(</span> <span class="n">nrOfScales</span><span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scaleIterations</span><span class="p">)</span> <span class="p">)</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="n">nrOfScales</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scaleIterations</span><span class="p">))</span>
 
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Performing multiscale optmization with scales: &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scaleFactors</span><span class="p">))</span>
 
@@ -749,17 +756,17 @@
 
             <span class="n">sampler</span> <span class="o">=</span> <span class="n">IS</span><span class="o">.</span><span class="n">ResampleImage</span><span class="p">()</span>
 
-            <span class="n">ISourceC</span><span class="p">,</span> <span class="n">spacingC</span> <span class="o">=</span> <span class="n">sampler</span><span class="o">.</span><span class="n">downsample_image_to_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ISource</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span><span class="n">currentDesiredSz</span><span class="p">)</span>
-            <span class="n">ITargetC</span><span class="p">,</span> <span class="n">spacingC</span> <span class="o">=</span> <span class="n">sampler</span><span class="o">.</span><span class="n">downsample_image_to_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ITarget</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span><span class="n">currentDesiredSz</span><span class="p">)</span>
+            <span class="n">ISourceC</span><span class="p">,</span> <span class="n">spacingC</span> <span class="o">=</span> <span class="n">sampler</span><span class="o">.</span><span class="n">downsample_image_to_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ISource</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span> <span class="n">currentDesiredSz</span><span class="p">)</span>
+            <span class="n">ITargetC</span><span class="p">,</span> <span class="n">spacingC</span> <span class="o">=</span> <span class="n">sampler</span><span class="o">.</span><span class="n">downsample_image_to_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ITarget</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span> <span class="n">currentDesiredSz</span><span class="p">)</span>
 
-            <span class="n">szC</span> <span class="o">=</span> <span class="n">ISourceC</span><span class="o">.</span><span class="n">size</span><span class="p">()</span> <span class="c1"># this assumes the BxCxXxYxZ format</span>
+            <span class="n">szC</span> <span class="o">=</span> <span class="n">ISourceC</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>  <span class="c1"># this assumes the BxCxXxYxZ format</span>
 
-            <span class="n">ssOpt</span> <span class="o">=</span> <span class="n">SingleScaleRegistrationOptimizer</span><span class="p">(</span><span class="n">szC</span><span class="p">,</span><span class="n">spacingC</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">useMap</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+            <span class="n">ssOpt</span> <span class="o">=</span> <span class="n">SingleScaleRegistrationOptimizer</span><span class="p">(</span><span class="n">szC</span><span class="p">,</span> <span class="n">spacingC</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">useMap</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="p">(</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">add_model_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span>
-                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">add_model_networkClass</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span>
-                     <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">add_model_lossClass</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="p">):</span>
-                <span class="n">ssOpt</span><span class="o">.</span><span class="n">add_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">add_model_name</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">add_model_networkClass</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">add_model_lossClass</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">add_model_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span>
+                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">add_model_networkClass</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span>
+                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">add_model_lossClass</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)):</span>
+                <span class="n">ssOpt</span><span class="o">.</span><span class="n">add_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">add_model_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_model_networkClass</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_model_lossClass</span><span class="p">)</span>
 
             <span class="c1"># now set the actual model we want to solve</span>
             <span class="n">ssOpt</span><span class="o">.</span><span class="n">set_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model_name</span><span class="p">)</span>
@@ -783,7 +790,7 @@
 
             <span class="k">if</span> <span class="n">upsampledParameters</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="c1"># check that the upsampled parameters are consistent with the downsampled images</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">spacingC</span><span class="o">-</span><span class="n">upsampledSpacing</span><span class="p">)</span><span class="o">&lt;</span><span class="mf">0.000001</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">spacingC</span> <span class="o">-</span> <span class="n">upsampledSpacing</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.000001</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
                     <span class="nb">print</span><span class="p">(</span><span class="n">spacingC</span><span class="p">)</span>
                     <span class="nb">print</span><span class="p">(</span><span class="n">upsampledSpacing</span><span class="p">)</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Upsampled parameters and downsampled images are of inconsistent dimension&#39;</span><span class="p">)</span>
@@ -792,16 +799,16 @@
                 <span class="n">ssOpt</span><span class="o">.</span><span class="n">set_model_parameters</span><span class="p">(</span><span class="n">upsampledParameters</span><span class="p">)</span>
 
             <span class="c1"># do the actual optimization</span>
-            <span class="nb">print</span><span class="p">(</span> <span class="s1">&#39;Optimizing for at most &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">currentNrOfIteratons</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; iterations&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Optimizing for at most &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">currentNrOfIteratons</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; iterations&#39;</span><span class="p">)</span>
             <span class="n">ssOpt</span><span class="o">.</span><span class="n">set_number_of_iterations</span><span class="p">(</span><span class="n">currentNrOfIteratons</span><span class="p">)</span>
             <span class="n">ssOpt</span><span class="o">.</span><span class="n">optimize</span><span class="p">()</span>
 
             <span class="c1"># if we are not at the very last scale, then upsample the parameters</span>
-            <span class="k">if</span> <span class="n">currentScaleNumber</span><span class="o">!=</span><span class="n">nrOfScales</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">currentScaleNumber</span> <span class="o">!=</span> <span class="n">nrOfScales</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="c1"># we need to revert the downsampling to the next higher level</span>
-                <span class="n">scaleTo</span> <span class="o">=</span> <span class="n">reverseScales</span><span class="p">[</span><span class="n">currentScaleNumber</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
-                <span class="n">desiredUpsampleSz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_desired_size_from_scale</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ISource</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">2</span><span class="p">::],</span> <span class="n">scaleTo</span><span class="p">)</span>
-                <span class="n">upsampledParameters</span><span class="p">,</span><span class="n">upsampledSpacing</span> <span class="o">=</span> <span class="n">ssOpt</span><span class="o">.</span><span class="n">upsample_model_parameters</span><span class="p">(</span><span class="n">desiredUpsampleSz</span><span class="p">)</span></div></div>
+                <span class="n">scaleTo</span> <span class="o">=</span> <span class="n">reverseScales</span><span class="p">[</span><span class="n">currentScaleNumber</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">desiredUpsampleSz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_desired_size_from_scale</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ISource</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">2</span><span class="p">::],</span> <span class="n">scaleTo</span><span class="p">)</span>
+                <span class="n">upsampledParameters</span><span class="p">,</span> <span class="n">upsampledSpacing</span> <span class="o">=</span> <span class="n">ssOpt</span><span class="o">.</span><span class="n">upsample_model_parameters</span><span class="p">(</span><span class="n">desiredUpsampleSz</span><span class="p">)</span></div></div>
 </pre></div>
 
            </div>
@@ -849,7 +856,7 @@
       <script type="text/javascript" src="../_static/jquery.js"></script>
       <script type="text/javascript" src="../_static/underscore.js"></script>
       <script type="text/javascript" src="../_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

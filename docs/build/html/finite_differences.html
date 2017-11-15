@@ -411,12 +411,14 @@ In this way the numpy and pytorch versions can easily be derived.</p>
 <dl class="method">
 <dt id="finite_differences.FD.lap">
 <code class="descname">lap</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.lap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.lap" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute the Lapacian of an image</p>
+<dd><p>IMPORTANT:
+ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image [batch, X,Y,Z]</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Returns the Laplacian</td>
 </tr>
@@ -483,7 +485,7 @@ THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image [batch, X, Y,Z]</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Image with values at an x-index one larger</td>
 </tr>
@@ -502,7 +504,7 @@ THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image [batch, X, Y, Z]</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Image with values at an x-index one smaller</td>
 </tr>
@@ -533,11 +535,15 @@ THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
 <dt id="finite_differences.FD.ym">
 <code class="descname">ym</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.ym"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.ym" title="Permalink to this definition">¶</a></dt>
 <dd><p>Same as xm, but for the y direction</p>
+<p>IMPORTANT:
+ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
+<p>Returns the values for x-index decremented by one (to the left in 1D)</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image [batch, X, Y, Z]</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Image with values at y-index one smaller</td>
 </tr>
@@ -549,11 +555,15 @@ THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
 <dt id="finite_differences.FD.zp">
 <code class="descname">zp</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.zp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.zp" title="Permalink to this definition">¶</a></dt>
 <dd><p>Same as xp, but for the z direction</p>
+<p>IMPORTANT:
+ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
+<p>Returns the values for x-index decremented by one (to the left in 1D)</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image [batch, X, Y, Z]</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Image with values at z-index one larger</td>
 </tr>
@@ -565,11 +575,15 @@ THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
 <dt id="finite_differences.FD.zm">
 <code class="descname">zm</code><span class="sig-paren">(</span><em>I</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/finite_differences.html#FD.zm"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#finite_differences.FD.zm" title="Permalink to this definition">¶</a></dt>
 <dd><p>Same as xm, but for the z direction</p>
+<p>IMPORTANT:
+ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
+<p>Returns the values for x-index decremented by one (to the left in 1D)</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>I</strong> – Input image [batch, X, Y, Z]</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Image with values at z-index one smaller</td>
 </tr>
@@ -696,7 +710,7 @@ THIS IS FOR COMPUTATIONAL EFFICIENCY.</p>
       <script type="text/javascript" src="_static/jquery.js"></script>
       <script type="text/javascript" src="_static/underscore.js"></script>
       <script type="text/javascript" src="_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

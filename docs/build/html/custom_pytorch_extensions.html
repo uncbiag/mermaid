@@ -179,15 +179,12 @@
             
   <div class="section" id="custom-pytorch-extensions">
 <h1>Custom pyTorch extensions<a class="headerlink" href="#custom-pytorch-extensions" title="Permalink to this headline">¶</a></h1>
-digraph inheritanced495a17bba {
-rankdir=LR;
-size=&quot;8.0, 12.0&quot;;
-  &quot;custom_pytorch_extensions.FourierConvolution&quot; [URL=&quot;#custom_pytorch_extensions.FourierConvolution&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;pyTorch function to compute convolutions in the Fourier domain: f = g*h&quot;];
-  &quot;torch.autograd.function.Function&quot; -&gt; &quot;custom_pytorch_extensions.FourierConvolution&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;custom_pytorch_extensions.InverseFourierConvolution&quot; [URL=&quot;#custom_pytorch_extensions.InverseFourierConvolution&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;pyTorch function to compute convolutions in the Fourier domain: f = g*h&quot;];
-  &quot;torch.autograd.function.Function&quot; -&gt; &quot;custom_pytorch_extensions.InverseFourierConvolution&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
-  &quot;torch.autograd.function.Function&quot; [fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,tooltip=&quot;Records operation history and defines formulas for differentiating ops.&quot;];
-}
+<img src="_images/inheritance-93a9fca7b567ce99f8778fe4661718b105e86c7c.png" alt="Inheritance diagram of custom_pytorch_extensions" usemap="#inheritanced495a17bba" class="inheritance"/>
+<map id="inheritanced495a17bba" name="inheritanced495a17bba">
+<area shape="rect" id="node1" href="#custom_pytorch_extensions.FourierConvolution" target="_top" title="pyTorch function to compute convolutions in the Fourier domain: f = g*h" alt="" coords="288,5,591,29"/>
+<area shape="rect" id="node2" title="Records operation history and defines formulas for differentiating ops." alt="" coords="5,29,218,53"/>
+<area shape="rect" id="node3" href="#custom_pytorch_extensions.InverseFourierConvolution" target="_top" title="pyTorch function to compute convolutions in the Fourier domain: f = g*h" alt="" coords="266,53,613,77"/>
+</map>
 <span class="target" id="module-custom_pytorch_extensions"></span><p>This package implements pytorch functions for Fourier-based convolutions.
 While this may not be relevant for GPU-implementations, convolutions in the spatial domain are slow on CPUs. Hence, this function should be useful for memory-intensive models that need to be run on the CPU or CPU-based computations involving convolutions in general.</p>
 <div class="admonition-todo admonition" id="index-0">
@@ -241,7 +238,11 @@ in the spatial domain to be symmetric</li>
 <dl class="function">
 <dt id="custom_pytorch_extensions.create_cuda_filter">
 <code class="descclassname">custom_pytorch_extensions.</code><code class="descname">create_cuda_filter</code><span class="sig-paren">(</span><em>spatial_filter</em>, <em>sz</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/custom_pytorch_extensions.html#create_cuda_filter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#custom_pytorch_extensions.create_cuda_filter" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>create cuda version filter, another one dimension is added for computational convenient
+:param spatial_filter:
+:param sz:
+:return: cuda filter</p>
+</dd></dl>
 
 <dl class="function">
 <dt id="custom_pytorch_extensions.create_numpy_filter">
@@ -249,49 +250,53 @@ in the spatial domain to be symmetric</li>
 <dd></dd></dl>
 
 <dl class="function">
-<dt id="custom_pytorch_extensions.cu_fftn">
-<code class="descclassname">custom_pytorch_extensions.</code><code class="descname">cu_fftn</code><span class="sig-paren">(</span><em>dim</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/custom_pytorch_extensions.html#cu_fftn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#custom_pytorch_extensions.cu_fftn" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dt id="custom_pytorch_extensions.sel_fftn">
+<code class="descclassname">custom_pytorch_extensions.</code><code class="descname">sel_fftn</code><span class="sig-paren">(</span><em>dim</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/custom_pytorch_extensions.html#sel_fftn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#custom_pytorch_extensions.sel_fftn" title="Permalink to this definition">¶</a></dt>
+<dd><p>sel the gpu and cpu version of the fft
+:param dim:
+:return: function pointer</p>
+</dd></dl>
 
 <dl class="function">
-<dt id="custom_pytorch_extensions.cu_ifftn">
-<code class="descclassname">custom_pytorch_extensions.</code><code class="descname">cu_ifftn</code><span class="sig-paren">(</span><em>dim</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/custom_pytorch_extensions.html#cu_ifftn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#custom_pytorch_extensions.cu_ifftn" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dt id="custom_pytorch_extensions.sel_ifftn">
+<code class="descclassname">custom_pytorch_extensions.</code><code class="descname">sel_ifftn</code><span class="sig-paren">(</span><em>dim</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/custom_pytorch_extensions.html#sel_ifftn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#custom_pytorch_extensions.sel_ifftn" title="Permalink to this definition">¶</a></dt>
+<dd><p>select the cpu and gpu version of the ifft
+:param dim:
+:return: function pointer</p>
+</dd></dl>
 
 <dl class="class">
 <dt id="custom_pytorch_extensions.FourierConvolution">
 <em class="property">class </em><code class="descclassname">custom_pytorch_extensions.</code><code class="descname">FourierConvolution</code><span class="sig-paren">(</span><em>complex_fourier_filter</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/custom_pytorch_extensions.html#FourierConvolution"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#custom_pytorch_extensions.FourierConvolution" title="Permalink to this definition">¶</a></dt>
 <dd><p>pyTorch function to compute convolutions in the Fourier domain: f = g*h</p>
+<dl class="attribute">
+<dt id="custom_pytorch_extensions.FourierConvolution.ifftn">
+<code class="descname">ifftn</code><em class="property"> = None</em><a class="headerlink" href="#custom_pytorch_extensions.FourierConvolution.ifftn" title="Permalink to this definition">¶</a></dt>
+<dd><p>The filter in the Fourier domain</p>
+</dd></dl>
+
 <dl class="method">
 <dt id="custom_pytorch_extensions.FourierConvolution.forward">
 <code class="descname">forward</code><span class="sig-paren">(</span><em>input</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/custom_pytorch_extensions.html#FourierConvolution.forward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#custom_pytorch_extensions.FourierConvolution.forward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Performs the Fourier-based filtering</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>input</strong> – Image</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Filtered-image</td>
-</tr>
-</tbody>
-</table>
+<dd><p>Performs the Fourier-based filtering
+the 3d cpu fft is implemented in fftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
+1d 2d cpu works well because fft and fft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt</p>
+<p>in gpu implementation, the rfft is used for efficiency, which means the filter should be symmetric
+:param input: Image
+:return: Filtered-image</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="custom_pytorch_extensions.FourierConvolution.backward">
 <code class="descname">backward</code><span class="sig-paren">(</span><em>grad_output</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/custom_pytorch_extensions.html#FourierConvolution.backward"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#custom_pytorch_extensions.FourierConvolution.backward" title="Permalink to this definition">¶</a></dt>
-<dd><p>Computes the gradient</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>grad_output</strong> – Gradient output of previous layer</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Gradient including the Fourier-based convolution</td>
-</tr>
-</tbody>
-</table>
+<dd><dl class="docutils">
+<dt>Computes the gradient</dt>
+<dd>the 3d cpu ifft is implemented in ifftn, to avoid fusing with batch and channel, here 3d is calcuated in loop</dd>
+</dl>
+<p>1d 2d cpu works well because ifft and ifft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt</p>
+<p>in gpu implementation, the irfft is used for efficiency, which means the filter should be symmetric
+:param grad_output: Gradient output of previous layer
+:return: Gradient including the Fourier-based convolution</p>
 </dd></dl>
 
 </dd></dl>
@@ -301,6 +306,12 @@ in the spatial domain to be symmetric</li>
 <em class="property">class </em><code class="descclassname">custom_pytorch_extensions.</code><code class="descname">InverseFourierConvolution</code><span class="sig-paren">(</span><em>complex_fourier_filter</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/custom_pytorch_extensions.html#InverseFourierConvolution"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#custom_pytorch_extensions.InverseFourierConvolution" title="Permalink to this definition">¶</a></dt>
 <dd><p>pyTorch function to compute convolutions in the Fourier domain: f = g*h
 But uses the inverse of the smoothing filter</p>
+<dl class="attribute">
+<dt id="custom_pytorch_extensions.InverseFourierConvolution.ifftn">
+<code class="descname">ifftn</code><em class="property"> = None</em><a class="headerlink" href="#custom_pytorch_extensions.InverseFourierConvolution.ifftn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fourier filter</p>
+</dd></dl>
+
 <dl class="attribute">
 <dt id="custom_pytorch_extensions.InverseFourierConvolution.alpha">
 <code class="descname">alpha</code><em class="property"> = None</em><a class="headerlink" href="#custom_pytorch_extensions.InverseFourierConvolution.alpha" title="Permalink to this definition">¶</a></dt>
@@ -480,7 +491,7 @@ s
       <script type="text/javascript" src="_static/jquery.js"></script>
       <script type="text/javascript" src="_static/underscore.js"></script>
       <script type="text/javascript" src="_static/doctools.js"></script>
-      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
 
   
 

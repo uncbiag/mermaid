@@ -224,7 +224,7 @@ class FourierConvolution(Function):
     def backward(self, grad_output):
         """
         Computes the gradient
-         the 3d cpu ifft is implemented in ifftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
+        the 3d cpu ifft is implemented in ifftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
         1d 2d cpu works well because ifft and ifft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
 
         in gpu implementation, the irfft is used for efficiency, which means the filter should be symmetric
@@ -243,8 +243,6 @@ class FourierConvolution(Function):
         # improve efficiency. If you want to make your code simpler, you can
         # skip them. Returning gradients for inputs that don't require it is
         # not an error.
-
-
 
 
         # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
