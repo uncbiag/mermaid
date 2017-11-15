@@ -1,7 +1,0 @@
-<map id="inheritance57abbeede0" name="inheritance57abbeede0">
-<area shape="rect" id="node1" href="#viewers.FigureEventHandler" target="_top" title="Class to implement general event handling for matplotlib figures." alt="" coords="4,42,152,61"/>
-<area shape="rect" id="node2" href="#viewers.ImageViewer" target="_top" title="Abstract class for an image viewer." alt="" coords="20,4,136,23"/>
-<area shape="rect" id="node3" href="#viewers.ImageViewer3D" target="_top" title="Abstract class for a 3D image viewer." alt="" coords="190,4,319,23"/>
-<area shape="rect" id="node4" href="#viewers.ImageViewer3D_Sliced" target="_top" title="3D image viewer specialization to 3D sliced viewing" alt="" coords="356,4,520,23"/>
-<area shape="rect" id="node5" href="#viewers.ImageViewer3D_Sliced_Contour" target="_top" title="Specialization of 3D sliced viewer to also display contours" alt="" coords="557,4,764,23"/>
-</map>

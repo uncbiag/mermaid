@@ -1,5 +1,0 @@
-<map id="inheritancedd2d0ee922" name="inheritancedd2d0ee922">
-<area shape="rect" id="node1" href="#rungekutta_integrators.EulerForward" target="_top" title="Euler&#45;forward integration" alt="" coords="287,5,526,29"/>
-<area shape="rect" id="node2" href="#rungekutta_integrators.RKIntegrator" target="_top" title="Abstract base class for Runge&#45;Kutta integration: x&#39; = f(x(t),u(t),t)" alt="" coords="5,29,239,53"/>
-<area shape="rect" id="node3" href="#rungekutta_integrators.RK4" target="_top" title="Runge&#45;Kutta 4 integration" alt="" coords="314,53,499,77"/>
-</map>

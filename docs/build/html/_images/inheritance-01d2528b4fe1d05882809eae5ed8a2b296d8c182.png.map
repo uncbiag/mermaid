@@ -1,5 +1,0 @@
-<map id="inheritancee11df5fc95" name="inheritancee11df5fc95">
-<area shape="rect" id="node1" href="#finite_differences.FD" target="_top" title="*FD* is the abstract class for finite differences. It includes most of the actual finite difference code, " alt="" coords="5,29,149,53"/>
-<area shape="rect" id="node2" href="#finite_differences.FD_np" target="_top" title="Defnitions of the abstract methods for numpy" alt="" coords="204,5,370,29"/>
-<area shape="rect" id="node3" href="#finite_differences.FD_torch" target="_top" title="Defnitions of the abstract methods for torch" alt="" coords="197,53,377,77"/>
-</map>
