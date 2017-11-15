@@ -1,6 +1,21 @@
 # Image registration using pyTorch
 
-Gpu version of proj mermaid
+CPU/GPU verwion of mermaid.
+
+# Basic install
+  * See mermaid.yaml for all the packages that need to be installed. This is easiest with anaconda.
+  * conda install pytorch torchvision cuda80 -c soumith
+  * conda install cffi
+  * conda install -c simpleitk simpleitk
+  * conda install sphinx
+  * pip install pytorch-fft
+
+After everything is installed, compile the documentation (there are also more detailed installation instructions)
+
+      * cd mermaid
+      * cd docs
+      * make html
+
 
 # Setup
 

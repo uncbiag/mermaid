@@ -3,6 +3,11 @@ Installation
 
 This note briefly describes how to install and use *mermaid*. Since this is all based on pyTorch, the first step if you have not done so yet is to install pyTorch itself. These installation notes are currently for OSX.
 
+anaconda installation
+^^^^^^^^^^^^^^^^^^^^^
+
+If you have not done so yet, install anaconda. Simply follow the installation instructions `here <https://www.anaconda.com/download>`_.
+
 pyTorch installation
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -15,7 +20,7 @@ To install via anaconda execute
    conda install pytorch torchvision cuda80 -c soumith
 
 
-However, as pyTorch is still actively developed it makes sense to install it from the git repository. At least at the time of writing of this document the repository had some autograd bugs fixed that were not fixed in the official release yet.
+However, as pyTorch is still actively developed it may make sense to install it from the git repository. At least at the time of writing of this document the repository had some autograd bugs fixed that were not fixed in the official release yet.
 
 To install pyTorch from source do the following
 
@@ -35,27 +40,52 @@ This will create a `pytorch` directory. On OSX do the following. (Set NO_CUDA=1 
 
 The `/path/to/anaconda/install` is for me for example `/Users/mn/anaconda`
 
-Installing mermaid
-^^^^^^^^^^^^^^^^^^
-
-To install the registration package. First check it out from bitbucket:
+Downloading mermaid
+^^^^^^^^^^^^^^^^^^^
+To install the registration package. First check it out from github:
 
 .. code::
 
-   git clone git@bitbucket.org:marcniethammer/pytorchregistration.git
+   git clone https://github.com/uncbiag/mermaid.git
 
-Currently, there is only CPU support. But since we want to work with 1D, 2D, and 3D images we need a custom version of a spatial transformer network (STN).
+Installing all the packages required to run and compile mermaid
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There are a variety of packages that are needed to run mermaid. Assuming you have anaconda installed simply execute
+
+.. code::
+
+    conda install cffi
+    conda install -c simpleitk simpleitk
+    conda install sphinx
+
+If the GPU should be supported we also need to get the package for pytorch FFT support. Unfortunately, it is not available via anaconda, but we can use pip
+
+.. code::
+
+    pip install pytorch-fft
+
+Installing mermaid
+^^^^^^^^^^^^^^^^^^
+
+Now we are ready to do some additional compilation for CPU and GPU support. Specicially, since we want to work with 1D, 2D, and 3D images we need a custom version of a spatial transformer network (STN).
 
 To compile this do the following
 
 .. code::
 
-   cd pytorchregistration
+   cd mermaid
    cd pyreg/libraries
-   python build.py
-   
+   sh make_cpu.sh
+
+If you want to also compile for GPU support (assuming you have the appropriate NVIDA CUDA libraries installed execute
+
+.. code::
+
+    sh make_gpu.sh
 
 You may need to adapt the build.py script (working on making this simpler). If it is compiled with gcc (you can install it on OSX via `brew install gcc` and then follow the intructions to give it the right permissions) it will support multi-threading via openmp. If compiled by clang, multi-threading support will not be available. However, in practice this part of the code is not the bottleneck, so it may not matter much.
+
 
 Creating the documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -64,12 +94,19 @@ The documentation is created via `sphinx <http://www.sphinx-doc.org/>`_. To buil
 
 .. code::
 
-   cd pytorchregistration
+   cd mermaid
    cd docs
    make html
 
 
 This will create the docs in `build/html`.
+
+Experimental install option
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We are currently working on creating an anaconda recipe for mermaid. This is included in the file `mermaid.yaml` in the top directory.
+It shows what is necessary to install mermaid and can be used with 'conda-build` to create an anaconda package.
+You can find more on how to use and build these packages `here <https://conda.io/docs/user-guide/tutorials/index.html>`_.
 
 Running the code
 ^^^^^^^^^^^^^^^^
