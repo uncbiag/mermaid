@@ -372,6 +372,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             if rel_f < self.rel_ftol:
                 print('Reached relative function tolerance of = ' + str(self.rel_ftol))
                 self.terminal_flag = 0
+                exit(0)
 
         else:
             print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF=n/a'
