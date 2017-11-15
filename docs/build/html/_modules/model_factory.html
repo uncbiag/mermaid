@@ -1,0 +1,332 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>model_factory &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>model_factory</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for model_factory</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Package to quickly instantiate registration models by name.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">registration_networks</span> <span class="k">as</span> <span class="nn">RN</span>
+
+<div class="viewcode-block" id="ModelFactory"><a class="viewcode-back" href="../model_factory.html#model_factory.ModelFactory">[docs]</a><span class="k">class</span> <span class="nc">ModelFactory</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Factory class to instantiate registration models.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor.</span>
+<span class="sd">        </span>
+<span class="sd">        :param sz: image size, expectes BxCxXxYxZ format </span>
+<span class="sd">        :param spacing: spatial spacing as array (as many entries as there are spatial dimensions)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sz</span> <span class="o">=</span> <span class="n">sz</span>
+        <span class="sd">&quot;&quot;&quot;size of the image (BxCxXxYxZ) format&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span> <span class="o">=</span> <span class="n">spacing</span>
+        <span class="sd">&quot;&quot;&quot;spatial spacing&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span> <span class="n">spacing</span> <span class="p">)</span>
+        <span class="sd">&quot;&quot;&quot;spatial dimension&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;svf_map&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">RN</span><span class="o">.</span><span class="n">SVFMapNet</span><span class="p">,</span><span class="n">RN</span><span class="o">.</span><span class="n">SVFMapLoss</span><span class="p">),</span>
+            <span class="s1">&#39;svf_image&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">RN</span><span class="o">.</span><span class="n">SVFImageNet</span><span class="p">,</span><span class="n">RN</span><span class="o">.</span><span class="n">SVFImageLoss</span><span class="p">),</span>
+            <span class="s1">&#39;lddmm_shooting_map&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">RN</span><span class="o">.</span><span class="n">LDDMMShootingVectorMomentumMapNet</span><span class="p">,</span>
+                                   <span class="n">RN</span><span class="o">.</span><span class="n">LDDMMShootingVectorMomentumMapLoss</span><span class="p">),</span>
+            <span class="s1">&#39;lddmm_shooting_image&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">RN</span><span class="o">.</span><span class="n">LDDMMShootingVectorMomentumImageNet</span><span class="p">,</span>
+                                     <span class="n">RN</span><span class="o">.</span><span class="n">LDDMMShootingVectorMomentumImageLoss</span><span class="p">),</span>
+            <span class="s1">&#39;lddmm_shooting_scalar_momentum_map&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">RN</span><span class="o">.</span><span class="n">LDDMMShootingScalarMomentumMapNet</span><span class="p">,</span>
+                                                   <span class="n">RN</span><span class="o">.</span><span class="n">LDDMMShootingScalarMomentumMapLoss</span><span class="p">),</span>
+            <span class="s1">&#39;lddmm_shooting_scalar_momentum_image&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">RN</span><span class="o">.</span><span class="n">LDDMMShootingScalarMomentumImageNet</span><span class="p">,</span>
+                                                     <span class="n">RN</span><span class="o">.</span><span class="n">LDDMMShootingScalarMomentumImageLoss</span><span class="p">),</span>
+            <span class="s1">&#39;svf_quasi_momentum_image&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">RN</span><span class="o">.</span><span class="n">SVFQuasiMomentumImageNet</span><span class="p">,</span>
+                                         <span class="n">RN</span><span class="o">.</span><span class="n">SVFQuasiMomentumImageLoss</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="sd">&quot;&quot;&quot;dictionary defining all the models&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ModelFactory.add_model"><a class="viewcode-back" href="../model_factory.html#model_factory.ModelFactory.add_model">[docs]</a>    <span class="k">def</span> <span class="nf">add_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">modelName</span><span class="p">,</span><span class="n">networkClass</span><span class="p">,</span><span class="n">lossClass</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allows to quickly add a new model.</span>
+<span class="sd">        </span>
+<span class="sd">        :param modelName: name for the model</span>
+<span class="sd">        :param networkClass: network class defining the model</span>
+<span class="sd">        :param lossClass: loss class being used by ty the model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Registering new model &#39;</span> <span class="o">+</span> <span class="n">modelName</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">modelName</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">networkClass</span><span class="p">,</span><span class="n">lossClass</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelFactory.print_available_models"><a class="viewcode-back" href="../model_factory.html#model_factory.ModelFactory.print_available_models">[docs]</a>    <span class="k">def</span> <span class="nf">print_available_models</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Prints the models that are available and can be created with `create_registration_model`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Known registration models are:&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;   svf_map                              : map-based stationary velocity field&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;   svf_image                            : image-based stationary velocity field&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;   lddmm_shooting_map                   : map-based shooting-based LDDMM using the vector momentum&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;   lddmm_shooting_image                 : image-based shooting-based LDDMM using the vector momentum&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;   lddmm_shooting_scalar_momentum_map   : map-based shooting-based LDDMM using the scalar momentum&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;   lddmm_shooting_scalar_momentum_image : image-based shooting-based LDDMM using the scalar momentum&#39;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">All registered models are:&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ModelFactory.create_registration_model"><a class="viewcode-back" href="../model_factory.html#model_factory.ModelFactory.create_registration_model">[docs]</a>    <span class="k">def</span> <span class="nf">create_registration_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">modelName</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Performs the actual model creation including the loss function</span>
+<span class="sd">        </span>
+<span class="sd">        :param modelName: Name of the model to be created </span>
+<span class="sd">        :param params: parameter dictionary of type :class:`ParameterDict`</span>
+<span class="sd">        :return: a two-tupel: model, loss</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">cparams</span> <span class="o">=</span> <span class="n">params</span><span class="p">[(</span><span class="s1">&#39;registration_model&#39;</span><span class="p">,{},</span><span class="s1">&#39;specifies the registration model&#39;</span><span class="p">)]</span>
+        <span class="n">cparams</span><span class="p">[</span><span class="s1">&#39;type&#39;</span><span class="p">]</span><span class="o">=</span> <span class="p">(</span><span class="n">modelName</span><span class="p">,</span><span class="s1">&#39;Name of the registration model&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">modelName</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Using &#39;</span> <span class="o">+</span> <span class="n">modelName</span> <span class="o">+</span> <span class="s1">&#39; model&#39;</span><span class="p">)</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">modelName</span><span class="p">][</span><span class="mi">0</span><span class="p">](</span><span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span> <span class="n">cparams</span><span class="p">)</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">modelName</span><span class="p">][</span><span class="mi">1</span><span class="p">](</span><span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">())[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span> <span class="n">cparams</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">model</span><span class="p">,</span> <span class="n">loss</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">print_available_models</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Registration model: &#39;</span> <span class="o">+</span> <span class="n">modelName</span> <span class="o">+</span> <span class="s1">&#39; not known&#39;</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -1,0 +1,601 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Viewers &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Visualize registration results" href="visualize_registration_results.html"/>
+        <link rel="prev" title="Utilities" href="utils.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Viewers</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/viewers.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="viewers">
+<h1>Viewers<a class="headerlink" href="#viewers" title="Permalink to this headline">¶</a></h1>
+<img src="_images/inheritance-627212173df2caa66b7439d72f6cd9fbe6e8e0e0.png" alt="Inheritance diagram of viewers" usemap="#inheritance57abbeede0" class="inheritance"/>
+<map id="inheritance57abbeede0" name="inheritance57abbeede0">
+<area shape="rect" id="node1" href="#viewers.FigureEventHandler" target="_top" title="Class to implement general event handling for matplotlib figures." alt="" coords="4,42,152,61"/>
+<area shape="rect" id="node2" href="#viewers.ImageViewer" target="_top" title="Abstract class for an image viewer." alt="" coords="20,4,136,23"/>
+<area shape="rect" id="node3" href="#viewers.ImageViewer3D" target="_top" title="Abstract class for a 3D image viewer." alt="" coords="190,4,319,23"/>
+<area shape="rect" id="node4" href="#viewers.ImageViewer3D_Sliced" target="_top" title="3D image viewer specialization to 3D sliced viewing" alt="" coords="356,4,520,23"/>
+<area shape="rect" id="node5" href="#viewers.ImageViewer3D_Sliced_Contour" target="_top" title="Specialization of 3D sliced viewer to also display contours" alt="" coords="557,4,764,23"/>
+</map>
+<span class="target" id="module-viewers"></span><p>Implements various viewers to display 3D data</p>
+<dl class="class">
+<dt id="viewers.FigureEventHandler">
+<em class="property">class </em><code class="descclassname">viewers.</code><code class="descname">FigureEventHandler</code><span class="sig-paren">(</span><em>fig</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#FigureEventHandler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.FigureEventHandler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to implement general event handling for matplotlib figures.
+In particular this class allows for easy event handling within different subplots.</p>
+<dl class="attribute">
+<dt id="viewers.FigureEventHandler.fig">
+<code class="descname">fig</code><em class="property"> = None</em><a class="headerlink" href="#viewers.FigureEventHandler.fig" title="Permalink to this definition">¶</a></dt>
+<dd><p>figure handle</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="viewers.FigureEventHandler.ax_events">
+<code class="descname">ax_events</code><em class="property"> = None</em><a class="headerlink" href="#viewers.FigureEventHandler.ax_events" title="Permalink to this definition">¶</a></dt>
+<dd><p>dictionary that keeps track of all the events</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="viewers.FigureEventHandler.supported_events">
+<code class="descname">supported_events</code><em class="property"> = None</em><a class="headerlink" href="#viewers.FigureEventHandler.supported_events" title="Permalink to this definition">¶</a></dt>
+<dd><p>events that are currently supported by the figure event handler</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="viewers.FigureEventHandler.sync_d">
+<code class="descname">sync_d</code><em class="property"> = None</em><a class="headerlink" href="#viewers.FigureEventHandler.sync_d" title="Permalink to this definition">¶</a></dt>
+<dd><p>dictionary to hold information about synchronization of subplots (for synchronized slicing)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.FigureEventHandler.reset_synchronize">
+<code class="descname">reset_synchronize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#FigureEventHandler.reset_synchronize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.FigureEventHandler.reset_synchronize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes all the subplot synchronizations</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.FigureEventHandler.synchronize">
+<code class="descname">synchronize</code><span class="sig-paren">(</span><em>axes</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#FigureEventHandler.synchronize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.FigureEventHandler.synchronize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets synchornization information (i.e., which axes need to be synchronized)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>axes</strong> – list of axes</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.FigureEventHandler.connect">
+<code class="descname">connect</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#FigureEventHandler.connect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.FigureEventHandler.connect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connect to all the events</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.FigureEventHandler.disconnect">
+<code class="descname">disconnect</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#FigureEventHandler.disconnect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.FigureEventHandler.disconnect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Disconnect from all events</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.FigureEventHandler.add_axes_event">
+<code class="descname">add_axes_event</code><span class="sig-paren">(</span><em>eventname</em>, <em>ax</em>, <em>eventfcn</em>, <em>getsyncfcn=None</em>, <em>setsyncfcn=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#FigureEventHandler.add_axes_event"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.FigureEventHandler.add_axes_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Associates events with a particular axis</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>eventname</strong> – event name: ‘button_press_event’, not yet supported: ‘button_release_event’, ‘key_press_event’, ‘key_release_event’</li>
+<li><strong>ax</strong> – axis handle</li>
+<li><strong>eventfcn</strong> – function that should be called</li>
+<li><strong>getsyncfcn</strong> – function that returns synchronization information</li>
+<li><strong>setsyncfcn</strong> – function that takes synchronization information</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.FigureEventHandler.remove_axes_event">
+<code class="descname">remove_axes_event</code><span class="sig-paren">(</span><em>eventname</em>, <em>ax</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#FigureEventHandler.remove_axes_event"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.FigureEventHandler.remove_axes_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Removes an event from an axis</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>eventname</strong> – event name: ‘button_press_event’, not yet supported: ‘button_release_event’, ‘key_press_event’, ‘key_release_event’</li>
+<li><strong>ax</strong> – axis handle</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="viewers.ImageViewer">
+<em class="property">class </em><code class="descclassname">viewers.</code><code class="descname">ImageViewer</code><span class="sig-paren">(</span><em>ax</em>, <em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract class for an image viewer.</p>
+<dl class="method">
+<dt id="viewers.ImageViewer.show">
+<code class="descname">show</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>Displays the image</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer.display_title">
+<code class="descname">display_title</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer.display_title"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer.display_title" title="Permalink to this definition">¶</a></dt>
+<dd><p>Displays the title for a figure</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="viewers.ImageViewer3D">
+<em class="property">class </em><code class="descclassname">viewers.</code><code class="descname">ImageViewer3D</code><span class="sig-paren">(</span><em>ax</em>, <em>data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract class for a 3D image viewer.</p>
+<dl class="method">
+<dt id="viewers.ImageViewer3D.previous_slice">
+<code class="descname">previous_slice</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D.previous_slice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D.previous_slice" title="Permalink to this definition">¶</a></dt>
+<dd><p>display the previous slice</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D.next_slice">
+<code class="descname">next_slice</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D.next_slice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D.next_slice" title="Permalink to this definition">¶</a></dt>
+<dd><p>display the next slice</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D.set_synchronize">
+<code class="descname">set_synchronize</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D.set_synchronize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D.set_synchronize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Synchronize to a particular slice</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> – slice index</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D.get_synchronize">
+<code class="descname">get_synchronize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D.get_synchronize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D.get_synchronize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get index to which should be synchronized</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">slice index</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D.on_mouse_press">
+<code class="descname">on_mouse_press</code><span class="sig-paren">(</span><em>event</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D.on_mouse_press"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D.on_mouse_press" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implements going forward and backward in slices depending based on clicking in the left or the right of an image</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>event</strong> – event data</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="viewers.ImageViewer3D_Sliced">
+<em class="property">class </em><code class="descclassname">viewers.</code><code class="descname">ImageViewer3D_Sliced</code><span class="sig-paren">(</span><em>ax</em>, <em>data</em>, <em>sliceDim</em>, <em>textStr='Slice'</em>, <em>showColorbar=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced" title="Permalink to this definition">¶</a></dt>
+<dd><p>3D image viewer specialization to 3D sliced viewing</p>
+<dl class="attribute">
+<dt id="viewers.ImageViewer3D_Sliced.sliceDim">
+<code class="descname">sliceDim</code><em class="property"> = None</em><a class="headerlink" href="#viewers.ImageViewer3D_Sliced.sliceDim" title="Permalink to this definition">¶</a></dt>
+<dd><p>dimension to slice</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="viewers.ImageViewer3D_Sliced.textStr">
+<code class="descname">textStr</code><em class="property"> = None</em><a class="headerlink" href="#viewers.ImageViewer3D_Sliced.textStr" title="Permalink to this definition">¶</a></dt>
+<dd><p>title string</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="viewers.ImageViewer3D_Sliced.index">
+<code class="descname">index</code><em class="property"> = None</em><a class="headerlink" href="#viewers.ImageViewer3D_Sliced.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>slice index to display</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="viewers.ImageViewer3D_Sliced.showColorbar">
+<code class="descname">showColorbar</code><em class="property"> = None</em><a class="headerlink" href="#viewers.ImageViewer3D_Sliced.showColorbar" title="Permalink to this definition">¶</a></dt>
+<dd><p>dispaly colorbar True/False</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D_Sliced.previous_slice">
+<code class="descname">previous_slice</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced.previous_slice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced.previous_slice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display previous slice</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D_Sliced.next_slice">
+<code class="descname">next_slice</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced.next_slice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced.next_slice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display next slice</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D_Sliced.set_synchronize">
+<code class="descname">set_synchronize</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced.set_synchronize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced.set_synchronize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Synchronize slice view to a particular slice</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> – slice index to synchronize to</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D_Sliced.get_synchronize">
+<code class="descname">get_synchronize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced.get_synchronize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced.get_synchronize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get current slice index</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">current slice index</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D_Sliced.display_title">
+<code class="descname">display_title</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced.display_title"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced.display_title" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display figure title</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D_Sliced.show">
+<code class="descname">show</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show the current slice</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="viewers.ImageViewer3D_Sliced_Contour">
+<em class="property">class </em><code class="descclassname">viewers.</code><code class="descname">ImageViewer3D_Sliced_Contour</code><span class="sig-paren">(</span><em>ax</em>, <em>data</em>, <em>phi</em>, <em>sliceDim</em>, <em>textStr='Slice'</em>, <em>showColorbar=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced_Contour"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced_Contour" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialization of 3D sliced viewer to also display contours</p>
+<dl class="attribute">
+<dt id="viewers.ImageViewer3D_Sliced_Contour.phi">
+<code class="descname">phi</code><em class="property"> = None</em><a class="headerlink" href="#viewers.ImageViewer3D_Sliced_Contour.phi" title="Permalink to this definition">¶</a></dt>
+<dd><p>map</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D_Sliced_Contour.get_phi_slice_at_dimension">
+<code class="descname">get_phi_slice_at_dimension</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced_Contour.get_phi_slice_at_dimension"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced_Contour.get_phi_slice_at_dimension" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get map (based on which we can draw contours) at a particular slice index</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> – slice index</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns the map at this slice index</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D_Sliced_Contour.show_contours">
+<code class="descname">show_contours</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced_Contour.show_contours"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced_Contour.show_contours" title="Permalink to this definition">¶</a></dt>
+<dd><p>display the contours for a particular slice</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D_Sliced_Contour.previous_slice">
+<code class="descname">previous_slice</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced_Contour.previous_slice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced_Contour.previous_slice" title="Permalink to this definition">¶</a></dt>
+<dd><p>display previous slice</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D_Sliced_Contour.next_slice">
+<code class="descname">next_slice</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced_Contour.next_slice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced_Contour.next_slice" title="Permalink to this definition">¶</a></dt>
+<dd><p>display next slice</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D_Sliced_Contour.set_synchronize">
+<code class="descname">set_synchronize</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced_Contour.set_synchronize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced_Contour.set_synchronize" title="Permalink to this definition">¶</a></dt>
+<dd><p>set slice to a particular index (to synchronize views)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> – slice index</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="viewers.ImageViewer3D_Sliced_Contour.show">
+<code class="descname">show</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#ImageViewer3D_Sliced_Contour.show"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.ImageViewer3D_Sliced_Contour.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show the image with contours overlaid</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="viewers.test_viewer">
+<code class="descclassname">viewers.</code><code class="descname">test_viewer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/viewers.html#test_viewer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#viewers.test_viewer" title="Permalink to this definition">¶</a></dt>
+<dd><p>simple test viewer</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="visualize_registration_results.html" class="btn btn-neutral float-right" title="Visualize registration results" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="utils.html" class="btn btn-neutral" title="Utilities" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

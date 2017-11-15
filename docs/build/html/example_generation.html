@@ -1,0 +1,351 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Example generation &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Finite differences" href="finite_differences.html"/>
+        <link rel="prev" title="Custom pyTorch extensions" href="custom_pytorch_extensions.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Example generation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/example_generation.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="example-generation">
+<h1>Example generation<a class="headerlink" href="#example-generation" title="Permalink to this headline">¶</a></h1>
+digraph inheritance9ca3245efb {
+rankdir=LR;
+size=&quot;8.0, 12.0&quot;;
+  &quot;example_generation.CreateExample&quot; [URL=&quot;#example_generation.CreateExample&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Abstract base class.&quot;];
+  &quot;example_generation.CreateRealExampleImages&quot; [URL=&quot;#example_generation.CreateRealExampleImages&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Class to create two example brain images. Currently only supported in 2D&quot;];
+  &quot;example_generation.CreateExample&quot; -&gt; &quot;example_generation.CreateRealExampleImages&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+  &quot;example_generation.CreateSquares&quot; [URL=&quot;#example_generation.CreateSquares&quot;,fontname=&quot;Vera Sans, DejaVu Sans, Liberation Sans, Arial, Helvetica, sans&quot;,fontsize=10,height=0.25,shape=box,style=&quot;setlinewidth(0.5)&quot;,target=&quot;_top&quot;,tooltip=&quot;Class to create two example squares in arbitrary dimension as registration test cases&quot;];
+  &quot;example_generation.CreateExample&quot; -&gt; &quot;example_generation.CreateSquares&quot; [arrowsize=0.5,style=&quot;setlinewidth(0.5)&quot;];
+}
+<span class="target" id="module-example_generation"></span><p>Package to create example images to test the image registration algorithms</p>
+<dl class="class">
+<dt id="example_generation.CreateExample">
+<em class="property">class </em><code class="descclassname">example_generation.</code><code class="descname">CreateExample</code><span class="sig-paren">(</span><em>dim</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/example_generation.html#CreateExample"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#example_generation.CreateExample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract base class.</p>
+<dl class="attribute">
+<dt id="example_generation.CreateExample.dim">
+<code class="descname">dim</code><em class="property"> = None</em><a class="headerlink" href="#example_generation.CreateExample.dim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spatial dimension</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="example_generation.CreateExample.create_image_pair">
+<code class="descname">create_image_pair</code><span class="sig-paren">(</span><em>sz=None</em>, <em>params=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/example_generation.html#CreateExample.create_image_pair"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#example_generation.CreateExample.create_image_pair" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method to create example image pairs</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>params</strong> – Dictionary which contains parameters to create the images</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Will return two images</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="example_generation.CreateSquares">
+<em class="property">class </em><code class="descclassname">example_generation.</code><code class="descname">CreateSquares</code><span class="sig-paren">(</span><em>dim</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/example_generation.html#CreateSquares"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#example_generation.CreateSquares" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to create two example squares in arbitrary dimension as registration test cases</p>
+<dl class="method">
+<dt id="example_generation.CreateSquares.create_image_pair">
+<code class="descname">create_image_pair</code><span class="sig-paren">(</span><em>sz</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/example_generation.html#CreateSquares.create_image_pair"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#example_generation.CreateSquares.create_image_pair" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates two square images in dimensions 1-3</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>sz</strong> – Desired size, e.g., [5,10]</li>
+<li><strong>params</strong> – Parameter dictionary. Uses ‘len_s’ and ‘len_l’ to define the side-length of the small and
+the large squares which will be generated</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Returns two images of squares</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="example_generation.CreateRealExampleImages">
+<em class="property">class </em><code class="descclassname">example_generation.</code><code class="descname">CreateRealExampleImages</code><span class="sig-paren">(</span><em>dim</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/example_generation.html#CreateRealExampleImages"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#example_generation.CreateRealExampleImages" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class to create two example brain images. Currently only supported in 2D</p>
+<dl class="method">
+<dt id="example_generation.CreateRealExampleImages.create_image_pair">
+<code class="descname">create_image_pair</code><span class="sig-paren">(</span><em>sz=None</em>, <em>params=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/example_generation.html#CreateRealExampleImages.create_image_pair"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#example_generation.CreateRealExampleImages.create_image_pair" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads the two brain images using SimpleITK, normalizes them so that the 95-th percentile is as 0.95 and returns them.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>sz</strong> – Ignored</li>
+<li><strong>params</strong> – Ignored</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Returns the two brain slices.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="finite_differences.html" class="btn btn-neutral float-right" title="Finite differences" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="custom_pytorch_extensions.html" class="btn btn-neutral" title="Custom pyTorch extensions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

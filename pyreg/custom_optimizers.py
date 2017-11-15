@@ -12,6 +12,7 @@ import torch
 from functools import reduce
 from torch.optim import Optimizer
 from math import isinf
+from dataWarper import  AdaptVal
 
 # this is taken from the torch master; should be included in the LBFGS optimizer in the newest torch versions
 class LBFGS_LS(Optimizer):
@@ -74,7 +75,7 @@ class LBFGS_LS(Optimizer):
         offset = 0
         for p in self._params:
             numel = p.numel()
-            p.data.add_(step_size, update[offset:offset + numel].resize_(p.size()))
+            p.data.add_(step_size, AdaptVal(update[offset:offset + numel]).resize_(p.size()))
             offset += numel
         assert offset == self._numel()
 
@@ -105,8 +106,8 @@ class LBFGS_LS(Optimizer):
         current_evals = 1
         state['func_evals'] += 1
 
-        flat_grad = self._gather_flat_grad()
-        abs_grad_sum = flat_grad.abs().sum()
+        flat_grad = self._gather_flat_grad().float()
+        abs_grad_sum = flat_grad.float().abs().sum()
 
         if abs_grad_sum <= tolerance_grad:
             return loss
@@ -140,7 +141,7 @@ class LBFGS_LS(Optimizer):
                 # do lbfgs update (update memory)
                 y = flat_grad.sub(prev_flat_grad)
                 s = d.mul(t)
-                ys = y.dot(s)  # y*s
+                ys = y.float().dot(s.float())  # y*s
                 if ys > 1e-10:
                     # updating memory
                     if len(old_dirs) == history_size:
@@ -153,7 +154,7 @@ class LBFGS_LS(Optimizer):
                     old_stps.append(y)
 
                     # update scale of initial Hessian approximation
-                    H_diag = ys / y.dot(y)  # (y*y)
+                    H_diag = ys / (y.float().dot(y.float()))  # (y*y)
 
                 # compute the approximate (L-BFGS) inverse Hessian
                 # multiplied by the gradient
@@ -166,19 +167,19 @@ class LBFGS_LS(Optimizer):
                 al = state['al']
 
                 for i in range(num_old):
-                    ro[i] = 1. / old_stps[i].dot(old_dirs[i])
+                    ro[i] = 1. / old_stps[i].float().dot(old_dirs[i].float())
 
                 # iteration in L-BFGS loop collapsed to use just one buffer
                 q = flat_grad.neg()
                 for i in range(num_old - 1, -1, -1):
-                    al[i] = old_dirs[i].dot(q) * ro[i]
+                    al[i] = old_dirs[i].float().dot(q.float()) * ro[i]
                     q.add_(-al[i], old_stps[i])
 
                 # multiply by initial Hessian
                 # r/d is the final direction
                 d = r = torch.mul(q, H_diag)
                 for i in range(num_old):
-                    be_i = old_stps[i].dot(r) * ro[i]
+                    be_i = old_stps[i].float().dot(r.float()) * ro[i]
                     r.add_(al[i] - be_i, old_dirs[i])
 
             if prev_flat_grad is None:
@@ -191,7 +192,8 @@ class LBFGS_LS(Optimizer):
             # compute step length
             ############################################################
             # directional derivative
-            gtd = flat_grad.dot(d)  # g * d
+            #print  flat_grad.size(), d.size()
+            gtd = flat_grad.float().dot(d.float())  # g * d
 
             # check that progress can be made along that direction
             if gtd > -tolerance_change:
@@ -224,7 +226,7 @@ class LBFGS_LS(Optimizer):
                 # no use to re-evaluate that function here
                 loss = closure().data[0]
                 flat_grad = self._gather_flat_grad()
-                abs_grad_sum = flat_grad.abs().sum()
+                abs_grad_sum = flat_grad.float().abs().sum()
                 ls_func_evals = 1
 
             # update func eval
@@ -275,7 +277,7 @@ class LBFGS_LS(Optimizer):
         offset = 0
         for p in self._params:
             numel = p.numel()
-            p.data.copy_(p.data + alpha*d[offset:offset + numel].resize_(p.size()))
+            p.data.copy_(p.data.float() + alpha*d[offset:offset + numel].resize_(p.size()))
             offset += numel
         assert offset == self._numel()
 
@@ -284,7 +286,7 @@ class LBFGS_LS(Optimizer):
         offset = 0
         for p in self._params:
             numel = p.numel()
-            deriv += torch.sum(p.grad.data * d[offset:offset + numel].resize_(p.size()))
+            deriv += torch.sum(p.grad.data.float() * d[offset:offset + numel].resize_(p.size()))
             offset += numel
         assert offset == self._numel()
         return deriv

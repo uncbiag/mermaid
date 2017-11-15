@@ -12,6 +12,7 @@ echo "Running pyreg tests for: module_parameters"
 $PYCMD test_module_parameters.py $@
 
 echo "Running pyreg tests for: stn"
-$PYCMD test_stn.py $@
+$PYCMD test_stn_cpu.py $@
+$PYCMD test_stn_gpu.py $@
 
 popd

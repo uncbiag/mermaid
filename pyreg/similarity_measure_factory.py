@@ -5,6 +5,7 @@ Similarity measures for the registration methods and factory to create similarit
 from abc import ABCMeta, abstractmethod
 import torch
 from torch.autograd import Variable
+from dataWarper import AdaptVal
 
 class SimilarityMeasure(object):
     """
@@ -31,7 +32,7 @@ class SimilarityMeasure(object):
         :return: returns similarity measure
         """
         sz = I0.size()
-        sim = Variable(torch.zeros(1), requires_grad=False)
+        sim = Variable(torch.zeros(1), requires_grad=False).type_as(I0)
         for nrI in range(sz[0]):  # loop over all the images
             sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...])
         return sim
@@ -45,7 +46,7 @@ class SimilarityMeasure(object):
         :return: returns similarity measure
         """
         sz = I0.size()
-        sim = Variable(torch.zeros(1), requires_grad=False)
+        sim = Variable(torch.zeros(1), requires_grad=False).type_as(I0)
         for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same
             sim = sim + self.compute_similarity(I0[nrC, ...], I1[nrC, ...])
         return sim
@@ -101,7 +102,7 @@ class SSDSimilarity(SimilarityMeasure):
         :param I1: second image
         :return: SSD
         """
-        return ((I0 - I1) ** 2).sum() / (self.sigma ** 2) * self.volumeElement
+        return AdaptVal(((I0.float() - I1.float()) ** 2).sum() / (self.sigma ** 2) * self.volumeElement)
 
 class NCCSimilarity(SimilarityMeasure):
     """

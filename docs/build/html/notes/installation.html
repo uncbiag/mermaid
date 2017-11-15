@@ -1,0 +1,317 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Installation &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="../index.html"/>
+        <link rel="next" title="Parameters" href="parameters.html"/>
+        <link rel="prev" title="How to write your own registration model" href="howto_own_registration.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pytorch-installation">pyTorch installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installing-mermaid">Installing mermaid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#creating-the-documentation">Creating the documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-the-code">Running the code</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>Installation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/notes/installation.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<p>This note briefly describes how to install and use <em>mermaid</em>. Since this is all based on pyTorch, the first step if you have not done so yet is to install pyTorch itself. These installation notes are currently for OSX.</p>
+<div class="section" id="pytorch-installation">
+<h2>pyTorch installation<a class="headerlink" href="#pytorch-installation" title="Permalink to this headline">¶</a></h2>
+<p>See <a class="reference external" href="http://pytorch.org/">pyTorch</a>.</p>
+<p>To install via anaconda execute</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">install</span> <span class="n">pytorch</span> <span class="n">torchvision</span> <span class="n">cuda80</span> <span class="o">-</span><span class="n">c</span> <span class="n">soumith</span>
+</pre></div>
+</div>
+<p>However, as pyTorch is still actively developed it makes sense to install it from the git repository. At least at the time of writing of this document the repository had some autograd bugs fixed that were not fixed in the official release yet.</p>
+<p>To install pyTorch from source do the following</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">/</span><span class="n">pytorch</span><span class="o">.</span><span class="n">git</span>
+</pre></div>
+</div>
+<p>This will create a <cite>pytorch</cite> directory. On OSX do the following. (Set NO_CUDA=1 if you want to compile without CUDA support and NO_CUDA=0 if you want CUDA support.)</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">export</span> <span class="n">NO_CUDA</span><span class="o">=</span><span class="mi">1</span>
+<span class="n">export</span> <span class="n">CMAKE_PREFIX_PATH</span><span class="o">=</span><span class="p">[</span><span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">anaconda</span><span class="o">/</span><span class="n">install</span><span class="p">]</span>
+<span class="n">MACOSX_DEPLOYMENT_TARGET</span><span class="o">=</span><span class="mf">10.9</span> <span class="n">CC</span><span class="o">=</span><span class="n">clang</span> <span class="n">CXX</span><span class="o">=</span><span class="n">clang</span><span class="o">++</span> <span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+</pre></div>
+</div>
+<p>The <cite>/path/to/anaconda/install</cite> is for me for example <cite>/Users/mn/anaconda</cite></p>
+</div>
+<div class="section" id="installing-mermaid">
+<h2>Installing mermaid<a class="headerlink" href="#installing-mermaid" title="Permalink to this headline">¶</a></h2>
+<p>To install the registration package. First check it out from bitbucket:</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">git</span><span class="nd">@bitbucket</span><span class="o">.</span><span class="n">org</span><span class="p">:</span><span class="n">marcniethammer</span><span class="o">/</span><span class="n">pytorchregistration</span><span class="o">.</span><span class="n">git</span>
+</pre></div>
+</div>
+<p>Currently, there is only CPU support. But since we want to work with 1D, 2D, and 3D images we need a custom version of a spatial transformer network (STN).</p>
+<p>To compile this do the following</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">pytorchregistration</span>
+<span class="n">cd</span> <span class="n">pyreg</span><span class="o">/</span><span class="n">libraries</span>
+<span class="n">python</span> <span class="n">build</span><span class="o">.</span><span class="n">py</span>
+</pre></div>
+</div>
+<p>You may need to adapt the build.py script (working on making this simpler). If it is compiled with gcc (you can install it on OSX via <cite>brew install gcc</cite> and then follow the intructions to give it the right permissions) it will support multi-threading via openmp. If compiled by clang, multi-threading support will not be available. However, in practice this part of the code is not the bottleneck, so it may not matter much.</p>
+</div>
+<div class="section" id="creating-the-documentation">
+<h2>Creating the documentation<a class="headerlink" href="#creating-the-documentation" title="Permalink to this headline">¶</a></h2>
+<p>The documentation is created via <a class="reference external" href="http://www.sphinx-doc.org/">sphinx</a>. To build it first install graphviz (on OSX: <cite>brew install graphviz</cite>). Then execute the following</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">pytorchregistration</span>
+<span class="n">cd</span> <span class="n">docs</span>
+<span class="n">make</span> <span class="n">html</span>
+</pre></div>
+</div>
+<p>This will create the docs in <cite>build/html</cite>.</p>
+</div>
+<div class="section" id="running-the-code">
+<h2>Running the code<a class="headerlink" href="#running-the-code" title="Permalink to this headline">¶</a></h2>
+<p>The simplest way to start is to look at the two example scripts <cite>testRegistrationGeneric.py</cite> and <cite>testRegistrationGenericMultiscale.py</cite> at the top direcory. To mak sure that they all find the paths to the libraries simply do</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">set_pyreg_paths</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="parameters.html" class="btn btn-neutral float-right" title="Parameters" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="howto_own_registration.html" class="btn btn-neutral" title="How to write your own registration model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

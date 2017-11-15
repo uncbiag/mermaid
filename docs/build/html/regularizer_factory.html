@@ -1,0 +1,438 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Regularizer factory &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Runge-Kutta integrators" href="rungekutta_integrators.html"/>
+        <link rel="prev" title="Registration networks" href="registration_networks.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Regularizer factory</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/regularizer_factory.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="regularizer-factory">
+<h1>Regularizer factory<a class="headerlink" href="#regularizer-factory" title="Permalink to this headline">¶</a></h1>
+<img src="_images/inheritance-e7ce27b485906504ce741545bbe1b670bb3fc12a.png" alt="Inheritance diagram of regularizer_factory" usemap="#inheritance723252f5a3" class="inheritance"/>
+<map id="inheritance723252f5a3" name="inheritance723252f5a3">
+<area shape="rect" id="node1" href="#regularizer_factory.HelmholtzRegularizer" target="_top" title="Implements a Helmholtz regularizer" alt="" coords="300,53,562,77"/>
+<area shape="rect" id="node2" href="#regularizer_factory.Regularizer" target="_top" title="Abstract regularizer base class" alt="" coords="28,53,230,77"/>
+<area shape="rect" id="node3" href="#regularizer_factory.RegularizerFactory" target="_top" title="Regularizer factory to instantiate a regularizer by name." alt="" coords="5,5,252,29"/>
+</map>
+<span class="target" id="module-regularizer_factory"></span><p>Package implementing general purpose regularizers.</p>
+<dl class="class">
+<dt id="regularizer_factory.Regularizer">
+<em class="property">class </em><code class="descclassname">regularizer_factory.</code><code class="descname">Regularizer</code><span class="sig-paren">(</span><em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regularizer_factory.html#Regularizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regularizer_factory.Regularizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract regularizer base class</p>
+<dl class="attribute">
+<dt id="regularizer_factory.Regularizer.spacing">
+<code class="descname">spacing</code><em class="property"> = None</em><a class="headerlink" href="#regularizer_factory.Regularizer.spacing" title="Permalink to this definition">¶</a></dt>
+<dd><p>spacing</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="regularizer_factory.Regularizer.fdt">
+<code class="descname">fdt</code><em class="property"> = None</em><a class="headerlink" href="#regularizer_factory.Regularizer.fdt" title="Permalink to this definition">¶</a></dt>
+<dd><p>finite differencing support</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="regularizer_factory.Regularizer.volumeElement">
+<code class="descname">volumeElement</code><em class="property"> = None</em><a class="headerlink" href="#regularizer_factory.Regularizer.volumeElement" title="Permalink to this definition">¶</a></dt>
+<dd><p>volume element, i.e., volume of a pixel/voxel</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="regularizer_factory.Regularizer.dim">
+<code class="descname">dim</code><em class="property"> = None</em><a class="headerlink" href="#regularizer_factory.Regularizer.dim" title="Permalink to this definition">¶</a></dt>
+<dd><p>spatial dimension</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="regularizer_factory.Regularizer.params">
+<code class="descname">params</code><em class="property"> = None</em><a class="headerlink" href="#regularizer_factory.Regularizer.params" title="Permalink to this definition">¶</a></dt>
+<dd><p>parameters</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regularizer_factory.Regularizer.compute_regularizer_multiN">
+<code class="descname">compute_regularizer_multiN</code><span class="sig-paren">(</span><em>v</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regularizer_factory.html#Regularizer.compute_regularizer_multiN"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regularizer_factory.Regularizer.compute_regularizer_multiN" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute a regularized vector field</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>v</strong> – Input vector field</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Regularizer energy</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="regularizer_factory.HelmholtzRegularizer">
+<em class="property">class </em><code class="descclassname">regularizer_factory.</code><code class="descname">HelmholtzRegularizer</code><span class="sig-paren">(</span><em>spacing</em>, <em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regularizer_factory.html#HelmholtzRegularizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regularizer_factory.HelmholtzRegularizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implements a Helmholtz regularizer
+<span class="math">\(Reg[v] = \langle\gamma v -\alpha \Delta v,  \gamma v -\alpha \Delta v\rangle\)</span></p>
+<dl class="attribute">
+<dt id="regularizer_factory.HelmholtzRegularizer.alpha">
+<code class="descname">alpha</code><em class="property"> = None</em><a class="headerlink" href="#regularizer_factory.HelmholtzRegularizer.alpha" title="Permalink to this definition">¶</a></dt>
+<dd><p>penalty for second derivative</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="regularizer_factory.HelmholtzRegularizer.gamma">
+<code class="descname">gamma</code><em class="property"> = None</em><a class="headerlink" href="#regularizer_factory.HelmholtzRegularizer.gamma" title="Permalink to this definition">¶</a></dt>
+<dd><p>penalty for magnitude</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regularizer_factory.HelmholtzRegularizer.set_alpha">
+<code class="descname">set_alpha</code><span class="sig-paren">(</span><em>alpha</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regularizer_factory.html#HelmholtzRegularizer.set_alpha"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regularizer_factory.HelmholtzRegularizer.set_alpha" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the penalty for the second derivative</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>alpha</strong> – penalty</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="regularizer_factory.HelmholtzRegularizer.get_alpha">
+<code class="descname">get_alpha</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regularizer_factory.html#HelmholtzRegularizer.get_alpha"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regularizer_factory.HelmholtzRegularizer.get_alpha" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the penalty for the second derivative</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns the penalty for the second derivative</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="regularizer_factory.HelmholtzRegularizer.set_gamma">
+<code class="descname">set_gamma</code><span class="sig-paren">(</span><em>gamma</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regularizer_factory.html#HelmholtzRegularizer.set_gamma"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regularizer_factory.HelmholtzRegularizer.set_gamma" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the penalty for the magnitude</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>gamma</strong> – penalty</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="regularizer_factory.HelmholtzRegularizer.get_gamma">
+<code class="descname">get_gamma</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regularizer_factory.html#HelmholtzRegularizer.get_gamma"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regularizer_factory.HelmholtzRegularizer.get_gamma" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gest the penalty for the magnitude</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns the penalty for the magnitude</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="regularizer_factory.RegularizerFactory">
+<em class="property">class </em><code class="descclassname">regularizer_factory.</code><code class="descname">RegularizerFactory</code><span class="sig-paren">(</span><em>spacing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regularizer_factory.html#RegularizerFactory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regularizer_factory.RegularizerFactory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Regularizer factory to instantiate a regularizer by name.</p>
+<dl class="attribute">
+<dt id="regularizer_factory.RegularizerFactory.spacing">
+<code class="descname">spacing</code><em class="property"> = None</em><a class="headerlink" href="#regularizer_factory.RegularizerFactory.spacing" title="Permalink to this definition">¶</a></dt>
+<dd><p>spacing</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="regularizer_factory.RegularizerFactory.dim">
+<code class="descname">dim</code><em class="property"> = None</em><a class="headerlink" href="#regularizer_factory.RegularizerFactory.dim" title="Permalink to this definition">¶</a></dt>
+<dd><p>spatial dimension</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="regularizer_factory.RegularizerFactory.default_regularizer_type">
+<code class="descname">default_regularizer_type</code><em class="property"> = None</em><a class="headerlink" href="#regularizer_factory.RegularizerFactory.default_regularizer_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>type of the regularizer used by default</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regularizer_factory.RegularizerFactory.set_default_regularizer_type_to_helmholtz">
+<code class="descname">set_default_regularizer_type_to_helmholtz</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regularizer_factory.html#RegularizerFactory.set_default_regularizer_type_to_helmholtz"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regularizer_factory.RegularizerFactory.set_default_regularizer_type_to_helmholtz" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets the default regularizer type to helmholtz</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regularizer_factory.RegularizerFactory.create_regularizer">
+<code class="descname">create_regularizer</code><span class="sig-paren">(</span><em>params</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regularizer_factory.html#RegularizerFactory.create_regularizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regularizer_factory.RegularizerFactory.create_regularizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the regularizer</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>params</strong> – ParameterDict instance, expecting category ‘regularizer’, with variables ‘type’ and any settings the regularizer may require</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">returns the regularization energy</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="rungekutta_integrators.html" class="btn btn-neutral float-right" title="Runge-Kutta integrators" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="registration_networks.html" class="btn btn-neutral" title="Registration networks" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -1,0 +1,36 @@
+#useMap:        set to true if a map-based implementation should be used
+#visualize:     set to true if intermediate visualizations are desired
+#nrOfIterations: number of iterations for the optimizer
+#modelName:     ''svf' 'svf_quasi_momentum' 'lddmm_shooting' 'lddmm_shooting_scalar_momentum'
+#smoothType:    gaussianSpatial,gaussian,diffusion
+#optimName:     lbfgs_ls, adam
+
+[boolType]
+CUDA_ON = True
+USE_FLOAT16 = False
+loadSettingsFromFile = False
+saveSettingsToFile = False
+useMap = False
+visualize = True
+smoothImages = True
+useRealImages = True
+
+[floatType]
+myAdamEPS = 0
+gaussianStd = 0.05
+simMeasureSigma = 0.1
+
+[intType]
+dim = 2
+nrOfIterations = 50
+img_len = 128
+nrOfThreads = 8
+
+[strType]
+modelName = lddmm_shooting
+smoothType = gaussian
+optimName = lbfgs_ls
+
+[listType]
+multi_scale_scale_factors = [1.0, 0.5, 0.25]
+multi_scale_iterations_per_scale = [10,20,20]

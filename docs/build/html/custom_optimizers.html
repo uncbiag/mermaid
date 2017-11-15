@@ -1,0 +1,331 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Custom optimizers &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+        <link rel="search" title="Search" href="search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Custom pyTorch extensions" href="custom_pytorch_extensions.html"/>
+        <link rel="prev" title="TODOs" href="notes/todos.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Custom optimizers</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/custom_optimizers.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="custom-optimizers">
+<h1>Custom optimizers<a class="headerlink" href="#custom-optimizers" title="Permalink to this headline">¶</a></h1>
+<img src="_images/inheritance-5c05a6d77209c2fd01e971196b898962b9ff7bf1.png" alt="Inheritance diagram of custom_optimizers" usemap="#inheritance11e3528bc6" class="inheritance"/>
+<map id="inheritance11e3528bc6" name="inheritance11e3528bc6">
+<area shape="rect" id="node1" href="#custom_optimizers.LBFGS_LS" target="_top" title="Implements L&#45;BFGS algorithm." alt="" coords="258,5,462,29"/>
+<area shape="rect" id="node2" title="Base class for all optimizers." alt="" coords="5,5,210,29"/>
+</map>
+<span class="target" id="module-custom_optimizers"></span><p>This package includes an lBFGS optimizer which supports different types of line-search, in particular backtracking, which is
+important for the image registration implementations. This implementation is available in the torch git repository
+(but not yet available in the standard release – as of July 2017)</p>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">Add support for multiple parameter groups.</p>
+</div>
+<dl class="class">
+<dt id="custom_optimizers.LBFGS_LS">
+<em class="property">class </em><code class="descclassname">custom_optimizers.</code><code class="descname">LBFGS_LS</code><span class="sig-paren">(</span><em>params</em>, <em>lr=1</em>, <em>max_iter=20</em>, <em>max_eval=None</em>, <em>tolerance_grad=1e-05</em>, <em>tolerance_change=1e-09</em>, <em>history_size=100</em>, <em>line_search_fn=None</em>, <em>bounds=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/custom_optimizers.html#LBFGS_LS"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#custom_optimizers.LBFGS_LS" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implements L-BFGS algorithm.
+.. warning:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">This</span> <span class="n">optimizer</span> <span class="n">doesn</span><span class="s1">&#39;t support per-parameter options and parameter</span>
+<span class="n">groups</span> <span class="p">(</span><span class="n">there</span> <span class="n">can</span> <span class="n">be</span> <span class="n">only</span> <span class="n">one</span><span class="p">)</span><span class="o">.</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Right now all parameters have to be on a single device. This will be
+improved in the future.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This is a very memory intensive optimizer (it requires additional
+<code class="docutils literal"><span class="pre">param_bytes</span> <span class="pre">*</span> <span class="pre">(history_size</span> <span class="pre">+</span> <span class="pre">1)</span></code> bytes). If it doesn’t fit in memory
+try reducing the history size, or use a different algorithm.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lr</strong> (<em>float</em>) – learning rate (default: 1)</li>
+<li><strong>max_iter</strong> (<em>int</em>) – maximal number of iterations per optimization step
+(default: 20)</li>
+<li><strong>max_eval</strong> (<em>int</em>) – maximal number of function evaluations per optimization
+step (default: max_iter * 1.25).</li>
+<li><strong>tolerance_grad</strong> (<em>float</em>) – termination tolerance on first order optimality
+(default: 1e-5).</li>
+<li><strong>tolerance_change</strong> (<em>float</em>) – termination tolerance on function value/parameter
+changes (default: 1e-9).</li>
+<li><strong>line_search_fn</strong> (<em>str</em>) – line search methods, currently available
+[‘backtracking’, ‘goldstein’, ‘weak_wolfe’]</li>
+<li><strong>bounds</strong> (<em>list of tuples of tensor</em>) – bounds[i][0], bounds[i][1] are elementwise
+lowerbound and upperbound of param[i], respectively</li>
+<li><strong>history_size</strong> (<em>int</em>) – update history size (default: 100).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="custom_optimizers.LBFGS_LS.step">
+<code class="descname">step</code><span class="sig-paren">(</span><em>closure</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/custom_optimizers.html#LBFGS_LS.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#custom_optimizers.LBFGS_LS.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs a single optimization step.
+:param closure: A closure that reevaluates the model</p>
+<blockquote>
+<div>and returns the loss.</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="custom_pytorch_extensions.html" class="btn btn-neutral float-right" title="Custom pyTorch extensions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="notes/todos.html" class="btn btn-neutral" title="TODOs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

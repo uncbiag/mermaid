@@ -10,7 +10,7 @@ import torch
 from torch.nn.parameter import Parameter
 from torch.autograd import Variable
 from libraries.modules.stn_nd import STN_ND_BCXYZ
-
+from dataWarper import MyTensor,AdaptVal
 import numpy as np
 import finite_differences as fd
 
@@ -145,9 +145,10 @@ def compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, sz, spacing):
     :return: returns the vector momentum
     """
     nrOfI = sz[0] # number of images
-    m = create_ND_vector_field_variable_multiN(sz[2::], nrOfI)
-    for nrI in range(nrOfI):  # loop over all the images
-        m[nrI, ...] = compute_vector_momentum_from_scalar_momentum_multiC(lam[nrI, ...], I[nrI, ...], sz[1::], spacing)
+    m = create_ND_vector_field_variable_multiN(sz[2::], nrOfI)  # attention that the second dimension here is image dim, not nrOfC
+    nrOfC = sz[1]
+    for c in range(nrOfC): # loop over all the channels and add the results
+        m = m + compute_vector_momentum_from_scalar_momentum_singleC(lam[:,c, ...], I[:,c, ...], nrOfI, sz[2::], spacing)
     return m
 
 def compute_vector_momentum_from_scalar_momentum_multiC(lam, I, sz, spacing):
@@ -166,28 +167,28 @@ def compute_vector_momentum_from_scalar_momentum_multiC(lam, I, sz, spacing):
         m = m + compute_vector_momentum_from_scalar_momentum_singleC(lam[c, ...], I[c, ...], sz[1::], spacing)
     return m
 
-def compute_vector_momentum_from_scalar_momentum_singleC(lam, I, sz, spacing):
+def compute_vector_momentum_from_scalar_momentum_singleC(lam, I, nrOfI, sz, spacing):
     """
     Computes the vector momentum from the scalar momentum: :math:`m=\\lambda\\nabla I`
 
-    :param lam: scalar momentum, XxYxZ
-    :param I: image, XxYxZ
+    :param lam: scalar momentum, batchxXxYxZ
+    :param I: image, batchXxYxZ
     :param sz: size of image
     :param spacing: spacing of image
     :return: returns the vector momentum
     """
     fdt = fd.FD_torch(spacing)
     dim = len(sz)
-    m = create_ND_vector_field_variable(sz)
+    m = create_ND_vector_field_variable_multiN(sz, nrOfI)
     if dim==1:
-        m[0,:] = fdt.dXc(I)*lam
+        m[:,0,:] = fdt.dXc(I)*lam
     elif dim==2:
-        m[0,:,:] = fdt.dXc(I)*lam
-        m[1,:,:] = fdt.dYc(I)*lam
+        m[:,0,:,:] = fdt.dXc(I)*lam
+        m[:,1,:,:] = fdt.dYc(I)*lam
     elif dim==3:
-        m[0,:,:,:] = fdt.dXc(I)*lam
-        m[1,:,:,:] = fdt.dYc(I)*lam
-        m[2,:,:,:] = fdt.dZc(I)*lam
+        m[:,0,:,:,:] = fdt.dXc(I)*lam
+        m[:,1,:,:,:] = fdt.dYc(I)*lam
+        m[:,2,:,:,:] = fdt.dZc(I)*lam
     else:
         raise ValueError('Can only convert scalar to vector momentum in dimensions 1-3')
     return m
@@ -203,7 +204,7 @@ def create_ND_vector_field_variable_multiN(sz, nrOfI=1):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
-    return Variable(torch.zeros(csz.tolist()), requires_grad=False)
+    return AdaptVal(Variable(torch.zeros(csz.tolist()), requires_grad=False))
 
 def create_ND_vector_field_variable(sz):
     """
@@ -215,7 +216,7 @@ def create_ND_vector_field_variable(sz):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([dim]+list(csz))
-    return Variable(torch.zeros(csz.tolist()), requires_grad=False)
+    return AdaptVal(Variable(torch.zeros(csz.tolist()), requires_grad=False))
 
 def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
     """
@@ -228,7 +229,7 @@ def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
-    return Parameter(torch.zeros(csz.tolist()))
+    return Parameter(AdaptVal(torch.zeros(csz.tolist())))
 
 def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
     """
@@ -242,7 +243,7 @@ def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
 
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,nrOfC]+list(csz))
-    return Parameter(torch.zeros(csz.tolist()))
+    return Parameter(AdaptVal(torch.zeros(csz.tolist())))
 
 def identity_map_multiN(sz):
     """

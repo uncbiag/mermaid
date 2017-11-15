@@ -1,0 +1,718 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>viewers &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>viewers</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for viewers</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Implements various viewers to display 3D data</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABCMeta</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1</span> <span class="k">import</span> <span class="n">make_axes_locatable</span>
+
+<span class="k">def</span> <span class="nf">_create_some_test_data</span><span class="p">():</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="mi">5</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)[</span><span class="o">...</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">*</span> <span class="n">a</span>
+    <span class="k">return</span> <span class="n">data</span>
+
+<span class="k">def</span> <span class="nf">_print_debug</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">flag</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">flag</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FigureEventHandler"><a class="viewcode-back" href="../viewers.html#viewers.FigureEventHandler">[docs]</a><span class="k">class</span> <span class="nc">FigureEventHandler</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class to implement general event handling for matplotlib figures.</span>
+<span class="sd">    In particular this class allows for easy event handling within different subplots.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fig</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor</span>
+<span class="sd">        </span>
+<span class="sd">        :param fig: figure handle </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fig</span> <span class="o">=</span> <span class="n">fig</span>
+        <span class="sd">&quot;&quot;&quot;figure handle&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_remove_keymap_conflicts</span><span class="p">({</span><span class="s1">&#39;j&#39;</span><span class="p">,</span> <span class="s1">&#39;k&#39;</span><span class="p">})</span>
+        <span class="sd">&quot;&quot;&quot;conflicts with keys that should be removed&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ax_events</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="sd">&quot;&quot;&quot;dictionary that keeps track of all the events&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ax_events</span><span class="p">[</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ax_events</span><span class="p">[</span><span class="s1">&#39;button_release_event&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ax_events</span><span class="p">[</span><span class="s1">&#39;key_press_event&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ax_events</span><span class="p">[</span><span class="s1">&#39;key_release_event&#39;</span><span class="p">]</span><span class="o">=</span><span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">supported_events</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span><span class="s1">&#39;button_release_event&#39;</span><span class="p">,</span>
+                                 <span class="s1">&#39;key_press_event&#39;</span><span class="p">,</span><span class="s1">&#39;key_release_event&#39;</span><span class="p">]</span>
+        <span class="sd">&quot;&quot;&quot;events that are currently supported by the figure event handler&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sync_d</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="sd">&quot;&quot;&quot;dictionary to hold information about synchronization of subplots (for synchronized slicing)&quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+
+<div class="viewcode-block" id="FigureEventHandler.reset_synchronize"><a class="viewcode-back" href="../viewers.html#viewers.FigureEventHandler.reset_synchronize">[docs]</a>    <span class="k">def</span> <span class="nf">reset_synchronize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Removes all the subplot synchronizations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sync_d</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FigureEventHandler.synchronize"><a class="viewcode-back" href="../viewers.html#viewers.FigureEventHandler.synchronize">[docs]</a>    <span class="k">def</span> <span class="nf">synchronize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">axes</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets synchornization information (i.e., which axes need to be synchronized)</span>
+<span class="sd">        </span>
+<span class="sd">        :param axes: list of axes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sync_d</span><span class="p">[</span><span class="n">e</span><span class="p">]</span><span class="o">=</span><span class="n">axes</span></div>
+
+    <span class="k">def</span> <span class="nf">_is_supported_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventname</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">supported_events</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">eventname</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">_remove_keymap_conflicts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_keys_set</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">prop</span> <span class="ow">in</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">prop</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;keymap.&#39;</span><span class="p">):</span>
+                <span class="n">keys</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="n">prop</span><span class="p">]</span>
+                <span class="n">remove_list</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">new_keys_set</span>
+                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">remove_list</span><span class="p">:</span>
+                    <span class="n">keys</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+<div class="viewcode-block" id="FigureEventHandler.connect"><a class="viewcode-back" href="../viewers.html#viewers.FigureEventHandler.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Connect to all the events</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="s1">&#39;connect to all the events we need&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cidbuttonpress</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_connect</span><span class="p">(</span>
+            <span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_mouse_press</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cidbuttonrelease</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_connect</span><span class="p">(</span>
+            <span class="s1">&#39;button_release_event&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_mouse_release</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cidkeypress</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_connect</span><span class="p">(</span>
+            <span class="s1">&#39;key_press_event&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_key_press</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cidkeyrelease</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_connect</span><span class="p">(</span>
+            <span class="s1">&#39;key_release_event&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_on_key_release</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FigureEventHandler.disconnect"><a class="viewcode-back" href="../viewers.html#viewers.FigureEventHandler.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Disconnect from all events</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="s1">&#39;disconnect all the stored connection ids&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_disconnect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_mouse_press</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_disconnect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_mouse_release</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_disconnect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_key_press</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">mpl_disconnect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_key_release</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_event_is_registered</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventname</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax_events</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">eventname</span><span class="p">):</span>
+            <span class="n">registeredEvents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax_events</span><span class="p">[</span><span class="n">eventname</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">registeredEvents</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="n">ax</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="FigureEventHandler.add_axes_event"><a class="viewcode-back" href="../viewers.html#viewers.FigureEventHandler.add_axes_event">[docs]</a>    <span class="k">def</span> <span class="nf">add_axes_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventname</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">eventfcn</span><span class="p">,</span> <span class="n">getsyncfcn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">setsyncfcn</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Associates events with a particular axis</span>
+<span class="sd">        </span>
+<span class="sd">        :param eventname: event name: &#39;button_press_event&#39;, not yet supported: &#39;button_release_event&#39;, &#39;key_press_event&#39;, &#39;key_release_event&#39;</span>
+<span class="sd">        :param ax: axis handle</span>
+<span class="sd">        :param eventfcn: function that should be called</span>
+<span class="sd">        :param getsyncfcn: function that returns synchronization information</span>
+<span class="sd">        :param setsyncfcn: function that takes synchronization information</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_supported_event</span><span class="p">(</span><span class="n">eventname</span><span class="p">):</span>
+            <span class="n">_print_debug</span><span class="p">(</span><span class="s1">&#39;Registering an event&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_event_is_registered</span><span class="p">(</span><span class="n">eventname</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ax_events</span><span class="p">[</span><span class="n">eventname</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ax</span><span class="p">,</span><span class="n">eventfcn</span><span class="p">,</span><span class="n">getsyncfcn</span><span class="p">,</span><span class="n">setsyncfcn</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Event &#39;</span> <span class="o">+</span> <span class="n">eventname</span> <span class="o">+</span> <span class="s1">&#39; is not supported and cannot be registered&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="FigureEventHandler.remove_axes_event"><a class="viewcode-back" href="../viewers.html#viewers.FigureEventHandler.remove_axes_event">[docs]</a>    <span class="k">def</span> <span class="nf">remove_axes_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eventname</span><span class="p">,</span> <span class="n">ax</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Removes an event from an axis</span>
+<span class="sd">        </span>
+<span class="sd">        :param eventname: event name: &#39;button_press_event&#39;, not yet supported: &#39;button_release_event&#39;, &#39;key_press_event&#39;, &#39;key_release_event&#39;</span>
+<span class="sd">        :param ax: axis handle</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_supported_event</span><span class="p">(</span><span class="n">eventname</span><span class="p">):</span>
+            <span class="n">_print_debug</span><span class="p">(</span><span class="s1">&#39;Removing an event ... &#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax_events</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">eventname</span><span class="p">):</span>
+                <span class="n">registeredEvents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax_events</span><span class="p">[</span><span class="n">eventname</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">registeredEvents</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="n">ax</span><span class="p">:</span>
+                        <span class="n">registeredEvents</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span> <span class="n">e</span> <span class="p">)</span>
+                        <span class="n">_print_debug</span><span class="p">(</span><span class="s1">&#39;Removed!&#39;</span><span class="p">)</span>
+                        <span class="k">return</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Event &#39;</span> <span class="o">+</span> <span class="n">eventname</span> <span class="o">+</span> <span class="s1">&#39; is not supported and cannot be removed&#39;</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_broadcast</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">broadCastTo</span><span class="p">,</span> <span class="n">syncInfo</span><span class="p">,</span> <span class="n">eventName</span><span class="p">):</span>
+        <span class="n">registeredEvents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax_events</span><span class="p">[</span><span class="n">eventName</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">registeredEvents</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">broadCastTo</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">b</span> <span class="ow">is</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="c1"># found the axes</span>
+                    <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">e</span><span class="p">[</span><span class="mi">3</span><span class="p">](</span><span class="n">syncInfo</span><span class="p">)</span> <span class="c1"># now sync it</span>
+
+    <span class="k">def</span> <span class="nf">_on_mouse_press</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">_print_debug</span><span class="p">(</span><span class="s1">&#39;Pressed mouse button&#39;</span><span class="p">)</span>
+        <span class="c1"># get current axis</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">inaxes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">inaxes</span>
+            <span class="n">registeredEvents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax_events</span><span class="p">[</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">]</span>
+            <span class="c1"># get corresponding event function and dispatch it</span>
+            <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">registeredEvents</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="n">ax</span><span class="p">:</span>
+                    <span class="n">_print_debug</span><span class="p">(</span><span class="s1">&#39;Dispatching event&#39;</span><span class="p">)</span>
+                    <span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">](</span><span class="n">event</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sync_d</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> <span class="n">e</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">_print_debug</span><span class="p">(</span><span class="s1">&#39;Broadcasting&#39;</span><span class="p">)</span>
+                        <span class="n">syncInfo</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="mi">2</span><span class="p">]()</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_broadcast</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sync_d</span><span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">syncInfo</span><span class="p">,</span> <span class="s1">&#39;button_press_event&#39;</span><span class="p">)</span>
+
+                    <span class="c1"># and now draw the canvas</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">fig</span><span class="o">.</span><span class="n">canvas</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_on_mouse_release</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">_on_key_press</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">_on_key_release</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="ImageViewer"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer">[docs]</a><span class="k">class</span> <span class="nc">ImageViewer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Abstract class for an image viewer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">ABCMeta</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">data</span> <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor.</span>
+<span class="sd">        </span>
+<span class="sd">        :param ax: axis</span>
+<span class="sd">        :param data: data to show</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ax</span> <span class="o">=</span> <span class="n">ax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ImageViewer.show"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer.show">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Displays the image</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="ImageViewer.display_title"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer.display_title">[docs]</a>    <span class="k">def</span> <span class="nf">display_title</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Displays the title for a figure</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div></div>
+
+<div class="viewcode-block" id="ImageViewer3D"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D">[docs]</a><span class="k">class</span> <span class="nc">ImageViewer3D</span><span class="p">(</span><span class="n">ImageViewer</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Abstract class for a 3D image viewer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">ABCMeta</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">data</span> <span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span><span class="n">data</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ImageViewer3D.previous_slice"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D.previous_slice">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">previous_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        display the previous slice</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="ImageViewer3D.next_slice"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D.next_slice">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">next_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        display the next slice</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="ImageViewer3D.set_synchronize"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D.set_synchronize">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">set_synchronize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Synchronize to a particular slice</span>
+<span class="sd">        </span>
+<span class="sd">        :param index: slice index </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="ImageViewer3D.get_synchronize"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D.get_synchronize">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_synchronize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get index to which should be synchronized</span>
+<span class="sd">        </span>
+<span class="sd">        :return: slice index </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="ImageViewer3D.on_mouse_press"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D.on_mouse_press">[docs]</a>    <span class="k">def</span> <span class="nf">on_mouse_press</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Implements going forward and backward in slices depending based on clicking in the left or the right of an image</span>
+<span class="sd">        </span>
+<span class="sd">        :param event: event data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">xdata</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">ydata</span>
+
+        <span class="n">xlim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">get_xlim</span><span class="p">()</span>
+        <span class="n">ylim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">get_ylim</span><span class="p">()</span>
+        <span class="n">xrange</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">xlim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">xlim</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">yrange</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">ylim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">ylim</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">_print_debug</span><span class="p">(</span><span class="s1">&#39;X = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="n">_print_debug</span><span class="p">(</span><span class="s1">&#39;Y = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+        <span class="n">_print_debug</span><span class="p">(</span><span class="s1">&#39;xlim = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">xlim</span><span class="p">))</span>
+        <span class="n">_print_debug</span><span class="p">(</span><span class="s1">&#39;ylim = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">ylim</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y</span> <span class="o">-</span> <span class="n">ylim</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="n">yrange</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">xlim</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="mf">0.4</span> <span class="o">*</span> <span class="n">xrange</span><span class="p">:</span>
+                <span class="n">_print_debug</span><span class="p">(</span><span class="s1">&#39;Previous slice&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">previous_slice</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="nb">abs</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">xlim</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;=</span> <span class="mf">0.4</span> <span class="o">*</span> <span class="n">xrange</span><span class="p">:</span>
+                <span class="n">_print_debug</span><span class="p">(</span><span class="s1">&#39;Next slice&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">next_slice</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">display_title</span><span class="p">()</span></div></div>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced">[docs]</a><span class="k">class</span> <span class="nc">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ImageViewer3D</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    3D image viewer specialization to 3D sliced viewing</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">sliceDim</span><span class="p">,</span> <span class="n">textStr</span><span class="o">=</span><span class="s1">&#39;Slice&#39;</span><span class="p">,</span> <span class="n">showColorbar</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor</span>
+<span class="sd">        </span>
+<span class="sd">        :param ax: axis </span>
+<span class="sd">        :param data: data to be displayed (3D image volume)</span>
+<span class="sd">        :param sliceDim: dimension along which to slice</span>
+<span class="sd">        :param textStr: text string that should be displayed</span>
+<span class="sd">        :param showColorbar: (bool) should a colorbar be displayed? </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sliceDim</span> <span class="o">=</span> <span class="n">sliceDim</span>
+        <span class="sd">&quot;&quot;&quot;dimension to slice&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">textStr</span> <span class="o">=</span> <span class="n">textStr</span>
+        <span class="sd">&quot;&quot;&quot;title string&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sliceDim</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span>
+        <span class="sd">&quot;&quot;&quot;slice index to display&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">showColorbar</span> <span class="o">=</span> <span class="n">showColorbar</span>
+        <span class="sd">&quot;&quot;&quot;dispaly colorbar True/False&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D_Sliced</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_slice_at_dimension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="c1"># slicing a along a given dimension at index, index</span>
+        <span class="n">slc</span> <span class="o">=</span> <span class="p">[</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">slc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sliceDim</span><span class="p">]</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">index</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">slc</span><span class="p">])</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced.previous_slice"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced.previous_slice">[docs]</a>    <span class="k">def</span> <span class="nf">previous_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Display previous slice</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">sca</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">cla</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sliceDim</span><span class="p">]</span>  <span class="c1"># wrap around using %</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_slice_at_dimension</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">))</span></div>
+        <span class="c1">#self.ax.images[0].set_array(self.get_slice_at_dimension(self.index))</span>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced.next_slice"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced.next_slice">[docs]</a>    <span class="k">def</span> <span class="nf">next_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Display next slice</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">sca</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">cla</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sliceDim</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_slice_at_dimension</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">))</span></div>
+        <span class="c1">#self.ax.images[0].set_array(self.get_slice_at_dimension(self.index))</span>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced.set_synchronize"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced.set_synchronize">[docs]</a>    <span class="k">def</span> <span class="nf">set_synchronize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Synchronize slice view to a particular slice</span>
+<span class="sd">        </span>
+<span class="sd">        :param index: slice index to synchronize to </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">sca</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">cla</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sliceDim</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_slice_at_dimension</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>
+        <span class="c1">#self.ax.images[0].set_array(self.get_slice_at_dimension(self.index))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">display_title</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced.get_synchronize"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced.get_synchronize">[docs]</a>    <span class="k">def</span> <span class="nf">get_synchronize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get current slice index</span>
+<span class="sd">        </span>
+<span class="sd">        :return: current slice index</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span></div>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced.display_title"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced.display_title">[docs]</a>    <span class="k">def</span> <span class="nf">display_title</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Display figure title</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">sca</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">textStr</span> <span class="o">+</span> <span class="s1">&#39; = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sliceDim</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">)</span></div>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced.show"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show the current slice</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">sca</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">cla</span><span class="p">()</span>
+        <span class="n">cim</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_slice_at_dimension</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>
+        <span class="n">divider</span> <span class="o">=</span> <span class="n">make_axes_locatable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="p">)</span>
+        <span class="n">cax</span> <span class="o">=</span> <span class="n">divider</span><span class="o">.</span><span class="n">append_axes</span><span class="p">(</span><span class="s1">&#39;right&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="s1">&#39;5%&#39;</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">gcf</span><span class="p">()</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">cim</span><span class="p">,</span> <span class="n">cax</span><span class="o">=</span><span class="n">cax</span><span class="p">,</span> <span class="n">orientation</span><span class="o">=</span><span class="s1">&#39;vertical&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">display_title</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced_Contour"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced_Contour">[docs]</a><span class="k">class</span> <span class="nc">ImageViewer3D_Sliced_Contour</span><span class="p">(</span><span class="n">ImageViewer3D_Sliced</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Specialization of 3D sliced viewer to also display contours</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">phi</span><span class="p">,</span> <span class="n">sliceDim</span><span class="p">,</span> <span class="n">textStr</span><span class="o">=</span><span class="s1">&#39;Slice&#39;</span><span class="p">,</span> <span class="n">showColorbar</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor</span>
+<span class="sd">        :param ax: axis</span>
+<span class="sd">        :param data: data (image array, XxYxZ)</span>
+<span class="sd">        :param phi: map (dimxXxYxZ)</span>
+<span class="sd">        :param sliceDim: slice dimension</span>
+<span class="sd">        :param textStr: title string</span>
+<span class="sd">        :param showColorbar: (bool) show colorbar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phi</span> <span class="o">=</span> <span class="n">phi</span>
+        <span class="sd">&quot;&quot;&quot;map&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D_Sliced_Contour</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span><span class="n">data</span><span class="p">,</span> <span class="n">sliceDim</span><span class="p">,</span> <span class="n">textStr</span><span class="p">,</span> <span class="n">showColorbar</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced_Contour.get_phi_slice_at_dimension"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced_Contour.get_phi_slice_at_dimension">[docs]</a>    <span class="k">def</span> <span class="nf">get_phi_slice_at_dimension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get map (based on which we can draw contours) at a particular slice index</span>
+<span class="sd">        </span>
+<span class="sd">        :param index: slice index </span>
+<span class="sd">        :return: returns the map at this slice index</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># slicing a along a given dimension at index, index</span>
+        <span class="n">slc</span> <span class="o">=</span> <span class="p">[</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phi</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">slc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sliceDim</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">index</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">phi</span><span class="p">[</span><span class="n">slc</span><span class="p">])</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced_Contour.show_contours"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced_Contour.show_contours">[docs]</a>    <span class="k">def</span> <span class="nf">show_contours</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        display the contours for a particular slice</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">sca</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ax</span><span class="p">)</span>
+        <span class="n">phiSliced</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_phi_slice_at_dimension</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">sliceDim</span><span class="p">):</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">phiSliced</span><span class="p">[</span><span class="n">d</span><span class="p">,:,:],</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">20</span><span class="p">),</span><span class="n">colors</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="n">linestyles</span><span class="o">=</span><span class="s1">&#39;solid&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sliceDim</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">):</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">phiSliced</span><span class="p">[</span><span class="n">d</span><span class="p">,:,:],</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">20</span><span class="p">),</span><span class="n">colors</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="n">linestyles</span><span class="o">=</span><span class="s1">&#39;solid&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced_Contour.previous_slice"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced_Contour.previous_slice">[docs]</a>    <span class="k">def</span> <span class="nf">previous_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        display previous slice</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D_Sliced_Contour</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">previous_slice</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show_contours</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced_Contour.next_slice"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced_Contour.next_slice">[docs]</a>    <span class="k">def</span> <span class="nf">next_slice</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        display next slice</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D_Sliced_Contour</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">next_slice</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show_contours</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced_Contour.set_synchronize"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced_Contour.set_synchronize">[docs]</a>    <span class="k">def</span> <span class="nf">set_synchronize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        set slice to a particular index (to synchronize views)</span>
+
+<span class="sd">        :param index: slice index </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D_Sliced_Contour</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show_contours</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ImageViewer3D_Sliced_Contour.show"><a class="viewcode-back" href="../viewers.html#viewers.ImageViewer3D_Sliced_Contour.show">[docs]</a>    <span class="k">def</span> <span class="nf">show</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Show the image with contours overlaid</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ImageViewer3D_Sliced_Contour</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show_contours</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="test_viewer"><a class="viewcode-back" href="../viewers.html#viewers.test_viewer">[docs]</a><span class="k">def</span> <span class="nf">test_viewer</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    simple test viewer</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">_create_some_test_data</span><span class="p">()</span>
+    <span class="n">fig</span><span class="p">,</span><span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">gcf</span><span class="p">(),</span> <span class="s1">&#39;facecolor&#39;</span><span class="p">,</span> <span class="s1">&#39;white&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;bmh&#39;</span><span class="p">)</span>
+
+    <span class="n">ivx</span> <span class="o">=</span> <span class="n">ImageViewer3D_Sliced</span><span class="p">(</span> <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;X slice&#39;</span><span class="p">)</span>
+    <span class="n">ivy</span> <span class="o">=</span> <span class="n">ImageViewer3D_Sliced</span><span class="p">(</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">data</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Y slice&#39;</span><span class="p">)</span>
+    <span class="n">ivz</span> <span class="o">=</span> <span class="n">ImageViewer3D_Sliced</span><span class="p">(</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">data</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;Z slice&#39;</span><span class="p">)</span>
+
+    <span class="n">feh</span> <span class="o">=</span> <span class="n">FigureEventHandler</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+
+    <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ivx</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">)</span>
+    <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">ivy</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">)</span>
+    <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">ivz</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">)</span>
+
+    <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">]])</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

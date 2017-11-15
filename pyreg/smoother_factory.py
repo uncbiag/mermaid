@@ -8,11 +8,10 @@ import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 import numpy as np
-
+from dataWarper import USE_CUDA, MyTensor, AdaptVal
 import finite_differences as fd
-
 import utils
-
+from configParsers import smoothType, gaussianStd
 import custom_pytorch_extensions as ce
 
 class Smoother(object):
@@ -69,7 +68,7 @@ class Smoother(object):
         if Iout is not None:
             Is = Iout
         else:
-            Is = Variable(torch.zeros(sz), requires_grad=False)
+            Is = AdaptVal(Variable(MyTensor(sz).zero_(), requires_grad=False))
 
         for nrI in range(sz[0]):  # loop over all the images
             Is[nrI, ...] = self.smooth_scalar_field_multiC(I[nrI, ...])
@@ -87,7 +86,7 @@ class Smoother(object):
         if Iout is not None:
             Is = Iout
         else:
-            Is = Variable(torch.zeros(sz), requires_grad=False)
+            Is = AdaptVal(Variable(MyTensor(sz).zero_(), requires_grad=False))
 
         for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same
             Is[nrC, ...] = self.smooth_scalar_field(I[nrC, ...])
@@ -105,7 +104,7 @@ class Smoother(object):
         if vout is not None:
             ISv = vout
         else:
-            ISv = Variable(torch.FloatTensor(v.size()))
+            ISv = AdaptVal(Variable(MyTensor(v.size()).zero_()))
 
         for nrI in range(sz[0]): # loop over all images
             ISv[nrI,...] = self.inverse_smooth_vector_field(v[nrI, ...])
@@ -129,7 +128,7 @@ class Smoother(object):
             if vout is not None:
                 ISv = vout
             else:
-                ISv = Variable( torch.FloatTensor( v.size() ) )
+                ISv = AdaptVal(Variable(MyTensor(v.size()).zero_()))
 
             # smooth every dimension individually
             for d in range(0, self.dim):
@@ -140,6 +139,8 @@ class Smoother(object):
         """
         Smoothes a vector field of dimension NxdimxXxYxZ
 
+        a new version, where channels are separately calcualted during filtering time, so channel loop is not needed
+
         :param v: vector field to smooth
         :param vout: if not None then result is returned in this variable
         :return: smoothed vector field
@@ -148,10 +149,14 @@ class Smoother(object):
         if vout is not None:
             Sv = vout
         else:
-            Sv = Variable(torch.FloatTensor(v.size()))
+            Sv = AdaptVal(Variable(MyTensor(v.size()).zero_()))
 
-        for nrI in range(sz[0]): #loop over all the images
-            Sv[nrI,...] = self.smooth_vector_field(v[nrI, ...])
+        # if USE_CUDA:
+        Sv[:] = self.smooth_scalar_field(v)    # here must use :, very important !!!!
+        # else:
+        #     for nrI in range(sz[0]): #loop over all the images
+        #         Sv[nrI,...] = self.smooth_vector_field(v[nrI, ...])
+
         return Sv
 
     def smooth_vector_field(self, v, vout=None):
@@ -172,9 +177,9 @@ class Smoother(object):
             if vout is not None:
                 Sv = vout
             else:
-                Sv = Variable( torch.FloatTensor( v.size() ) )
+                Sv = AdaptVal(Variable(MyTensor(v.size()).zero_()))
 
-            # smooth every dimension individually
+            #smooth every dimension individually
             for d in range(0, self.dim):
                 Sv[d,...] = self.smooth_scalar_field(v[d, ...])
             return Sv
@@ -224,7 +229,8 @@ class DiffusionSmoother(Smoother):
         # now iterate and average based on the neighbors
         for i in range(0,self.iter*2**self.dim): # so that we smooth the same indepdenent of dimension
             # multiply with smallest h^2 and divide by 2^dim to assure stability
-            Sv = Sv + 0.5/(2**self.dim)*self.fdt.lap(Sv)*self.spacing.min()**2 # multiply with smallest h^2 to assure stability
+            for c in range(Sv.size()[1]):
+                Sv[:,c] = Sv[:,c] + 0.5/(2**self.dim)*self.fdt.lap(Sv[:,c])*self.spacing.min()**2 # multiply with smallest h^2 to assure stability
         return Sv
 
     def inverse_smooth_scalar_field(self, v, vout=None):
@@ -247,7 +253,7 @@ class GaussianSpatialSmoother(GaussianSmoother):
 
     def __init__(self, sz, spacing, params):
         super(GaussianSpatialSmoother,self).__init__(sz,spacing,params)
-        self.k_sz_h = params[('k_sz_h', None, 'size of the kernel' )]
+        self.k_sz_h = None # params[('k_sz_h', None, 'size of the kernel' )]
         """size of half the smoothing kernel"""
         self.filter = None
         """smoothing filter"""
@@ -274,17 +280,20 @@ class GaussianSpatialSmoother(GaussianSmoother):
         if self.k_sz_h is None:
             self.k_sz = (2 * 5 + 1) * np.ones(self.dim, dtype='int')  # default kernel size
         else:
-            self.k_sz = k_sz_h * 2 + 1  # this is to assure that the kernel is odd size
+            self.k_sz = self.k_sz_h * 2 + 1  # this is to assure that the kernel is odd size
 
         self.smoothingKernel = self._create_smoothing_kernel(self.k_sz)
         self.required_padding = (self.k_sz-1)/2
-
+        ##################################3
+        k_sz = self.k_sz
+        ###########################################################
+        ###################################
         if self.dim==1:
-            self.filter = Variable(torch.from_numpy(self.smoothingKernel).view([sz[0],sz[1],k_sz[0]]))
+            self.filter =AdaptVal(Variable(torch.from_numpy(self.smoothingKernel)))
         elif self.dim==2:
-            self.filter = Variable(torch.from_numpy(self.smoothingKernel).view([sz[0],sz[1],k_sz[0],k_sz[1]]))
+            self.filter = AdaptVal(Variable(torch.from_numpy(self.smoothingKernel)))
         elif self.dim==3:
-            self.filter = Variable(torch.from_numpy(self.smoothingKernel).view([sz[0],sz[1],k_sz[0],k_sz[1],k_sz[2]]))
+            self.filter = AdaptVal(Variable(torch.from_numpy(self.smoothingKernel)))
         else:
             raise ValueError('Can only create the smoothing kernel in dimensions 1-3')
 
@@ -297,30 +306,39 @@ class GaussianSpatialSmoother(GaussianSmoother):
         return g
 
     def _filter_input_with_padding(self, I, Iout=None):
+
         if self.dim==1:
-            I_4d = I.view([1,1,1]+list(I.size()))
+            I_4d = I.view([1]+list(I.size()))
             I_pad = F.pad(I_4d,(self.required_padding[0],self.required_padding[0],0,0),mode='replicate').view(1,1,-1)
+            # 1D will be available in pytorch 0.4
+            # I_pad = F.pad(I, (self.required_padding[0], self.required_padding[0]), mode='replicate')
+            I_sz = I_pad.size()
+            sm_filter = self.filter.repeat(I_sz[1], 1, 1)  # output_ch input_chh h, w
             if Iout is not None:
-                Iout = F.conv1d(I_pad,self.filter).view(I.size())
+                Iout = F.conv1d(I_pad,sm_filter, groups=I_sz[1])
                 return Iout
             else:
-                return F.conv1d(I_pad,self.filter).view(I.size())
+                return F.conv1d(I_pad,sm_filter, groups=I_sz[1])
         elif self.dim==2:
             I_pad = F.pad(I,(self.required_padding[0],self.required_padding[0],
                                 self.required_padding[1],self.required_padding[1]),mode='replicate')
+            I_sz = I_pad.size()
+            sm_filter = self.filter.repeat(I_sz[1], 1, 1, 1)  # output_ch input_chh h, w
             if Iout is not None:
-                Iout = F.conv2d(I_pad,self.filter).view(I.size())
+                Iout = F.conv2d(I_pad,sm_filter, groups=I_sz[1])
                 return Iout
             else:
-                return F.conv2d(I_pad,self.filter).view(I.size())
+                return F.conv2d(I_pad,sm_filter, groups=I_sz[1])
         elif self.dim==3:
             I_pad = F.pad(I, (self.required_padding[0], self.required_padding[0],
                                  self.required_padding[1], self.required_padding[1],
                                  self.required_padding[2], self.required_padding[2]), mode='replicate')
+            I_sz = I_pad.size()
+            sm_filter = self.filter.repeat(I_sz[1], 1, 1, 1, 1)  # output_ch input_chh h, w
             if Iout is not None:
-                Iout = F.conv3d(I_pad, self.filter).view(I.size())
+                Iout = F.conv3d(I_pad, sm_filter, groups=I_sz[1])
             else:
-                return F.conv3d(I_pad, self.filter).view(I.size())
+                return F.conv3d(I_pad, sm_filter, groups=I_sz[1])
         else:
             raise ValueError('Can only perform padding in dimensions 1-3')
 
@@ -332,6 +350,7 @@ class GaussianSpatialSmoother(GaussianSmoother):
         :param vout: if not None returns the result in this variable
         :return: smoothed image
         """
+        self.sz = v.size()
         if self.filter is None:
             self._create_filter()
         # just doing a Gaussian smoothing
@@ -352,7 +371,7 @@ class GaussianFourierSmoother(GaussianSmoother):
 
     def __init__(self, sz, spacing, params):
         super(GaussianFourierSmoother,self).__init__(sz,spacing,params)
-        self.gaussianStd = params[('gaussian_std', 0.15,'std for the Gaussian' )]
+        self.gaussianStd = params[('gaussianStd', gaussianStd ,'std for the Gaussian' )]
         """stanard deviation of Gaussian"""
         self.FFilter = None
         """filter in Fourier domain"""
@@ -432,7 +451,7 @@ class SmootherFactory(object):
         """size of image"""
         self.dim = len( spacing )
         """dimension of image"""
-        self.default_smoother_type = 'gaussian'
+        self.default_smoother_type = smoothType
         """default smoother used for smoothing"""
 
     def set_default_smoother_type_to_gaussian(self):
@@ -470,4 +489,4 @@ class SmootherFactory(object):
         elif smootherType=='gaussianSpatial':
             return GaussianSpatialSmoother(self.sz,self.spacing,cparams)
         else:
-            raise ValueError( 'Smoother: ' + smootherName + ' not known')
+            raise ValueError( 'Smoother: ' + smoothType + ' not known')

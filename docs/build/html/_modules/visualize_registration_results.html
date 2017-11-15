@@ -1,0 +1,589 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>visualize_registration_results &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>visualize_registration_results</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for visualize_registration_results</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Some utility functions to display the registration results</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">import</span> <span class="nn">utils</span>
+<span class="kn">import</span> <span class="nn">viewers</span>
+
+<span class="k">def</span> <span class="nf">_show_current_images_1d</span><span class="p">(</span><span class="n">iS</span><span class="p">,</span> <span class="n">iT</span><span class="p">,</span> <span class="n">iW</span><span class="p">,</span> <span class="nb">iter</span><span class="p">,</span> <span class="n">vizImage</span><span class="p">,</span> <span class="n">vizName</span><span class="p">,</span> <span class="n">phiWarped</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">sp_s</span> <span class="o">=</span> <span class="mi">231</span>
+        <span class="n">sp_t</span> <span class="o">=</span> <span class="mi">232</span>
+        <span class="n">sp_w</span> <span class="o">=</span> <span class="mi">233</span>
+        <span class="n">sp_p</span> <span class="o">=</span> <span class="mi">235</span>
+        <span class="n">sp_v</span> <span class="o">=</span> <span class="mi">236</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">sp_s</span> <span class="o">=</span> <span class="mi">221</span>
+        <span class="n">sp_t</span> <span class="o">=</span> <span class="mi">222</span>
+        <span class="n">sp_w</span> <span class="o">=</span> <span class="mi">223</span>
+        <span class="n">sp_v</span> <span class="o">=</span> <span class="mi">224</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">sp_s</span> <span class="o">=</span> <span class="mi">221</span>
+        <span class="n">sp_t</span> <span class="o">=</span> <span class="mi">222</span>
+        <span class="n">sp_w</span> <span class="o">=</span> <span class="mi">223</span>
+        <span class="n">sp_p</span> <span class="o">=</span> <span class="mi">224</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sp_s</span> <span class="o">=</span> <span class="mi">131</span>
+        <span class="n">sp_t</span> <span class="o">=</span> <span class="mi">132</span>
+        <span class="n">sp_w</span> <span class="o">=</span> <span class="mi">133</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s1">&#39;Iteration = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">iter</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">gcf</span><span class="p">(),</span> <span class="s1">&#39;facecolor&#39;</span><span class="p">,</span> <span class="s1">&#39;white&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;bmh&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_s</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iS</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;source image&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_t</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iT</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;target image&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_w</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iT</span><span class="p">),</span><span class="s1">&#39;g&#39;</span><span class="p">,</span><span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iS</span><span class="p">),</span><span class="s1">&#39;r&#39;</span><span class="p">,</span><span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iW</span><span class="p">),</span><span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;warped image&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_p</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">phiWarped</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;phi&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_v</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">vizImage</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">vizName</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<div class="viewcode-block" id="checkerboard_2d"><a class="viewcode-back" href="../visualize_registration_results.html#visualize_registration_results.checkerboard_2d">[docs]</a><span class="k">def</span> <span class="nf">checkerboard_2d</span><span class="p">(</span><span class="n">I0</span><span class="p">,</span><span class="n">I1</span><span class="p">,</span><span class="n">nrOfTiles</span><span class="o">=</span><span class="mi">8</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates a checkerboard between two images</span>
+<span class="sd">    </span>
+<span class="sd">    :param I0: image 0, size XxYxZ </span>
+<span class="sd">    :param I1: image 1, size XxYxZ </span>
+<span class="sd">    :param nrOfTiles: number of desired tiles in each direction</span>
+<span class="sd">    :return: returns tiled image</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sz</span> <span class="o">=</span> <span class="n">I0</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">tileSize</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">sz</span><span class="p">)</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="o">/</span><span class="n">nrOfTiles</span> <span class="p">)</span>
+    <span class="n">nrOfTileXH</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">tileSize</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span> <span class="p">)</span>
+    <span class="n">nrOfTileYH</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">sz</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="n">tileSize</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span> <span class="p">)</span>
+    <span class="n">cb_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">kron</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">nrOfTileYH</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">nrOfTileYH</span><span class="p">]</span> <span class="o">*</span><span class="n">nrOfTileXH</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">tileSize</span><span class="p">,</span> <span class="n">tileSize</span><span class="p">)))</span>
+    <span class="c1"># now cut it to the same size</span>
+    <span class="n">cb_grid</span><span class="o">=</span><span class="n">cb_grid</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">sz</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">0</span><span class="p">:</span><span class="n">sz</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+    <span class="n">cb_image</span> <span class="o">=</span> <span class="n">I0</span><span class="o">*</span><span class="n">cb_grid</span> <span class="o">+</span> <span class="n">I1</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">cb_grid</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cb_image</span></div>
+
+<span class="k">def</span> <span class="nf">_show_current_images_2d_no_map</span><span class="p">(</span><span class="n">iS</span><span class="p">,</span> <span class="n">iT</span><span class="p">,</span> <span class="n">iW</span><span class="p">,</span> <span class="nb">iter</span><span class="p">,</span> <span class="n">vizImage</span><span class="p">,</span> <span class="n">vizName</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">sp_s</span> <span class="o">=</span> <span class="mi">231</span>
+        <span class="n">sp_t</span> <span class="o">=</span> <span class="mi">232</span>
+        <span class="n">sp_w</span> <span class="o">=</span> <span class="mi">233</span>
+        <span class="n">sp_c</span> <span class="o">=</span> <span class="mi">234</span>
+        <span class="n">sp_v</span> <span class="o">=</span> <span class="mi">235</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sp_s</span> <span class="o">=</span> <span class="mi">221</span>
+        <span class="n">sp_t</span> <span class="o">=</span> <span class="mi">222</span>
+        <span class="n">sp_w</span> <span class="o">=</span> <span class="mi">223</span>
+        <span class="n">sp_c</span> <span class="o">=</span> <span class="mi">224</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s1">&#39;Iteration = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">iter</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">gcf</span><span class="p">(),</span> <span class="s1">&#39;facecolor&#39;</span><span class="p">,</span> <span class="s1">&#39;white&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;bmh&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_s</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iS</span><span class="p">),</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;source image&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_t</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iT</span><span class="p">),</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;target image&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_w</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iW</span><span class="p">),</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;warped image&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_c</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">checkerboard_2d</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iW</span><span class="p">),</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iT</span><span class="p">)),</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;checkerboard&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_v</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">vizImage</span><span class="p">),</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">vizName</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">_show_current_images_2d_map</span><span class="p">(</span><span class="n">iS</span><span class="p">,</span> <span class="n">iT</span><span class="p">,</span> <span class="n">iW</span><span class="p">,</span> <span class="nb">iter</span><span class="p">,</span> <span class="n">vizImage</span><span class="p">,</span> <span class="n">vizName</span><span class="p">,</span> <span class="n">phiWarped</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">sp_s</span> <span class="o">=</span> <span class="mi">231</span>
+        <span class="n">sp_t</span> <span class="o">=</span> <span class="mi">232</span>
+        <span class="n">sp_w</span> <span class="o">=</span> <span class="mi">233</span>
+        <span class="n">sp_c</span> <span class="o">=</span> <span class="mi">234</span>
+        <span class="n">sp_p</span> <span class="o">=</span> <span class="mi">235</span>
+        <span class="n">sp_v</span> <span class="o">=</span> <span class="mi">236</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">sp_s</span> <span class="o">=</span> <span class="mi">231</span>
+        <span class="n">sp_t</span> <span class="o">=</span> <span class="mi">232</span>
+        <span class="n">sp_w</span> <span class="o">=</span> <span class="mi">233</span>
+        <span class="n">sp_c</span> <span class="o">=</span> <span class="mi">234</span>
+        <span class="n">sp_v</span> <span class="o">=</span> <span class="mi">235</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">sp_s</span> <span class="o">=</span> <span class="mi">231</span>
+        <span class="n">sp_t</span> <span class="o">=</span> <span class="mi">232</span>
+        <span class="n">sp_w</span> <span class="o">=</span> <span class="mi">233</span>
+        <span class="n">sp_c</span> <span class="o">=</span> <span class="mi">234</span>
+        <span class="n">sp_p</span> <span class="o">=</span> <span class="mi">235</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sp_s</span> <span class="o">=</span> <span class="mi">221</span>
+        <span class="n">sp_t</span> <span class="o">=</span> <span class="mi">222</span>
+        <span class="n">sp_w</span> <span class="o">=</span> <span class="mi">223</span>
+        <span class="n">sp_c</span> <span class="o">=</span> <span class="mi">224</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s1">&#39;Iteration = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">iter</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">gcf</span><span class="p">(),</span> <span class="s1">&#39;facecolor&#39;</span><span class="p">,</span> <span class="s1">&#39;white&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;bmh&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_s</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iS</span><span class="p">),</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;source image&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_t</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iT</span><span class="p">),</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;target image&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_w</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iW</span><span class="p">),</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;warped image&#39;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_c</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">checkerboard_2d</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iW</span><span class="p">),</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iT</span><span class="p">)),</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;checkerboard&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_p</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iW</span><span class="p">),</span><span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">phiWarped</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]),</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="n">colors</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">=</span><span class="s1">&#39;solid&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">phiWarped</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]),</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="n">colors</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">linestyles</span><span class="o">=</span><span class="s1">&#39;solid&#39;</span><span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;warped image + grid&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">sp_v</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">vizImage</span><span class="p">),</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;gray&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">vizName</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">_show_current_images_2d</span><span class="p">(</span><span class="n">iS</span><span class="p">,</span> <span class="n">iT</span><span class="p">,</span> <span class="n">iW</span><span class="p">,</span> <span class="nb">iter</span><span class="p">,</span> <span class="n">vizImage</span><span class="p">,</span> <span class="n">vizName</span><span class="p">,</span> <span class="n">phiWarped</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_show_current_images_2d_map</span><span class="p">(</span><span class="n">iS</span><span class="p">,</span> <span class="n">iT</span><span class="p">,</span> <span class="n">iW</span><span class="p">,</span> <span class="nb">iter</span><span class="p">,</span> <span class="n">vizImage</span><span class="p">,</span> <span class="n">vizName</span><span class="p">,</span> <span class="n">phiWarped</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">_show_current_images_2d_no_map</span><span class="p">(</span><span class="n">iS</span><span class="p">,</span> <span class="n">iT</span><span class="p">,</span> <span class="n">iW</span><span class="p">,</span> <span class="nb">iter</span><span class="p">,</span> <span class="n">vizImage</span><span class="p">,</span> <span class="n">vizName</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_show_current_images_3d</span><span class="p">(</span><span class="n">iS</span><span class="p">,</span> <span class="n">iT</span><span class="p">,</span> <span class="n">iW</span><span class="p">,</span> <span class="nb">iter</span><span class="p">,</span> <span class="n">vizImage</span><span class="p">,</span> <span class="n">vizName</span><span class="p">,</span> <span class="n">phiWarped</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">phiw_a</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="n">vizi_a</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">phiw_a</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">vizi_a</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s1">&#39;Iteration = &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">iter</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">gcf</span><span class="p">(),</span> <span class="s1">&#39;facecolor&#39;</span><span class="p">,</span> <span class="s1">&#39;white&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;bmh&#39;</span><span class="p">)</span>
+
+    <span class="n">ivsx</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iS</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;source X&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="n">ivsy</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iS</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;source Y&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="n">ivsz</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iS</span><span class="p">),</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;source Z&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">ivtx</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iT</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;target X&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="n">ivty</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iT</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;target Y&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="n">ivtz</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iT</span><span class="p">),</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;target Z&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">ivwx</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iW</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;warped X&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="n">ivwy</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iW</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;warped Y&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="n">ivwz</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iW</span><span class="p">),</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;warped Z&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ivwxc</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced_Contour</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="n">phiw_a</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iW</span><span class="p">),</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">phiWarped</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;warped X&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">ivwyc</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced_Contour</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="n">phiw_a</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iW</span><span class="p">),</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">phiWarped</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;warped Y&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">ivwzc</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced_Contour</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="n">phiw_a</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">iW</span><span class="p">),</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">phiWarped</span><span class="p">),</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;warped Z&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ivvxc</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="n">vizi_a</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">vizImage</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="n">vizName</span> <span class="o">+</span> <span class="s1">&#39; X&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">ivvyc</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="n">vizi_a</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">vizImage</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">vizName</span> <span class="o">+</span> <span class="s1">&#39; Y&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">ivvzc</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">ImageViewer3D_Sliced</span><span class="p">(</span><span class="n">ax</span><span class="p">[</span><span class="n">vizi_a</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">utils</span><span class="o">.</span><span class="n">t2np</span><span class="p">(</span><span class="n">vizImage</span><span class="p">),</span> <span class="mi">2</span><span class="p">,</span> <span class="n">vizName</span> <span class="o">+</span> <span class="s1">&#39; Z&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">feh</span> <span class="o">=</span> <span class="n">viewers</span><span class="o">.</span><span class="n">FigureEventHandler</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+
+    <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ivsx</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivsx</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span> <span class="n">ivsx</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+    <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ivsy</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivsy</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span> <span class="n">ivsy</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+    <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ivsz</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivsz</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span> <span class="n">ivsz</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+
+    <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ivtx</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivtx</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span> <span class="n">ivtx</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+    <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ivty</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivty</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span> <span class="n">ivty</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+    <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ivtz</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivtz</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span> <span class="n">ivtz</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+
+    <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ivwx</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivwx</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span> <span class="n">ivwx</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+    <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ivwy</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivwy</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span> <span class="n">ivwy</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+    <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ivwz</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivwz</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span> <span class="n">ivwz</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="n">phiw_a</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ivwxc</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivwxc</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span> <span class="n">ivwxc</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="n">phiw_a</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ivwyc</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivwyc</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span> <span class="n">ivwyc</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="n">phiw_a</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ivwzc</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivwzc</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span> <span class="n">ivwzc</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="n">vizi_a</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ivvxc</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivvxc</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span>
+                           <span class="n">ivvxc</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="n">vizi_a</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ivvyc</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivvyc</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span>
+                           <span class="n">ivvyc</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">add_axes_event</span><span class="p">(</span><span class="s1">&#39;button_press_event&#39;</span><span class="p">,</span> <span class="n">ax</span><span class="p">[</span><span class="n">vizi_a</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ivvzc</span><span class="o">.</span><span class="n">on_mouse_press</span><span class="p">,</span> <span class="n">ivvzc</span><span class="o">.</span><span class="n">get_synchronize</span><span class="p">,</span>
+                           <span class="n">ivvzc</span><span class="o">.</span><span class="n">set_synchronize</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="n">phiw_a</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="n">vizi_a</span><span class="p">][</span><span class="mi">0</span><span class="p">]])</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="n">phiw_a</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="n">vizi_a</span><span class="p">][</span><span class="mi">1</span><span class="p">]])</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="n">phiw_a</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="n">vizi_a</span><span class="p">][</span><span class="mi">2</span><span class="p">]])</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="n">phiw_a</span><span class="p">][</span><span class="mi">0</span><span class="p">]])</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="n">phiw_a</span><span class="p">][</span><span class="mi">1</span><span class="p">]])</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="n">phiw_a</span><span class="p">][</span><span class="mi">2</span><span class="p">]])</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">vizImage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="n">vizi_a</span><span class="p">][</span><span class="mi">0</span><span class="p">]])</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="n">vizi_a</span><span class="p">][</span><span class="mi">1</span><span class="p">]])</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="n">vizi_a</span><span class="p">][</span><span class="mi">2</span><span class="p">]])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">]])</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">1</span><span class="p">]])</span>
+        <span class="n">feh</span><span class="o">.</span><span class="n">synchronize</span><span class="p">([</span><span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">],</span> <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">2</span><span class="p">]])</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="show_current_images"><a class="viewcode-back" href="../visualize_registration_results.html#visualize_registration_results.show_current_images">[docs]</a><span class="k">def</span> <span class="nf">show_current_images</span><span class="p">(</span><span class="nb">iter</span><span class="p">,</span> <span class="n">iS</span><span class="p">,</span> <span class="n">iT</span><span class="p">,</span> <span class="n">iW</span><span class="p">,</span> <span class="n">vizImage</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">vizName</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">phiWarped</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Visualizes the current images during registration</span>
+<span class="sd">    </span>
+<span class="sd">    :param iter: iteration number </span>
+<span class="sd">    :param iS: source image BxCxXxYxZ (only displays B=0,C=0)</span>
+<span class="sd">    :param iT: target image BxCxXxYxZ (only displays B=0,C=0)</span>
+<span class="sd">    :param iW: warped image BxCxXxYxZ (only displays B=0,C=0)</span>
+<span class="sd">    :param vizImage: custom visualization image XxYxZ</span>
+<span class="sd">    :param vizName: name for this image</span>
+<span class="sd">    :param phiWarped: warped map BxdimxXxYxZ (only displays B=0)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Show current 2D registration results in relation to the source and target images</span>
+<span class="sd">    :param iter: iteration number</span>
+<span class="sd">    :param iS: source image</span>
+<span class="sd">    :param iT: target image</span>
+<span class="sd">    :param iW: current warped image</span>
+<span class="sd">    :return: no return arguments</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">dim</span> <span class="o">=</span> <span class="n">iS</span><span class="o">.</span><span class="n">ndimension</span><span class="p">()</span><span class="o">-</span><span class="mi">2</span>
+
+    <span class="n">iSF</span> <span class="o">=</span> <span class="n">iS</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span>
+    <span class="n">iTF</span> <span class="o">=</span> <span class="n">iT</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span>
+    <span class="n">iWF</span> <span class="o">=</span> <span class="n">iW</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">phiWarped</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pwF</span> <span class="o">=</span> <span class="n">phiWarped</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="o">...</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">pwF</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="n">dim</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">_show_current_images_1d</span><span class="p">(</span><span class="n">iSF</span><span class="p">,</span> <span class="n">iTF</span><span class="p">,</span> <span class="n">iWF</span><span class="p">,</span> <span class="nb">iter</span><span class="p">,</span> <span class="n">vizImage</span><span class="p">,</span> <span class="n">vizName</span><span class="p">,</span> <span class="n">pwF</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">dim</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+        <span class="n">_show_current_images_2d</span><span class="p">(</span><span class="n">iSF</span><span class="p">,</span> <span class="n">iTF</span><span class="p">,</span> <span class="n">iWF</span><span class="p">,</span> <span class="nb">iter</span><span class="p">,</span> <span class="n">vizImage</span><span class="p">,</span> <span class="n">vizName</span><span class="p">,</span> <span class="n">pwF</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">dim</span><span class="o">==</span><span class="mi">3</span><span class="p">:</span>
+        <span class="n">_show_current_images_3d</span><span class="p">(</span><span class="n">iSF</span><span class="p">,</span> <span class="n">iTF</span><span class="p">,</span> <span class="n">iWF</span><span class="p">,</span> <span class="nb">iter</span><span class="p">,</span> <span class="n">vizImage</span><span class="p">,</span> <span class="n">vizName</span><span class="p">,</span> <span class="n">pwF</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span> <span class="s1">&#39;Debug output only supported in 1D and 3D at the moment&#39;</span><span class="p">)</span>
+
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    plt.show(block=False)</span>
+<span class="sd">    plt.draw_all(force=True)</span>
+
+<span class="sd">    print( &#39;Click mouse to continue press any key to exit&#39; )</span>
+<span class="sd">    wasKeyPressed = plt.waitforbuttonpress()</span>
+<span class="sd">    if wasKeyPressed:</span>
+<span class="sd">        sys.exit()</span>
+<span class="sd">    &#39;&#39;&#39;</span></div>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

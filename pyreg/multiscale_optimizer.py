@@ -12,9 +12,12 @@ import numpy as np
 
 import torch
 from torch.autograd import Variable
-
+from dataWarper import USE_CUDA, AdaptVal
 import model_factory as MF
 import image_sampling as IS
+from MyAdam import MyAdam
+from configParsers import optimName, visualize
+
 
 class Optimizer(object):
     """
@@ -22,7 +25,7 @@ class Optimizer(object):
        """
     __metaclass__ = ABCMeta
 
-    def __init__(self,sz,spacing,useMap,params):
+    def __init__(self, sz, spacing, useMap, params):
         """
         Constructor.
         
@@ -42,7 +45,7 @@ class Optimizer(object):
         self.rel_ftol = 1e-4
         """relative termination tolerance for optimizer"""
 
-    def set_rel_ftol(self,rel_ftol):
+    def set_rel_ftol(self, rel_ftol):
         """
         Sets the relative termination tolerance: |f(x_i)-f(x_{i-1})|/f(x_i)<tol
         
@@ -57,7 +60,7 @@ class Optimizer(object):
         return self.rel_ftol
 
     @abstractmethod
-    def set_model(self,modelName):
+    def set_model(self, modelName):
         """
         Abstract method to select the model which should be optimized by name
         
@@ -78,20 +81,20 @@ class ImageRegistrationOptimizer(Optimizer):
     Optimization class for image registration.
     """
 
-    def __init__(self,sz,spacing,useMap,params):
-        super(ImageRegistrationOptimizer,self).__init__(sz,spacing,useMap,params)
+    def __init__(self, sz, spacing, useMap, params):
+        super(ImageRegistrationOptimizer, self).__init__(sz, spacing, useMap, params)
         self.ISource = None
         """source image"""
         self.ITarget = None
         """target image"""
-        self.optimizer_name = 'lbfgs_ls'
+        self.optimizer_name = optimName  # 'lbfgs_ls'#''lbfgs_ls'
         """name of the optimizer to use"""
         self.optimizer_params = {}
         """parameters that should be passed to the optimizer"""
         self.optimizer = None
         """optimizer object itself (to be instantiated)"""
 
-        self.visualize = True
+        self.visualize = visualize
         """if True figures are created during the run"""
         self.visualize_step = 10
         """how often the figures are updated; each self.visualize_step-th iteration"""
@@ -108,7 +111,7 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         self.visualize = False
 
-    def set_visualization(self,vis):
+    def set_visualization(self, vis):
         """
         Set if visualization should be on (True) or off (False)
         
@@ -124,7 +127,7 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         return self.visualize
 
-    def set_visualize_step(self,nr_step):
+    def set_visualize_step(self, nr_step):
         """
         Set after how many steps a visualization should be updated
         
@@ -172,7 +175,7 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         return self.optimizer_name
 
-    def set_optimizer(self,opt):
+    def set_optimizer(self, opt):
         """
         Set the optimizer. Not by name, but instead by passing the optimizer object which should be instantiated
         
@@ -188,7 +191,7 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         return self.optimizer
 
-    def set_optimizer_params(self,opt_params):
+    def set_optimizer_params(self, opt_params):
         """
         Set the desired parameters of the optimizer. This is done by passing a dictionary, for example, dict(lr=0.01)
         
@@ -206,8 +209,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         tying it to rel_ftol is not really correct.
     """
 
-    def __init__(self,sz,spacing,useMap,params):
-        super(SingleScaleRegistrationOptimizer,self).__init__(sz,spacing,useMap,params)
+    def __init__(self, sz, spacing, useMap, params):
+        super(SingleScaleRegistrationOptimizer, self).__init__(sz, spacing, useMap, params)
 
         self.mf = MF.ModelFactory(self.sz, self.spacing)
         """model factory which will be used to create the model and its loss function"""
@@ -224,8 +227,17 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.nrOfIterations = 1
         """the maximum number of iterations for the optimizer"""
+        self.iter_count = 0
+        self.rec_energy = None
+        self.rec_similarityEnergy = None
+        self.rec_regEnergy = None
+        self.rec_phiWarped = None
+        self.rec_IWarped = None
+        self.last_energy = None
+        self.terminal_flag = 0
+        """the evaluation information"""
 
-    def set_model(self,modelName):
+    def set_model(self, modelName):
         """
         Sets the model that should be solved
         
@@ -238,8 +250,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.useMap:
             # create the identity map [-1,1]^d, since we will use a map-based implementation
             id = utils.identity_map_multiN(self.sz)
-            self.identityMap = Variable(torch.from_numpy(id), requires_grad=False)
-
+            self.identityMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
 
     def add_similarity_measure(self, simName, simMeasure):
         """
@@ -258,7 +269,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param modelNetworkClass: registration model itself (class object that can be instantiated)
         :param modelLossClass: registration loss (class object that can be instantiated)
         """
-        self.mf.add_model(modelName,modelNetworkClass,modelLossClass)
+        self.mf.add_model(modelName, modelNetworkClass, modelLossClass)
 
     def set_model_parameters(self, p):
         """
@@ -315,14 +326,72 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # 1) Forward pass: Compute predicted y by passing x to the model
         # 2) Compute loss
         if self.useMap:
-            phiWarped = self.model(self.identityMap, self.ISource)
-            loss = self.criterion(phiWarped, self.ISource, self.ITarget)
+            self.rec_phiWarped = self.model(self.identityMap, self.ISource)
+            loss = self.criterion(self.rec_phiWarped, self.ISource, self.ITarget)
         else:
-            IWarped = self.model(self.ISource)
-            loss = self.criterion(IWarped, self.ISource, self.ITarget)
-
+            self.rec_IWarped = self.model(self.ISource)
+            loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget)
         loss.backward()
+
+        if self.useMap:
+            if self.iter_count % 1 == 0:
+                self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
+                    self.rec_phiWarped, self.ISource, self.ITarget)
+        else:
+            if self.iter_count % 1 == 0:
+                self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
+                    self.rec_IWarped, self.ISource, self.ITarget)
+
         return loss
+
+    def analysis(self, energy, similarityEnergy, regEnergy, Warped):
+        """
+        print out the and visualize the result
+        :param energy:
+        :param similarityEnergy:
+        :param regEnergy:
+        :param Warped:
+        :return:
+        """
+
+        cur_energy = utils.t2np(energy.float())
+
+        if self.last_energy is not None:
+
+            # relative function toleranc: |f(xi)-f(xi+1)|/(1+|f(xi)|)
+            rel_f = abs(self.last_energy - cur_energy) / (1 + abs(cur_energy))
+
+            print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF={relF}'
+                  .format(iter=self.iter_count,
+                          energy=cur_energy,
+                          similarityE=utils.t2np(similarityEnergy.float()),
+                          regE=utils.t2np(regEnergy.float()),
+                          relF=rel_f))
+
+            # check if relative convergence tolerance is reached
+            if rel_f < self.rel_ftol:
+                print('Reached relative function tolerance of = ' + str(self.rel_ftol))
+                self.terminal_flag = 0
+                exit(0)
+
+        else:
+            print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF=n/a'
+                  .format(iter=self.iter_count,
+                          energy=cur_energy,
+                          similarityE=utils.t2np(similarityEnergy.float()),
+                          regE=utils.t2np(regEnergy.float())))
+
+        self.last_energy = cur_energy
+        iter = self.iter_count
+
+        if self.visualize:
+            if iter % self.visualize_step == 0:
+                vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize()
+                if self.useMap:
+                    I1Warped = utils.compute_warped_image_multiNC(self.ISource, Warped)
+                    vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, Warped)
+                else:
+                    vizReg.show_current_images(iter, self.ISource, self.ITarget, Warped, vizImage, vizName)
 
     def _get_optimizer_instance(self):
 
@@ -336,22 +405,22 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.optimizer_name is not None:
                 print('Warning: optimizer name = ' + str(self.optimizer_name) +
                       ' specified, but ignored since optimizer was set explicitly')
-            opt_instance = self.optimizer(self.model.parameters(),**self.optimizer_params)
+            opt_instance = self.optimizer(self.model.parameters(), **self.optimizer_params)
             return opt_instance
         else:
             # select it by name
-            #TODO: Check what the best way to adapt the tolerances is here; tying it to rel_ftol is not really correct
+            # TODO: Check what the best way to adapt the tolerances is here; tying it to rel_ftol is not really correct
             if self.optimizer_name is None:
                 raise ValueError('Need to select an optimizer')
             elif self.optimizer_name == 'lbfgs_ls':
                 opt_instance = CO.LBFGS_LS(self.model.parameters(),
-                                         lr=1.0, max_iter=1, max_eval=5,
-                                         tolerance_grad=self.rel_ftol*10, tolerance_change=self.rel_ftol,
-                                         history_size=5, line_search_fn='backtracking')
+                                           lr=1.0, max_iter=1, max_eval=5,
+                                           tolerance_grad=self.rel_ftol * 10, tolerance_change=self.rel_ftol,
+                                           history_size=5, line_search_fn='backtracking')
                 return opt_instance
             elif self.optimizer_name == 'adam':
                 opt_instance = torch.optim.Adam(self.model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=self.rel_ftol,
-                                              weight_decay=0)
+                                      weight_decay=0)
                 return opt_instance
             else:
                 raise ValueError('Optimizer = ' + str(self.optimizer_name) + ' not yet supported')
@@ -366,65 +435,29 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         # optimize for a few steps
         start = time.time()
+        if USE_CUDA:
+            self.model = self.model.cuda()
 
-        last_energy = None
+        self.last_energy = None
 
         for iter in range(self.nrOfIterations):
 
             # take a step of the optimizer
+            # for p in self.optimizer_instance._params:
+            #     p.data = p.data.float()
             self.optimizer_instance.step(self._closure)
 
-            # apply the current state to either get the warped map or directly the warped source image
             if self.useMap:
-                phiWarped = self.model(self.identityMap, self.ISource)
+                self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_phiWarped)
             else:
-                cIWarped = self.model(self.ISource)
-
-            if iter%1==0:
-                if self.useMap:
-                    energy, similarityEnergy, regEnergy = self.criterion.get_energy(phiWarped, self.ISource, self.ITarget)
-                else:
-                    energy, similarityEnergy, regEnergy = self.criterion.get_energy(cIWarped, self.ISource, self.ITarget)
-
-                cur_energy = utils.t2np(energy)
-
-                if last_energy is not None:
-
-                    # relative function toleranc: |f(xi)-f(xi+1)|/(1+|f(xi)|)
-                    rel_f = abs(last_energy-cur_energy)/(1+abs(cur_energy))
-
-                    print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF={relF}'
-                          .format(iter=iter,
-                                energy=cur_energy,
-                                similarityE=utils.t2np(similarityEnergy),
-                                regE=utils.t2np(regEnergy),
-                                relF=rel_f))
-
-                    # check if relative convergence tolerance is reached
-                    if rel_f < self.rel_ftol:
-                        print('Reached relative function tolerance of = ' + str( self.rel_ftol ))
-                        break
-
-                else:
-                    print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF=n/a'
-                          .format(iter=iter,
-                                  energy=cur_energy,
-                                  similarityE=utils.t2np(similarityEnergy),
-                                  regE=utils.t2np(regEnergy)))
-
-                last_energy = cur_energy
-
-            if self.visualize:
-                if iter%self.visualize_step==0:
-                    vizImage,vizName = self.model.get_parameter_image_and_name_to_visualize()
-                    if self.useMap:
-                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phiWarped)
-                        vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, phiWarped)
-                    else:
-                        vizReg.show_current_images(iter, self.ISource, self.ITarget, cIWarped, vizImage, vizName)
+                self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_IWarped)
+            self.rec_regEnergy = None
+            self.rec_phiWarped = None
+            if self.terminal_flag:
+                break
+            self.iter_count = iter+1
 
         print('time:', time.time() - start)
-
 
 
 class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
@@ -434,8 +467,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     the hierarchy, the registration parameters are upsampled from the solution at the previous lower resolution
     """
 
-    def __init__(self,sz,spacing,useMap,params):
-        super(MultiScaleRegistrationOptimizer,self).__init__(sz,spacing,useMap,params)
+    def __init__(self, sz, spacing, useMap, params):
+        super(MultiScaleRegistrationOptimizer, self).__init__(sz, spacing, useMap, params)
         self.scaleFactors = [1.]
         """At what image scales optimization should be computed"""
         self.scaleIterations = [100]
@@ -465,7 +498,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.addSimName = simName
         self.addSimMeasure = simMeasure
 
-    def set_model(self,modelName):
+    def set_model(self, modelName):
         """
         Set the model to be optimized over by name
         
@@ -504,13 +537,12 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def _get_desired_size_from_scale(self, origSz, scale):
 
         osz = np.array(list(origSz))
-        dsz = np.zeros(osz.shape,dtype='int')
+        dsz = np.zeros(osz.shape, dtype='int')
         dim = len(osz)
         for d in range(dim):
-            dsz[d]=round(scale*osz[d])
+            dsz[d] = round(scale * osz[d])
 
         return dsz
-
 
     def optimize(self):
         """
@@ -526,7 +558,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         nrOfScales = len(self.scaleFactors)
 
         # check that we have the right number of iteration parameters
-        assert( nrOfScales==len(self.scaleIterations) )
+        assert (nrOfScales == len(self.scaleIterations))
 
         print('Performing multiscale optmization with scales: ' + str(self.scaleFactors))
 
@@ -547,17 +579,17 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             sampler = IS.ResampleImage()
 
-            ISourceC, spacingC = sampler.downsample_image_to_size(self.ISource, self.spacing,currentDesiredSz)
-            ITargetC, spacingC = sampler.downsample_image_to_size(self.ITarget, self.spacing,currentDesiredSz)
+            ISourceC, spacingC = sampler.downsample_image_to_size(self.ISource, self.spacing, currentDesiredSz)
+            ITargetC, spacingC = sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz)
 
-            szC = ISourceC.size() # this assumes the BxCxXxYxZ format
+            szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
 
-            ssOpt = SingleScaleRegistrationOptimizer(szC,spacingC,self.useMap,self.params)
+            ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.params)
 
-            if ( (self.add_model_name is not None) and
-                     (self.add_model_networkClass is not None) and
-                     (self.add_model_lossClass is not None) ):
-                ssOpt.add_model(self.add_model_name,self.add_model_networkClass,self.add_model_lossClass)
+            if ((self.add_model_name is not None) and
+                    (self.add_model_networkClass is not None) and
+                    (self.add_model_lossClass is not None)):
+                ssOpt.add_model(self.add_model_name, self.add_model_networkClass, self.add_model_lossClass)
 
             # now set the actual model we want to solve
             ssOpt.set_model(self.model_name)
@@ -581,7 +613,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             if upsampledParameters is not None:
                 # check that the upsampled parameters are consistent with the downsampled images
-                if not (abs(spacingC-upsampledSpacing)<0.000001).all():
+                if not (abs(spacingC - upsampledSpacing) < 0.000001).all():
                     print(spacingC)
                     print(upsampledSpacing)
                     raise ValueError('Upsampled parameters and downsampled images are of inconsistent dimension')
@@ -590,13 +622,13 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 ssOpt.set_model_parameters(upsampledParameters)
 
             # do the actual optimization
-            print( 'Optimizing for at most ' + str(currentNrOfIteratons) + ' iterations')
+            print('Optimizing for at most ' + str(currentNrOfIteratons) + ' iterations')
             ssOpt.set_number_of_iterations(currentNrOfIteratons)
             ssOpt.optimize()
 
             # if we are not at the very last scale, then upsample the parameters
-            if currentScaleNumber!=nrOfScales-1:
+            if currentScaleNumber != nrOfScales - 1:
                 # we need to revert the downsampling to the next higher level
-                scaleTo = reverseScales[currentScaleNumber+1]
+                scaleTo = reverseScales[currentScaleNumber + 1]
                 desiredUpsampleSz = self._get_desired_size_from_scale(self.ISource.size()[2::], scaleTo)
-                upsampledParameters,upsampledSpacing = ssOpt.upsample_model_parameters(desiredUpsampleSz)
+                upsampledParameters, upsampledSpacing = ssOpt.upsample_model_parameters(desiredUpsampleSz)

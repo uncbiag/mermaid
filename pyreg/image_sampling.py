@@ -16,6 +16,7 @@ import smoother_factory as SF
 import module_parameters as MP
 
 import utils
+from dataWarper import AdaptVal
 
 class ResampleImage(object):
     """
@@ -114,7 +115,7 @@ class ResampleImage(object):
             print(desiredSizeNC)
             raise('For upsampling sizes need to increase')
 
-        idDes = Variable(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC)))
+        idDes = AdaptVal(Variable(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC))))
         newspacing = spacing*(sz[2::].astype('float')/desiredSizeNC[2::].astype('float'))
 
         # now use this map for resampling
@@ -149,7 +150,7 @@ class ResampleImage(object):
         smoother = SF.DiffusionSmoother(sz, spacing, self.params)
         smoothedImage_multiNC = smoother.smooth_scalar_field_multiNC(I)
 
-        idDes = Variable(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC)))
+        idDes = AdaptVal(Variable(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC))))
         newspacing = spacing*(sz[2::].astype('float')/desiredSizeNC[2::].astype('float'))
 
         # now use this map for resampling

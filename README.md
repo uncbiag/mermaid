@@ -1,31 +1,46 @@
 # Image registration using pyTorch
 
-This is a project to integrate image registration algorithms with pyTorch.
-
-The goal is to: 
-
-1. Initially start with a stationary velocity field (SVF) implementation on images in 2D (done)
-2. Create a map-based SVF implementation inspired by the map code of the spatial transformer networks (done)
-3. Create an SVF model paramterized by momentum
-4. Port everything from 2D to 3D (done)
-5. Implement LDDMM using pyTorch (done for scalar- and vector-valued momentum)
+Gpu version of proj mermaid
 
 # Setup
 
-* To compile the spatial transformer code simply go to the pyreg/libraries directory and exectute 'python build.py'
-* To run the code import set_pyreg_paths (which will take care of the paths for the libraries)
-* The main registation code examples are in testRegistrationGeneric.py and testRegistrationGenericMultiscale.py
-* To compile the documentation, simply execute 'make html' in the docs directory. This requires an installation of graphviz to render the inheritence diagrams. On OSX this can for example be intalled by 'brew install graphviz'. *This documentation also contains slightly more detailed installation instruction*
+* To compile the spatial transformer code simply go to the pyreg/libraries directory \
+  for gpu user: execute 'sh make_cuda.sh'
+  for cpu user: execute 'sh make_cpu.sh'
+* pip install pytorch-fft
+* go config to set CUDA_ON
 
-# TODO
+# How to run
+* run testRegistrationGeneric.py/testRegistrationMultiscale.py 
+* settings are put together in config.txt
+* use float32 in most cases !!!, float16 is not stable
+* !!!!!!!!!!!!  most part of the codes have been examined. In case of failure, contact zyshen021@gmail.com
+    
+# Lastest Modification
+  * 11.13    fix to adpat device
+  * 11.12    optimize, fix bugs, 
+  * 10.31:   unitest stn is added, see test_stn_cpu.py and test_stn_gpu.py
+  * 10.29:   1D, 2D and 3D cuda STN have been implemented. see pyreg.libraries.functions.stn_nd
+    *        stn = STNFunction_ND_BCXYZ(n_dim)
+             stn.forward_stn(inputImage,inputGrids, output, n_dim, device_c, use_cuda=True)
+             stn.backward_stn(inputImage, inputGrids, grad_input, grad_grids, grad_output, n_dim, device_c,use_cuda=True)
 
-There is a lot still to do. Here is an incomplete list:
 
-- Implement a convergence check for optimizer. Currently just stops after a fixed number of steps
-- CUDA implementation of the spatial transformer parts (this can follow the existing 2D spatial transformer code in CUDA)
-- image-smoothing based on CUDA (I wrote a pyTorch function to do it on the CPU in the Fourier domain)
-- In general, make sure that everything can also run on the GPU (as most of it is standard pyTorch, this should hopefully not be too difficult)
-- Write a more complete documentation (with sphinx and as part of the code)
-- Extend the lBFGS optimizer so that it can deal with parameter groups (currently one one set of parameters seems to be supported; while this is sufficient for many standard registration tasks, it is not for more advanced models.)
-- Add more tests
-- Add some time-series models (this should be super-easy, because we no longer need to worry about the adjoint equations)
+  * Important changes before 10.21:
+    * add dataWarper.py, define some Variable Warppers, two are most common use
+      *     # AdaptVal(x): Adaptive Warper: used to adapt the data type, implemented on the existed Tensor/Variable
+                
+            # MyTensor:  a adpative Tensor to create gpu, cpu and float16 Tensor
+
+    * Changes are made in vector organization, batch is no longer calculated in loop
+    * Memory efficient structure modification in "optimize" function
+    * Real FFT is implemented for both speed and memory consideration, which needs the smoothing kernel should be symmetric 
+
+
+# To Do
+  * make svf_quasi_momentum stable
+  * add smoothing unittest
+  * modify other testRegistration*
+  * add Tensorboard
+  * schedule the main function
+  
