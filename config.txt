@@ -6,13 +6,13 @@
 #optimName:     lbfgs_ls, adam
 
 [boolType]
-CUDA_ON = False
+CUDA_ON = True
 USE_FLOAT16 = False
 loadSettingsFromFile = False
-saveSettingsToFile = True
+saveSettingsToFile = False
 useMap = False
-visualize = True
-smoothImages = False
+visualize = False
+smoothImages = True
 useRealImages = True
 
 
@@ -24,13 +24,13 @@ simMeasureSigma = 0.1
 [intType]
 dim = 2
 nrOfIterations = 50
-img_len =150
+img_len =504
 
 [strType]
-modelName = lddmm_shooting 
+modelName = lddmm_shooting
 smoothType = gaussian
-optimName = lbfgs_ls
+optimName = adam
 
 [listType]
 multi_scale_scale_factors = [1.0, 0.5, 0.25]
-multi_scale_iterations_per_scale = [50, 100, 100]
+multi_scale_iterations_per_scale = [10,20,20]
