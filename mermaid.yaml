@@ -1,0 +1,54 @@
+{% set name = "mermaid" %}
+{% set version = "0.0.1" %}
+
+package:
+  name: '{{ name|lower }}'
+  version: '{{ version }}'
+
+source:
+  - git_url: https://github.com/uncbiag/mermaid.git
+    folder: mermaid
+  - git_url: https://github.com/locuslab/pytorch_fft.git 
+    folder: pytorch_fft
+
+
+build:
+  number: 0
+  script: python mermaid/pyreg/libraries/build.py
+  script: python pytorch_fft/build.py # [not osx]
+
+requirements:
+  build:
+    - python
+    - cffi
+    - simpleitk
+    - pytorch
+    - torchvision
+    - cuda80 # [not osx]
+    - pytorch-fft # [not osx]
+    - setuptools
+    - sphinx
+
+  run:
+    - python
+    - cffi
+    - simpleitk
+    - pytorch
+    - torchvision
+    - cuda80 # [not osx]
+    - pytorch-fft # [not osx]
+    - sphinx
+
+test:
+  imports:
+
+about:
+  home: https://github.com/uncbiag/mermaid
+  license: BSD License
+  license_family: BSD
+  license_file: ''
+  doc_url: ''
+  dev_url: ''
+
+extra:
+  recipe-maintainers: 'Marc Niethammer'
