@@ -632,3 +632,4 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 scaleTo = reverseScales[currentScaleNumber + 1]
                 desiredUpsampleSz = self._get_desired_size_from_scale(self.ISource.size()[2::], scaleTo)
                 upsampledParameters, upsampledSpacing = ssOpt.upsample_model_parameters(desiredUpsampleSz)
+
