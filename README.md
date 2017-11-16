@@ -1,6 +1,6 @@
 # Image registration using pyTorch
 
-CPU/GPU verwion of mermaid.
+CPU/GPU version of mermaid.
 
 # Basic install
   * See mermaid.yaml for all the packages that need to be installed. This is easiest with anaconda.
