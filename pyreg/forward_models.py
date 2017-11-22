@@ -25,7 +25,7 @@ import numpy as np
 import finite_differences as fd
 import smoother_factory as sf
 import utils
-from dataWarper import MyTensor, AdaptVal
+from data_wrapper import MyTensor, AdaptVal
 import torch
 from torch.autograd import Variable
 

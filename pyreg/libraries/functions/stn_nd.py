@@ -8,7 +8,7 @@ Spatial transform functions in 1D, 2D, and 3D.
 import torch
 from torch.autograd import Function
 from cffi import FFI
-from pyreg.dataWarper import USE_CUDA, STNTensor, STNVal
+from pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
 if USE_CUDA:
     from pyreg.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
 from pyreg.libraries._ext import my_lib_nd

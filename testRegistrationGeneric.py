@@ -14,7 +14,7 @@ Contributors:
 from __future__ import print_function
 import torch
 from torch.autograd import Variable
-from pyreg.dataWarper import CUDA_ON, MyTensor, AdaptVal
+from pyreg.data_wrapper import CUDA_ON, MyTensor, AdaptVal
 import numpy as np
 import set_pyreg_paths
 from time import time

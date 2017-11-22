@@ -5,7 +5,7 @@ Similarity measures for the registration methods and factory to create similarit
 from abc import ABCMeta, abstractmethod
 import torch
 from torch.autograd import Variable
-from dataWarper import AdaptVal
+from data_wrapper import AdaptVal
 
 class SimilarityMeasure(object):
     """

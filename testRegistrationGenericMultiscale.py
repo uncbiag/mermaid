@@ -25,7 +25,7 @@ import pyreg.smoother_factory as SF
 
 import pyreg.multiscale_optimizer as MO
 from configParsers import *
-from pyreg.dataWarper import AdaptVal
+from pyreg.data_wrapper import AdaptVal
 
 since = time()
 if useMap:

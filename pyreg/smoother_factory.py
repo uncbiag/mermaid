@@ -8,7 +8,7 @@ import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 import numpy as np
-from dataWarper import USE_CUDA, MyTensor, AdaptVal
+from data_wrapper import USE_CUDA, MyTensor, AdaptVal
 import finite_differences as fd
 import utils
 from configParsers import smoothType, gaussianStd

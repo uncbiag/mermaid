@@ -10,7 +10,7 @@ import torch
 from torch.nn.parameter import Parameter
 from torch.autograd import Variable
 from libraries.modules.stn_nd import STN_ND_BCXYZ
-from dataWarper import MyTensor,AdaptVal
+from data_wrapper import MyTensor,AdaptVal
 import numpy as np
 import finite_differences as fd
 

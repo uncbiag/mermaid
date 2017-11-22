@@ -12,7 +12,7 @@ import numpy as np
 
 import torch
 from torch.autograd import Variable
-from dataWarper import USE_CUDA, AdaptVal
+from data_wrapper import USE_CUDA, AdaptVal
 import model_factory as MF
 import image_sampling as IS
 from MyAdam import MyAdam
