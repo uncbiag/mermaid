@@ -2,24 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0ab09987-bda6-459e-9cb5-d91da1696177" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/vcs.xml" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/pyreg/dataWarper.py" afterPath="$PROJECT_DIR$/pyreg/data_wrapper.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/MyAdam.py" afterPath="$PROJECT_DIR$/pyreg/MyAdam.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/custom_optimizers.py" afterPath="$PROJECT_DIR$/pyreg/custom_optimizers.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/custom_pytorch_extensions.py" afterPath="$PROJECT_DIR$/pyreg/custom_pytorch_extensions.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/finite_differences.py" afterPath="$PROJECT_DIR$/pyreg/finite_differences.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/forward_models.py" afterPath="$PROJECT_DIR$/pyreg/forward_models.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/image_sampling.py" afterPath="$PROJECT_DIR$/pyreg/image_sampling.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/libraries/functions/stn_nd.py" afterPath="$PROJECT_DIR$/pyreg/libraries/functions/stn_nd.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/multiscale_optimizer.py" afterPath="$PROJECT_DIR$/pyreg/multiscale_optimizer.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/registration_networks.py" afterPath="$PROJECT_DIR$/pyreg/registration_networks.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/regularizer_factory.py" afterPath="$PROJECT_DIR$/pyreg/regularizer_factory.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/similarity_measure_factory.py" afterPath="$PROJECT_DIR$/pyreg/similarity_measure_factory.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/smoother_factory.py" afterPath="$PROJECT_DIR$/pyreg/smoother_factory.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/utils.py" afterPath="$PROJECT_DIR$/pyreg/utils.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/testMinimalRegistraton.py" afterPath="$PROJECT_DIR$/testMinimalRegistraton.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/testRegistrationGeneric.py" afterPath="$PROJECT_DIR$/testRegistrationGeneric.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/testRegistrationGenericMultiscale.py" afterPath="$PROJECT_DIR$/testRegistrationGenericMultiscale.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -34,8 +17,20 @@
       <file leaf-file-name="regularizer_factory.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/pyreg/regularizer_factory.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="200">
-              <caret line="10" column="17" lean-forward="false" selection-start-line="10" selection-start-column="17" selection-end-line="10" selection-end-column="17" />
+            <state relative-caret-position="185">
+              <caret line="48" column="40" lean-forward="false" selection-start-line="48" selection-start-column="32" selection-end-line="48" selection-end-column="40" />
+              <folding>
+                <element signature="e#60#99#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="registration_networks.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/pyreg/registration_networks.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-751">
+              <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -51,7 +46,7 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="config.txt" pinned="false" current-in-tab="true">
+      <file leaf-file-name="config.txt" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/config.txt">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="200">
@@ -75,14 +70,19 @@
       </file>
     </leaf>
   </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>MyTensor</find>
+    </findStrings>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/pyreg/regularizer_factory.py" />
         <option value="$PROJECT_DIR$/testRegistrationGeneric.py" />
+        <option value="$PROJECT_DIR$/pyreg/regularizer_factory.py" />
       </list>
     </option>
   </component>
@@ -343,14 +343,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyreg/regularizer_factory.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="200">
-          <caret line="10" column="17" lean-forward="false" selection-start-line="10" selection-start-column="17" selection-end-line="10" selection-end-column="17" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/testRegistrationGeneric.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="160">
@@ -363,6 +355,24 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="200">
           <caret line="10" column="28" lean-forward="true" selection-start-line="10" selection-start-column="28" selection-end-line="10" selection-end-column="28" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyreg/regularizer_factory.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="185">
+          <caret line="48" column="40" lean-forward="false" selection-start-line="48" selection-start-column="32" selection-end-line="48" selection-end-column="40" />
+          <folding>
+            <element signature="e#60#99#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyreg/registration_networks.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-751">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding />
         </state>
       </provider>
