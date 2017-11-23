@@ -371,7 +371,7 @@ class GaussianFourierSmoother(GaussianSmoother):
     def __init__(self, sz, spacing, params):
         super(GaussianFourierSmoother,self).__init__(sz,spacing,params)
         self.gaussianStd = params[('gaussian_std', 0.15 ,'std for the Gaussian' )]
-        """stanard deviation of Gaussian"""
+        """standard deviation of Gaussian"""
         self.FFilter = None
         """filter in Fourier domain"""
 
