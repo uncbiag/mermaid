@@ -71,6 +71,7 @@ if smooth_images:
     ISource = s.smooth_scalar_field(ISource)
     ITarget = s.smooth_scalar_field(ITarget)
 
+use_map = False # this custom registration algorithm does not use a map, so force it to False
 mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,use_map,params)
 
 # now customize everything
