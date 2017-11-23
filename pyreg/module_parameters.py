@@ -27,11 +27,13 @@ class ParameterDict(object):
         
         :param fileName: filename of the configuration to be loaded 
         """
-
-        with open(fileName) as data_file:
-            if self.printSettings:
-                print('Loading parameter file = ' + fileName )
-            self.ext = json.load(data_file)
+        try:
+            with open(fileName) as data_file:
+                if self.printSettings:
+                    print('Loading parameter file = ' + fileName )
+                self.ext = json.load(data_file)
+        except IOError as e:
+            print('Could not open file = ' + fileName + '; ignoring request.')
 
     def write_JSON(self, fileName):
         """
@@ -146,7 +148,13 @@ class ParameterDict(object):
             # we are assigning a category
         else:
             # now we have to set an actual value (not a category)
-            self._set_current_key(key, value, comment)
+            if type(value)==type(self):
+                # Here we are trying to assign a full parameter object
+                # We want to add the content and not the object itself
+                self._set_current_key(key, value.int, comment)
+            else:
+                # this is just a normal value
+                self._set_current_key(key, value, comment)
 
     def _set_current_category(self, key, comment):
         currentCategoryName = self.currentCategoryName + '.' + str(key)

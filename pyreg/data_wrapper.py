@@ -1,5 +1,5 @@
 import torch
-from configParsers import CUDA_ON, USE_FLOAT16, myAdamEPS,dim
+from configParsers import CUDA_ON, USE_FLOAT16
 
 # ----------------- global setting ----------------------------------------
 USE_CUDA = torch.cuda.is_available() & CUDA_ON

@@ -11,7 +11,6 @@ import numpy as np
 from data_wrapper import USE_CUDA, MyTensor, AdaptVal
 import finite_differences as fd
 import utils
-from configParsers import smoothType, gaussianStd
 import custom_pytorch_extensions as ce
 
 class Smoother(object):
@@ -371,7 +370,7 @@ class GaussianFourierSmoother(GaussianSmoother):
 
     def __init__(self, sz, spacing, params):
         super(GaussianFourierSmoother,self).__init__(sz,spacing,params)
-        self.gaussianStd = params[('gaussianStd', gaussianStd ,'std for the Gaussian' )]
+        self.gaussianStd = params[('gaussian_std', 0.15 ,'std for the Gaussian' )]
         """stanard deviation of Gaussian"""
         self.FFilter = None
         """filter in Fourier domain"""
@@ -451,7 +450,7 @@ class SmootherFactory(object):
         """size of image"""
         self.dim = len( spacing )
         """dimension of image"""
-        self.default_smoother_type = smoothType
+        self.default_smoother_type = 'gaussian'
         """default smoother used for smoothing"""
 
     def set_default_smoother_type_to_gaussian(self):
@@ -489,4 +488,4 @@ class SmootherFactory(object):
         elif smootherType=='gaussianSpatial':
             return GaussianSpatialSmoother(self.sz,self.spacing,cparams)
         else:
-            raise ValueError( 'Smoother: ' + smoothType + ' not known')
+            raise ValueError( 'Smoother: ' + smootherType + ' not known')
