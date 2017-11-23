@@ -23,7 +23,7 @@ import set_pyreg_paths
 import pyreg.example_generation as eg
 import pyreg.module_parameters as pars
 import pyreg.smoother_factory as SF
-
+from pyreg.data_wrapper import AdaptVal
 import pyreg.multiscale_optimizer as MO
 from configParsers import *
 
@@ -58,8 +58,8 @@ spacing = 1./(sz[2::]-1) # the first two dimensions are batch size and number of
 print ('Spacing = ' + str( spacing ) )
 
 # create the source and target image as pyTorch variables
-ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
-ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
+ISource = AdaptVal(Variable( torch.from_numpy( I0.copy() ), requires_grad=False ))
+ITarget = AdaptVal(Variable( torch.from_numpy( I1 ), requires_grad=False ))
 
 if smooth_images:
     # smooth both a little bit
