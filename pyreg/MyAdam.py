@@ -1,6 +1,6 @@
 import math
 from torch.optim import Optimizer
-from dataWarper import AdaptVal
+from data_wrapper import AdaptVal
 from configParsers import my_adam_EPS
 
 class MyAdam(Optimizer):

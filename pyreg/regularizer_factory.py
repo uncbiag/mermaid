@@ -8,7 +8,7 @@ import torch
 from torch.autograd import Variable
 
 import finite_differences as fd
-from dataWarper import AdaptVal,MyTensor
+from data_wrapper import AdaptVal,MyTensor
 
 class Regularizer(object):
     """
@@ -46,7 +46,7 @@ class Regularizer(object):
         :return: Regularizer energy
         """
         szv = v.size()
-        reg = AdaptVal(MyTensor(1).zero_(), requires_grad=False)
+        reg = AdaptVal(Variable(MyTensor(1).zero_()), requires_grad=False)
         for nrI in range(szv[0]): # loop over number of images
             reg = reg + self._compute_regularizer(v[nrI, ...])
         return reg

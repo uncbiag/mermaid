@@ -16,7 +16,7 @@ import smoother_factory as SF
 import module_parameters as MP
 
 import utils
-from dataWarper import AdaptVal
+from data_wrapper import AdaptVal
 
 class ResampleImage(object):
     """

@@ -12,7 +12,7 @@ from torch.autograd import Function
 from torch.autograd import Variable
 import numpy as np
 from torch.autograd import gradcheck
-from dataWarper import USE_CUDA, FFTVal,AdaptVal
+from data_wrapper import USE_CUDA, FFTVal,AdaptVal
 if USE_CUDA:
     import pytorch_fft.fft as fft
 

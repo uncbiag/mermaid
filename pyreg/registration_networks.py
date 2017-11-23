@@ -15,7 +15,7 @@ import torch.nn as nn
 
 import rungekutta_integrators as RK
 import forward_models as FM
-from dataWarper import AdaptVal
+from data_wrapper import AdaptVal
 import regularizer_factory as RF
 import similarity_measure_factory as SM
 

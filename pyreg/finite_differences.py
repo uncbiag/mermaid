@@ -9,7 +9,7 @@ from abc import ABCMeta, abstractmethod
 
 import torch
 from torch.autograd import Variable
-from dataWarper import MyTensor, AdaptVal
+from data_wrapper import MyTensor, AdaptVal
 import numpy as np
 
 class FD(object):

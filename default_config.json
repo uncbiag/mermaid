@@ -36,7 +36,7 @@
         "my_adam_EPS": 0.0, 
         "name": "lbfgs_ls", 
         "single_scale": {
-            "nr_of_iterations": 100
+            "nr_of_iterations": 5
         }
     }
 }
