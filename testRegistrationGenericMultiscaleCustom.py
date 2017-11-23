@@ -30,12 +30,13 @@ from configParsers import *
 
 # general parameters
 params = pars.ParameterDict()
+#params['registration_model']['forward_model'] = base_default_params['model']['deformation']['forward_model']
 
-if loadSettingsFromFile:
-    settingFile = modelName + '_settings.json'
+if load_settings_from_file:
+    settingFile = model_name + '_settings.json'
     params.load_JSON(settingFile)
 
-if useRealImages:
+if use_real_images:
     I0,I1= eg.CreateRealExampleImages(dim).create_image_pair()
 
 else:
@@ -60,17 +61,17 @@ print ('Spacing = ' + str( spacing ) )
 ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
 ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
 
-if smoothImages:
+if smooth_images:
     # smooth both a little bit
     cparams = params[('image_smoothing',{},'general settings to pre-smooth images')]
     cparams[('smoother',{})]
-    cparams['smoother']['type']= smoothType
-    cparams['smoother']['gaussianStd']= gaussianStd
+    cparams['smoother']['type']= image_smoothing_type
+    cparams['smoother']['gaussian_std']= smooth_images_gaussian_std
     s = SF.SmootherFactory( sz[2::], spacing ).create_smoother(cparams)
     ISource = s.smooth_scalar_field(ISource)
     ITarget = s.smooth_scalar_field(ITarget)
 
-mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,useMap,params)
+mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,use_map,params)
 
 # now customize everything
 
@@ -139,10 +140,11 @@ class MySVFImageLoss(RN.RegistrationImageLoss):
     def compute_regularization_energy(self, I0_source):
         return self.regularizer.compute_regularizer_multiN(self.v)
 
-mo.add_model(modelName,MySVFNet,MySVFImageLoss)
-mo.set_model(modelName)
+mo.add_model(model_name,MySVFNet,MySVFImageLoss)
+mo.set_model(model_name)
 
-mo.set_model(modelName)
+mo.set_visualization( visualize )
+mo.set_visualize_step( visualize_step )
 
 mo.set_source_image(ISource)
 mo.set_target_image(ITarget)
@@ -157,6 +159,6 @@ mo.set_optimizer_params(dict(lr=0.01))
 # and now do the optimization
 mo.optimize()
 
-if saveSettingsToFile:
-    params.write_JSON(modelName + '_settings_clean.json')
-    params.write_JSON_comments(modelName + '_settings_comments.json')
+if save_settings_to_file:
+    params.write_JSON(model_name + '_settings_clean.json')
+    params.write_JSON_comments(model_name + '_settings_comments.json')

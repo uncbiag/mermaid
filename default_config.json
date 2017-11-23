@@ -1,0 +1,42 @@
+{
+    "image_smoothing": {
+        "smooth_images": true, 
+        "smooth_images_gaussian_std": 0.05, 
+        "smoothing_type": "gaussian"
+    }, 
+    "model": {
+        "deformation": {
+            "forward_model": {
+                "number_of_time_steps": 10, 
+                "smoother": {
+                    "gaussian_std": 0.15, 
+                    "type": "gaussian"
+                }
+            }, 
+            "name": "lddmm_shooting", 
+            "use_map": true
+        }, 
+        "similarity": {
+            "sim_measure_sigma": 0.1
+        }
+    }, 
+    "optimizer": {
+        "multi_scale": {
+            "scale_factors": [
+                1.0, 
+                0.5, 
+                0.25
+            ], 
+            "scale_iterations": [
+                10, 
+                20, 
+                20
+            ]
+        }, 
+        "my_adam_EPS": 0.0, 
+        "name": "lbfgs_ls", 
+        "single_scale": {
+            "nr_of_iterations": 100
+        }
+    }
+}

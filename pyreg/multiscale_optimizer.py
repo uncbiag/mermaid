@@ -16,8 +16,6 @@ from dataWarper import USE_CUDA, AdaptVal
 import model_factory as MF
 import image_sampling as IS
 from MyAdam import MyAdam
-from configParsers import optimName, visualize
-
 
 class Optimizer(object):
     """
@@ -87,14 +85,14 @@ class ImageRegistrationOptimizer(Optimizer):
         """source image"""
         self.ITarget = None
         """target image"""
-        self.optimizer_name = optimName  # 'lbfgs_ls'#''lbfgs_ls'
+        self.optimizer_name = 'lbfgs_ls' #''lbfgs_ls'
         """name of the optimizer to use"""
         self.optimizer_params = {}
         """parameters that should be passed to the optimizer"""
         self.optimizer = None
         """optimizer object itself (to be instantiated)"""
 
-        self.visualize = visualize
+        self.visualize = True
         """if True figures are created during the run"""
         self.visualize_step = 10
         """how often the figures are updated; each self.visualize_step-th iteration"""

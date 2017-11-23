@@ -28,26 +28,27 @@ from configParsers import *
 from pyreg.dataWarper import AdaptVal
 
 since = time()
-if useMap:
-    modelName = modelName + '_map'
+if use_map:
+    model_name = model_name + '_map'
 else:
-    modelName = modelName + '_image'
+    model_name = model_name + '_image'
 
 # general parameters
 params = pars.ParameterDict()
+params['registration_model']['forward_model'] = base_default_params['model']['deformation']['forward_model']
 
-if loadSettingsFromFile:
-    settingFile = modelName + '_settings.json'
+if load_settings_from_file:
+    settingFile = model_name + '_settings.json'
     params.load_JSON(settingFile)
 
-torch.set_num_threads( nrOfThreads )
+torch.set_num_threads( nr_of_threads )
 print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
 
-if useRealImages:
+if use_real_images:
     I0,I1= eg.CreateRealExampleImages(dim).create_image_pair()
 
 else:
-    szEx = np.tile( img_len, dim )         # size of the desired images: (sz)^dim
+    szEx = np.tile( example_img_len, dim )         # size of the desired images: (sz)^dim
 
     params['square_example_images']=({},'Settings for example image generation')
     params['square_example_images']['len_s'] = szEx.min()/6
@@ -68,19 +69,23 @@ print ('Spacing = ' + str( spacing ) )
 ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
 ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
 
-if smoothImages:
+if smooth_images:
     # smooth both a little bit
     cparams = params[('image_smoothing',{},'general settings to pre-smooth images')]
     cparams[('smoother',{})]
-    cparams['smoother']['type']= smoothType
-    cparams['smoother']['gaussianStd']= gaussianStd
+    cparams['smoother']['type']= image_smoothing_type
+    cparams['smoother']['gaussian_std']= smooth_images_gaussian_std
     s = SF.SmootherFactory( sz[2::], spacing ).create_smoother(cparams)
     ISource = s.smooth_scalar_field(ISource)
     ITarget = s.smooth_scalar_field(ITarget)
 
-mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,useMap,params)
+mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,use_map,params)
 
-mo.set_model(modelName)
+mo.set_optimizer_by_name( optimizer_name )
+mo.set_visualization( visualize )
+mo.set_visualize_step( visualize_step )
+
+mo.set_model(model_name)
 
 mo.set_source_image(ISource)
 mo.set_target_image(ITarget)
@@ -91,9 +96,9 @@ mo.set_number_of_iterations_per_scale(multi_scale_iterations_per_scale)
 # and now do the optimization
 mo.optimize()
 
-if saveSettingsToFile:
-    params.write_JSON(modelName + '_settings_clean.json')
-    params.write_JSON_comments(modelName + '_settings_comments.json')
+if save_settings_to_file:
+    params.write_JSON(model_name + '_settings_clean.json')
+    params.write_JSON_comments(model_name + '_settings_comments.json')
 
 
 print("time{}".format(time()-since))

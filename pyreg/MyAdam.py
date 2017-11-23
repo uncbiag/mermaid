@@ -1,6 +1,7 @@
 import math
 from torch.optim import Optimizer
-from dataWarper import AdaptVal,myAdamEPS
+from dataWarper import AdaptVal
+from configParsers import my_adam_EPS
 
 class MyAdam(Optimizer):
     """a numerical (float16) more stable version of Adam algorithm.
@@ -70,7 +71,7 @@ class MyAdam(Optimizer):
                 bias_correction1 = 1 - beta1 ** state['step']
                 bias_correction2 = 1 - beta2 ** state['step']
                 step_size = group['lr'] * math.sqrt(bias_correction2) / bias_correction1
-                eps =myAdamEPS
+                eps = my_adam_EPS
 
                 p.data =AdaptVal(p.data.float().addcdiv_(-step_size, (exp_avg), (denom + eps)))
 

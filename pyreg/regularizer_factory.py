@@ -8,7 +8,7 @@ import torch
 from torch.autograd import Variable
 
 import finite_differences as fd
-from dataWapper import AdaptVal,MyTensor
+from dataWarper import AdaptVal,MyTensor
 
 class Regularizer(object):
     """
