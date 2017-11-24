@@ -8,11 +8,11 @@
         "load_settings_from_file": true, 
         "save_settings_to_file": true, 
         "visualize": true, 
-        "visualize_step": 5
+        "visualize_step": 25
     }, 
     "demo_examples": {
         "dim": 2, 
         "example_img_len": 128, 
-        "use_real_images": false
+        "use_real_images": true
     }
 }

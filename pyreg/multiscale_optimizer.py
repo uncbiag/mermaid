@@ -15,7 +15,7 @@ from torch.autograd import Variable
 from data_wrapper import USE_CUDA, AdaptVal
 import model_factory as MF
 import image_sampling as IS
-from MyAdam import MyAdam
+#from MyAdam import MyAdam
 
 class Optimizer(object):
     """
@@ -416,9 +416,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                                            tolerance_grad=self.rel_ftol * 10, tolerance_change=self.rel_ftol,
                                            history_size=5, line_search_fn='backtracking')
                 return opt_instance
+            elif self.optimizer_name == 'sgd':
+                opt_instance = torch.optim.SGD(self.model.parameters(), lr=0.25, momentum=0.9, dampening=0, weight_decay=0, nesterov=True)
             elif self.optimizer_name == 'adam':
-                opt_instance = torch.optim.Adam(self.model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=self.rel_ftol,
-                                      weight_decay=0)
+                opt_instance = torch.optim.Adam(self.model.parameters(), lr=0.0025, betas=(0.9, 0.999), eps=self.rel_ftol, weight_decay=0)
                 return opt_instance
             else:
                 raise ValueError('Optimizer = ' + str(self.optimizer_name) + ' not yet supported')
