@@ -1,0 +1,7 @@
+{
+    "compute": {
+        "CUDA_ON": false,
+        "USE_FLOAT16": false, 
+        "nr_of_threads": 8
+    }
+}

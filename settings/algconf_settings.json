@@ -1,0 +1,48 @@
+{
+    "algconf": {
+        "image_smoothing": {
+            "smooth_images": true, 
+            "smoother": {
+                "gaussian_std": 0.01, 
+                "type": "gaussian"
+            }
+        }, 
+        "model": {
+            "deformation": {
+                "name": "lddmm_shooting", 
+                "use_map": true
+            }, 
+            "registration_model": {
+                "forward_model": {
+                    "number_of_time_steps": 10, 
+                    "smoother": {
+                        "gaussian_std": 0.1, 
+                        "type": "gaussian"
+                    }
+                }, 
+                "similarity_measure": {
+                    "sigma": 0.1, 
+                    "type": "ssd"
+                }
+            }
+        }, 
+        "optimizer": {
+            "multi_scale": {
+                "scale_factors": [
+                    1.0, 
+                    0.5, 
+                    0.25
+                ], 
+                "scale_iterations": [
+                    10, 
+                    20, 
+                    20
+                ]
+            }, 
+            "name": "lbfgs_ls", 
+            "single_scale": {
+                "nr_of_iterations": 20
+            }
+        }
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "baseconf": {
+        "load_settings_from_file": true, 
+        "save_settings_to_file": true, 
+        "visualize": true,
+        "visualize_step": 5
+    }
+}
