@@ -232,7 +232,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.rec_phiWarped = None
         self.rec_IWarped = None
         self.last_energy = None
-        self.terminal_flag = 0
         """the evaluation information"""
 
     def set_model(self, modelName):
@@ -349,7 +348,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param similarityEnergy:
         :param regEnergy:
         :param Warped:
-        :return:
+        :return: returns True if termination tolerance was reached, otherwise returns False
         """
 
         cur_energy = utils.t2np(energy.float())
@@ -369,8 +368,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             # check if relative convergence tolerance is reached
             if rel_f < self.rel_ftol:
                 print('Reached relative function tolerance of = ' + str(self.rel_ftol))
-                self.terminal_flag = 0
-                exit(0)
+                return True
 
         else:
             print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF=n/a'
@@ -390,6 +388,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, Warped)
                 else:
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, Warped, vizImage, vizName)
+
+        return False
 
     def _get_optimizer_instance(self):
 
@@ -447,12 +447,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.optimizer_instance.step(self._closure)
 
             if self.useMap:
-                self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_phiWarped)
+                tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_phiWarped)
             else:
-                self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_IWarped)
+                tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_IWarped)
             self.rec_regEnergy = None
             self.rec_phiWarped = None
-            if self.terminal_flag:
+            if tolerance_reached:
                 break
             self.iter_count = iter+1
 

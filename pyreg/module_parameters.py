@@ -151,7 +151,7 @@ class ParameterDict(object):
             if type(value)==type(self):
                 # Here we are trying to assign a full parameter object
                 # We want to add the content and not the object itself
-                self._set_current_key(key, value.int, comment)
+                self._set_current_key(key, value.ext, comment)
             else:
                 # this is just a normal value
                 self._set_current_key(key, value, comment)
