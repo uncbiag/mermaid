@@ -67,7 +67,7 @@ class Smoother(object):
         if Iout is not None:
             Is = Iout
         else:
-            Is = AdaptVal(Variable(MyTensor(sz).zero_(), requires_grad=False))
+            Is = Variable(MyTensor(sz).zero_(), requires_grad=False)
 
         for nrI in range(sz[0]):  # loop over all the images
             Is[nrI, ...] = self.smooth_scalar_field_multiC(I[nrI, ...])
@@ -85,7 +85,7 @@ class Smoother(object):
         if Iout is not None:
             Is = Iout
         else:
-            Is = AdaptVal(Variable(MyTensor(sz).zero_(), requires_grad=False))
+            Is = Variable(MyTensor(sz).zero_(), requires_grad=False)
 
         for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same
             Is[nrC, ...] = self.smooth_scalar_field(I[nrC, ...])
@@ -103,7 +103,7 @@ class Smoother(object):
         if vout is not None:
             ISv = vout
         else:
-            ISv = AdaptVal(Variable(MyTensor(v.size()).zero_()))
+            ISv = Variable(MyTensor(v.size()).zero_())
 
         for nrI in range(sz[0]): # loop over all images
             ISv[nrI,...] = self.inverse_smooth_vector_field(v[nrI, ...])
@@ -127,7 +127,7 @@ class Smoother(object):
             if vout is not None:
                 ISv = vout
             else:
-                ISv = AdaptVal(Variable(MyTensor(v.size()).zero_()))
+                ISv = Variable(MyTensor(v.size()).zero_())
 
             # smooth every dimension individually
             for d in range(0, self.dim):
@@ -148,7 +148,7 @@ class Smoother(object):
         if vout is not None:
             Sv = vout
         else:
-            Sv = AdaptVal(Variable(MyTensor(v.size()).zero_()))
+            Sv = Variable(MyTensor(v.size()).zero_())
 
         # if USE_CUDA:
         Sv[:] = self.smooth_scalar_field(v)    # here must use :, very important !!!!
@@ -176,7 +176,7 @@ class Smoother(object):
             if vout is not None:
                 Sv = vout
             else:
-                Sv = AdaptVal(Variable(MyTensor(v.size()).zero_()))
+                Sv = Variable(MyTensor(v.size()).zero_())
 
             #smooth every dimension individually
             for d in range(0, self.dim):

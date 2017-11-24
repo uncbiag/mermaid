@@ -25,7 +25,7 @@ import numpy as np
 import finite_differences as fd
 import smoother_factory as sf
 import utils
-from data_wrapper import MyTensor, AdaptVal
+from data_wrapper import MyTensor
 import torch
 from torch.autograd import Variable
 
@@ -68,7 +68,7 @@ class RHSLibrary(object):
         :return: Returns the RHS of the advection equations involved
         '''
         sz = I.size()
-        rhs_ret = AdaptVal(Variable(MyTensor(sz).zero_(), requires_grad=False))
+        rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
         if sz[1]==1:  #  when only has one channel use fast version
             self._rhs_advect_oneC_image(I,v,rhs_ret)
         else:
@@ -85,7 +85,7 @@ class RHSLibrary(object):
         :return: Returns the RHS of the advection equation
         """
         sz = I.size()
-        rhs_ret = AdaptVal(Variable(MyTensor(sz).zero_(), requires_grad=False))
+        rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
         for nrC in range(sz[0]): # loop over all the channels, just advect them all the same
             rhs_ret[nrC,...] = self._rhs_advect_image_singleC(I[None,nrC,...],v)  # additional None add here for compatiabilty
         return rhs_ret
@@ -147,7 +147,7 @@ class RHSLibrary(object):
         """
 
         sz = I.size()
-        rhs_ret = AdaptVal(Variable(MyTensor(sz).zero_(), requires_grad=False))
+        rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
         # for nrI in range(sz[0]):  # loop over all the images
         #     rhs_ret[nrI, ...] = self._rhs_scalar_conservation_multiC(I[nrI, ...], v[nrI, ...])
         # return rhs_ret
@@ -167,7 +167,7 @@ class RHSLibrary(object):
         :return: Returns the RHS of the scalar-conservation law equation
         """
         sz = I.size()
-        rhs_ret = AdaptVal(Variable(MyTensor(sz).zero_(), requires_grad=False))
+        rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
         for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same
             rhs_ret[nrC, ...] = self._rhs_scalar_conservation_singleC(I[None,nrC, ...], v)  # here None is added for compatiability
         return rhs_ret
@@ -227,7 +227,7 @@ class RHSLibrary(object):
         :return: Returns the RHS of the advection equations involved
         '''
         sz = phi.size()
-        rhs_ret = AdaptVal(Variable(MyTensor(sz).zero_(), requires_grad=False))
+        rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
         # for nrI in range(sz[0]):  # loop over all the images
         #     rhs_ret[nrI, ...] = self._rhs_advect_map_singleN(phi[nrI, ...], v[nrI, ...])
         self._rhs_advect_map_singleN(phi, v,rhs_ret)
@@ -283,7 +283,7 @@ class RHSLibrary(object):
         :return: Returns the RHS of the EPDiff equations involved
         '''
         sz = m.size()
-        rhs_ret = AdaptVal(Variable(MyTensor(sz).zero_(), requires_grad=False))
+        rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
         # for nrI in range(sz[0]):  # loop over all the images
         #     rhs_ret[nrI, ...] = self._rhs_epdiff_singleN(m[nrI, ...], v[nrI, ...])
         self._rhs_epdiff_singleN(m, v, rhs_ret)
