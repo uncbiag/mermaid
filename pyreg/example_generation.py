@@ -92,16 +92,16 @@ class CreateRealExampleImages(CreateExample):
         :param params: Ignored
         :return: Returns the two brain slices.
         """
-        import SimpleITK as sitk
+        import itk 
 
         # create small and large squares
         if self.dim==2:
-            brain_s = sitk.ReadImage('./test_data/brain_slices/ws_slice.nrrd')
-            brain_t = sitk.ReadImage('./test_data/brain_slices/wt_slice.nrrd')
-            I0 = sitk.GetArrayFromImage(brain_s)
+            brain_s = itk.imread('./test_data/brain_slices/ws_slice.nrrd')
+            brain_t = itk.imread('./test_data/brain_slices/wt_slice.nrrd')
+            I0 = itk.GetArrayViewFromImage(brain_s)
             I0 = I0.squeeze()
 
-            I1 = sitk.GetArrayFromImage(brain_t)
+            I1 = itk.GetArrayViewFromImage(brain_t)
             I1 = I1.squeeze()
 
             # normalize based on the 95-th percentile

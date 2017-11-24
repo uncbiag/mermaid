@@ -1,7 +1,7 @@
 {
     "image_smoothing": {
-        "smooth_images": true, 
-        "smooth_images_gaussian_std": 0.05, 
+        "smooth_images": false, 
+        "smooth_images_gaussian_std": 0.01, 
         "smoothing_type": "gaussian"
     }, 
     "model": {
@@ -36,7 +36,7 @@
         "my_adam_EPS": 0.0, 
         "name": "lbfgs_ls", 
         "single_scale": {
-            "nr_of_iterations": 5
+            "nr_of_iterations": 250
         }
     }
 }

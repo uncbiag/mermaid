@@ -21,7 +21,7 @@ requirements:
   build:
     - python
     - cffi
-    - simpleitk
+    - itk
     - pytorch
     - torchvision
     - cuda80 # [not osx]
@@ -32,7 +32,7 @@ requirements:
   run:
     - python
     - cffi
-    - simpleitk
+    - itk
     - pytorch
     - torchvision
     - cuda80 # [not osx]

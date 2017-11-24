@@ -6,7 +6,7 @@ CPU/GPU version of mermaid.
   * See mermaid.yaml for all the packages that need to be installed. This is easiest with anaconda.
   * conda install pytorch torchvision cuda80 -c soumith
   * conda install cffi
-  * conda install -c simpleitk simpleitk
+  * conda install -c conda-forge itk
   * conda install sphinx
   * pip install pytorch-fft
 
