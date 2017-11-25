@@ -10,12 +10,15 @@ source:
     folder: mermaid
   - git_url: https://github.com/locuslab/pytorch_fft.git 
     folder: pytorch_fft
+  - git_url: https://github.com/mhe/pynrrd.git
+    folder: pynrrd
 
 
 build:
   number: 0
   script: python mermaid/pyreg/libraries/build.py
   script: python pytorch_fft/build.py # [not osx]
+  script: python pynrrd/setup.py 
 
 requirements:
   build:
