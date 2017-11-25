@@ -91,7 +91,6 @@ class ImageRegistrationOptimizer(Optimizer):
         """parameters that should be passed to the optimizer"""
         self.optimizer = None
         """optimizer object itself (to be instantiated)"""
-
         self.visualize = True
         """if True figures are created during the run"""
         self.visualize_step = 10
@@ -234,6 +233,27 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.last_energy = None
         """the evaluation information"""
 
+    def get_energy(self):
+        """
+        Returns the current energy
+        :return: Returns a tuple (energy, similarity energy, regularization energy)
+        """
+        return self.rec_energy.data.numpy(), self.rec_similarityEnergy.data.numpy(), self.rec_regEnergy.data.numpy()
+
+    def get_warped_image(self):
+        """
+        Returns the warped image
+        :return: the warped image
+        """
+        return self.rec_IWarped
+
+    def get_map(self):
+        """
+        Returns the deformation map
+        :return: deformation map
+        """
+        return self.rec_phiWarped
+
     def set_model(self, modelName):
         """
         Sets the model that should be solved
@@ -282,7 +302,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
          
         :return: model parameters 
         """
-        self.model.get_registration_parameters()
+        return self.model.get_registration_parameters()
 
     def upsample_model_parameters(self, desiredSize):
         """
@@ -450,8 +470,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_phiWarped)
             else:
                 tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_IWarped)
-            self.rec_regEnergy = None
-            self.rec_phiWarped = None
             if tolerance_reached:
                 break
             self.iter_count = iter+1
@@ -483,9 +501,10 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """network object of the model to be added"""
         self.add_model_lossClass = None
         """loss object of the model to be added"""
-
         self.model_name = None
         """name of the model to be added (if specified by name; gets dominated by specifying an optimizer directly"""
+        self.ssOpt = None
+        """Single scale optimizer"""
 
     def add_similarity_measure(self, simName, simMeasure):
         """
@@ -543,6 +562,47 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         return dsz
 
+    def get_energy(self):
+        """
+        Returns the current energy
+        :return: Returns a tuple (energy, similarity energy, regularization energy)
+        """
+        if self.ssOpt is not None:
+            return self.ssOpt.get_energy()
+        else:
+            return None
+
+    def get_warped_image(self):
+        """
+        Returns the warped image
+        :return: the warped image
+        """
+        if self.ssOpt is not None:
+            return self.ssOpt.get_warped_image()
+        else:
+            return None
+
+    def get_map(self):
+        """
+        Returns the deformation map
+        :return: deformation map
+        """
+        if self.ssOpt is not None:
+            return self.ssOpt.get_map()
+        else:
+            return None
+
+    def get_model_parameters(self):
+        """
+        Returns the parameters of the model
+
+        :return: model parameters
+        """
+        if self.ssOpt is not None:
+            return self.ssOpt.get_model_parameters()
+        else:
+            return None
+
     def optimize(self):
         """
         Perform the actual multi-scale optimization
@@ -583,32 +643,32 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
 
-            ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.params)
+            self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.params)
 
             if ((self.add_model_name is not None) and
                     (self.add_model_networkClass is not None) and
                     (self.add_model_lossClass is not None)):
-                ssOpt.add_model(self.add_model_name, self.add_model_networkClass, self.add_model_lossClass)
+                self.ssOpt.add_model(self.add_model_name, self.add_model_networkClass, self.add_model_lossClass)
 
             # now set the actual model we want to solve
-            ssOpt.set_model(self.model_name)
+            self.ssOpt.set_model(self.model_name)
 
             if (self.addSimName is not None) and (self.addSimMeasure is not None):
-                ssOpt.add_similarity_measure(self.addSimName, self.addSimMeasure)
+                self.ssOpt.add_similarity_measure(self.addSimName, self.addSimMeasure)
 
             # setting the optimizer
             if self.optimizer is not None:
-                ssOpt.set_optimizer(self.optimizer)
-                ssOpt.set_optimizer_params(self.optimizer_params)
+                self.ssOpt.set_optimizer(self.optimizer)
+                self.ssOpt.set_optimizer_params(self.optimizer_params)
             elif self.optimizer_name is not None:
-                ssOpt.set_optimizer_by_name(self.optimizer_name)
+                self.ssOpt.set_optimizer_by_name(self.optimizer_name)
 
-            ssOpt.set_rel_ftol(self.get_rel_ftol())
-            ssOpt.set_visualization(self.get_visualization())
-            ssOpt.set_visualize_step(self.get_visualize_step())
+            self.ssOpt.set_rel_ftol(self.get_rel_ftol())
+            self.ssOpt.set_visualization(self.get_visualization())
+            self.ssOpt.set_visualize_step(self.get_visualize_step())
 
-            ssOpt.set_source_image(ISourceC)
-            ssOpt.set_target_image(ITargetC)
+            self.ssOpt.set_source_image(ISourceC)
+            self.ssOpt.set_target_image(ITargetC)
 
             if upsampledParameters is not None:
                 # check that the upsampled parameters are consistent with the downsampled images
@@ -618,16 +678,16 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     raise ValueError('Upsampled parameters and downsampled images are of inconsistent dimension')
                 # now that everything is fine, we can use the upsampled parameters
                 print('Explicitly setting the optimization parameters')
-                ssOpt.set_model_parameters(upsampledParameters)
+                self.ssOpt.set_model_parameters(upsampledParameters)
 
             # do the actual optimization
             print('Optimizing for at most ' + str(currentNrOfIteratons) + ' iterations')
-            ssOpt.set_number_of_iterations(currentNrOfIteratons)
-            ssOpt.optimize()
+            self.ssOpt.set_number_of_iterations(currentNrOfIteratons)
+            self.ssOpt.optimize()
 
             # if we are not at the very last scale, then upsample the parameters
             if currentScaleNumber != nrOfScales - 1:
                 # we need to revert the downsampling to the next higher level
                 scaleTo = reverseScales[currentScaleNumber + 1]
                 desiredUpsampleSz = self._get_desired_size_from_scale(self.ISource.size()[2::], scaleTo)
-                upsampledParameters, upsampledSpacing = ssOpt.upsample_model_parameters(desiredUpsampleSz)
+                upsampledParameters, upsampledSpacing = self.ssOpt.upsample_model_parameters(desiredUpsampleSz)

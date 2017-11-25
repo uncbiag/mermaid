@@ -9,6 +9,7 @@ CPU/GPU version of mermaid.
   * conda install -c conda-forge itk
   * conda install sphinx
   * pip install pytorch-fft
+  * pip install pynrrd
 
 After everything is installed, compile the documentation (there are also more detailed installation instructions)
 

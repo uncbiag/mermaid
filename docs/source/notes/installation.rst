@@ -58,6 +58,7 @@ There are a variety of packages that are needed to run mermaid. Assuming you hav
     conda install cffi
     conda install -c conda-forge itk
     conda install sphinx
+    pip install pynrrd
 
 If the GPU should be supported we also need to get the package for pytorch FFT support. Unfortunately, it is not available via anaconda, but we can use pip
 

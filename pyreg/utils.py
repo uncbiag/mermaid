@@ -13,6 +13,54 @@ from libraries.modules.stn_nd import STN_ND_BCXYZ
 from data_wrapper import MyTensor,AdaptVal
 import numpy as np
 import finite_differences as fd
+import itk
+
+def convert_itk_vector_to_numpy(v):
+    return itk.GetArrayFromVnlVector( v.Get_vnl_vector() )
+
+def convert_itk_matrix_to_numpy(M):
+    return itk.GetArrayFromVnlMatrix( M.GetVnlMatrix().as_matrix() )
+
+def convert_itk_image_to_numpy(I0_itk):
+    I0 = itk.GetArrayViewFromImage(I0_itk)
+    image_meta_data = dict()
+    image_meta_data['space origin'] = convert_itk_vector_to_numpy( I0_itk.GetOrigin() )
+    image_meta_data['spacing'] = convert_itk_vector_to_numpy( I0_itk.GetSpacing() )
+    image_meta_data['space directions'] = convert_itk_matrix_to_numpy( I0_itk.GetDirection() )
+    image_meta_data['sizes'] = I0.shape
+    image_meta_data['dimension'] = I0_itk.GetImageDimension()
+    image_meta_data['space'] = 'left-posterior-superior'
+    """
+    NRRD format
+    {u'dimension': 3,
+     u'encoding': 'gzip',
+     u'endian': 'little',
+     u'keyvaluepairs': {},
+     u'kinds': ['domain', 'domain', 'domain'],
+     u'sizes': [128, 128, 1],
+     u'space': 'left-posterior-superior',
+     u'space directions': [['2', '0', '0'], ['0', '2', '0'], ['0', '0', '2']],
+     u'space origin': ['0', '0', '0'],
+     u'type': 'float'}
+    """
+    return I0,image_meta_data
+
+def compute_squeezed_spacing( spacing0,dim0,sz0,dimSqueezed ):
+    """
+    Extracts the spacing information for non-trivial dimensions (i.e., with more than one entry)
+    :param spacing0: original spacing information
+    :param dim0: original dimension
+    :param sz0: original size
+    :param dimSqueezed: dimension after squeezing
+    :return: returns only the spacing information for the dimensions with more than one entry
+    """
+    spacing = np.zeros(dimSqueezed)
+    j = 0
+    for i in range(dim0):
+        if sz0[i] != 1:
+            spacing[j] = spacing0[i]
+            j += 1
+    return spacing
 
 def transform_image_to_NC_image_format(I):
     '''

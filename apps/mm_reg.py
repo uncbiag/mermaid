@@ -16,6 +16,7 @@ import torch
 from torch.autograd import Variable
 from time import time
 
+import nrrd
 import itk
 import numpy as np
 
@@ -25,11 +26,11 @@ import pyreg.utils as utils
 def read_images(source_image_name,target_image_name, normalize_spacing = True, normalize_intensities = True):
     I0_itk = itk.imread( source_image_name )
     I1_itk = itk.imread( target_image_name )
-    I0 = itk.GetArrayViewFromImage( I0_itk )
-    orig_shape = I0.shape
-    orig_dim = len( orig_shape )
+
+    I0,md_I0 = utils.convert_itk_image_to_numpy(I0_itk)
+    I1,md_I1 = utils.convert_itk_image_to_numpy(I1_itk)
+
     I0 = I0.squeeze()
-    I1 = itk.GetArrayViewFromImage( I1_itk )
     I1 = I1.squeeze()
 
     if normalize_intensities:
@@ -55,20 +56,11 @@ def read_images(source_image_name,target_image_name, normalize_spacing = True, n
         spacing = 1. / (sz[2::] - 1)  # the first two dimensions are batch size and number of image channels
 
     else:
-
-        spacing0 = I0_itk.GetSpacing()
-        #spacing1 = I1_itk.GetSpacing()
-
-        spacing = np.zeros(dim0)
-        j = 0
-        for i in range(orig_dim):
-            if orig_shape[i] != 1:
-                spacing[j]=spacing0[i]
-                j += 1
+       spacing = utils.compute_squeezed_spacing(md_I0['spacing'],md_I0['dimension'],md_I0['sizes'],dim0)
 
     print('Spacing = ' + str(spacing))
 
-    return I0, I1, spacing
+    return I0, I1, spacing, md_I0, md_I1
 
 
 def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scale, normalize_spacing, normalize_intensities, par_algconf ):
@@ -98,7 +90,7 @@ def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scal
     torch.set_num_threads( nr_of_threads )
     print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
 
-    I0, I1, spacing = read_images( I0_name, I1_name, normalize_spacing, normalize_intensities )
+    I0, I1, spacing, md_I0, md_I1 = read_images( I0_name, I1_name, normalize_spacing, normalize_intensities )
     sz = I0.shape
 
     # create the source and target image as pyTorch variables
@@ -122,7 +114,6 @@ def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scal
         multi_scale_scale_factors = par_optimizer['multi_scale']['scale_factors']
         multi_scale_iterations_per_scale = par_optimizer['multi_scale']['scale_iterations']
 
-
     mo = MO.MultiScaleRegistrationOptimizer(sz, spacing, use_map, params)
 
     optimizer_name = par_optimizer['name']
@@ -142,7 +133,12 @@ def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scal
     # and now do the optimization
     mo.optimize()
 
-    return params
+    optimized_energy = mo.get_energy()
+    warped_image = mo.get_warped_image()
+    optimized_map = mo.get_map()
+    optimized_reg_parameters = mo.get_model_parameters()
+
+    return warped_image, optimized_map, optimized_reg_parameters, optimized_energy, params, md_I0
 
 
 if __name__ == "__main__":
@@ -153,8 +149,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Registers two images')
 
     required = parser.add_argument_group('required arguments')
-    required.add_argument('--moving_image', nargs=1, required=False, default='../test_data/brain_slices/ws_slice.nrrd', help='Moving image')
-    required.add_argument('--target_image', nargs=1, required=False, default='../test_data/brain_slices/wt_slice.nrrd', help='Target image')
+    required.add_argument('--moving_image', nargs=1, required=True, default='../test_data/brain_slices/ws_slice.nrrd', help='Moving image')
+    required.add_argument('--target_image', nargs=1, required=True, default='../test_data/brain_slices/wt_slice.nrrd', help='Target image')
 
     parser.add_argument('--warped_image', nargs=1, required=False, help='Warped image after registration')
     parser.add_argument('--map', nargs=1, required=False, help='Computed map')
@@ -165,6 +161,9 @@ if __name__ == "__main__":
     parser.add_argument('--use_multiscale', nargs=1, required=False,default=False, help='Uses multi-scale optimization')
     parser.add_argument('--normalize_spacing', nargs=1, required=False,default=True, help='Normalizes the spacing to [0,1]^d')
     parser.add_argument('--normalize_intensities', nargs=1, required=False, default=True, help='Normalizes the intensities so that the 95th percentile is 0.95')
+    parser.add_argument('--write_map', nargs=1, required=False, default=None, help='File to write the resulting map to (if map-based algorithm)')
+    parser.add_argument('--write_warped_image', nargs=1, required=False, default=None, help='File to write the warped source image to (if image-based algorithm)')
+    parser.add_argument('--write_reg_params', nargs=1, required=False, default=None, help='File to write the optimized registration parameters to')
     args = parser.parse_args()
 
     # load the specified configuration files
@@ -178,8 +177,15 @@ if __name__ == "__main__":
     use_multiscale = args.use_multiscale
     normalize_spacing = args.normalize_spacing
     normalize_intensities = args.normalize_intensities
+    used_config = args.used_config
+    write_map = args.write_map
+    write_warped_image = args.write_warped_image
+    write_reg_params = args.write_reg_params
 
 else:
+    # load the specified configuration files
+    par_algconf = pars.ParameterDict()
+    par_algconf.load_JSON('../settings/algconf_settings.json')
 
     moving_image = '../test_data/brain_slices/ws_slice.nrrd'
     target_image = '../test_data/brain_slices/wt_slice.nrrd'
@@ -188,16 +194,50 @@ else:
     use_multiscale = False
     normalize_spacing = True
     normalize_intensities = True
+    used_config = 'used_config'
+
+    #TODO: Check what happens here when using .nhdr file; there seems to be some confusion in the library
+    # where the datafile is not changed
+    write_map = 'map_out.nrrd'
+    write_warped_image = 'warped_image_out.nrrd'
+    write_reg_params = 'reg_params_out.nrrd'
 
 # now do the actual registration
 since = time()
 
-params = do_registration( moving_image, target_image, visualize, visualize_step, use_multiscale, normalize_spacing, normalize_intensities, par_algconf )
+warped_image, optimized_map, optimized_reg_parameters, optimized_energy, params, md_I = \
+    do_registration( moving_image, target_image, visualize, visualize_step, use_multiscale, normalize_spacing, normalize_intensities, par_algconf )
 
-if args.used_config is not None:
+print('The final energy was: E={energy}, similarityE={similarityE}, regE={regE}'
+                  .format(energy=optimized_energy[0],
+                          similarityE=optimized_energy[1],
+                          regE=optimized_energy[2]))
+
+if write_map is not None:
+    if optimized_map is not None:
+        om_data = optimized_map.data.numpy()
+        nrrd.write( write_map, om_data, md_I )
+    else:
+        print('Warning: Map cannot be written as it was not computed -- maybe you are using an image-based algorithm?')
+
+if write_warped_image is not None:
+    if warped_image is not None:
+        wi_data = warped_image.data.numpy()
+        nrrd.write(write_warped_image, wi_data, md_I)
+    else:
+        print('Warning: Warped image cannot be written as it was not computed -- maybe you are using a map-based algorithm?')
+
+if write_reg_params is not None:
+    if optimized_reg_parameters is not None:
+        rp_data = optimized_reg_parameters.data.numpy()
+        nrrd.write(write_reg_params, rp_data, md_I)
+    else:
+        print('Warning: optimized parameters were not computed and hence cannot be saved.')
+
+if used_config is not None:
     print('Writing the used configuration to file.')
-    params.write_JSON( args.used_config[0] + '_settings_clean.json')
-    params.write_JSON_comments( args.used_config[0] + '_settings_comments.json')
+    params.write_JSON( used_config + '_settings_clean.json')
+    params.write_JSON_comments( used_config + '_settings_comments.json')
 
 print("time {}".format(time()-since))
 
