@@ -1,9 +1,11 @@
 # Image registration using pyTorch
 
-CPU/GPU version of mermaid.
+Mermaid is a registration toolkit making use of automatic differentiation for rapid prototyping. It runs on the CPU and the GPU, though GPU acceleration only becomes obvious for large images or 3D volumes. 
 
-# Basic install
-  * See mermaid.yaml for all the packages that need to be installed. This is easiest with anaconda.
+# Basic installation
+
+A basic installation requires the installation of a few python packages. Most of these packages can be installed via conda, but a few do not have conda installers, but can be installed via pip. 
+
   * conda install pytorch torchvision cuda80 -c soumith
   * conda install cffi
   * conda install -c conda-forge itk
@@ -11,26 +13,28 @@ CPU/GPU version of mermaid.
   * pip install pytorch-fft
   * pip install pynrrd
 
-After everything is installed, compile the documentation (there are also more detailed installation instructions)
+ The mermaid.yaml file also contains information for all the packages that need to be installed. We will provide an anaconda installer in the (hopefully) near future.
+
+After everything is installed, compile the documentation (there are also more detailed installation instructions) by doing the following.
 
       * cd mermaid
       * cd docs
       * make html
 
-
-# Setup
-
-* To compile the spatial transformer code simply go to the pyreg/libraries directory \
+Lastly, to compile the spatial transformer code simply go to the pyreg/libraries directory \
   for gpu user: execute 'sh make_cuda.sh'
   for cpu user: execute 'sh make_cpu.sh'
-* pip install pytorch-fft
-* go config to set CUDA_ON
 
-# How to run
-* run testRegistrationGeneric.py/testRegistrationMultiscale.py 
-* settings are put together in config.txt
-* use float32 in most cases !!!, float16 is not stable
-* !!!!!!!!!!!!  most part of the codes have been examined. In case of failure, contact zyshen021@gmail.com
+CUDA can be enabled by setting CUDA_ON to True in settings/compute_settings.json. All settings are contained in json configuration files in the settings directory. 
+
+# How to run registrations
+
+There are a few example registration implementations in the demos directory. Actual applications are contained in the apps directory.
+
+# Things to know
+
+* Use float32 in most cases, float16 is not stable
+* Most parts of the codes have been examined. In case of failure of the GPU code contact zyshen021@gmail.com; for all other failures contact mn@cs.unc.edu or open an issue in the github issue tracker.
     
 # Lastest Modification
   * 11.13    fix to adpat device
