@@ -14,6 +14,19 @@ from data_wrapper import MyTensor,AdaptVal
 import numpy as np
 import finite_differences as fd
 import itk
+import os
+
+# check if we are dealing with a nrrd file
+def is_nrrd_filename( filename ):
+    sf = os.path.splitext( filename )
+    ext = sf[1].lower()
+
+    if ext=='.nrrd':
+        return True
+    elif ext=='.nhdr':
+        return True
+    else:
+        return False
 
 def convert_itk_vector_to_numpy(v):
     return itk.GetArrayFromVnlVector( v.Get_vnl_vector() )

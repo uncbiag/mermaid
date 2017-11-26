@@ -13,18 +13,6 @@ import itk
 import os
 from pyreg.data_wrapper import AdaptVal
 
-# check if we are dealing with a nrrd file
-def is_nrrd_filename( filename ):
-    sf = os.path.splitext( filename )
-    ext = sf[1].lower()
-
-    if ext=='.nrrd':
-        return True
-    elif ext=='.nhdr':
-        return True
-    else:
-        return False
-
 def try_fixing_image_dimension(im,map):
 
     im_fixed = None # default, if we cannot fix it
@@ -42,8 +30,9 @@ def try_fixing_image_dimension(im,map):
         dim_s = len( im_s.shape )
         if dim_s==dim:
             # we can likely fix it, because this is an individual image
-            print('Attempted to fix image dimensions for compatibility with map.')
             im_fixed = utils.transform_image_to_NC_image_format(im_s)
+            print('Attempted to fix image dimensions for compatibility with map.')
+            print('Modified dimension from  ' + str(si) + ' to ' + str(im_fixed.shape))
 
     return im_fixed
 
@@ -65,13 +54,13 @@ def map_is_compatible_with_image(im,map):
 def read_image_and_map_and_apply_map(image_filename,map_filename):
 
     im_warped = None
-    if not is_nrrd_filename(map_filename):
+    if not utils.is_nrrd_filename(map_filename):
         print('Sorry, currently only nrrd files are supported for maps. Aborting.')
         return im_warped
 
     map, map_hdr = nrrd.read(map_filename)
 
-    if is_nrrd_filename( image_filename ):
+    if utils.is_nrrd_filename( image_filename ):
         # load with the dedicated nrrd reader (can also read higher dimensional files)
         im,hdr = nrrd.read(image_filename)
     else:
@@ -109,7 +98,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Apply map to warp image')
 
     required = parser.add_argument_group('required arguments')
-    required.add_argument('--map', required=True, help='Map that should be applied [need to be in [0,1]^d format currently]')
+    required.add_argument('--map', required=True, help='Map that should be applied [need to be in [-1,1]^d format currently]')
     required.add_argument('--image', required=True, help='Image to which the map should be applied')
     required.add_argument('--warped_image', required=True, help='Warped image after applying the map')
 
@@ -118,7 +107,7 @@ if __name__ == "__main__":
     map_filename = args.map
     im_warped_filename = args.warped_image
 
-    if not is_nrrd_filename(im_warped_filename):
+    if not utils.is_nrrd_filename(im_warped_filename):
         print('Sorry, currently only nrrd files are supported as output. Aborting.')
 
     im_warped,hdr = read_image_and_map_and_apply_map(image_filename, map_filename)
