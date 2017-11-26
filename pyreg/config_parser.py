@@ -22,6 +22,7 @@ democonf_settings_filename_comments = os.path.join(this_directory, r'../settings
 
 # First get the computational settings that will be used in various parts of the library
 compute_params = pars.ParameterDict()
+compute_params.print_settings_off()
 compute_params.load_JSON(compute_settings_filename)
 
 compute_params[('compute',{},'how computations are done')]
