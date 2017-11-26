@@ -36,7 +36,8 @@ There are a few example registration implementations in the demos directory. Act
 * Use float32 in most cases, float16 is not stable
 * Most parts of the codes have been examined. In case of failure of the GPU code contact zyshen021@gmail.com; for all other failures contact mn@cs.unc.edu or open an issue in the github issue tracker.
     
-# Lastest Modification
+# Lastest modifications
+  * 11.26    Created a separate IO class; use this for all file input/output
   * 11.13    fix to adpat device
   * 11.12    optimize, fix bugs, 
   * 10.31:   unitest stn is added, see test_stn_cpu.py and test_stn_gpu.py
@@ -57,7 +58,7 @@ There are a few example registration implementations in the demos directory. Act
     * Real FFT is implemented for both speed and memory consideration, which needs the smoothing kernel should be symmetric 
 
 
-# To Do
+# Todo
   * make svf_quasi_momentum stable
   * add smoothing unittest
   * modify other testRegistration*

@@ -5,6 +5,7 @@ Package to create example images to test the image registration algorithms
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import utils
+import fileio
 
 class CreateExample(object):
     """
@@ -72,8 +73,8 @@ class CreateSquares(CreateExample):
             raise ValueError('Square examples only supported in dimensions 1-3.')
 
         # now transform from single-channel to multi-channel image format
-        I0 = utils.transform_image_to_NC_image_format(I0)
-        I1 = utils.transform_image_to_NC_image_format(I1)
+        I0 = I0.reshape([1, 1] + list(I0.shape))
+        I1 = I1.reshape([1, 1] + list(I1.shape))
 
         return I0,I1
 
@@ -92,26 +93,12 @@ class CreateRealExampleImages(CreateExample):
         :param params: Ignored
         :return: Returns the two brain slices.
         """
-        import itk 
 
         # create small and large squares
         if self.dim==2:
-            brain_s = itk.imread('./test_data/brain_slices/ws_slice.nrrd')
-            brain_t = itk.imread('./test_data/brain_slices/wt_slice.nrrd')
-            I0 = itk.GetArrayViewFromImage(brain_s)
-            I0 = I0.squeeze()
-
-            I1 = itk.GetArrayViewFromImage(brain_t)
-            I1 = I1.squeeze()
-
-            # normalize based on the 95-th percentile
-            I0 = I0 / np.percentile(I0, 95) * 0.95
-            I1 = I1 / np.percentile(I1, 95) * 0.95
+            I0,_,_,_ = fileio.ImageIO().read_to_nc_format(filename='../test_data/brain_slices/ws_slice.nrrd',intensity_normalize=True,squeeze_image=True)
+            I1,_,_,_ = fileio.ImageIO().read_to_nc_format(filename='../test_data/brain_slices/wt_slice.nrrd',intensity_normalize=True,squeeze_image=True)
         else:
             raise ValueError('Real examples only supported in dimension 2 at the moment.')
-
-        # now transform from single-channel to multi-channel image format
-        I0 = utils.transform_image_to_NC_image_format(I0)
-        I1 = utils.transform_image_to_NC_image_format(I1)
 
         return I0,I1

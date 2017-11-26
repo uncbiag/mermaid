@@ -16,54 +16,31 @@ import torch
 from torch.autograd import Variable
 from time import time
 
-import nrrd
-import itk
 import numpy as np
 
 import pyreg.module_parameters as pars
 import pyreg.utils as utils
+import pyreg.fileio as fileio
 
-def read_images(source_image_name,target_image_name, normalize_spacing = True, normalize_intensities = True):
-    I0_itk = itk.imread( source_image_name )
-    I1_itk = itk.imread( target_image_name )
+def read_images(source_image_name,target_image_name, normalize_spacing=True, normalize_intensities=True, squeeze_image=True):
 
-    I0,md_I0 = utils.convert_itk_image_to_numpy(I0_itk)
-    I1,md_I1 = utils.convert_itk_image_to_numpy(I1_itk)
+    I0,hdr0,spacing0,normalized_spacing0 = fileio.ImageIO().read_to_nc_format(source_image_name, intensity_normalize=normalize_intensities, squeeze_image=squeeze_image)
+    I1,hdr1,spacing1,normalized_spacing1 = fileio.ImageIO().read_to_nc_format(target_image_name, intensity_normalize=normalize_intensities, squeeze_image=squeeze_image)
 
-    I0 = I0.squeeze()
-    I1 = I1.squeeze()
-
-    if normalize_intensities:
-        print( 'Normalizing image intensities')
-        I0 = I0 / np.percentile(I0, 95) * 0.95
-        I1 = I1 / np.percentile(I1, 95) * 0.95
-
-    dim0 = I0.ndim
-    dim1 = I1.ndim
-
-    assert (dim0 == dim1)
+    assert (np.all( spacing0 == spacing1) )
     # TODO: do a better test for equality for the images here
 
-    # introduce first two dimensions as 1, 1
-    I0 = utils.transform_image_to_NC_image_format(I0)
-    I1 = utils.transform_image_to_NC_image_format(I1)
-
     if normalize_spacing:
-        print( 'Normalizing the spacing' )
-        sz = np.array(I0.shape)
-        assert (len(sz) == dim0 + 2)
-        # spacing so that everything is in [0,1]^2 for now
-        spacing = 1. / (sz[2::] - 1)  # the first two dimensions are batch size and number of image channels
-
+        spacing = normalized_spacing0
     else:
-       spacing = utils.compute_squeezed_spacing(md_I0['spacing'],md_I0['dimension'],md_I0['sizes'],dim0)
+        spacing = spacing0
 
     print('Spacing = ' + str(spacing))
 
-    return I0, I1, spacing, md_I0, md_I1
+    return I0, I1, spacing, hdr0, hdr1
 
 
-def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scale, normalize_spacing, normalize_intensities, par_algconf ):
+def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scale, normalize_spacing, normalize_intensities, squeeze_image,par_algconf ):
 
     from pyreg.data_wrapper import AdaptVal
     import pyreg.smoother_factory as SF
@@ -90,7 +67,7 @@ def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scal
     torch.set_num_threads( nr_of_threads )
     print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
 
-    I0, I1, spacing, md_I0, md_I1 = read_images( I0_name, I1_name, normalize_spacing, normalize_intensities )
+    I0, I1, spacing, md_I0, md_I1 = read_images( I0_name, I1_name, normalize_spacing, normalize_intensities,squeeze_image )
     sz = I0.shape
 
     # create the source and target image as pyTorch variables
@@ -161,6 +138,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_multiscale', required=False,default=False, help='Uses multi-scale optimization')
     parser.add_argument('--normalize_spacing', required=False,default=True, help='Normalizes the spacing to [0,1]^d')
     parser.add_argument('--normalize_intensities', required=False, default=True, help='Normalizes the intensities so that the 95th percentile is 0.95')
+    parser.add_argument('--squeeze_image', required=False, default=True, help='Squeezes out singular dimension from image before processing (e.g., 1x256x256 -> 256x256)')
     parser.add_argument('--write_map', required=False, default=None, help='File to write the resulting map to (if map-based algorithm)')
     parser.add_argument('--write_warped_image', required=False, default=None, help='File to write the warped source image to (if image-based algorithm)')
     parser.add_argument('--write_reg_params', required=False, default=None, help='File to write the optimized registration parameters to')
@@ -178,6 +156,7 @@ if __name__ == "__main__":
     use_multiscale = args.use_multiscale
     normalize_spacing = args.normalize_spacing
     normalize_intensities = args.normalize_intensities
+    squeeze_image = args.squeeze_image
     used_config = args.used_config
     write_map = args.write_map
     write_warped_image = args.write_warped_image
@@ -195,6 +174,7 @@ else:
     use_multiscale = False
     normalize_spacing = True
     normalize_intensities = True
+    squeeze_image = True
     used_config = 'used_config'
 
     #TODO: Check what happens here when using .nhdr file; there seems to be some confusion in the library
@@ -207,7 +187,7 @@ else:
 since = time()
 
 warped_image, optimized_map, optimized_reg_parameters, optimized_energy, params, md_I = \
-    do_registration( moving_image, target_image, visualize, visualize_step, use_multiscale, normalize_spacing, normalize_intensities, par_algconf )
+    do_registration( moving_image, target_image, visualize, visualize_step, use_multiscale, normalize_spacing, normalize_intensities, squeeze_image, par_algconf )
 
 print('The final energy was: E={energy}, similarityE={similarityE}, regE={regE}'
                   .format(energy=optimized_energy[0],
@@ -216,22 +196,25 @@ print('The final energy was: E={energy}, similarityE={similarityE}, regE={regE}'
 
 if write_map is not None:
     if optimized_map is not None:
-        om_data = optimized_map.data.numpy()
-        nrrd.write( write_map, om_data, md_I )
+        #om_data = optimized_map.data.numpy()
+        #nrrd.write( write_map, om_data, md_I )
+        fileio.MapIO().write(write_map,optimized_map,md_I)
     else:
         print('Warning: Map cannot be written as it was not computed -- maybe you are using an image-based algorithm?')
 
 if write_warped_image is not None:
     if warped_image is not None:
-        wi_data = warped_image.data.numpy()
-        nrrd.write(write_warped_image, wi_data, md_I)
+        #wi_data = warped_image.data.numpy()
+        #nrrd.write(write_warped_image, wi_data, md_I)
+        fileio.ImageIO().write(write_warped_image,warped_image,md_I)
     else:
         print('Warning: Warped image cannot be written as it was not computed -- maybe you are using a map-based algorithm?')
 
 if write_reg_params is not None:
     if optimized_reg_parameters is not None:
-        rp_data = optimized_reg_parameters.data.numpy()
-        nrrd.write(write_reg_params, rp_data, md_I)
+        #rp_data = optimized_reg_parameters.data.numpy()
+        #nrrd.write(write_reg_params, rp_data, md_I)
+        fileio.GenericIO().write(write_reg_params,optimized_reg_parameters,md_I)
     else:
         print('Warning: optimized parameters were not computed and hence cannot be saved.')
 
