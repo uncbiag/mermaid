@@ -17,12 +17,17 @@ mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
    :maxdepth: 1
    :caption: Package Reference
 
+   config_parser
    custom_optimizers
    custom_pytorch_extensions
+   data_wrapper
    example_generation
+   fileio
    finite_differences
    forward_models
+   image_manipulations
    image_sampling
+   load_default_settings
    model_factory
    module_parameters
    multiscale_optimizer

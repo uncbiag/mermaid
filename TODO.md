@@ -1,1 +1,1 @@
-- Warp image functionality assumes [0,1] maps. Add support to also be able to use physical coordinates.
+- Warp image functionality assumes [-1,1] maps. Add support to also be able to use physical coordinates.

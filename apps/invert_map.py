@@ -10,15 +10,16 @@ import torch
 from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 import pyreg.utils as utils
-import nrrd
 from pyreg.data_wrapper import AdaptVal
-
+import pyreg.fileio as fileio
 import pyreg.custom_optimizers as CO
 
-map_filename = 'res_map.nrrd'
-
 def invert_map(map):
-
+    """
+    Inverts the map and returns its inverse. Assumes standard map parameterization [-1,1]^d
+    :param map: Input map to be inverted
+    :return: inverted map
+    """
     # make pytorch arrays for subsequent processing
     map_t = AdaptVal(Variable(torch.from_numpy(map), requires_grad=False))
 
@@ -75,18 +76,12 @@ if __name__ == "__main__":
     map_filename = args.map
     imap_filename = args.imap
 
-    if not utils.is_nrrd_filename(map_filename):
-        print('Sorry, currently only nrrd files are supported as input. Aborting.')
-
-    if not utils.is_nrrd_filename(imap_filename):
-        print('Sorry, currently only nrrd files are supported as input. Aborting.')
-
-    map, map_hdr = nrrd.read(map_filename)
+    map, map_hdr = fileio.MapIO().read(map_filename)
     imap = invert_map(map)
 
     # now write it out
     print( 'Writing inverted map to file: ' + imap_filename )
-    nrrd.write(imap_filename, imap, map_hdr)
+    fileio.MapIO().write(imap_filename, imap, map_hdr)
 
 
 
