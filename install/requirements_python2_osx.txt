@@ -1,0 +1,4 @@
+http://download.pytorch.org/whl/torch-0.2.0.post3-cp27-none-macosx_10_7_x86_64.whl
+-r shared_requirements.txt
+
+

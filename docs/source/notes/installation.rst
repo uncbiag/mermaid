@@ -13,6 +13,8 @@ pyTorch installation
 
 See `pyTorch <http://pytorch.org/>`_.
 
+An easier way of installation (that includes pytorch) in a conda virtual environment is described in a section below.
+
 To install via anaconda execute
 
 .. code::
@@ -38,7 +40,9 @@ This will create a `pytorch` directory. On OSX do the following. (Set NO_CUDA=1 
    MACOSX_DEPLOYMENT_TARGET=10.9 CC=clang CXX=clang++ python setup.py install
 
 
-The `/path/to/anaconda/install` is for me for example `/Users/mn/anaconda`
+The `/path/to/anaconda/install` is for me for example `/Users/mn/anaconda`.
+
+It is also possible to install everything in a virtual conda environment. This may be simpler to do (see below).
 
 Downloading mermaid
 ^^^^^^^^^^^^^^^^^^^
@@ -65,6 +69,30 @@ If the GPU should be supported we also need to get the package for pytorch FFT s
 .. code::
 
     pip install pytorch-fft
+
+Installing all the packages required to run and compile mermaid in a virtual environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This is an alternative way of installation, which is even easier. It installs into a virtual conda environment. To do so exectute the follwing (inside the mermaid directory).
+
+.. code::
+
+   conda create -n mermaid-py27 python=2.7 pip
+   source activate mermaid-py27
+   cd install
+   pip install -r requirements_python2_osx.txt  [Pick the right one for your operating system]
+   pip install -r requirements_pytorch_fft.txt
+
+We are working on making the code compatible with python3, which is currently *not supported*. Once it is supported it will be possible to install doing the following:
+
+.. code::
+   
+   conda create -n mermaid-py36 python=3.6 pip
+   source activate mermaid-py36
+   cd install
+   pip install -r requirements_python3_osx.txt  [Pick the right one for your operating system]
+   pip install -r requirements_pytorch_fft.txt
+
 
 Installing mermaid
 ^^^^^^^^^^^^^^^^^^

@@ -1,0 +1,9 @@
+# pip requirements file
+numpy
+scipy
+matplotlib
+torchvision
+cffi
+itk
+sphinx
+pynrrd

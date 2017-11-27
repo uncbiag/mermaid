@@ -13,7 +13,27 @@ A basic installation requires the installation of a few python packages. Most of
   * pip install pytorch-fft
   * pip install pynrrd
 
- The mermaid.yaml file also contains information for all the packages that need to be installed. We will provide an anaconda installer in the (hopefully) near future.
+ The mermaid.yaml file in the install directory also contains information for all the packages that need to be installed. We will provide an anaconda installer in the (hopefully) near future.
+
+# An alterative way to install everything
+
+It is of course also possible to install everything into a virtual conda environment. For this, do the following:
+
+   * conda create -n mermaid-py27 python=2.7 pip
+   * source activate mermaid-py27
+   * cd install
+   * pip install -r requirements_python2_osx.txt  [Pick the right one for your operating system]
+   * pip install -r requirements_pytorch_fft.txt
+
+We are working on making the code compatible with python3, which is currently *not supported*. Once it is supported it will be possible to install doing the following:
+
+   * conda create -n mermaid-py36 python=3.6 pip
+   * source activate mermaid-py36
+   * cd install
+   * pip install -r requirements_python3_osx.txt  [Pick the right one for your operating system]
+   * pip install -r requirements_pytorch_fft.txt
+
+# After the installation
 
 After everything is installed, compile the documentation (there are also more detailed installation instructions) by doing the following.
 
