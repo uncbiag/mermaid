@@ -12,6 +12,7 @@ Currently implemented:
 
 import torch
 import torch.nn as nn
+from torch.autograd.variable import Variable
 
 import rungekutta_integrators as RK
 import forward_models as FM
@@ -21,6 +22,8 @@ import similarity_measure_factory as SM
 
 import smoother_factory as SF
 import image_sampling as IS
+
+from data_wrapper import MyTensor
 
 import utils
 
@@ -409,11 +412,17 @@ class RegistrationMapLoss(RegistrationLoss):
     """
     def __init__(self, sz, spacing, params):
         super(RegistrationMapLoss, self).__init__(sz, spacing, params)
+        cparams = params[('loss', {}, 'settings for the loss function')]
+        self.display_max_displacement = cparams[('display_max_displacement',False,'displays the current maximal displacement')]
+        self.limit_displacement = cparams[('limit_displacement',False,'[True/False] if set to true limits the maximal displacement based on the max_displacement_setting')]
+        max_displacement = cparams[('max_displacement',0.05,'Max displacement penalty added to loss function of limit_displacement set to True')]
+        self.max_displacement_sqr = max_displacement**2
 
-    def get_energy(self, phi1, I0_source, I1_target):
+    def get_energy(self, phi0, phi1, I0_source, I1_target):
         """
         Compute the energy by warping the source image via the map and then comparing it to the target image
         
+        :param phi0: map (initial map from which phi1 is computed by integration; likely the identity map) 
         :param phi1: map (mapping the source image to the target image, defined in the space of the target image) 
         :param I0_source: source image
         :param I1_target: target image
@@ -422,19 +431,35 @@ class RegistrationMapLoss(RegistrationLoss):
         I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1)
         sim = self.compute_similarity_energy(I1_warped, I1_target)
         reg = self.compute_regularization_energy(I0_source)
+
+        if self.limit_displacement:
+            # first compute squared displacement
+            dispSqr = ((phi1-phi0)**2).sum(1)
+            if self.display_max_displacement==True:
+                dispMax = ( torch.sqrt( dispSqr ) ).max()
+                print( 'Max disp = ' + str( utils.t2np( dispMax )))
+            sz = dispSqr.size()
+            dispPenalty = ( torch.max( ( dispSqr - self.max_displacement_sqr ), Variable( MyTensor(sz).zero_(), requires_grad=False ) )).sum()
+            reg = reg + dispPenalty
+        else:
+            if self.display_max_displacement==True:
+                dispMax = ( torch.sqrt( ((phi1-phi0)**2).sum(1) ) ).max()
+                print( 'Max disp = ' + str( utils.t2np( dispMax )))
+
         energy = sim + reg
         return energy, sim, reg
 
-    def forward(self, phi1, I0_source, I1_target):
+    def forward(self, phi0, phi1, I0_source, I1_target):
         """
         Compute the loss function value by evaluating the registration energy
         
+        :param phi0: map (initial map from which phi1 is computed by integration; likely the identity map) 
         :param phi1:  map (mapping the source image to the target image, defined in the space of the target image) 
         :param I0_source: source image
         :param I1_target: target image
         :return: returns the value of the loss function (i.e., the registration energy)
         """
-        energy, sim, reg = self.get_energy(phi1, I0_source, I1_target)
+        energy, sim, reg = self.get_energy(phi0, phi1, I0_source, I1_target)
         return energy
 
 
