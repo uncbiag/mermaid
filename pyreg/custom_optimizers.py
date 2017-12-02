@@ -15,6 +15,9 @@ from math import isinf
 from data_wrapper import  AdaptVal
 
 # this is taken from the torch master; should be included in the LBFGS optimizer in the newest torch versions
+
+# mn: added: last step size taken functionality
+
 class LBFGS_LS(Optimizer):
     """Implements L-BFGS algorithm.
     .. warning::
@@ -61,6 +64,11 @@ class LBFGS_LS(Optimizer):
         self._params = self.param_groups[0]['params']
         self._bounds = [(None, None)] * len(self._params) if bounds is None else bounds
         self._numel_cache = None
+        self._last_step_size_taken = None
+        self._first_step_size_try = None
+
+    def last_step_size_taken(self):
+        return self._last_step_size_taken
 
     def _numel(self):
         if self._numel_cache is None:
@@ -228,6 +236,8 @@ class LBFGS_LS(Optimizer):
                 flat_grad = self._gather_flat_grad()
                 abs_grad_sum = flat_grad.float().abs().sum()
                 ls_func_evals = 1
+
+            self._last_step_size_taken = t
 
             # update func eval
             current_evals += ls_func_evals

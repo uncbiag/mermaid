@@ -28,13 +28,12 @@ import pyreg.multiscale_optimizer as MO
 import pyreg.load_default_settings as ds
 
 # general parameters
-params = pars.ParameterDict()
-params['registration_model'] = ds.par_algconf['model']['registration_model']
-
 model_name = 'mySVFNet'
 
+params = pars.ParameterDict(ds.par_algconf)
+
 if ds.load_settings_from_file:
-    settingFile = model_name + '_settings.json'
+    settingFile = 'testRegistrationGenericMultiScaleCustom_' + model_name + '_settings.json'
     params.load_JSON(settingFile)
 
 if ds.use_real_images:
@@ -71,7 +70,8 @@ if ds.smooth_images:
     ITarget = s.smooth_scalar_field(ITarget)
 
 use_map = False # this custom registration algorithm does not use a map, so force it to False
-mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,use_map,params)
+map_low_res_factor = None
+mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,use_map,map_low_res_factor,params)
 
 # now customize everything
 
@@ -160,5 +160,5 @@ mo.set_optimizer_params(dict(lr=0.01))
 mo.optimize()
 
 if ds.save_settings_to_file:
-    params.write_JSON(model_name + '_settings_clean.json')
-    params.write_JSON_comments(model_name + '_settings_comments.json')
+    params.write_JSON( 'testRegistrationGenericMultiScaleCustom_' + model_name + '_settings_clean.json')
+    params.write_JSON_comments( 'testRegistrationGenericMultiScaleCustom_' + model_name + '_settings_comments.json')

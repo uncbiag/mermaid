@@ -35,6 +35,7 @@ parameter structure, so that *mermaid* can keep track of the parameters used. Th
 
     modelName = 'lddmm_shooting_map'
     useMap = True
+    mapLowResFactor = 1.
     dim = 2
     nrOfIterations = 500 # number of iterations for the optimizer
     params = pars.ParameterDict()
@@ -67,7 +68,7 @@ Close each figure for the optimizer to advance.
 
 .. code::
 
-    so = MO.SingleScaleRegistrationOptimizer(sz,spacing,useMap,params)
+    so = MO.SingleScaleRegistrationOptimizer(sz,spacing,useMap,mapLowResFactor,params)
     so.set_model(modelName)
 
     so.set_number_of_iterations(nrOfIterations)
@@ -80,5 +81,22 @@ Close each figure for the optimizer to advance.
 
 
 That's it. Pretty easy, no?
+
+There are also now a few convenience functions to make everything even easier. So intead of manually creating optimizers and such, you can use the following functions
+
+.. code::
+
+   so = MO.SimpleSingleScaleRegistration(ISource,ITarget,spacing,params)
+   so.register()
+
+or
+
+.. code::
+
+   so = MO.SimpleMultiScaleRegistration(ISource,ITarget,spacing,params)
+   so.register()
+
+   
+See *testMinimalSimpleRegistration.py* and *testMinimalSimpleRegistrationMultiScale.py* in the *demos* directory for details.
 
 
