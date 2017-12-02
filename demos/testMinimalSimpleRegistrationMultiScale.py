@@ -29,20 +29,13 @@ spacing = 1./(sz[2::]-1) # the first two dimensions are batch size and number of
 ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
 ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
 
-so = MO.SingleScaleRegistrationOptimizer(sz,spacing,ds.use_map,ds.map_low_res_factor,params)
-so.set_model(model_name)
-so.set_optimizer_by_name( ds.optimizer_name )
-so.set_visualization( ds.visualize )
-so.set_visualize_step( ds.visualize_step )
+params['model']['deformation']['map_low_res_factor'] = 0.25
+params['optimizer']['single_scale']['nr_of_iterations'] = 50
+so = MO.SimpleMultiScaleRegistration(ISource,ITarget,spacing,params)
+so.get_optimizer().set_visualization( ds.visualize )
+so.get_optimizer().set_visualize_step( ds.visualize_step )
+so.register()
 
-so.set_number_of_iterations(ds.nr_of_iterations)
-
-so.set_source_image(ISource)
-so.set_target_image(ITarget)
-
-# and now do the optimization
-so.optimize()
-
-params.write_JSON( 'testMinimalRegistration_' + model_name + '_settings_clean.json')
-params.write_JSON_comments( 'testMinimalRegistration_' + model_name + '_settings_comments.json')
+params.write_JSON( 'testMinimalSimpleRegistrationMultiScale_' + model_name + '_settings_clean.json')
+params.write_JSON_comments( 'testMinimalSimpleRegistrationMultiScale_' + model_name + '_settings_comments.json')
 

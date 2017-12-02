@@ -17,31 +17,208 @@ import model_factory as MF
 import image_sampling as IS
 #from MyAdam import MyAdam
 
+# add some convenience functionality
+class SimpleRegistration(object):
+    """
+           Abstract optimizer base class.
+    """
+    __metaclass__ = ABCMeta
+
+    def __init__(self,ISource,ITarget,spacing,params):
+        """
+        :param ISource: source image
+        :param ITarget: target image
+        :param spacing: image spacing
+        :param params: parameters
+        """
+        self.params = params
+        self.use_map = self.params['model']['deformation'][('use_map', True, '[True|False] either do computations via a map or directly using the image')]
+        self.map_low_res_factor = self.params['model']['deformation'][('map_low_res_factor', 1.0, 'Set to a value in (0,1) if a map-based solution should be computed at a lower internal resolution (image matching is still at full resolution')]
+        self.spacing = spacing
+        self.ISource = ISource
+        self.ITarget = ITarget
+        self.sz = np.array( ISource.size() )
+        self.optimizer = None
+
+    @abstractmethod
+    def register(self):
+        """
+        Abstract method to register the source to the target image
+        :return: 
+        """
+        pass
+
+    def get_optimizer(self):
+        """
+        Returns the optimizer being used (can be used to customize the simple registration if desired)
+        :return: optimizer
+        """
+        return self.optimizer
+
+    def get_energy(self):
+        """
+        Returns the current energy
+        :return: Returns a tuple (energy, similarity energy, regularization energy)
+        """
+        if self.optimizer is not None:
+            return self.optimizer.get_energy()
+        else:
+            return None
+
+    def get_warped_image(self):
+        """
+        Returns the warped image
+        :return: the warped image
+        """
+        if self.optimizer is not None:
+            return self.optimizer.get_warped_image()
+        else:
+            return None
+
+    def get_map(self):
+        """
+        Returns the deformation map
+        :return: deformation map
+        """
+        if self.optimizer is not None:
+            return self.optimizer.get_map()
+
+    def get_model_parameters(self):
+        """
+        Returns the parameters of the model
+
+        :return: model parameters 
+        """
+        return self.optimizer.get_model_parameters()
+
+class SimpleSingleScaleRegistration(SimpleRegistration):
+    """
+    Simple single scale registration
+    """
+    def __init__(self,ISource,ITarget,spacing,params):
+        super(SimpleSingleScaleRegistration, self).__init__(ISource,ITarget,spacing, params)
+        self.optimizer = SingleScaleRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params)
+
+    def register(self):
+        """
+        Registers the source to the target image
+        :return: n/a
+        """
+
+        self.optimizer.register(self.ISource,self.ITarget)
+
+class SimpleMultiScaleRegistration(SimpleRegistration):
+    """
+    Simple multi scale registration
+    """
+    def __init__(self,ISource,ITarget,spacing,params):
+        super(SimpleMultiScaleRegistration, self).__init__(ISource, ITarget, spacing, params)
+        self.optimizer = MultiScaleRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params)
+
+    def register(self):
+        """
+        Registers the source to the target image
+        :return: n/a
+        """
+        self.optimizer.register(self.ISource,self.ITarget)
+
+
 class Optimizer(object):
     """
        Abstract optimizer base class.
-       """
+    """
     __metaclass__ = ABCMeta
 
-    def __init__(self, sz, spacing, useMap, params):
+    def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
         """
         Constructor.
         
         :param sz: image size in BxCxXxYxZ format
         :param spacing: spatial spacing, e.g., [0.1,0.1,0.1] in 3D
         :param useMap: boolean, True if a coordinate map is evolved to warp images, False otherwise
+        :param map_low_res_factor: if <1 evolutions happen at a lower resolution; >=1 ignored 
         :param params: ParametersDict() instance to hold parameters
         """
         self.sz = sz
         """image size"""
         self.spacing = spacing
         """image spacing"""
+        self.lowResSize = None
+        """low res image size"""
+        self.lowResSpacing = None
+        """low res image spacing"""
         self.useMap = useMap
         """makes use of map"""
+        self.mapLowResFactor = mapLowResFactor
+        """if <1 then evolutions are at a lower resolution, but image is compared at the same resolution; >=1 ignored"""
+        if self.mapLowResFactor is not None:
+            if self.mapLowResFactor>1:
+                print('mapLowResFactor needs to be <=1 but is set to ' + str( self.mapLowResFactor ) + '; ignoring it')
+                self.mapLowResFactor = None
+            elif self.mapLowResFactor==1:
+                print('mapLowResFactor = 1: performing computations at original resolution.')
+                self.mapLowResFactor = None
         self.params = params
         """general parameters"""
         self.rel_ftol = 1e-4
         """relative termination tolerance for optimizer"""
+        self.last_successful_step_size_taken = None
+        """Records the last successful step size an optimizer took (possible use: propogate step size between multiscale levels"""
+
+        if (self.mapLowResFactor is not None):
+            self.lowResSize = self._get_low_res_size_from_size( sz, self.mapLowResFactor )
+            self.lowResSpacing = self._get_low_res_spacing_from_spacing(self.spacing,sz,self.lowResSize)
+        self.sampler = IS.ResampleImage()
+
+        self.params[('optimizer', {}, 'optimizer settings')]
+        self.params[('model', {}, 'general model settings')]
+        self.params[('deformation', {}, 'model describing the desired deformation model')]
+
+        self.params['model']['deformation']['use_map']= (useMap, '[True|False] either do computations via a map or directly using the image')
+        self.params['model']['deformation']['map_low_res_factor'] = (mapLowResFactor, 'Set to a value in (0,1) if a map-based solution should be computed at a lower internal resolution (image matching is still at full resolution')
+
+        self.params['optimizer']['single_scale'][('rel_ftol',self.rel_ftol,'relative termination tolerance for optimizer')]
+
+    def set_last_successful_step_size_taken(self,lr):
+        """
+        Function to let the optimizer know what step size has been successful previously.
+        Useful for example to retain optimization "memory" across scales in a multi-scale implementation
+        :param lr: step size
+        :return: n/a
+        """
+        self.last_successful_step_size_taken=lr
+
+    def get_last_successful_step_size_taken(self):
+        """
+        Returns the last successful step size the optimizer has taken (if the optimizer supports querying the step size)
+        :return: last successful step size
+        """
+        return self.last_successful_step_size_taken
+
+    def _get_low_res_spacing_from_spacing(self, spacing, sz, lowResSize):
+        """
+        Computes spacing for the low-res parameterization from image spacing
+        :param spacing: image spacing
+        :param sz: size of image
+        :param lowResSize: size of low re parameterization
+        :return: returns spacing of low res parameterization
+        """
+        return spacing * np.array(sz[2::]) / np.array(lowResSize[2::])
+
+    def _get_low_res_size_from_size(self, sz, factor):
+        """
+        Returns the corresponding low-res size from a (high-res) sz
+        :param sz: size (high-res)
+        :param factor: low-res factor (needs to be <1)
+        :return: low res size
+        """
+        if (factor is None) or (factor>=1):
+            print('WARNING: Could not compute low_res_size as factor was ' + str( factor ))
+            return sz
+        else:
+            lowResSize = np.array(sz)
+            lowResSize[2::] = (np.ceil((np.array(sz[2::]) * factor))).astype('int16')
+            return lowResSize
 
     def set_rel_ftol(self, rel_ftol):
         """
@@ -50,6 +227,7 @@ class Optimizer(object):
         :param rel_ftol: relative termination tolerance for optimizer
         """
         self.rel_ftol = rel_ftol
+        self.params['optimizer']['single_scale']['rel_ftol'] = (rel_ftol,'relative termination tolerance for optimizer')
 
     def get_rel_ftol(self):
         """
@@ -73,16 +251,20 @@ class Optimizer(object):
         """
         pass
 
+    def get_last_successful_step_size_taken(self):
+        return self.last_successful_step_size_taken
 
 class ImageRegistrationOptimizer(Optimizer):
     """
     Optimization class for image registration.
     """
 
-    def __init__(self, sz, spacing, useMap, params):
-        super(ImageRegistrationOptimizer, self).__init__(sz, spacing, useMap, params)
+    def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
+        super(ImageRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params)
         self.ISource = None
         """source image"""
+        self.lowResISource = None
+        """if mapLowResFactor <1, a lowres image needs to be created to parameterize some of the registration algorithms"""
         self.ITarget = None
         """target image"""
         self.optimizer_name = 'lbfgs_ls' #''lbfgs_ls'
@@ -95,6 +277,7 @@ class ImageRegistrationOptimizer(Optimizer):
         """if True figures are created during the run"""
         self.visualize_step = 10
         """how often the figures are updated; each self.visualize_step-th iteration"""
+
 
     def turn_visualization_on(self):
         """
@@ -140,6 +323,17 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         return self.visualize_step
 
+    def register(self,ISource,ITarget):
+        """
+        Registers the source to the target image
+        :param ISource: source image
+        :param ITarget: target image 
+        :return: n/a
+        """
+        self.set_source_image(ISource)
+        self.set_target_image(ITarget)
+        self.optimize()
+
     def set_source_image(self, I):
         """
         Setting the source image which should be deformed to match the target image
@@ -147,6 +341,8 @@ class ImageRegistrationOptimizer(Optimizer):
         :param I: source image
         """
         self.ISource = I
+        if self.mapLowResFactor is not None:
+            self.lowResISource,_ = self.sampler.downsample_image_to_size(self.ISource,self.spacing,self.lowResSize[2::])
 
     def set_target_image(self, I):
         """
@@ -206,10 +402,13 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         tying it to rel_ftol is not really correct.
     """
 
-    def __init__(self, sz, spacing, useMap, params):
-        super(SingleScaleRegistrationOptimizer, self).__init__(sz, spacing, useMap, params)
+    def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
+        super(SingleScaleRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params)
 
-        self.mf = MF.ModelFactory(self.sz, self.spacing)
+        if (self.mapLowResFactor is not None ):
+            self.mf = MF.ModelFactory(self.lowResSize, self.lowResSpacing)
+        else:
+            self.mf = MF.ModelFactory(self.sz, self.spacing)
         """model factory which will be used to create the model and its loss function"""
 
         self.model = None
@@ -219,10 +418,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.identityMap = None
         """identity map, will be needed for map-based solutions"""
+        self.lowResIdentityMap = None
+        """low res identity map, will be needed for map-based solutions which are computed at lower resolution"""
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
-        self.nrOfIterations = 1
+        self.nrOfIterations = None
         """the maximum number of iterations for the optimizer"""
         self.iter_count = 0
         self.rec_energy = None
@@ -261,13 +462,19 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param modelName: name of the model that should be solved (string) 
         """
 
-        self.model, self.criterion = self.mf.create_registration_model(modelName, self.params)
+        self.params['model']['deformation']['name'] = ( modelName, "['svf'|'svf_quasi_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum']" )
+
+        self.model, self.criterion = self.mf.create_registration_model(modelName, self.params['model'])
         print(self.model)
 
         if self.useMap:
             # create the identity map [-1,1]^d, since we will use a map-based implementation
             id = utils.identity_map_multiN(self.sz)
             self.identityMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
+            if self.mapLowResFactor is not None:
+                # create a lower resolution map for the computations
+                lowres_id = utils.identity_map_multiN(self.lowResSize)
+                self.lowResIdentityMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=True))
 
     def add_similarity_measure(self, simName, simMeasure):
         """
@@ -277,6 +484,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param simMeasure: similarity measure itself (class object that can be instantiated)
         """
         self.criterion.add_similarity_measure(simName, simMeasure)
+        self.params['model']['registration_model']['similarity_measure']['type'] = (simName, 'was customized; needs to be expplicitly instantiated, cannot be loaded')
 
     def add_model(self, modelName, modelNetworkClass, modelLossClass):
         """
@@ -287,6 +495,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param modelLossClass: registration loss (class object that can be instantiated)
         """
         self.mf.add_model(modelName, modelNetworkClass, modelLossClass)
+        self.params['model']['deformation']['name'] = (modelName, 'was customized; needs to be explicitly instantiated, cannot be loaded')
 
     def set_model_parameters(self, p):
         """
@@ -294,7 +503,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         
         :param p: parameters 
         """
-        self.model.set_registration_parameters(p, self.sz, self.spacing)
+        if (self.useMap) and (self.mapLowResFactor is not None):
+            self.model.set_registration_parameters(p, self.lowResSize, self.lowResSpacing)
+        else:
+            self.model.set_registration_parameters(p, self.sz, self.spacing)
 
     def get_model_parameters(self):
         """
@@ -322,12 +534,22 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         return self.model.downsample_registration_parameters(desiredSize)
 
+    def _set_number_of_iterations_from_multi_scale(self, nrIter):
+        """
+        Same as set_number_of_iterations with the exception that this is not recored in the parameter structure since it comes from the multi-scale setting
+        :param nrIter: number of iterations 
+        """
+        self.nrOfIterations = nrIter
+
     def set_number_of_iterations(self, nrIter):
         """
         Set the number of iterations of the optimizer
         
         :param nrIter: number of iterations 
         """
+        self.params['optimizer'][('single_scale', {}, 'single scale settings')]
+        self.params['optimizer']['single_scale']['nr_of_iterations'] = (nrIter, 'number of iterations')
+
         self.nrOfIterations = nrIter
 
     def get_number_of_iterations(self):
@@ -343,7 +565,14 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # 1) Forward pass: Compute predicted y by passing x to the model
         # 2) Compute loss
         if self.useMap:
-            self.rec_phiWarped = self.model(self.identityMap, self.ISource)
+            if self.mapLowResFactor is not None:
+                rec_tmp = self.model(self.lowResIdentityMap, self.lowResISource)
+                # now upsample to correct resolution
+                desiredSz = self.identityMap.size()[2::]
+                self.rec_phiWarped,_ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
+            else:
+                self.rec_phiWarped = self.model(self.identityMap, self.ISource)
+
             loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget)
         else:
             self.rec_IWarped = self.model(self.ISource)
@@ -431,23 +660,56 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.optimizer_name is None:
                 raise ValueError('Need to select an optimizer')
             elif self.optimizer_name == 'lbfgs_ls':
+                if self.last_successful_step_size_taken is not None:
+                    desired_lr = self.last_successful_step_size_taken
+                else:
+                    desired_lr = 1.0
                 opt_instance = CO.LBFGS_LS(self.model.parameters(),
-                                           lr=1.0, max_iter=1, max_eval=5,
+                                           lr=desired_lr, max_iter=1, max_eval=5,
                                            tolerance_grad=self.rel_ftol * 10, tolerance_change=self.rel_ftol,
                                            history_size=5, line_search_fn='backtracking')
                 return opt_instance
             elif self.optimizer_name == 'sgd':
-                opt_instance = torch.optim.SGD(self.model.parameters(), lr=0.25, momentum=0.9, dampening=0, weight_decay=0, nesterov=True)
+                if self.last_successful_step_size_taken is not None:
+                    desired_lr = self.last_successful_step_size_taken
+                else:
+                    desired_lr = 0.25
+                opt_instance = torch.optim.SGD(self.model.parameters(), lr=desired_lr, momentum=0.9, dampening=0, weight_decay=0, nesterov=True)
             elif self.optimizer_name == 'adam':
-                opt_instance = torch.optim.Adam(self.model.parameters(), lr=0.0025, betas=(0.9, 0.999), eps=self.rel_ftol, weight_decay=0)
+                if self.last_successful_step_size_taken is not None:
+                    desired_lr = self.last_successful_step_size_taken
+                else:
+                    desired_lr = 0.0025
+                opt_instance = torch.optim.Adam(self.model.parameters(), lr=desired_lr, betas=(0.9, 0.999), eps=self.rel_ftol, weight_decay=0)
                 return opt_instance
             else:
                 raise ValueError('Optimizer = ' + str(self.optimizer_name) + ' not yet supported')
+
+    def _set_all_still_missing_parameters(self):
+
+        if self.optimizer_name is None:
+            self.optimizer_name = self.params['optimizer'][('name','lbfgs_ls','Optimizer (lbfgs|adam|sgd)')]
+
+        if self.model is None:
+            model_base_name = self.params['model']['deformation'][('name', 'lddmm_shooting', "['svf'|'svf_quasi_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum']")]
+            if self.useMap:
+                model_name = model_base_name + '_map'
+            else:
+                model_name = model_base_name + '_image'
+            self.set_model( model_name )
+
+        if self.nrOfIterations is None: # not externally set, so this will not be a multi-scale solution
+            self.params['optimizer'][('single_scale', {}, 'single scale settings')]
+            self.nrOfIterations = self.params['optimizer']['single_scale'][('nr_of_iterations', 10, 'number of iterations')]
+
 
     def optimize(self):
         """
         Do the single scale optimization
         """
+
+        # obtain all missing parameters (i.e., only set the ones that were not explicitly set)
+        self._set_all_still_missing_parameters()
 
         # do the actual optimization
         self.optimizer_instance = self._get_optimizer_instance()
@@ -465,6 +727,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             # for p in self.optimizer_instance._params:
             #     p.data = p.data.float()
             self.optimizer_instance.step(self._closure)
+            if hasattr(self.optimizer_instance,'last_step_size_taken'):
+                self.last_successful_step_size_taken = self.optimizer_instance.last_step_size_taken()
+                print('successful lr = ' + str( self.last_successful_step_size_taken ))
 
             if self.useMap:
                 tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_phiWarped)
@@ -484,11 +749,11 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     the hierarchy, the registration parameters are upsampled from the solution at the previous lower resolution
     """
 
-    def __init__(self, sz, spacing, useMap, params):
-        super(MultiScaleRegistrationOptimizer, self).__init__(sz, spacing, useMap, params)
-        self.scaleFactors = [1.]
+    def __init__(self, sz, spacing, useMap, mapLowResFactor, params ):
+        super(MultiScaleRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params)
+        self.scaleFactors = None
         """At what image scales optimization should be computed"""
-        self.scaleIterations = [100]
+        self.scaleIterations = None
         """number of iterations per scale"""
 
         self.addSimName = None
@@ -505,6 +770,9 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """name of the model to be added (if specified by name; gets dominated by specifying an optimizer directly"""
         self.ssOpt = None
         """Single scale optimizer"""
+
+        self.params['optimizer'][('multi_scale', {}, 'multi scale settings')]
+
 
     def add_similarity_measure(self, simName, simMeasure):
         """
@@ -542,6 +810,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         
         :param scaleFactors: scale factors for the multi-scale solution hierarchy 
         """
+
+        self.params['optimizer']['multi_scale']['scale_factors'] = (scaleFactors, 'how images are scaled')
         self.scaleFactors = scaleFactors
 
     def set_number_of_iterations_per_scale(self, scaleIterations):
@@ -550,15 +820,15 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         
         :param scaleIterations: number of iterations per scale (array)
         """
+
+        self.params['optimizer']['multi_scale']['scale_iterations'] = (scaleIterations, 'number of iterations per scale')
         self.scaleIterations = scaleIterations
 
     def _get_desired_size_from_scale(self, origSz, scale):
 
         osz = np.array(list(origSz))
-        dsz = np.zeros(osz.shape, dtype='int')
-        dim = len(osz)
-        for d in range(dim):
-            dsz[d] = round(scale * osz[d])
+        dsz = osz
+        dsz[2::] = (np.round( scale*osz[2::] )).astype('int')
 
         return dsz
 
@@ -603,16 +873,37 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             return None
 
+
+    def _set_all_still_missing_parameters(self):
+
+        self.scaleFactors = self.params['optimizer']['multi_scale'][('scale_factors', [1.0, 0.5, 0.25], 'how images are scaled')]
+        self.scaleIterations = self.params['optimizer']['multi_scale'][('scale_iterations', [10, 20, 20], 'number of iterations per scale')]
+
+        if (self.optimizer is None) and (self.optimizer_name is None):
+            self.optimizer_name = self.params['optimizer'][('name','lbfgs_ls','Optimizer (lbfgs|adam|sgd)')]
+
+        if self.model_name is None:
+            model_base_name = self.params['model']['deformation'][('name', 'lddmm_shooting', "['svf'|'svf_quasi_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum']")]
+            if self.useMap:
+                model_name = model_base_name + '_map'
+            else:
+                model_name = model_base_name + '_image'
+            self.set_model( model_name )
+
+
     def optimize(self):
         """
         Perform the actual multi-scale optimization
         """
+        self._set_all_still_missing_parameters()
 
         if (self.ISource is None) or (self.ITarget is None):
             raise ValueError('Source and target images need to be set first')
 
         upsampledParameters = None
-        upsampledSpacing = None
+        upsampledParameterSpacing = None
+        upsampledSz = None
+        lastSuccessfulStepSizeTaken = None
 
         nrOfScales = len(self.scaleFactors)
 
@@ -632,18 +923,18 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             currentScaleFactor = en_scale[1]
             currentScaleNumber = en_scale[0]
 
-            currentDesiredSz = self._get_desired_size_from_scale(self.ISource.size()[2::], currentScaleFactor)
+            currentDesiredSz = self._get_desired_size_from_scale(self.ISource.size(), currentScaleFactor)
 
             currentNrOfIteratons = reverseIterations[currentScaleNumber]
 
-            sampler = IS.ResampleImage()
-
-            ISourceC, spacingC = sampler.downsample_image_to_size(self.ISource, self.spacing, currentDesiredSz)
-            ITargetC, spacingC = sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz)
+            ISourceC, spacingC = self.sampler.downsample_image_to_size(self.ISource, self.spacing, currentDesiredSz[2::])
+            ITargetC, spacingC = self.sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz[2::])
 
             szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
 
-            self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.params)
+            self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.mapLowResFactor, self.params)
+            print('Setting learning rate to ' + str( lastSuccessfulStepSizeTaken ))
+            self.ssOpt.set_last_successful_step_size_taken( lastSuccessfulStepSizeTaken )
 
             if ((self.add_model_name is not None) and
                     (self.add_model_networkClass is not None) and
@@ -664,6 +955,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 self.ssOpt.set_optimizer_by_name(self.optimizer_name)
 
             self.ssOpt.set_rel_ftol(self.get_rel_ftol())
+
             self.ssOpt.set_visualization(self.get_visualization())
             self.ssOpt.set_visualize_step(self.get_visualize_step())
 
@@ -672,22 +964,45 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             if upsampledParameters is not None:
                 # check that the upsampled parameters are consistent with the downsampled images
-                if not (abs(spacingC - upsampledSpacing) < 0.000001).all():
-                    print(spacingC)
-                    print(upsampledSpacing)
+                spacingError = False
+                expectedSpacing = None
+                if self.mapLowResFactor is not None:
+                    expectedSpacing = self._get_low_res_spacing_from_spacing(spacingC, szC, upsampledSz)
+                    # the spacing of the upsampled parameters will be different
+                    if not (abs(expectedSpacing - upsampledParameterSpacing) < 0.000001).all():
+                        spacingError = True
+                elif not (abs(spacingC - upsampledParameterSpacing) < 0.000001).all():
+                    expectedSpacing = spacingC
+                    spacingError = True
+
+                if spacingError:
+                    print(expectedSpacing)
+                    print(upsampledParameterSpacing)
                     raise ValueError('Upsampled parameters and downsampled images are of inconsistent dimension')
+
                 # now that everything is fine, we can use the upsampled parameters
                 print('Explicitly setting the optimization parameters')
                 self.ssOpt.set_model_parameters(upsampledParameters)
 
             # do the actual optimization
             print('Optimizing for at most ' + str(currentNrOfIteratons) + ' iterations')
-            self.ssOpt.set_number_of_iterations(currentNrOfIteratons)
+            self.ssOpt._set_number_of_iterations_from_multi_scale(currentNrOfIteratons)
             self.ssOpt.optimize()
+
+            lastSuccessfulStepSizeTaken = self.ssOpt.get_last_successful_step_size_taken()
 
             # if we are not at the very last scale, then upsample the parameters
             if currentScaleNumber != nrOfScales - 1:
                 # we need to revert the downsampling to the next higher level
                 scaleTo = reverseScales[currentScaleNumber + 1]
-                desiredUpsampleSz = self._get_desired_size_from_scale(self.ISource.size()[2::], scaleTo)
-                upsampledParameters, upsampledSpacing = self.ssOpt.upsample_model_parameters(desiredUpsampleSz)
+                upsampledSz = self._get_desired_size_from_scale(self.ISource.size(), scaleTo)
+                print('Before')
+                print(upsampledSz)
+                if self.useMap:
+                    if self.mapLowResFactor is not None:
+                        # parameters are upsampled differently here, because they are computed at low res
+                        upsampledSz = self._get_low_res_size_from_size(upsampledSz,self.mapLowResFactor)
+                        print(self.mapLowResFactor)
+                        print('After')
+                        print(upsampledSz)
+                upsampledParameters, upsampledParameterSpacing = self.ssOpt.upsample_model_parameters(upsampledSz[2::])

@@ -57,9 +57,10 @@ There are a few example registration implementations in the demos directory. Act
 * Most parts of the codes have been examined. In case of failure of the GPU code contact zyshen021@gmail.com; for all other failures contact mn@cs.unc.edu or open an issue in the github issue tracker.
     
 # Lastest modifications
-  * 11.26    Created a separate IO class; use this for all file input/output
-  * 11.13    fix to adpat device
-  * 11.12    optimize, fix bugs, 
+  * 12.02:   Simplified interface. Petter parameters. Low-res capability (requires new arguent mapLowResFactor to be specified when calling the functions).
+  * 11.26:   Created a separate IO class; use this for all file input/output
+  * 11.13:   fix to adpat device
+  * 11.12:   optimize, fix bugs, 
   * 10.31:   unitest stn is added, see test_stn_cpu.py and test_stn_gpu.py
   * 10.29:   1D, 2D and 3D cuda STN have been implemented. see pyreg.libraries.functions.stn_nd
     *        stn = STNFunction_ND_BCXYZ(n_dim)

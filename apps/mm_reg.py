@@ -40,7 +40,7 @@ def read_images(source_image_name,target_image_name, normalize_spacing=True, nor
     return I0, I1, spacing, hdr0, hdr1
 
 
-def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scale, normalize_spacing, normalize_intensities, squeeze_image,par_algconf ):
+def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scale, normalize_spacing, normalize_intensities, squeeze_image, par_algconf ):
 
     from pyreg.data_wrapper import AdaptVal
     import pyreg.smoother_factory as SF
@@ -54,6 +54,7 @@ def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scal
     par_optimizer = par_algconf['algconf']['optimizer']
 
     use_map = par_model['deformation']['use_map']
+    map_low_res_factor = par_model['deformation']['map_low_res_factor']
     model_name = par_model['deformation']['name']
 
     if use_map:
@@ -91,7 +92,7 @@ def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scal
         multi_scale_scale_factors = par_optimizer['multi_scale']['scale_factors']
         multi_scale_iterations_per_scale = par_optimizer['multi_scale']['scale_iterations']
 
-    mo = MO.MultiScaleRegistrationOptimizer(sz, spacing, use_map, params)
+    mo = MO.MultiScaleRegistrationOptimizer(sz, spacing, use_map, map_low_res_factor, params)
 
     optimizer_name = par_optimizer['name']
 

@@ -35,11 +35,11 @@ else:
     model_name = ds.model_name + '_image'
 
 # general parameters
-params = pars.ParameterDict()
-params['registration_model'] = ds.par_algconf['model']['registration_model']
+
+params = pars.ParameterDict(ds.par_algconf)
 
 if ds.load_settings_from_file:
-    settingFile = model_name + '_settings.json'
+    settingFile = 'testRegistrationGenericMultiScale_' + model_name + '_settings.json'
     params.load_JSON(settingFile)
 
 torch.set_num_threads( ds.nr_of_threads )
@@ -72,13 +72,12 @@ ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
 
 if ds.smooth_images:
     # smooth both a little bit
-    params['image_smoothing'] = ds.par_algconf['image_smoothing']
     cparams = params['image_smoothing']
     s = SF.SmootherFactory( sz[2::], spacing ).create_smoother(cparams)
     ISource = s.smooth_scalar_field(ISource)
     ITarget = s.smooth_scalar_field(ITarget)
 
-mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,ds.use_map,params)
+mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,ds.use_map,ds.map_low_res_factor,params)
 
 mo.set_optimizer_by_name( ds.optimizer_name )
 mo.set_visualization( ds.visualize )
@@ -96,8 +95,8 @@ mo.set_number_of_iterations_per_scale(ds.multi_scale_iterations_per_scale)
 mo.optimize()
 
 if ds.save_settings_to_file:
-    params.write_JSON(model_name + '_settings_clean.json')
-    params.write_JSON_comments(model_name + '_settings_comments.json')
+    params.write_JSON( 'testRegistrationGenericMultiScale_' + model_name + '_settings_clean.json')
+    params.write_JSON_comments( 'testRegistrationGenericMultiScale_' + model_name + '_settings_comments.json')
 
 
 print("time{}".format(time()-since))

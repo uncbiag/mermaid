@@ -36,11 +36,10 @@ else:
     model_name = ds.model_name + '_image'
 
 # general parameters
-params = pars.ParameterDict()
-params['registration_model'] = ds.par_algconf['model']['registration_model']
+params = pars.ParameterDict(ds.par_algconf)
 
 if ds.load_settings_from_file:
-    settingFile = model_name + '_settings.json'
+    settingFile = 'testRegistrationGeneric_' + model_name + '_settings.json'
     params.load_JSON(settingFile)
 
 torch.set_num_threads( ds.nr_of_threads ) # not sure if this actually affects anything
@@ -80,7 +79,7 @@ if ds.smooth_images:
     ISource = s.smooth_scalar_field(ISource)
     ITarget = s.smooth_scalar_field(ITarget)
 
-so = MO.SingleScaleRegistrationOptimizer(sz,spacing,ds.use_map,params)
+so = MO.SingleScaleRegistrationOptimizer(sz,spacing,ds.use_map,ds.map_low_res_factor,params)
 so.set_model(model_name)
 so.set_optimizer_by_name( ds.optimizer_name )
 so.set_visualization( ds.visualize )
@@ -96,8 +95,8 @@ so.set_target_image(ITarget)
 so.optimize()
 
 if ds.save_settings_to_file:
-    params.write_JSON(model_name + '_settings_clean.json')
-    params.write_JSON_comments(model_name + '_settings_comments.json')
+    params.write_JSON( 'testRegistrationGeneric_' + model_name + '_settings_clean.json')
+    params.write_JSON_comments( 'testRegistrationGeneric_' + model_name + '_settings_comments.json')
 
 time_elapsed = time() - since
 

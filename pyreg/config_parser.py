@@ -93,6 +93,7 @@ def get_algconf_settings( algconf_settings_filename = None ):
     algconf_params['algconf']['model'][('deformation', {}, 'model describing the desired deformation model')]
     algconf_params['algconf']['model']['deformation'][('name', 'lddmm_shooting', "['svf'|'svf_quasi_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum']")]
     algconf_params['algconf']['model']['deformation'][('use_map', True, '[True|False] either do computations via a map or directly using the image')]
+    algconf_params['algconf']['model']['deformation'][('map_low_res_factor',1.0,'Set to a value in (0,1) if a map-based solution should be computed at a lower internal resolution (image matching is still at full resolution')]
 
     algconf_params['algconf']['model'][('registration_model', {}, 'general settings for the registration model')]
     algconf_params['algconf']['model']['registration_model'][('forward_model', {}, 'Holds the parameters for the forward model')]

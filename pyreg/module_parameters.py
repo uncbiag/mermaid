@@ -7,8 +7,15 @@ registration runs. See the corresponding note for a brief description on how to 
 import json
 
 class ParameterDict(object):
-    def __init__(self):
-        self.ext = {}
+    def __init__(self,initDict=None):
+        if initDict is not None:
+            if type(initDict)==type(self):
+                self.ext = initDict.ext
+            else:
+                print('WARNING: Cannot initialize from non ParameterDict object. Ignoring initialization.')
+                self.ext = {}
+        else:
+            self.ext = {}
         self.int = {}
         self.com = {}
         self.currentCategoryName = 'root'
@@ -151,7 +158,9 @@ class ParameterDict(object):
             if type(value)==type(self):
                 # Here we are trying to assign a full parameter object
                 # We want to add the content and not the object itself
-                self._set_current_key(key, value.ext, comment)
+                self.ext[key]=value.ext
+                self.int[key]={}
+                self.com[key]={}
             else:
                 # this is just a normal value
                 self._set_current_key(key, value, comment)

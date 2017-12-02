@@ -6,6 +6,7 @@ par_baseconf = cp.get_baseconf_settings()['baseconf']
 par_algconf = cp.get_algconf_settings()['algconf']
 
 use_map = par_algconf['model']['deformation']['use_map']
+map_low_res_factor = par_algconf['model']['deformation']['map_low_res_factor']
 model_name = par_algconf['model']['deformation']['name']
 optimizer_name = par_algconf['optimizer']['name']
 nr_of_iterations = par_algconf['optimizer']['single_scale']['nr_of_iterations']
