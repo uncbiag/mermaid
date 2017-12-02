@@ -31,7 +31,7 @@ Now, once we have a multi-scale optimizer
 .. code::
    
    import pyreg.multiscale_optimizer as MO
-   mo = MO.MultiScaleRegistrationOptimizer(modelName,sz,spacing,useMap,params)
+   mo = MO.MultiScaleRegistrationOptimizer(modelName,sz,spacing,useMap,mapLowResFactor,params)
 
 
 we can simply instruct it to use our new similarity measure
