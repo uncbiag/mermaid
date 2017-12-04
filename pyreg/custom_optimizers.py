@@ -322,12 +322,14 @@ class LBFGS_LS(Optimizer):
         # 0 < rho < 0.5 and 0 < w < 1
         rho = 1e-4
         w = 0.5
+        max_backtracking = 20
 
         original_param_data_list = self._copy_param()
         phi_0 = closure().data[0]
         phi_0_prime = self._directional_derivative(d)
         alpha_k = 1.0
-        while True:
+        nr_of_backtracking_attempts = 0
+        while nr_of_backtracking_attempts<max_backtracking:
             self._set_param_incremental(alpha_k, d)
             phi_k = closure().data[0]
             self._set_param(original_param_data_list)
@@ -337,7 +339,11 @@ class LBFGS_LS(Optimizer):
             else:
                 alpha_k *= w
                 print('Found UNACCEPTABLE step: new alpha_k = ' + str(alpha_k))
-        return alpha_k
+                nr_of_backtracking_attempts += 1
+        if nr_of_backtracking_attempts==max_backtracking:
+            return 0.0 # could not find a proper step
+        else:
+            return alpha_k
 
 
     def _goldstein(self, closure, d):
