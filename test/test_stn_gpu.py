@@ -180,6 +180,12 @@ class Test_stn_3d(unittest.TestCase):
 
 if __name__ == '__main__':
     if foundHTMLTestRunner:
-        unittest.main(testRunner=HtmlTestRunner.HTMLTestRunner(output='test_output'))
+        if torch.cuda.device_count()==0:
+            print('No CUDA devices found. Ignoring test.')
+        else:
+            unittest.main(testRunner=HtmlTestRunner.HTMLTestRunner(output='test_output'))
     else:
-       unittest.main()
+        if torch.cuda.device_count()==0:
+            print('No CUDA devices found. Ignoring test.')
+        else:
+            unittest.main()
