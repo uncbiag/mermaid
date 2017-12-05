@@ -109,10 +109,9 @@ class RHSLibrary(object):
             raise ValueError('Only supported up to dimension 3')
 
 
-    ################################################################################################################3
     def _rhs_advect_oneC_image(self,I,v,rhs_ret):
         """
-        a fast version for _rhs_advect_image_multiC,   batch will no longer to be calculated sperately, one channel at a time.
+        a fast version for _rhs_advect_image_multiC,   batch will no longer to be calculated separately, one channel at a time.
         
         :param I: One-channel input image: batchxchxXxYxZ
         :param v: velocity field
@@ -126,8 +125,6 @@ class RHSLibrary(object):
             rhs_ret[:] = -self.fdt.dXc(I[:,0,...]) * v[:,0,...] -self.fdt.dYc(I[:,0,...])*v[:,1,...]-self.fdt.dZc(I[:,0,...])*v[:,2,...]
         else:
             raise ValueError('Only supported up to dimension 3')
-
-    ################################################################################################################3
 
 
     def rhs_scalar_conservation_multiNC(self, I, v):
@@ -152,7 +149,7 @@ class RHSLibrary(object):
         #     rhs_ret[nrI, ...] = self._rhs_scalar_conservation_multiC(I[nrI, ...], v[nrI, ...])
         # return rhs_ret
         if sz[1]==1:  # if one channel case, a fast version will be used
-            self._rhs_scalar_OneC_conservation(I,v,rhs_ret)
+            self._rhs_scalar_oneC_conservation(I, v, rhs_ret)
         else:
             for nrI in range(sz[0]):  # loop over all the images
                 rhs_ret[nrI, ...] = self._rhs_scalar_conservation_multiC(I[nrI, ...], v[nrI, ...])
@@ -190,8 +187,7 @@ class RHSLibrary(object):
             raise ValueError('Only supported up to dimension 3')
 
 
-    ################################################################################################################3
-    def _rhs_scalar_OneC_conservation(self,I,v,rhs_ret):
+    def _rhs_scalar_oneC_conservation(self, I, v, rhs_ret):
         """
         a fast version for _rhs_scalar_conservation_multiC,   batch will no longer to be calculated sperately, one channel at a time.
 
@@ -207,8 +203,6 @@ class RHSLibrary(object):
             rhs_ret[:] = -self.fdt.dXc(I[:,0,...]* v[:,0,...]) -self.fdt.dYc(I[:,0,...]*v[:,1,...])-self.fdt.dZc(I[:,0,...]*v[:,2,...])
         else:
             raise ValueError('Only supported up to dimension 3')
-
-    ################################################################################################################3
 
 
     def rhs_advect_map_multiN(self, phi, v):
@@ -498,38 +492,6 @@ class AdvectImage(ForwardModel):
         """
         return [self.rhs.rhs_advect_image_multiNC(x[0],u)]
 
-
-class AdvectImageAndConserveScalarMomentum(ForwardModel):
-    """
-    Forward model to advect an image using a transport equation: :math:`I_t + \\nabla I^Tv = 0`,
-    and to propagate a scalar momentum using a scalar conservation law:  :math:`\\lambda_t +div(\\lambda v)=0`.
-    v is treated as an external argument and [lambda,I] is the state
-    """
-
-    def __init__(self, sz, spacing, params=None):
-        super(AdvectImageAndConserveScalarMomentum, self).__init__(sz, spacing, params)
-
-    def u(self, t, pars):
-        """
-        External input, to hold the velocity field
-
-        :param t: time (ignored; not time-dependent) 
-        :param pars: assumes an n-D velocity field is passed as the only input argument
-        :return: Simply returns this velocity field
-        """
-        return pars
-
-    def f(self, t, x, u, pars):
-        """
-        Function to be integrated, i.e., right hand side of transport equation: :math:`-\\nabla I^T v`
-
-        :param t: time (ignored; not time-dependent) 
-        :param x: state, here the image, I, itself (supports multiple images and channels)
-        :param u: external input, will be the velocity field here
-        :param pars: ignored (does not expect any additional inputs)
-        :return: right hand side [I]
-        """
-        return [self.rhs.rhs_scalar_conservation_multiNC(x[0], u), self.rhs.rhs_advect_image_multiNC(x[1], u)]
 
 class EPDiffImage(ForwardModel):
     """

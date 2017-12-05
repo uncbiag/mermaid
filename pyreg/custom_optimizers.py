@@ -334,7 +334,7 @@ class LBFGS_LS(Optimizer):
             phi_k = closure().data[0]
             self._set_param(original_param_data_list)
             if phi_k <= phi_0 + rho * alpha_k * phi_0_prime:
-                print('Found acceptable step')
+                #print('Found acceptable step')
                 break
             else:
                 alpha_k *= w
