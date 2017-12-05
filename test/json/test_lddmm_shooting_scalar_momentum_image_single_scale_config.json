@@ -1,0 +1,45 @@
+{
+    "image_smoothing": {
+        "smooth_images": true, 
+        "smoother": {
+            "gaussian_std": 0.05, 
+            "type": "gaussian"
+        }
+    }, 
+    "model": {
+        "deformation": {
+            "map_low_res_factor": 1.0, 
+            "use_map": false
+        }, 
+        "registration_model": {
+            "forward_model": {
+                "number_of_time_steps": 10, 
+                "smoother": {
+                    "gaussian_std": 0.15, 
+                    "type": "gaussian"
+                }
+            }, 
+            "loss": {
+                "display_max_displacement": false, 
+                "limit_displacement": false, 
+                "max_displacement": 0.05
+            }, 
+            "similarity_measure": {
+                "sigma": 0.1, 
+                "type": "ssd"
+            }, 
+            "type": "lddmm_shooting_scalar_momentum_image"
+        }
+    }, 
+    "optimizer": {
+        "name": "lbfgs_ls", 
+        "single_scale": {
+            "nr_of_iterations": 10, 
+            "rel_ftol": 0.0001
+        }
+    }, 
+    "square_example_images": {
+        "len_l": 16, 
+        "len_s": 10
+    }
+}
