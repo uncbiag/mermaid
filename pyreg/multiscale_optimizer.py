@@ -172,7 +172,8 @@ class Optimizer(object):
 
         self.params[('optimizer', {}, 'optimizer settings')]
         self.params[('model', {}, 'general model settings')]
-        self.params[('deformation', {}, 'model describing the desired deformation model')]
+        self.params['model'][('deformation', {}, 'model describing the desired deformation model')]
+        self.params['model'][('registration_model', {}, 'general settings for the registration model')]
 
         self.params['model']['deformation']['use_map']= (useMap, '[True|False] either do computations via a map or directly using the image')
         self.params['model']['deformation']['map_low_res_factor'] = (mapLowResFactor, 'Set to a value in (0,1) if a map-based solution should be computed at a lower internal resolution (image matching is still at full resolution')
@@ -267,7 +268,7 @@ class ImageRegistrationOptimizer(Optimizer):
         """if mapLowResFactor <1, a lowres image needs to be created to parameterize some of the registration algorithms"""
         self.ITarget = None
         """target image"""
-        self.optimizer_name = 'lbfgs_ls' #''lbfgs_ls'
+        self.optimizer_name = None #''lbfgs_ls'
         """name of the optimizer to use"""
         self.optimizer_params = {}
         """parameters that should be passed to the optimizer"""
@@ -359,6 +360,7 @@ class ImageRegistrationOptimizer(Optimizer):
         :param optimizer_name: name of the optimizer (string) to be used 
         """
         self.optimizer_name = optimizer_name
+        self.params['optimizer']['name'] = optimizer_name
 
     def get_optimizer_by_name(self):
         """
@@ -462,7 +464,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param modelName: name of the model that should be solved (string) 
         """
 
-        self.params['model']['deformation']['name'] = ( modelName, "['svf'|'svf_quasi_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum']" )
+        self.params['model']['registration_model']['type'] = ( modelName, "['svf'|'svf_quasi_momentum'|'svf_scalar_momentum'|'svf_vector_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with '_map' or '_image' suffix" )
 
         self.model, self.criterion = self.mf.create_registration_model(modelName, self.params['model'])
         print(self.model)
@@ -495,7 +497,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param modelLossClass: registration loss (class object that can be instantiated)
         """
         self.mf.add_model(modelName, modelNetworkClass, modelLossClass)
-        self.params['model']['deformation']['name'] = (modelName, 'was customized; needs to be explicitly instantiated, cannot be loaded')
+        self.params['model']['registration_model']['type'] = (modelName, 'was customized; needs to be explicitly instantiated, cannot be loaded')
 
     def set_model_parameters(self, p):
         """
@@ -691,11 +693,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.optimizer_name = self.params['optimizer'][('name','lbfgs_ls','Optimizer (lbfgs|adam|sgd)')]
 
         if self.model is None:
-            model_base_name = self.params['model']['deformation'][('name', 'lddmm_shooting', "['svf'|'svf_quasi_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum']")]
-            if self.useMap:
-                model_name = model_base_name + '_map'
-            else:
-                model_name = model_base_name + '_image'
+            model_name = self.params['model']['registration_model'][('type', 'lddmm_shooting_map', "['svf'|'svf_quasi_momentum'|'svf_scalar_momentum'|'svf_vector_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with suffix '_map' or '_image'")]
+            self.params['model']['deformation'][('use_map', True, 'use a map for the solution or not True/False' )]
             self.set_model( model_name )
 
         if self.nrOfIterations is None: # not externally set, so this will not be a multi-scale solution
@@ -729,7 +728,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.optimizer_instance.step(self._closure)
             if hasattr(self.optimizer_instance,'last_step_size_taken'):
                 self.last_successful_step_size_taken = self.optimizer_instance.last_step_size_taken()
-                print('successful lr = ' + str( self.last_successful_step_size_taken ))
 
             if self.useMap:
                 tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_phiWarped)
@@ -883,13 +881,9 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.optimizer_name = self.params['optimizer'][('name','lbfgs_ls','Optimizer (lbfgs|adam|sgd)')]
 
         if self.model_name is None:
-            model_base_name = self.params['model']['deformation'][('name', 'lddmm_shooting', "['svf'|'svf_quasi_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum']")]
-            if self.useMap:
-                model_name = model_base_name + '_map'
-            else:
-                model_name = model_base_name + '_image'
+            model_name = self.params['model']['registration_model'][('type', 'lddmm_shooting_map', "['svf'|'svf_quasi_momentum'|'svf_scalar_momentum'|'svf_vector_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with suffix '_map' or '_image'")]
+            self.params['model']['deformation'][('use_map', True, 'use a map for the solution or not True/False' )]
             self.set_model( model_name )
-
 
     def optimize(self):
         """

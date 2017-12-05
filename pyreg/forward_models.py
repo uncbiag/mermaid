@@ -109,10 +109,9 @@ class RHSLibrary(object):
             raise ValueError('Only supported up to dimension 3')
 
 
-    ################################################################################################################3
     def _rhs_advect_oneC_image(self,I,v,rhs_ret):
         """
-        a fast version for _rhs_advect_image_multiC,   batch will no longer to be calculated sperately, one channel at a time.
+        a fast version for _rhs_advect_image_multiC,   batch will no longer to be calculated separately, one channel at a time.
         
         :param I: One-channel input image: batchxchxXxYxZ
         :param v: velocity field
@@ -126,8 +125,6 @@ class RHSLibrary(object):
             rhs_ret[:] = -self.fdt.dXc(I[:,0,...]) * v[:,0,...] -self.fdt.dYc(I[:,0,...])*v[:,1,...]-self.fdt.dZc(I[:,0,...])*v[:,2,...]
         else:
             raise ValueError('Only supported up to dimension 3')
-
-    ################################################################################################################3
 
 
     def rhs_scalar_conservation_multiNC(self, I, v):
@@ -152,7 +149,7 @@ class RHSLibrary(object):
         #     rhs_ret[nrI, ...] = self._rhs_scalar_conservation_multiC(I[nrI, ...], v[nrI, ...])
         # return rhs_ret
         if sz[1]==1:  # if one channel case, a fast version will be used
-            self._rhs_scalar_OneC_conservation(I,v,rhs_ret)
+            self._rhs_scalar_oneC_conservation(I, v, rhs_ret)
         else:
             for nrI in range(sz[0]):  # loop over all the images
                 rhs_ret[nrI, ...] = self._rhs_scalar_conservation_multiC(I[nrI, ...], v[nrI, ...])
@@ -190,8 +187,7 @@ class RHSLibrary(object):
             raise ValueError('Only supported up to dimension 3')
 
 
-    ################################################################################################################3
-    def _rhs_scalar_OneC_conservation(self,I,v,rhs_ret):
+    def _rhs_scalar_oneC_conservation(self, I, v, rhs_ret):
         """
         a fast version for _rhs_scalar_conservation_multiC,   batch will no longer to be calculated sperately, one channel at a time.
 
@@ -207,8 +203,6 @@ class RHSLibrary(object):
             rhs_ret[:] = -self.fdt.dXc(I[:,0,...]* v[:,0,...]) -self.fdt.dYc(I[:,0,...]*v[:,1,...])-self.fdt.dZc(I[:,0,...]*v[:,2,...])
         else:
             raise ValueError('Only supported up to dimension 3')
-
-    ################################################################################################################3
 
 
     def rhs_advect_map_multiN(self, phi, v):
@@ -578,6 +572,52 @@ class EPDiffScalarMomentum(ForwardModel):
         super(EPDiffScalarMomentum,self).__init__(sz,spacing,params)
 
         self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).create_smoother(params)
+
+
+class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
+    """
+    Forward model for the scalar momentum EPdiff equation. State is the scalar momentum, lam, and the image I
+    :math:`(m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
+
+    :math:`v=Km`
+
+    :math:'m=\\lambda\\nabla I`
+
+    :math:`I_t+\\nabla I^Tv=0`
+
+    :math:`\\lambda_t + div(\\lambda v)=0`
+    """
+
+    def __init__(self, sz, spacing, params=None):
+        super(EPDiffScalarMomentumImage, self).__init__(sz, spacing, params)
+
+    def f(self, t, x, u, pars):
+        """
+        Function to be integrated, i.e., right hand side of the EPDiff equation:
+
+        :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
+
+        :math:`-\\nabla I^Tv`
+
+        :math: `-div(\\lambda v)`
+
+        :param t: time (ignored; not time-dependent) 
+        :param x: state, here the scalar momentum, lam, and the image, I, itself
+        :param u: no external input
+        :param pars: ignored (does not expect any additional inputs)
+        :return: right hand side [lam,I]
+        """
+        # assume x[0] is \lambda and x[1] is I for the state
+        lam = x[0]
+        I = x[1]
+
+        # now compute the momentum
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, self.sz, self.spacing)
+        v = self.smoother.smooth_vector_field_multiN(m)
+
+        # advection for I, scalar-conservation law for lam
+        return [self.rhs.rhs_scalar_conservation_multiNC(lam, v), self.rhs.rhs_advect_image_multiNC(I, v)]
+
 
 class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
     """
