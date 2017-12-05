@@ -499,6 +499,38 @@ class AdvectImage(ForwardModel):
         return [self.rhs.rhs_advect_image_multiNC(x[0],u)]
 
 
+class AdvectImageAndConserveScalarMomentum(ForwardModel):
+    """
+    Forward model to advect an image using a transport equation: :math:`I_t + \\nabla I^Tv = 0`,
+    and to propagate a scalar momentum using a scalar conservation law:  :math:`\\lambda_t +div(\\lambda v)=0`.
+    v is treated as an external argument and [lambda,I] is the state
+    """
+
+    def __init__(self, sz, spacing, params=None):
+        super(AdvectImageAndConserveScalarMomentum, self).__init__(sz, spacing, params)
+
+    def u(self, t, pars):
+        """
+        External input, to hold the velocity field
+
+        :param t: time (ignored; not time-dependent) 
+        :param pars: assumes an n-D velocity field is passed as the only input argument
+        :return: Simply returns this velocity field
+        """
+        return pars
+
+    def f(self, t, x, u, pars):
+        """
+        Function to be integrated, i.e., right hand side of transport equation: :math:`-\\nabla I^T v`
+
+        :param t: time (ignored; not time-dependent) 
+        :param x: state, here the image, I, itself (supports multiple images and channels)
+        :param u: external input, will be the velocity field here
+        :param pars: ignored (does not expect any additional inputs)
+        :return: right hand side [I]
+        """
+        return [self.rhs.rhs_scalar_conservation_multiNC(x[0], u), self.rhs.rhs_advect_image_multiNC(x[1], u)]
+
 class EPDiffImage(ForwardModel):
     """
     Forward model for the EPdiff equation. State is the momentum, m, and the image I:
@@ -578,6 +610,52 @@ class EPDiffScalarMomentum(ForwardModel):
         super(EPDiffScalarMomentum,self).__init__(sz,spacing,params)
 
         self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).create_smoother(params)
+
+
+class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
+    """
+    Forward model for the scalar momentum EPdiff equation. State is the scalar momentum, lam, and the image I
+    :math:`(m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
+
+    :math:`v=Km`
+
+    :math:'m=\\lambda\\nabla I`
+
+    :math:`I_t+\\nabla I^Tv=0`
+
+    :math:`\\lambda_t + div(\\lambda v)=0`
+    """
+
+    def __init__(self, sz, spacing, params=None):
+        super(EPDiffScalarMomentumImage, self).__init__(sz, spacing, params)
+
+    def f(self, t, x, u, pars):
+        """
+        Function to be integrated, i.e., right hand side of the EPDiff equation:
+
+        :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
+
+        :math:`-\\nabla I^Tv`
+
+        :math: `-div(\\lambda v)`
+
+        :param t: time (ignored; not time-dependent) 
+        :param x: state, here the scalar momentum, lam, and the image, I, itself
+        :param u: no external input
+        :param pars: ignored (does not expect any additional inputs)
+        :return: right hand side [lam,I]
+        """
+        # assume x[0] is \lambda and x[1] is I for the state
+        lam = x[0]
+        I = x[1]
+
+        # now compute the momentum
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, self.sz, self.spacing)
+        v = self.smoother.smooth_vector_field_multiN(m)
+
+        # advection for I, scalar-conservation law for lam
+        return [self.rhs.rhs_scalar_conservation_multiNC(lam, v), self.rhs.rhs_advect_image_multiNC(I, v)]
+
 
 class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
     """

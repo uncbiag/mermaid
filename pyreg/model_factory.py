@@ -26,6 +26,7 @@ class ModelFactory(object):
         self.models = {
             'svf_map': (RN.SVFMapNet,RN.SVFMapLoss),
             'svf_image': (RN.SVFImageNet,RN.SVFImageLoss),
+            'svf_shooting_image': (RN.SVFShootingScalarMomentumImageNet,RN.SVFShootingScalarMomentumImageLoss),
             'lddmm_shooting_map': (RN.LDDMMShootingVectorMomentumMapNet,
                                    RN.LDDMMShootingVectorMomentumMapLoss),
             'lddmm_shooting_image': (RN.LDDMMShootingVectorMomentumImageNet,
@@ -58,6 +59,7 @@ class ModelFactory(object):
         print('\nKnown registration models are:')
         print('   svf_map                              : map-based stationary velocity field')
         print('   svf_image                            : image-based stationary velocity field')
+        print('   svf_shooting_image                   : image-based stationary velocity field solved via shooting')
         print('   lddmm_shooting_map                   : map-based shooting-based LDDMM using the vector momentum')
         print('   lddmm_shooting_image                 : image-based shooting-based LDDMM using the vector momentum')
         print('   lddmm_shooting_scalar_momentum_map   : map-based shooting-based LDDMM using the scalar momentum')

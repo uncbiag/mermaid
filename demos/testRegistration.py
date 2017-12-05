@@ -12,9 +12,11 @@ import pyreg.multiscale_optimizer as MO
 import pyreg.smoother_factory as SF
 
 params = pars.ParameterDict()
-params.load_JSON('../test/json/test_svf_image_single_scale_config.json')
+#params.load_JSON('../test/json/test_svf_image_single_scale_config.json')
+params.load_JSON('./svf_shooting_test.json')
 
-example_img_len = 32
+
+example_img_len = 128
 dim = 2
 szEx = np.tile(example_img_len, dim)  # size of the desired images: (sz)^dim
 I0, I1 = eg.CreateSquares(dim).create_image_pair(szEx, params)  # create a default image size with two sample squares
@@ -39,7 +41,7 @@ ITarget = s.smooth_scalar_field(ITarget)
 
 so = MO.SimpleSingleScaleRegistration(ISource, ITarget, spacing, params)
 so.get_optimizer().set_visualization( True )
-so.get_optimizer().set_visualize_step( 2 )
+so.get_optimizer().set_visualize_step( 10 )
 so.register()
 
 energy = so.get_energy()

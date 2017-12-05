@@ -43,6 +43,9 @@ class RKIntegrator(object):
             self.u = u
             """input for integration"""
 
+    def set_pars(self,pars):
+        self.pars = pars
+
     def set_number_of_time_steps(self, nr):
         """
         Sets the number of time-steps for the integration
