@@ -15,4 +15,7 @@ echo "Running pyreg tests for: stn"
 $PYCMD test_stn_cpu.py $@
 $PYCMD test_stn_gpu.py $@
 
+echo "Running pyreg tests for registrations"
+$PYCMD test_registration_algorithms.py $@
+
 popd

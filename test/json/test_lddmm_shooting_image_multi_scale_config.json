@@ -1,0 +1,49 @@
+{
+    "image_smoothing": {
+        "smooth_images": true, 
+        "smoother": {
+            "gaussian_std": 0.05, 
+            "type": "gaussian"
+        }
+    }, 
+    "model": {
+        "deformation": {
+            "map_low_res_factor": null, 
+            "use_map": false
+        }, 
+        "registration_model": {
+            "forward_model": {
+                "number_of_time_steps": 10, 
+                "smoother": {
+                    "gaussian_std": 0.15, 
+                    "type": "gaussian"
+                }
+            }, 
+            "similarity_measure": {
+                "sigma": 0.1, 
+                "type": "ssd"
+            }, 
+            "type": "lddmm_shooting_image"
+        }
+    }, 
+    "optimizer": {
+        "multi_scale": {
+            "scale_factors": [
+                1.0, 
+                0.75
+            ], 
+            "scale_iterations": [
+                5, 
+                5
+            ]
+        }, 
+        "name": "lbfgs_ls", 
+        "single_scale": {
+            "rel_ftol": 0.0001
+        }
+    }, 
+    "square_example_images": {
+        "len_l": 16, 
+        "len_s": 10
+    }
+}

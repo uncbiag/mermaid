@@ -91,7 +91,6 @@ def get_algconf_settings( algconf_settings_filename = None ):
 
     algconf_params['algconf'][('model', {}, 'general model settings')]
     algconf_params['algconf']['model'][('deformation', {}, 'model describing the desired deformation model')]
-    algconf_params['algconf']['model']['deformation'][('name', 'lddmm_shooting', "['svf'|'svf_quasi_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum']")]
     algconf_params['algconf']['model']['deformation'][('use_map', True, '[True|False] either do computations via a map or directly using the image')]
     algconf_params['algconf']['model']['deformation'][('map_low_res_factor',1.0,'Set to a value in (0,1) if a map-based solution should be computed at a lower internal resolution (image matching is still at full resolution')]
 
@@ -101,6 +100,7 @@ def get_algconf_settings( algconf_settings_filename = None ):
     algconf_params['algconf']['model']['registration_model']['forward_model'][('smoother', {}, 'how the smoothing of velocity fields is done')]
     algconf_params['algconf']['model']['registration_model']['forward_model']['smoother'][('type', 'gaussian', 'type of smoothing')]
     algconf_params['algconf']['model']['registration_model']['forward_model']['smoother'][('gaussian_std', 0.1, 'standard deviation for smoothing')]
+    algconf_params['algconf']['model']['registration_model'][('type', 'lddmm_shooting', "['svf'|'svf_quasi_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with '_map' or '_image' suffix")]
 
     algconf_params['algconf']['model']['registration_model'][('similarity_measure', {}, 'model describing the similarity measure')]
     algconf_params['algconf']['model']['registration_model']['similarity_measure'][('sigma', 0.1, '1/sigma^2 weighting')]

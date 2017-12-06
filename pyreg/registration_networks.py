@@ -4,6 +4,10 @@ Currently implemented:
     * SVFImageNet: image-based stationary velocity field
     * SVFMapNet: map-based stationary velocity field
     * SVFQuasiMomentumImageNet: EXPERIMENTAL (not working yet): SVF which is parameterized by a momentum
+    * SVFScalarMomentumImageNet: image-based SVF using the scalar-momentum parameterization
+    * SVFScalarMomentumMapNet: map-based SVF using the scalar-momentum parameterization
+    * SVFVectorMomentumImageNet: image-based SVF using the vector-momentum parameterization
+    * SVFVectorMomentumMapNet: map-based SVF using the vector-momentum parameterization
     * LDDMMShootingVectorMomentumImageNet: image-based LDDMM using the vector-momentum parameterization
     * LDDMMShootingVectorMomentumImageNet: map-based LDDMM using the vector-momentum parameterization
     * LDDMMShootingScalarMomentumImageNet: image-based LDDMM using the scalar-momentum parameterization
@@ -588,12 +592,12 @@ class SVFMapLoss(RegistrationMapLoss):
         return self.regularizer.compute_regularizer_multiN(self.v)
 
 
-class LDDMMShootingVectorMomentumNet(RegistrationNet):
+class ShootingVectorMomentumNet(RegistrationNet):
     """
     Specialization to vector-momentum-based shooting for LDDMM
     """
     def __init__(self,sz,spacing,params):
-        super(LDDMMShootingVectorMomentumNet, self).__init__(sz,spacing,params)
+        super(ShootingVectorMomentumNet, self).__init__(sz, spacing, params)
         self.m = self.create_registration_parameters()
         """vector momentum"""
         self.integrator = self.create_integrator()
@@ -663,7 +667,7 @@ class LDDMMShootingVectorMomentumNet(RegistrationNet):
 
         return mDownsampled, downsampled_spacing
 
-class LDDMMShootingVectorMomentumImageNet(LDDMMShootingVectorMomentumNet):
+class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
     """
     Specialization of vector-momentum LDDMM for direct image matching.
     """
@@ -715,8 +719,69 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
         reg = (v * self.m).sum() * self.spacing.prod()
         return reg
 
+class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
+    """
+    Specialization of scalar-momentum LDDMM to SVF image-based matching
+    """
 
-class LDDMMShootingVectorMomentumMapNet(LDDMMShootingVectorMomentumNet):
+    def __init__(self, sz, spacing, params):
+        super(SVFVectorMomentumImageNet, self).__init__(sz, spacing, params)
+
+        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        """smoother to go from momentum to velocity"""
+
+    def create_integrator(self):
+        """
+        Creates an integrator integrating the scalar momentum conservation law and an advection equation for the image
+
+        :return: returns this integrator
+        """
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+
+        advection = FM.AdvectImage(self.sz, self.spacing)
+        return RK.RK4(advection.f, advection.u, None, cparams)
+
+    def forward(self, I):
+        """
+        Solved the scalar momentum forward equation and returns the image at time tTo
+
+        :param I: initial image
+        :return: image at time tTo
+        """
+        v = self.smoother.smooth_vector_field_multiN(self.m)
+        self.integrator.set_pars(v)  # to use this as external parameter
+        I1 = self.integrator.solve([I], self.tFrom, self.tTo)
+        return I1[0]
+
+class SVFVectorMomentumImageLoss(RegistrationImageLoss):
+    """
+    Specialization of the loss to scalar-momentum LDDMM on images
+    """
+
+    def __init__(self, m, sz, spacing, params):
+        super(SVFVectorMomentumImageLoss, self).__init__(sz, spacing, params)
+        self.m = m
+        """vector momentum"""
+
+        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        """smoother to go from momentum to velocity"""
+
+    def compute_regularization_energy(self, I0_source):
+        """
+        Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
+
+        :param I0_source: source image
+        :return: returns the regularization energy
+        """
+
+        v = self.smoother.smooth_vector_field_multiN(self.m)
+        reg = (v * self.m).sum() * self.spacing.prod()
+        return reg
+
+
+class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
     """
     Specialization for map-based vector-momentum where the map itself is advected
     """
@@ -768,17 +833,77 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
         v = self.smoother.smooth_vector_field_multiN(self.m)
-        reg = AdaptVal((v.float() * self.m.float()).sum() * self.spacing.prod())
+        reg = (v * self.m).sum() * self.spacing.prod()
         return reg
 
+class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
+    """
+    Specialization of scalar-momentum LDDMM to SVF image-based matching
+    """
 
-class LDDMMShootingScalarMomentumNet(RegistrationNet):
+    def __init__(self, sz, spacing, params):
+        super(SVFVectorMomentumMapNet, self).__init__(sz, spacing, params)
+
+        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        """smoother to go from momentum to velocity"""
+
+    def create_integrator(self):
+        """
+        Creates an integrator integrating the scalar momentum conservation law and an advection equation for the image
+
+        :return: returns this integrator
+        """
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+
+        advectionMap = FM.AdvectMap(self.sz, self.spacing)
+        return RK.RK4(advectionMap.f, advectionMap.u, None, cparams)
+
+    def forward(self, phi, I_source):
+        """
+        Solved the scalar momentum forward equation and returns the map at time tTo
+
+        :param phi: initial map
+        :param I_source: not used
+        :return: image at time tTo
+        """
+        v = self.smoother.smooth_vector_field_multiN(self.m)
+        self.integrator.set_pars(v)  # to use this as external parameter
+        phi1 = self.integrator.solve([phi], self.tFrom, self.tTo)
+        return phi1[0]
+
+class SVFVectorMomentumMapLoss(RegistrationMapLoss):
+    """
+    Specialization of the loss to scalar-momentum LDDMM on images
+    """
+
+    def __init__(self, m, sz, spacing, params):
+        super(SVFVectorMomentumMapLoss, self).__init__(sz, spacing, params)
+        self.m = m
+        """vector momentum"""
+
+        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        """smoother to go from momentum to velocity"""
+
+    def compute_regularization_energy(self, I0_source):
+        """
+        Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
+
+        :param I0_source: source image
+        :return: returns the regularization energy
+        """
+        v = self.smoother.smooth_vector_field_multiN(self.m)
+        reg = (v * self.m).sum() * self.spacing.prod()
+        return reg
+
+class ShootingScalarMomentumNet(RegistrationNet):
     """
     Specialization of the registration network to registrations with scalar momentum. Provides an integrator
     and the scalar momentum parameter.
     """
     def __init__(self,sz,spacing,params):
-        super(LDDMMShootingScalarMomentumNet, self).__init__(sz,spacing,params)
+        super(ShootingScalarMomentumNet, self).__init__(sz, spacing, params)
         self.lam = self.create_registration_parameters()
         """scalar momentum"""
         self.integrator = self.create_integrator()
@@ -848,7 +973,71 @@ class LDDMMShootingScalarMomentumNet(RegistrationNet):
 
         return lamDownsampled, downsampled_spacing
 
-class LDDMMShootingScalarMomentumImageNet(LDDMMShootingScalarMomentumNet):
+
+class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
+    """
+    Specialization of scalar-momentum LDDMM to SVF image-based matching
+    """
+
+    def __init__(self, sz, spacing, params):
+        super(SVFScalarMomentumImageNet, self).__init__(sz, spacing, params)
+
+        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        """smoother to go from momentum to velocity"""
+
+    def create_integrator(self):
+        """
+        Creates an integrator integrating the scalar momentum conservation law and an advection equation for the image
+
+        :return: returns this integrator 
+        """
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+
+        advection = FM.AdvectImage(self.sz, self.spacing)
+        return RK.RK4(advection.f, advection.u, None, cparams)
+
+    def forward(self, I):
+        """
+        Solved the scalar momentum forward equation and returns the image at time tTo
+
+        :param I: initial image 
+        :return: image at time tTo
+        """
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I, self.sz, self.spacing)
+        v = self.smoother.smooth_vector_field_multiN(m)
+        self.integrator.set_pars(v)  # to use this as external parameter
+        I1 = self.integrator.solve([I], self.tFrom, self.tTo)
+        return I1[0]
+
+class SVFScalarMomentumImageLoss(RegistrationImageLoss):
+    """
+    Specialization of the loss to scalar-momentum LDDMM on images
+    """
+
+    def __init__(self, lam, sz, spacing, params):
+        super(SVFScalarMomentumImageLoss, self).__init__(sz, spacing, params)
+        self.lam = lam
+        """scalar momentum"""
+
+        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        """smoother to go from momentum to velocity"""
+
+    def compute_regularization_energy(self, I0_source):
+        """
+        Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
+
+        :param I0_source: source image 
+        :return: returns the regularization energy
+        """
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
+        v = self.smoother.smooth_vector_field_multiN(m)
+        reg = (v * m).sum() * self.spacing.prod()
+        return reg
+
+
+class LDDMMShootingScalarMomentumImageNet(ShootingScalarMomentumNet):
     """
     Specialization of scalar-momentum LDDMM to image-based matching
     """
@@ -902,7 +1091,7 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
         return reg
 
 
-class LDDMMShootingScalarMomentumMapNet(LDDMMShootingScalarMomentumNet):
+class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
     """
     Specialization of scalar-momentum LDDMM registration to map-based image matching
     """
@@ -950,6 +1139,68 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
         Computes the regularizaton energy from the initial vector momentum as computed from the scalar momentum
         
         :param I0_source: initial image 
+        :return: returns the regularization energy
+        """
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
+        v = self.smoother.smooth_vector_field_multiN(m)
+        reg = (v * m).sum() * self.spacing.prod()
+        return reg
+
+class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
+    """
+    Specialization of scalar-momentum LDDMM to SVF image-based matching
+    """
+
+    def __init__(self, sz, spacing, params):
+        super(SVFScalarMomentumMapNet, self).__init__(sz, spacing, params)
+
+        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        """smoother to go from momentum to velocity"""
+
+    def create_integrator(self):
+        """
+        Creates an integrator integrating the scalar momentum conservation law and an advection equation for the image
+
+        :return: returns this integrator
+        """
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+
+        advectionMap = FM.AdvectMap(self.sz, self.spacing)
+        return RK.RK4(advectionMap.f, advectionMap.u, None, cparams)
+
+    def forward(self, phi, I_source):
+        """
+        Solved the scalar momentum forward equation and returns the map at time tTo
+
+        :param I: initial image
+        :return: image at time tTo
+        """
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I_source, self.sz, self.spacing)
+        v = self.smoother.smooth_vector_field_multiN(m)
+        self.integrator.set_pars(v)  # to use this as external parameter
+        phi1 = self.integrator.solve([phi], self.tFrom, self.tTo)
+        return phi1[0]
+
+class SVFScalarMomentumMapLoss(RegistrationMapLoss):
+    """
+    Specialization of the loss to scalar-momentum LDDMM on images
+    """
+
+    def __init__(self, lam, sz, spacing, params):
+        super(SVFScalarMomentumMapLoss, self).__init__(sz, spacing, params)
+        self.lam = lam
+        """scalar momentum"""
+
+        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        """smoother to go from momentum to velocity"""
+
+    def compute_regularization_energy(self, I0_source):
+        """
+        Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
+
+        :param I0_source: source image
         :return: returns the regularization energy
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
