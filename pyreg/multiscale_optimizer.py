@@ -439,7 +439,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         Returns the current energy
         :return: Returns a tuple (energy, similarity energy, regularization energy)
         """
-        return self.rec_energy.data.numpy(), self.rec_similarityEnergy.data.numpy(), self.rec_regEnergy.data.numpy()
+        return self.rec_energy.cpu().data.numpy(), self.rec_similarityEnergy.cpu().data.numpy(), self.rec_regEnergy.cpu().data.numpy()
 
     def get_warped_image(self):
         """

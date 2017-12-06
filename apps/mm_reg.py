@@ -15,13 +15,16 @@ import set_pyreg_paths
 import torch
 from torch.autograd import Variable
 from time import time
-
+import os
 import numpy as np
 
 import pyreg.module_parameters as pars
 import pyreg.utils as utils
 import pyreg.fileio as fileio
+from pyreg import data_utils
 
+prepare_data= True
+batch_size =20
 def read_images(source_image_name,target_image_name, normalize_spacing=True, normalize_intensities=True, squeeze_image=True):
 
     I0,hdr0,spacing0,normalized_spacing0 = fileio.ImageIO().read_to_nc_format(source_image_name, intensity_normalize=normalize_intensities, squeeze_image=squeeze_image)
@@ -67,8 +70,23 @@ def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scal
 
     torch.set_num_threads( nr_of_threads )
     print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
+    I0, I1, spacing, md_I0, md_I1 = read_images(I0_name, I1_name, normalize_spacing, normalize_intensities,
+                                                squeeze_image)
+    from pyreg.prepare_data import prepare_data
+    path = '/home/hbg/cs_courses/2d_data_code/data/train'
+    img_type = ['*a.mhd']
+    skip = False
+    sched = 'inter'
+    save_path = '../data/data_' + sched + '.h5py'
 
-    I0, I1, spacing, md_I0, md_I1 = read_images( I0_name, I1_name, normalize_spacing, normalize_intensities,squeeze_image )
+    prepare_data(save_path, img_type, path, skip, sched)
+    dic = data_utils.read_file(save_path)
+    # print(dic['info'])
+    print(dic['data'].shape)
+    print('finished')
+    I0 = dic['data'][2:batch_size,0:1, :,:]
+    I1 = dic['data'][2:batch_size,1:2, :,:]
+
     sz = I0.shape
 
     # create the source and target image as pyTorch variables
@@ -127,13 +145,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Registers two images')
 
     required = parser.add_argument_group('required arguments')
-    required.add_argument('--moving_image', required=True, default='../test_data/brain_slices/ws_slice.nrrd', help='Moving image')
-    required.add_argument('--target_image', required=True, default='../test_data/brain_slices/wt_slice.nrrd', help='Target image')
+    required.add_argument('--moving_image', required=False, default='../test_data/brain_slices/ws_slice.nrrd', help='Moving image')
+    required.add_argument('--target_image', required=False, default='../test_data/brain_slices/wt_slice.nrrd', help='Target image')
 
     parser.add_argument('--warped_image', required=False, help='Warped image after registration')
     parser.add_argument('--map', required=False, help='Computed map')
     parser.add_argument('--alg_conf', required=False, default='../settings/algconf_settings.json')
-    parser.add_argument('--visualize', action='store_false', default=False, help='visualizes the output')
+    parser.add_argument('--visualize', action='store_false', default=True, help='visualizes the output')
     parser.add_argument('--visualize_step', required=False, default=5, help='Number of iterations between visualization output')
     parser.add_argument('--used_config', default=None, help='Name to write out the used configuration')
     parser.add_argument('--use_multiscale', required=False,default=False, help='Uses multi-scale optimization')

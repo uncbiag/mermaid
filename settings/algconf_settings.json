@@ -1,9 +1,9 @@
 {
     "algconf": {
         "image_smoothing": {
-            "smooth_images": true, 
+            "smooth_images": false,
             "smoother": {
-                "gaussian_std": 0.01, 
+                "gaussian_std": 0.1,
                 "type": "gaussian"
             }
         }, 
@@ -16,7 +16,7 @@
                 "forward_model": {
                     "number_of_time_steps": 10, 
                     "smoother": {
-                        "gaussian_std": 0.1, 
+                        "gaussian_std": 0.01,
                         "type": "gaussian"
                     }
                 }, 
