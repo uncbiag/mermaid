@@ -2,24 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="2a6ebea8-85ec-4a48-b09a-a51cda4864ba" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/deployment.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/data/data_inter.h5py" afterPath="$PROJECT_DIR$/data/data_inter.h5py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/mermaid.iml" afterPath="$PROJECT_DIR$/.idea/mermaid.iml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/misc.xml" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/apps/mm_reg.py" afterPath="$PROJECT_DIR$/apps/mm_reg.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/dataset.py" afterPath="$PROJECT_DIR$/pyreg/dataset.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/forward_models.py" afterPath="$PROJECT_DIR$/pyreg/forward_models.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/model_factory.py" afterPath="$PROJECT_DIR$/pyreg/model_factory.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/multiscale_optimizer.py" afterPath="$PROJECT_DIR$/pyreg/multiscale_optimizer.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/prepare_data.py" afterPath="$PROJECT_DIR$/pyreg/prepare_data.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/registration_networks.py" afterPath="$PROJECT_DIR$/pyreg/registration_networks.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/rungekutta_integrators.py" afterPath="$PROJECT_DIR$/pyreg/rungekutta_integrators.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/smoother_factory.py" afterPath="$PROJECT_DIR$/pyreg/smoother_factory.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/utils.py" afterPath="$PROJECT_DIR$/pyreg/utils.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/visualize_registration_results.py" afterPath="$PROJECT_DIR$/pyreg/visualize_registration_results.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/README.md" afterPath="$PROJECT_DIR$/README.md" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/settings/algconf_settings.json" afterPath="$PROJECT_DIR$/settings/algconf_settings.json" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/json/test_lddmm_shooting_image_single_scale_config.json" afterPath="$PROJECT_DIR$/test/json/test_lddmm_shooting_image_single_scale_config.json" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -71,16 +55,6 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="module.py" pinned="false" current-in-tab="false">
-        <entry file="file://$USER_HOME$/.PyCharm2017.2/system/remote_sources/288554611/1859199152/torch/nn/modules/module.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="215">
-              <caret line="223" column="0" lean-forward="false" selection-start-line="223" selection-start-column="0" selection-end-line="223" selection-end-column="0" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file leaf-file-name="registration_networks.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/pyreg/registration_networks.py">
           <provider selected="true" editor-type-id="text-editor">
@@ -105,7 +79,7 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name=".gitignore" pinned="false" current-in-tab="true">
+      <file leaf-file-name=".gitignore" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/.gitignore">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="54">
@@ -115,14 +89,22 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="rungekutta_integrators.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/pyreg/rungekutta_integrators.py">
+      <file leaf-file-name="algconf_settings_comments.json" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/settings/algconf_settings_comments.json">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="179">
-              <caret line="84" column="0" lean-forward="false" selection-start-line="84" selection-start-column="0" selection-end-line="84" selection-end-column="0" />
-              <folding>
-                <element signature="e#94#131#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="468">
+              <caret line="44" column="53" lean-forward="false" selection-start-line="44" selection-start-column="45" selection-end-line="44" selection-end-column="53" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="README.md" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/README.md">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="270">
+              <caret line="63" column="128" lean-forward="false" selection-start-line="63" selection-start-column="128" selection-end-line="63" selection-end-column="128" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -131,7 +113,7 @@
         <entry file="file://$PROJECT_DIR$/settings/algconf_settings.json">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="342">
-              <caret line="19" column="41" lean-forward="false" selection-start-line="19" selection-start-column="41" selection-end-line="19" selection-end-column="41" />
+              <caret line="19" column="44" lean-forward="false" selection-start-line="19" selection-start-column="44" selection-end-line="19" selection-end-column="44" />
               <folding />
             </state>
           </provider>
@@ -209,9 +191,10 @@
         <option value="$PROJECT_DIR$/pyreg/multiscale_optimizer.py" />
         <option value="$PROJECT_DIR$/pyreg/registration_networks.py" />
         <option value="$PROJECT_DIR$/pyreg/smoother_factory.py" />
-        <option value="$PROJECT_DIR$/settings/algconf_settings.json" />
         <option value="$PROJECT_DIR$/apps/mm_reg.py" />
         <option value="$PROJECT_DIR$/.gitignore" />
+        <option value="$PROJECT_DIR$/settings/algconf_settings.json" />
+        <option value="$PROJECT_DIR$/README.md" />
       </list>
     </option>
   </component>
@@ -269,24 +252,6 @@
               <item name="mermaid" type="b2602c69:ProjectViewProjectNode" />
               <item name="mermaid" type="462c0819:PsiDirectoryNode" />
               <item name="demos" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="mermaid" type="b2602c69:ProjectViewProjectNode" />
-              <item name="mermaid" type="462c0819:PsiDirectoryNode" />
-              <item name="pyreg" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="mermaid" type="b2602c69:ProjectViewProjectNode" />
-              <item name="mermaid" type="462c0819:PsiDirectoryNode" />
-              <item name="pyreg" type="462c0819:PsiDirectoryNode" />
-              <item name="libraries" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="mermaid" type="b2602c69:ProjectViewProjectNode" />
-              <item name="mermaid" type="462c0819:PsiDirectoryNode" />
-              <item name="pyreg" type="462c0819:PsiDirectoryNode" />
-              <item name="libraries" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="mermaid" type="b2602c69:ProjectViewProjectNode" />
@@ -662,13 +627,6 @@
     </watches-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file:///usr/local/lib/python2.7/dist-packages/matplotlib/backends/backend_gtk.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="187">
-          <caret line="35" column="0" lean-forward="false" selection-start-line="35" selection-start-column="0" selection-end-line="35" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file:///usr/local/lib/python2.7/dist-packages/matplotlib/backends/backend_gdk.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="187">
@@ -941,14 +899,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/settings/algconf_settings_comments.json">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="463">
-          <caret line="44" column="53" lean-forward="false" selection-start-line="44" selection-start-column="45" selection-end-line="44" selection-end-column="53" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/pyreg/finite_differences.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="362">
@@ -1021,14 +971,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/settings/algconf_settings.json">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="342">
-          <caret line="19" column="41" lean-forward="false" selection-start-line="19" selection-start-column="41" selection-end-line="19" selection-end-column="41" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/apps/mm_reg.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="468">
@@ -1073,6 +1015,30 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="54">
           <caret line="3" column="0" lean-forward="true" selection-start-line="3" selection-start-column="0" selection-end-line="3" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/settings/algconf_settings.json">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="342">
+          <caret line="19" column="44" lean-forward="false" selection-start-line="19" selection-start-column="44" selection-end-line="19" selection-end-column="44" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/settings/algconf_settings_comments.json">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="468">
+          <caret line="44" column="53" lean-forward="false" selection-start-line="44" selection-start-column="45" selection-end-line="44" selection-end-column="53" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/README.md">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="270">
+          <caret line="63" column="128" lean-forward="false" selection-start-line="63" selection-start-column="128" selection-end-line="63" selection-end-column="128" />
           <folding />
         </state>
       </provider>

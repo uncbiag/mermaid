@@ -57,6 +57,12 @@ There are a few example registration implementations in the demos directory. Act
 * Most parts of the codes have been examined. In case of failure of the GPU code contact zyshen021@gmail.com; for all other failures contact mn@cs.unc.edu or open an issue in the github issue tracker.
     
 # Lastest modifications
+  * 12.11    support oasis inter intra registration
+             support saving results, /data/saved_result/taskname,  settings can be found in commandline parsers
+             support adaptiveNet (can be founded in smoother class) in llddmm mapping(tested),  which embedding networks between m and v
+                  (other possible combinations like [I_t, m and v], [I_0,m and v]  also implemented but still underdevelop)
+             add m_1 into loss for avoid explosion ( maybe useful in small time step, cannot avoid explosion in large time_step)
+
   * 12.05:   Added various momentum-based SVF models (SVFScalarMomentumImageNet, SVFScalarMomentumMapNet, SVFVectorMomentumImageNet, SVFVectorMomentumMapNet )
   * 12.05:   Added tests for the registration algorithms
   * 12.02:   Simplified interface. Petter parameters. Low-res capability (requires new arguent mapLowResFactor to be specified when calling the functions).

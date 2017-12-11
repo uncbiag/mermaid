@@ -17,7 +17,7 @@
                     "number_of_time_steps": 10, 
                     "smoother": {
                         "gaussian_std": 0.1,
-                        "type": "gaussian"
+                        "type": "adaptiveNet"
                     }
                 }, 
                 "similarity_measure": {
