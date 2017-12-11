@@ -3,18 +3,18 @@ This package enables easy single-scale and multi-scale optimization support.
 """
 
 from abc import ABCMeta, abstractmethod
-
+import os
 import time
 import utils
 import visualize_registration_results as vizReg
 import custom_optimizers as CO
 import numpy as np
-
 import torch
 from torch.autograd import Variable
 from data_wrapper import USE_CUDA, AdaptVal
 import model_factory as MF
 import image_sampling as IS
+
 #from MyAdam import MyAdam
 
 # add some convenience functionality
@@ -278,6 +278,12 @@ class ImageRegistrationOptimizer(Optimizer):
         """if True figures are created during the run"""
         self.visualize_step = 10
         """how often the figures are updated; each self.visualize_step-th iteration"""
+        self.nrOfIterations = None
+        """the maximum number of iterations for the optimizer"""
+        self.save_fig_path=None
+        self.save_fig=None
+        self.save_fig_num =None
+        self.pair_path=None
 
 
     def turn_visualization_on(self):
@@ -323,6 +329,77 @@ class ImageRegistrationOptimizer(Optimizer):
         :return: after how many steps visualizations are updated
         """
         return self.visualize_step
+
+    def set_save_fig(self,save_fig):
+        """
+        :param save_fig: True: save the visualized figs
+        :return:
+        """
+        self.save_fig = save_fig
+    def get_save_fig(self):
+        """
+        :param save_fig: True: get the visualized figs
+        :return:
+        """
+        return self.save_fig
+
+    def set_save_fig_path(self, save_fig_path):
+        """
+        the path of saved figures, default is the ../data/expr_name
+        :param save_fig_path:
+        :return:
+        """
+        self.save_fig_path = save_fig_path
+
+
+    def get_save_fig_path(self):
+        """
+        the path of saved figures, default is the ../data/expr_name
+        :param save_fig_path:
+        :return:
+        """
+        return self.save_fig_path
+
+
+    def set_save_fig_num(self, save_fig_num=1):
+        """
+        set the num of the fig to save
+        :param save_fig_num:
+        :return:
+        """
+        self.save_fig_num = save_fig_num
+    def get_save_fig_num(self):
+        """
+        set the num of the fig to save
+        :param save_fig_num:
+        :return:
+        """
+        return self.save_fig_num
+
+    def set_expr_name(self, expr_name):
+        """
+        the name of experiments
+        :param expr_name:
+        :return:
+        """
+        self.expr_name = expr_name
+
+    def get_expr_name(self):
+        """
+        the name of experiments
+        :param expr_name:
+        :return:
+        """
+        return self.expr_name
+
+    def set_pair_path(self, pair_paths):
+        self.pair_path = pair_paths
+
+
+    def get_pair_path(self):
+        return self.pair_path
+
+
 
     def register(self,ISource,ITarget):
         """
@@ -425,8 +502,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
-        self.nrOfIterations = None
-        """the maximum number of iterations for the optimizer"""
         self.iter_count = 0
         self.rec_energy = None
         self.rec_similarityEnergy = None
@@ -456,6 +531,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :return: deformation map
         """
         return self.rec_phiWarped
+
+
+
+    def set_n_scale(self, n_scale):
+        """
+        the path of saved figures, default is the ../data/expr_name
+        :param save_fig_path:
+        :return:
+        """
+        self.n_scale = n_scale
 
     def set_model(self, modelName):
         """
@@ -571,17 +656,21 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 rec_tmp = self.model(self.lowResIdentityMap, self.lowResISource)
                 # now upsample to correct resolution
                 desiredSz = self.identityMap.size()[2::]
-                self.rec_phiWarped,_ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
+                self.rec_phiWarped = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
             else:
-                self.rec_phiWarped = self.model(self.identityMap, self.ISource)
+                self.rec_phiWarped, last_m = self.model(self.identityMap, self.ISource)
 
-            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget)
+            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, last_m)
         else:
             self.rec_IWarped = self.model(self.ISource)
             loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget)
         loss.backward()
+        torch.nn.utils.clip_grad_norm(self.model.parameters(), 5)
+
 
         if self.useMap:
+
+
             if self.iter_count % 1 == 0:
                 self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
                     self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget)
@@ -632,13 +721,20 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         iter = self.iter_count
 
         if self.visualize:
+            visual_param = {}
+            visual_param['save_fig'] = self.save_fig
+            visual_param['save_fig_path'] = self.save_fig_path
+            visual_param['save_fig_num'] = self.save_fig_num
+            visual_param['pair_path'] = self.pair_path
+            visual_param['iter'] = 'scale_'+str(self.n_scale) + '_iter_' + str(self.iter_count)
+
             if iter % self.visualize_step == 0:
                 vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize()
                 if self.useMap:
                     I1Warped = utils.compute_warped_image_multiNC(self.ISource, Warped)
-                    vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, Warped)
+                    vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, Warped, visual_param)
                 else:
-                    vizReg.show_current_images(iter, self.ISource, self.ITarget, Warped, vizImage, vizName)
+                    vizReg.show_current_images(iter, self.ISource, self.ITarget, Warped, vizImage, vizName, visual_param)
 
         return False
 
@@ -789,6 +885,35 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param modelName: the name of the model (string) 
         """
         self.model_name = modelName
+
+    def set_pair_path(self,pair_paths):
+        f = lambda name: os.path.split(name)
+        get_in = lambda x: os.path.splitext(f(x)[1])[0]
+        get_fn = lambda x: f(f(x)[0])[1]
+        get_img_name = lambda x: get_fn(x)+'_'+get_in(x)
+        img_pair_name = [get_img_name(pair_path[0])+'_'+get_img_name(pair_path[1]) for pair_path in pair_paths]
+        self.pair_path = img_pair_name
+
+    def set_save_fig_path(self, save_fig_path):
+        """
+        the path of saved figures, default is the ../data/expr_name
+        :param save_fig_path:
+        :return:
+        """
+        self.save_fig_path = os.path.join(save_fig_path, self.expr_name)
+
+    def set_saving_env(self):
+        if self.save_fig==True:
+            for file_name in self.pair_path[:self.save_fig_num]:
+                save_folder = os.path.join(self.save_fig_path,file_name)
+                if not os.path.exists(save_folder):
+                    os.makedirs(save_folder)
+            for idx, scale in enumerate(self.scaleFactors):
+                for i in range(self.scaleIterations[idx]):
+                    if i%self.visualize_step == 0:
+                        save_folder = os.path.join(self.save_fig_path,'scale_'+str(scale) + '_iter_' + str(i))
+                        if not os.path.exists(save_folder):
+                            os.makedirs(save_folder)
 
     def add_model(self, add_model_name, add_model_networkClass, add_model_lossClass):
         """
@@ -952,6 +1077,14 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             self.ssOpt.set_visualization(self.get_visualization())
             self.ssOpt.set_visualize_step(self.get_visualize_step())
+            self.ssOpt.set_expr_name(self.get_expr_name())
+            self.ssOpt.set_save_fig(self.get_save_fig())
+            self.ssOpt.set_save_fig_path(self.get_save_fig_path())
+            self.ssOpt.set_save_fig_num(self.get_save_fig_num())
+            self.ssOpt.set_pair_path(self.get_pair_path())
+            self.ssOpt.set_n_scale(en_scale[1])
+
+
 
             self.ssOpt.set_source_image(ISourceC)
             self.ssOpt.set_target_image(ITargetC)

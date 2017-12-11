@@ -3,7 +3,7 @@ Package to quickly instantiate registration models by name.
 """
 
 import registration_networks as RN
-
+import smoother_factory as sf
 class ModelFactory(object):
     """
     Factory class to instantiate registration models.
@@ -85,6 +85,8 @@ class ModelFactory(object):
 
         cparams = params[('registration_model',{},'specifies the registration model')]
         cparams['type']= (modelName,'Name of the registration model')
+        # self.smoother = sf.SmootherFactory(self.sz[2::], self.spacing).create_smoother(params['registration_model']['forward_model'])
+        # cparams['forward_model']['sm_ins'] = self.smoother
 
         if self.models.has_key(modelName):
             print('Using ' + modelName + ' model')

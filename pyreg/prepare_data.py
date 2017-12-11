@@ -19,9 +19,9 @@ def prepare_data(save_path, img_type, path='./data',skip=True, sched='intra'):
 
 class DataManager(object):
     def __init__(self, sched='intra'):
-        self.train_data_path = '/home/hbg/cs_courses/2d_data_code/data/train'
-        self.val_data_path = '/home/hbg/cs_courses/2d_data_code/data/val'
-        self.test_data_path = '/home/hbg/cs_courses/2d_data_code/data/test'
+        self.train_data_path = '/playpen/zyshen/data/mermaid/data/train'
+        self.val_data_path = '/playpen/zyshen/data/mermaid/data/val'
+        self.test_data_path = '/playpen/zyshen/data/mermaid/data/test'
         self.raw_data_path=[self.train_data_path,self.val_data_path,self.test_data_path]
         self.sched = sched
 

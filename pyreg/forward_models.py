@@ -540,7 +540,22 @@ class EPDiffMap(ForwardModel):
 
     def __init__(self, sz, spacing, params=None):
         super(EPDiffMap, self).__init__(sz,spacing,params)
-        self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).create_smoother(params)
+        #self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).create_smoother(params)
+        #######################################3
+        self.smoother = params['sm_ins']
+        self.use_net = True if self.params['smoother']['type'] == 'adaptiveNet' else False
+        ##########################################
+
+    def debugging(self,input,t):
+        x = utils.checkNan(input)
+        if np.sum(x):
+            print("find nan at {} step".format(t))
+            print("flag m: {}, ".format(x[0]))
+            print("flag v: {},".format(x[1]))
+            print("flag phi: {},".format(x[2]))
+            print("flag new_m: {},".format(x[3]))
+            print("flag new_phi: {},".format(x[4]))
+            raise ValueError, "nan error"
 
     def f(self,t, x, u, pars):
         """
@@ -559,9 +574,15 @@ class EPDiffMap(ForwardModel):
         # assume x[0] is m and x[1] is phi for the state
         m = x[0]
         phi = x[1]
-        v = self.smoother.smooth_vector_field_multiN(m)
+        if not self.use_net:
+            v = self.smoother.smooth_vector_field_multiN(m)
+        else:
+            v = self.smoother.adaptive_smooth(m, phi, using_map=True)
+
         # print('max(|v|) = ' + str( v.abs().max() ))
-        return [self.rhs.rhs_epdiff_multiN(m,v),self.rhs.rhs_advect_map_multiN(phi,v)]
+        new_val= [self.rhs.rhs_epdiff_multiN(m,v),self.rhs.rhs_advect_map_multiN(phi,v)]
+        #self.debugging([m, v, phi, new_val[0], new_val[1]], t)
+        return new_val
 
 class EPDiffScalarMomentum(ForwardModel):
     """
