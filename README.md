@@ -57,10 +57,10 @@ There are a few example registration implementations in the demos directory. Act
 * Most parts of the codes have been examined. In case of failure of the GPU code contact zyshen021@gmail.com; for all other failures contact mn@cs.unc.edu or open an issue in the github issue tracker.
     
 # Lastest modifications
-  * 12.12    add 'data_pool.py', a generalized dataset pool class
-             support inter intra personal dataset likeo asis, support inter-personal like lpba, IBSR, CUMU dataset
-             support 2D and 3D data
-             support loading img, label pair
+  * 12.12    add 'data_pool.py', a generalized dataset pool class\
+             support inter intra personal dataset likeo asis, support inter-personal like lpba, IBSR, CUMU dataset\
+             support 2D and 3D data\
+             support loading img, label pair\
              support 2D img, label slicing
   * 12.11    support oasis inter intra registration\
              support saving results, /data/saved_result/taskname,  settings can be found in commandline parsers\
