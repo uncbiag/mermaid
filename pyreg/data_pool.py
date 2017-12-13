@@ -57,9 +57,10 @@ class BaseDataSet(object):
         :param file_path:
         :return:
         """
-        img = read_itk_img(file_path)
-        info = {'img_size':img.shape}
+        # img, info = read_itk_img(file_path)
+        img, info = file_io_read_img(file_path)
         return img, info
+
     def extract_pair_info(self, info1, info2):
         return info1
 
@@ -112,8 +113,9 @@ class UnlabeledDatSet(BaseDataSet):
             else:
                 check_same_size(img1, img_size)
                 check_same_size(img2, img_size)
-                normalize_img(img1, self.normalize_sched)
-                normalize_img(img2, self.normalize_sched)
+                # Normalized has been done in fileio, though additonal normalization can be done here
+                # normalize_img(img1, self.normalize_sched)
+                # normalize_img(img2, self.normalize_sched)
             img_pair = np.asarray([(img1, img2)])
             info = self.extract_pair_info(info1, info2)
             save_to_h5py(saving_path_list[i], img_pair, info, [self.pair_name_list[i]], verbose=False)
@@ -163,8 +165,9 @@ class LabeledDataSet(BaseDataSet):
                 check_same_size(img2, img_size)
                 check_same_size(label1, img_size)
                 check_same_size(label2, img_size)
-                normalize_img(img1, self.normalize_sched)
-                normalize_img(img2, self.normalize_sched)
+                # Normalized has been done in fileio, though additonal normalization can be done here
+                # normalize_img(img1, self.normalize_sched)
+                # normalize_img(img2, self.normalize_sched)
             img_pair = np.asarray([(img1, img2)])
             label_pair = np.asarray([(label1,label2)])
             info = self.extract_pair_info(info1, info2)
@@ -204,10 +207,10 @@ class VolumticDataSet(BaseDataSet):
         if self.slicing != -1:
             if verbose:
                 print("slicing file: {}".format(file_path))
-            img = read_itk_img_slice(file_path, self.slicing)
+            img, info = file_io_read_img_slice(file_path, self.slicing)
         else:
-            img= BaseDataSet.read_file(file_path)
-        info = {'img_size': img.shape}
+            # check if is rihgt
+            img, info= BaseDataSet.read_file(self,file_path)
         return img, info
 
 
@@ -335,25 +338,25 @@ if __name__ == "__main__":
     # lpba.prepare_data()
 
 
-    ###########################       LPBA Slicing TESTING           ###################################
-    path = '/playpen/data/quicksilver_data/testdata/LPBA40/brain_affine_icbm'
-    label_path = '/playpen/data/quicksilver_data/testdata/LPBA40/label_affine_icbm'
-    full_comb = False
-    name = 'lpba'
-    output_path = '/playpen/zyshen/data/' + name + '_pre_slicing'
-    divided_ratio = (0.6, 0.2, 0.2)
-
-    ###################################################
-    #lpba testing
-
-
-    lpba = LPBADataSet(name=name, full_comb=full_comb)
-    lpba.set_slicing(90)
-    lpba.set_data_path(path)
-    lpba.set_output_path(output_path)
-    lpba.set_divided_ratio(divided_ratio)
-    lpba.set_label_path(label_path)
-    lpba.prepare_data()
+    # ###########################       LPBA Slicing TESTING           ###################################
+    # path = '/playpen/data/quicksilver_data/testdata/LPBA40/brain_affine_icbm'
+    # label_path = '/playpen/data/quicksilver_data/testdata/LPBA40/label_affine_icbm'
+    # full_comb = False
+    # name = 'lpba'
+    # output_path = '/playpen/zyshen/data/' + name + '_pre_slicing'
+    # divided_ratio = (0.6, 0.2, 0.2)
+    #
+    # ###################################################
+    # #lpba testing
+    #
+    #
+    # lpba = LPBADataSet(name=name, full_comb=full_comb)
+    # lpba.set_slicing(90)
+    # lpba.set_data_path(path)
+    # lpba.set_output_path(output_path)
+    # lpba.set_divided_ratio(divided_ratio)
+    # lpba.set_label_path(label_path)
+    # lpba.prepare_data()
 
 
 

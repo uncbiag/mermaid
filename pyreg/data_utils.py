@@ -13,6 +13,7 @@ import random
 PYTHON_VERSION = 3
 if sys.version_info[0] < 3:
     PYTHON_VERSION = 2
+import pyreg.fileio as fileio
 
 
 
@@ -250,6 +251,28 @@ def normalize_img(image, sched='tp'):
         image[:] = (image - np.min(image)) / (np.max(image) - np.min(image))
 
 
+
+
+def file_io_read_img(path, normalize_spacing=True, normalize_intensities=True, squeeze_image=True):
+    im, hdr, spacing, normalized_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image)
+    if normalize_spacing:
+        spacing = normalized_spacing
+    else:
+        spacing = spacing
+    info = { 'spacing':spacing, 'img_size': im.shape}
+    return im, info
+
+def file_io_read_img_slice(path, slicing, normalize_spacing=True, normalize_intensities=True, squeeze_image=True):
+    im, hdr, spacing, normalized_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image)
+    if normalize_spacing:
+        spacing = normalized_spacing
+    else:
+        spacing = spacing
+    info = { 'spacing':spacing[1:], 'img_size': im[slicing].shape}
+    return im[slicing], info
+
+
+
 def read_itk_img(path):
     """
     :param path:
@@ -258,8 +281,8 @@ def read_itk_img(path):
     itkimage = sitk.ReadImage(path)
     # Convert the image to a  numpy array first and then shuffle the dimensions to get axis in the order z,y,x
     ct_scan = sitk.GetArrayFromImage(itkimage)
-    return np.squeeze(ct_scan)
-
+    info = {'img_size': ct_scan.shape}
+    return np.squeeze(ct_scan), info
 
 def read_itk_img_slice(path, slicing):
     """
@@ -269,7 +292,8 @@ def read_itk_img_slice(path, slicing):
     itkimage = sitk.ReadImage(path)
     # Convert the image to a  numpy array first and then shuffle the dimensions to get axis in the order z,y,x
     ct_scan = np.squeeze(sitk.GetArrayFromImage(itkimage))
-    return ct_scan[slicing]
+    info = {'img_size': ct_scan[slicing].shape}
+    return ct_scan[slicing], info
 
 
 def read_file(path, type='h5py'):
