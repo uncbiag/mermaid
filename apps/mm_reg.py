@@ -24,24 +24,7 @@ import pyreg.fileio as fileio
 from pyreg import data_utils
 from pyreg.data_manager import DataManager
 
-prepare_data= True
-batch_size =100
-def read_images(source_image_name,target_image_name, normalize_spacing=True, normalize_intensities=True, squeeze_image=True):
 
-    I0,hdr0,spacing0,normalized_spacing0 = fileio.ImageIO().read_to_nc_format(source_image_name, intensity_normalize=normalize_intensities, squeeze_image=squeeze_image)
-    I1,hdr1,spacing1,normalized_spacing1 = fileio.ImageIO().read_to_nc_format(target_image_name, intensity_normalize=normalize_intensities, squeeze_image=squeeze_image)
-
-    assert (np.all( spacing0 == spacing1) )
-    # TODO: do a better test for equality for the images here
-
-    if normalize_spacing:
-        spacing = normalized_spacing0
-    else:
-        spacing = spacing0
-
-    print('Spacing = ' + str(spacing))
-
-    return I0, I1, spacing, hdr0, hdr1
 
 
 def do_registration(gen_conf, par_algconf ):
@@ -56,22 +39,25 @@ def do_registration(gen_conf, par_algconf ):
     ############################################     data  setting  #############################################
 
     prepare_data = False
+    dataset_name = 'oasis'
+    task_name = 'oasis'
 
-    dataset_name = 'lpba'
-    task_name = 'lpba'
-    task_path = '/playpen/zyshen/data/lpba__slicing90'
+    task_path = '/playpen/zyshen/data/oasis_inter_slicing90'
 
     if prepare_data:
-        data_path = '/playpen/data/quicksilver_data/testdata/LPBA40/brain_affine_icbm'
-        label_path = '/playpen/data/quicksilver_data/testdata/LPBA40/label_affine_icbm'
-        dataset_name = 'lpba'
-        task_name = 'lpba'
+        #lpba
+        #data_path = '/playpen/data/quicksilver_data/testdata/LPBA40/brain_affine_icbm'
+        #label_path = '/playpen/data/quicksilver_data/testdata/LPBA40/label_affine_icbm'
+        #oasis
+        data_path ='/playpen/zyshen/data/oasis'
+        label_path = None
+        sched = 'inter'
         full_comb = False
         output_path = '/playpen/zyshen/data/'
         divided_ratio = (0.6, 0.2, 0.2)
         slicing = 90
 
-        data_manager = DataManager(task_name=task_name, dataset_name=dataset_name)
+        data_manager = DataManager(task_name=task_name, dataset_name=dataset_name, sched=sched)
         data_manager.set_data_path(data_path)
         data_manager.set_output_path(output_path)
         data_manager.set_label_path(label_path)
@@ -94,33 +80,6 @@ def do_registration(gen_conf, par_algconf ):
     sz = data_info['info']['img_sz']
 
 
-
-
-
-
-    #I0, I1, spacing, md_I0, md_I1 = read_images(gen_conf['moving_image'], gen_conf['target_image'],  gen_conf['normalize_spacing'],  gen_conf['normalize_intensities'],
-    #                                            gen_conf['squeeze_image'])
-    # from pyreg.prepare_data import prepare_data
-    # path = '/playpen/zyshen/data/mermaid/data/train'
-    # img_type = ['*a.mhd']
-    # skip = False
-    # sched = 'inter'
-    # save_path = '../data/data_' + sched + '.h5py'
-    #
-    # #prepare_data(save_path, img_type, path, skip, sched)
-    # dic = data_utils.read_file(save_path)
-    # # print(dic['info'])
-    # print(dic['data'].shape)
-    # print('finished')
-    # I0 = dic['data'][2:batch_size,0:1, :,:]
-    # I1 = dic['data'][2:batch_size,1:2, :,:]
-    # pair_path = dic['info']['pair_path'][2:batch_size]
-    #
-    # sz = I0.shape
-    #
-    # # create the source and target image as pyTorch variables
-    # ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
-    # ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
 
 
 
@@ -197,34 +156,34 @@ def do_registration(gen_conf, par_algconf ):
             pair_path_idx = data['pair_path'].numpy().tolist()
             pair_path = [pair_path_list[idx] for idx in pair_path_idx]
 
-        if smooth_images:
-            # smooth both a little bit
-            params['image_smoothing'] = par_algconf['algconf']['image_smoothing']
-            cparams = params['image_smoothing']
-            s = SF.SmootherFactory(sz[2::], spacing).create_smoother(cparams)
-            ISource = s.smooth_scalar_field(ISource)
-            ITarget = s.smooth_scalar_field(ITarget)
+            if smooth_images:
+                # smooth both a little bit
+                params['image_smoothing'] = par_algconf['algconf']['image_smoothing']
+                cparams = params['image_smoothing']
+                s = SF.SmootherFactory(sz[2::], spacing).create_smoother(cparams)
+                ISource = s.smooth_scalar_field(ISource)
+                ITarget = s.smooth_scalar_field(ITarget)
 
-        if params['model']['registration_model']['forward_model']['smoother']['type'] == 'adaptiveNet':
-            params['model']['registration_model']['forward_model']['smoother']['input'] = [ISource, ITarget]
-            params['model']['registration_model']['forward_model']['smoother']['use_adp'] = True
-        else:
-            params['model']['registration_model']['forward_model']['smoother']['use_adp'] = False
-
-
-
-        mo.set_pair_path(pair_path)
+            if params['model']['registration_model']['forward_model']['smoother']['type'] == 'adaptiveNet':
+                params['model']['registration_model']['forward_model']['smoother']['input'] = [ISource, ITarget]
+                params['model']['registration_model']['forward_model']['smoother']['use_adp'] = True
+            else:
+                params['model']['registration_model']['forward_model']['smoother']['use_adp'] = False
 
 
-        mo.set_source_image(ISource)
-        mo.set_target_image(ITarget)
+
+            mo.set_pair_path(pair_path)
 
 
-        mo.set_saving_env()
+            mo.set_source_image(ISource)
+            mo.set_target_image(ITarget)
 
 
-        # and now do the optimization
-        mo.optimize()
+            mo.set_saving_env()
+
+
+            # and now do the optimization
+            mo.optimize()
 
         # optimized_energy = mo.get_energy()
         # warped_image = mo.get_warped_image()

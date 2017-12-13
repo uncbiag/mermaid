@@ -231,6 +231,10 @@ def check_same_size(img, standard):
     """
     assert img.shape == standard, "img size must be the same"
 
+
+
+
+
 def normalize_img(image, sched='tp'):
     """
     normalize image,
@@ -250,11 +254,26 @@ def normalize_img(image, sched='tp'):
     elif sched == 't':
         image[:] = (image - np.min(image)) / (np.max(image) - np.min(image))
 
+def read_images(source_image_name,target_image_name, normalize_spacing=True, normalize_intensities=True, squeeze_image=True):
+
+    I0,hdr0,spacing0,normalized_spacing0 = fileio.ImageIO().read_to_nc_format(source_image_name, intensity_normalize=normalize_intensities, squeeze_image=squeeze_image)
+    I1,hdr1,spacing1,normalized_spacing1 = fileio.ImageIO().read_to_nc_format(target_image_name, intensity_normalize=normalize_intensities, squeeze_image=squeeze_image)
+
+    assert (np.all( spacing0 == spacing1) )
+    # TODO: do a better test for equality for the images here
+
+    if normalize_spacing:
+        spacing = normalized_spacing0
+    else:
+        spacing = spacing0
+
+    print('Spacing = ' + str(spacing))
+
+    return I0, I1, spacing, hdr0, hdr1
 
 
-
-def file_io_read_img(path, normalize_spacing=True, normalize_intensities=True, squeeze_image=True):
-    im, hdr, spacing, normalized_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image)
+def file_io_read_img(path, normalize_spacing=True, normalize_intensities=True, squeeze_image=True, adaptive_padding=4):
+    im, hdr, spacing, normalized_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image,adaptive_padding)
     if normalize_spacing:
         spacing = normalized_spacing
     else:
@@ -262,8 +281,8 @@ def file_io_read_img(path, normalize_spacing=True, normalize_intensities=True, s
     info = { 'spacing':spacing, 'img_size': im.shape}
     return im, info
 
-def file_io_read_img_slice(path, slicing, normalize_spacing=True, normalize_intensities=True, squeeze_image=True):
-    im, hdr, spacing, normalized_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image)
+def file_io_read_img_slice(path, slicing, normalize_spacing=True, normalize_intensities=True, squeeze_image=True,adaptive_padding=4):
+    im, hdr, spacing, normalized_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image,adaptive_padding)
     if normalize_spacing:
         spacing = normalized_spacing
     else:

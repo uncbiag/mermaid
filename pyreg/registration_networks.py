@@ -845,7 +845,7 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         """vector momentum"""
 
         cparams = params[('forward_model',{},'settings for the forward model')]
-        cparams['smoother']['type'] = 'gaussianSpatial'
+        cparams['smoother']['type'] = 'gaussian'
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         #self.smoother = params['forward_model']['sm_ins']
         self.use_net = True if self.params['forward_model']['smoother']['type'] == 'adaptiveNet' else False

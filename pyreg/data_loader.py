@@ -42,6 +42,7 @@ class RegistrationDataset(Dataset):
     def get_file_list(self):
         f_filter = []
         import fnmatch
+        filenames=None
         for root, dirnames, filenames in os.walk(self.data_path):
             for filename in fnmatch.filter(filenames, self.data_type):
                 f_filter.append(os.path.join(root, filename))
@@ -55,11 +56,12 @@ class RegistrationDataset(Dataset):
 
     def __getitem__(self, idx):
         dic = read_file(self.pair_path_list[idx])
-        sample = {'image': dic['data'][0], 'info': dic['info'], 'label':dic['label'][0]}
+        sample = {'image': dic['data'][0], 'info': dic['info'], 'label':dic['label']}
         transformed={}
         if self.transform:
              transformed['image'] = self.transform(sample['image'])
-             transformed['label'] = self.transform(sample['label'])
+             if sample['label'] is not None:
+                transformed['label'] = self.transform(sample['label'])
              transformed['pair_path'] = self.retriv_file_id(sample['info']['pair_path'][0])
              transformed['spacing'] = self.transform(sample['info']['spacing'])
 
