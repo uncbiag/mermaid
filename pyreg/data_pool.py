@@ -24,7 +24,7 @@ class BaseDataSet(object):
         self.save_format = 'h5py'
         self.sched = sched
         self.dataset_type = dataset_type
-        self.normalize_sched = 'ntp'
+        self.normalize_sched = 'tp'
         self.divided_ratio = (0.7, 0.1, 0.2)
 
     def generate_pair_list(self):
@@ -288,7 +288,6 @@ if __name__ == "__main__":
     #
     # ###################################################
     # #oasis  intra testing
-    # file_type_list = ['*a.mhd']
     # full_comb = True
     # sched= 'intra'
     #
@@ -302,11 +301,10 @@ if __name__ == "__main__":
 
     # ###################################################
     # # oasis inter testing
-    # file_type_list = ['*_1_a.mhd', '*_2_a.mhd', '*_3_a.mhd']
     # sched='inter'
     # full_comb = False
     # output_path = '/playpen/zyshen/data/' + name + '_pre_' + sched
-    # oasis = OasisDataSet(name='oasis', sched=sched, full_comb=False)
+    # oasis = OasisDataSet(name='oasis', sched=sched, full_comb=full_comb)
     # oasis.set_data_path(path)
     # oasis.set_output_path(output_path)
     # oasis.set_divided_ratio(divided_ratio)
@@ -340,7 +338,6 @@ if __name__ == "__main__":
     ###########################       LPBA Slicing TESTING           ###################################
     path = '/playpen/data/quicksilver_data/testdata/LPBA40/brain_affine_icbm'
     label_path = '/playpen/data/quicksilver_data/testdata/LPBA40/label_affine_icbm'
-    file_type_list = ['*.nii']
     full_comb = False
     name = 'lpba'
     output_path = '/playpen/zyshen/data/' + name + '_pre_slicing'
@@ -349,7 +346,6 @@ if __name__ == "__main__":
     ###################################################
     #lpba testing
 
-    sched= 'intra'
 
     lpba = LPBADataSet(name=name, full_comb=full_comb)
     lpba.set_slicing(90)

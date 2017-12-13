@@ -27,65 +27,40 @@ from time import time
 class RegistrationDataset(Dataset):
     """Face Landmarks dataset."""
 
-    def __init__(self, data_dir, transform=None):
+    def __init__(self, data_path, transform=None):
         """
         Args:
             csv_file (string): Path to the saved data file
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
-        dic = read_file(data_dir, type='h5py')
-        self.data = dic['data']
-        self.info = dic['info']
-        self.root_dir = data_dir
+        self.data_path = data_path
         self.transform = transform
+        self.data_type = '*.h5py'
+        self.pair_list = self.get_file_list()
+
+    def get_file_list(self):
+        f_filter = []
+        import fnmatch
+        for root, dirnames, filenames in os.walk(self.data_path):
+            for filename in fnmatch.filter(filenames, self.data_type):
+                f_filter.append(os.path.join(root, filename))
+        return f_filter
 
     def __len__(self):
-        return len(self.data)
+        return len(self.pair_list)
 
     def __getitem__(self, idx):
-        sample = {'image': self.data[idx], 'path': self.info['pair_path'][idx]}
-
+        dic = read_file(self.pair_list[idx])
+        sample = {'image': dic['data'][0], 'info': dic['info'], 'label':dic['label'][0]}
+        transformed={}
         if self.transform:
-            sample = self.transform(sample)
+             transformed['image'] = self.transform(sample['image'])
+             transformed['label'] = self.transform(sample['label'])
+             transformed['pair_path'] = np.asarray(sample['info']['pair_path'])
 
-        return sample
+        return transformed
 
-#
-
-class Rescale(object):
-    """Rescale the image in a sample to a given size.
-
-    Args:
-        output_size (tuple or tuple): Desired output size. If tuple, output is
-            matched to output_size. If int, smaller of image edges is matched
-            to output_size keeping aspect ratio the same.
-    """
-
-    def __init__(self, output_size):
-        assert isinstance(output_size, (int, tuple))
-        self.output_size = output_size
-
-    def __call__(self, sample):
-        img_pair = sample['image']
-        for image in img_pair:
-            h, w = image.shape[:2]
-            if isinstance(self.output_size, int):
-                if h > w:
-                    new_h, new_w = self.output_size * h / w, self.output_size
-                else:
-                    new_h, new_w = self.output_size, self.output_size * w / h
-            else:
-                new_h, new_w = self.output_size
-
-            new_h, new_w = int(new_h), int(new_w)
-
-            image[:] = transform.resize(image, (new_h, new_w))
-
-        # h and w are swapped for landmarks because for images,
-        # x and y axes are axis 1 and 0 respectively
-
-        return {'image': img_pair}
 
 
 class Normalize(object):
@@ -103,13 +78,8 @@ class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, sample):
-        image = sample['image']
 
-        # swap color axis because
-        # numpy image: H x W
-        # torch image: 1 X H X W
-        image = np.stack([image], axis=0)
-        return {'image': torch.from_numpy(image)}
+        return torch.from_numpy(sample)
 
 
 

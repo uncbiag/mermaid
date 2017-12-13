@@ -344,6 +344,7 @@ class RegistrationLoss(nn.Module):
         self.similarityMeasure = None
         """the similarity measure itself"""
 
+
     def add_similarity_measure(self, simName, simMeasure):
         """
         To add a custom similarity measure to the similarity measure factory

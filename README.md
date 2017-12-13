@@ -57,12 +57,15 @@ There are a few example registration implementations in the demos directory. Act
 * Most parts of the codes have been examined. In case of failure of the GPU code contact zyshen021@gmail.com; for all other failures contact mn@cs.unc.edu or open an issue in the github issue tracker.
     
 # Lastest modifications
-  * 12.12    add 'data_pool.py', a generalized dataset pool class\
+  * 12.12\
+             add dataManager, Registration net, dataloader for typical dataset. see sample in prepare data\
+             add 'data_pool.py', a generalized dataset pool class\
              support inter intra personal dataset likeo asis, support inter-personal like lpba, IBSR, CUMU dataset\
-             support 2D and 3D data\
-             support loading img, label pair\
+             support 2D and 3D dataset\
+             support labeled and unlabeled dataset\
              support 2D img, label slicing
-  * 12.11    support oasis inter intra registration\
+  * 12.11\
+             support oasis inter intra registration\
              support saving results, /data/saved_result/taskname,  settings can be found in commandline parsers\
              support adaptiveNet (can be founded in smoother class) in llddmm mapping(tested),  which embedding networks between m and v\
              &nbsp;&nbsp;&nbsp;  (other possible combinations like [I_t, m and v], [I_0,m and v]  also implemented but still underdevelop)\

@@ -230,7 +230,7 @@ def check_same_size(img, standard):
     """
     assert img.shape == standard, "img size must be the same"
 
-def normalize_img(image, sched='ntp'):
+def normalize_img(image, sched='tp'):
     """
     normalize image,
     warning, default [-1,1], which would be tricky when dealing with the bilinear,
@@ -246,6 +246,8 @@ def normalize_img(image, sched='ntp'):
         image[:] = (image - np.min(image)) / (np.max(image) - np.min(image))
     elif sched == 'p':
         image[:] = image / np.percentile(image, 95) * 0.95
+    elif sched == 't':
+        image[:] = (image - np.min(image)) / (np.max(image) - np.min(image))
 
 
 def read_itk_img(path):
@@ -281,11 +283,14 @@ def read_file(path, type='h5py'):
         f = h5py.File(path, 'r')
         data = f['data'][:]
         info = {}
+        label= None
+        if '/label' in f:
+            label = f['label'][:]
         for key in f.attrs:
             info[key]= f.attrs[key]
         info['pair_path'] = f['pair_path'][:]
         f.close()
-        return {'data':data, 'info': info}
+        return {'data':data, 'info': info, 'label':label}
 
 
 def write_file(path, dic, type='h5py'):
@@ -303,7 +308,8 @@ def write_file(path, dic, type='h5py'):
             f.create_dataset('label', data= dic['label'] )
         for key, value in dic['info'].items():
             f.attrs[key] = value
-        asciiList = [[path.encode("ascii", "ignore") for path in pair] for pair in dic['pair_path']]
+        #asciiList = [[path.encode("ascii", "ignore") for path in pair] for pair in dic['pair_path']]
+        asciiList = [path.encode("ascii", "ignore") for path in dic['pair_path']]
         string_dt = h5py.special_dtype(vlen=str)
         f.create_dataset('pair_path', data=asciiList,dtype=string_dt)
         f.close()
