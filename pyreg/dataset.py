@@ -61,6 +61,7 @@ class RegistrationDataset(Dataset):
              transformed['image'] = self.transform(sample['image'])
              transformed['label'] = self.transform(sample['label'])
              transformed['pair_path'] = self.retriv_file_id(sample['info']['pair_path'][0])
+             transformed['spacing'] = self.transform(sample['info']['spacing'])
 
         return transformed
 

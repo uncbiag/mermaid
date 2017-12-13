@@ -4,18 +4,6 @@ import torch
 from dataset import  *
 from data_pool import *
 
-def prepare_data(save_path, img_type, path='./data',skip=True, sched='intra'):
-    '''
-    default:
-    path: './data'
-    img_type: '*a.mhd'
-    skip: True
-
-     '''
-    pair_list = list_pairwise(path, img_type, skip,sched)
-    img_pair_list, info, img_pair_path_list = load_as_data(pair_list)
-    save_to_h5py(save_path, img_pair_list, info, img_pair_path_list)
-
 
 
 class DataManager(object):
@@ -73,15 +61,15 @@ class DataManager(object):
         elif self.dataset_name == 'lpba':
             self.dataset =  LPBADataSet(name=self.task_name, full_comb=self.full_comb)
             self.dataset.set_slicing(self.slicing)
-            self.dataset.set_label_path(label_path)
+            self.dataset.set_label_path(self.label_path)
         elif self.dataset_name == 'ibsr':
             self.dataset = IBSRDataSet(name=self.task_name, full_comb= self.full_comb)
             self.dataset.set_slicing(self.slicing)
-            self.dataset.set_label_path(label_path)
+            self.dataset.set_label_path(self.label_path)
         elif self.dataset_name =='cmuc':
             self.dataset = CUMCDataSet(name=self.task_name,full_comb= self.full_comb)
             self.dataset.set_slicing(self.slicing)
-            self.dataset.set_label_path(label_path)
+            self.dataset.set_label_path(self.label_path)
         self.dataset.set_data_path(self.data_path)
         self.dataset.set_output_path(self.output_path)
         self.dataset.set_divided_ratio(self.divided_ratio)
