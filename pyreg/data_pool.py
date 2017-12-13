@@ -31,7 +31,6 @@ class BaseDataSet(object):
         pass
 
 
-
     def set_data_path(self, path):
         self.data_path = path
 
@@ -63,6 +62,9 @@ class BaseDataSet(object):
 
     def extract_pair_info(self, info1, info2):
         return info1
+
+    def save_shared_info(self,info):
+        save_sz_sp_to_json(info, self.output_path)
 
     def save_pair_to_file(self):
         pass
@@ -104,6 +106,7 @@ class UnlabeledDatSet(BaseDataSet):
         self.pair_name_list = generate_pair_name(self.pair_path_list, sched=self.dataset_type)
         saving_path_list = divide_data_set(self.output_path, self.pair_name_list, self.divided_ratio)
         img_size = ()
+        info = None
         for i, pair in enumerate(self.pair_path_list):
             img1, info1 = self.read_file(pair[0])
             img2, info2 = self.read_file(pair[1])
@@ -119,6 +122,7 @@ class UnlabeledDatSet(BaseDataSet):
             img_pair = np.asarray([(img1, img2)])
             info = self.extract_pair_info(info1, info2)
             save_to_h5py(saving_path_list[i], img_pair, info, [self.pair_name_list[i]], verbose=False)
+        self.save_shared_info(info)
 
 
 
@@ -150,6 +154,7 @@ class LabeledDataSet(BaseDataSet):
         self.pair_name_list = generate_pair_name(self.pair_path_list, sched=self.dataset_type)
         saving_path_list = divide_data_set(self.output_path, self.pair_name_list, self.divided_ratio)
         img_size = ()
+        info = None
         for i, pair in enumerate(self.pair_path_list):
             img1, info1 = self.read_file(pair[0])
             img2, info2 = self.read_file(pair[1])
@@ -172,6 +177,7 @@ class LabeledDataSet(BaseDataSet):
             label_pair = np.asarray([(label1,label2)])
             info = self.extract_pair_info(info1, info2)
             save_to_h5py(saving_path_list[i], img_pair, info, [self.pair_name_list[i]], label_pair, verbose=False)
+        self.save_shared_info(info)
 
 
 

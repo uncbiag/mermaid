@@ -887,12 +887,12 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.model_name = modelName
 
     def set_pair_path(self,pair_paths):
-        f = lambda name: os.path.split(name)
-        get_in = lambda x: os.path.splitext(f(x)[1])[0]
-        get_fn = lambda x: f(f(x)[0])[1]
-        get_img_name = lambda x: get_fn(x)+'_'+get_in(x)
-        img_pair_name = [get_img_name(pair_path[0])+'_'+get_img_name(pair_path[1]) for pair_path in pair_paths]
-        self.pair_path = img_pair_name
+        # f = lambda name: os.path.split(name)
+        # get_in = lambda x: os.path.splitext(f(x)[1])[0]
+        # get_fn = lambda x: f(f(x)[0])[1]
+        # get_img_name = lambda x: get_fn(x)+'_'+get_in(x)
+        # img_pair_name = [get_img_name(pair_path[0])+'_'+get_img_name(pair_path[1]) for pair_path in pair_paths]
+        self.pair_path = pair_paths
 
     def set_save_fig_path(self, save_fig_path):
         """

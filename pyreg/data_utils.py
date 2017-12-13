@@ -6,7 +6,6 @@ from scipy import misc
 import numpy as np
 import h5py
 import skimage
-from data_utils import *
 import SimpleITK as sitk
 import sys
 import random
@@ -14,6 +13,7 @@ PYTHON_VERSION = 3
 if sys.version_info[0] < 3:
     PYTHON_VERSION = 2
 import pyreg.fileio as fileio
+import pyreg.module_parameters as pars
 
 
 
@@ -294,6 +294,15 @@ def read_itk_img_slice(path, slicing):
     ct_scan = np.squeeze(sitk.GetArrayFromImage(itkimage))
     info = {'img_size': ct_scan[slicing].shape}
     return ct_scan[slicing], info
+
+
+def save_sz_sp_to_json(info, output_path):
+    par = pars.ParameterDict()
+    par[('info',{},'shared information of data')]
+    par['info'][('img_sz',info['img_size'], 'size of image')]
+    par['info'][('spacing',info['spacing'].tolist(), 'size of image')]
+    par.write_JSON(os.path.join(output_path,'info.json'))
+
 
 
 def read_file(path, type='h5py'):

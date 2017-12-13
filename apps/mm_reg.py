@@ -22,7 +22,7 @@ import pyreg.module_parameters as pars
 import pyreg.utils as utils
 import pyreg.fileio as fileio
 from pyreg import data_utils
-from pyreg.prepare_data import DataManager
+from pyreg.data_manager import DataManager
 
 prepare_data= True
 batch_size =100
@@ -51,7 +51,11 @@ def do_registration(gen_conf, par_algconf ):
     import pyreg.multiscale_optimizer as MO
     from pyreg.config_parser import nr_of_threads
 
-    prepare_data = True
+
+
+    ############################################     data  setting  #############################################
+
+    prepare_data = False
 
     dataset_name = 'lpba'
     task_name = 'lpba'
@@ -84,10 +88,48 @@ def do_registration(gen_conf, par_algconf ):
         data_manager.get_task_path(task_path)
 
     dataloaders = data_manager.data_loaders(batch_size=20)
+    data_info = pars.ParameterDict()
+    data_info.load_JSON(os.path.join(task_path,'info.json'))
+    spacing = np.asarray(data_info['info']['spacing'])
+    sz = data_info['info']['img_sz']
 
 
 
 
+
+
+    #I0, I1, spacing, md_I0, md_I1 = read_images(gen_conf['moving_image'], gen_conf['target_image'],  gen_conf['normalize_spacing'],  gen_conf['normalize_intensities'],
+    #                                            gen_conf['squeeze_image'])
+    # from pyreg.prepare_data import prepare_data
+    # path = '/playpen/zyshen/data/mermaid/data/train'
+    # img_type = ['*a.mhd']
+    # skip = False
+    # sched = 'inter'
+    # save_path = '../data/data_' + sched + '.h5py'
+    #
+    # #prepare_data(save_path, img_type, path, skip, sched)
+    # dic = data_utils.read_file(save_path)
+    # # print(dic['info'])
+    # print(dic['data'].shape)
+    # print('finished')
+    # I0 = dic['data'][2:batch_size,0:1, :,:]
+    # I1 = dic['data'][2:batch_size,1:2, :,:]
+    # pair_path = dic['info']['pair_path'][2:batch_size]
+    #
+    # sz = I0.shape
+    #
+    # # create the source and target image as pyTorch variables
+    # ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
+    # ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
+
+
+
+
+    ################################  task  setting  ###################################
+
+
+
+    sess = ['train']
     params = pars.ParameterDict()
 
     par_image_smoothing = par_algconf['algconf']['image_smoothing']
@@ -106,31 +148,10 @@ def do_registration(gen_conf, par_algconf ):
     # general parameters
     params['model']['registration_model'] = par_algconf['algconf']['model']['registration_model']
 
-    torch.set_num_threads( nr_of_threads )
+    torch.set_num_threads(nr_of_threads)
     print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
-    I0, I1, spacing, md_I0, md_I1 = read_images(gen_conf['moving_image'], gen_conf['target_image'],  gen_conf['normalize_spacing'],  gen_conf['normalize_intensities'],
-                                                gen_conf['squeeze_image'])
-    from pyreg.prepare_data import prepare_data
-    path = '/playpen/zyshen/data/mermaid/data/train'
-    img_type = ['*a.mhd']
-    skip = False
-    sched = 'inter'
-    save_path = '../data/data_' + sched + '.h5py'
 
-    #prepare_data(save_path, img_type, path, skip, sched)
-    dic = data_utils.read_file(save_path)
-    # print(dic['info'])
-    print(dic['data'].shape)
-    print('finished')
-    I0 = dic['data'][2:batch_size,0:1, :,:]
-    I1 = dic['data'][2:batch_size,1:2, :,:]
-    pair_path = dic['info']['pair_path'][2:batch_size]
 
-    sz = I0.shape
-
-    # create the source and target image as pyTorch variables
-    ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
-    ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
 
     smooth_images = par_image_smoothing['smooth_images']
     visualize = gen_conf['visualize']
@@ -140,13 +161,7 @@ def do_registration(gen_conf, par_algconf ):
     expr_name = gen_conf['expr_name']
     use_multi_scale = gen_conf['use_multi_scale']
 
-    if smooth_images:
-        # smooth both a little bit
-        params['image_smoothing'] = par_algconf['algconf']['image_smoothing']
-        cparams = params['image_smoothing']
-        s = SF.SmootherFactory(sz[2::], spacing).create_smoother(cparams)
-        ISource = s.smooth_scalar_field(ISource)
-        ITarget = s.smooth_scalar_field(ITarget)
+
 
     if not use_multi_scale:
         # create multi-scale settings for single-scale solution
@@ -156,11 +171,6 @@ def do_registration(gen_conf, par_algconf ):
         multi_scale_scale_factors = par_optimizer['multi_scale']['scale_factors']
         multi_scale_iterations_per_scale = par_optimizer['multi_scale']['scale_iterations']
 
-    if params['model']['registration_model']['forward_model']['smoother']['type'] == 'adaptiveNet':
-        params['model']['registration_model']['forward_model']['smoother']['input'] = [ISource, ITarget]
-        params['model']['registration_model']['forward_model']['smoother']['use_adp'] = True
-    else:
-        params['model']['registration_model']['forward_model']['smoother']['use_adp'] = False
 
     mo = MO.MultiScaleRegistrationOptimizer(sz, spacing, use_map, map_low_res_factor, params)
 
@@ -173,29 +183,60 @@ def do_registration(gen_conf, par_algconf ):
     mo.set_save_fig(save_fig)
     mo.set_save_fig_path(save_fig_path)
     mo.set_save_fig_num(10)
-    mo.set_pair_path(pair_path)
-
-
-
     mo.set_model(model_name)
-
-    mo.set_source_image(ISource)
-    mo.set_target_image(ITarget)
-
     mo.set_scale_factors(multi_scale_scale_factors)
     mo.set_number_of_iterations_per_scale(multi_scale_iterations_per_scale)
-    mo.set_saving_env()
+
+    #########################    batch iteration setting   ############################################
+    sessions = ['train']
+    for sess in sessions:
+        pair_path_list = dataloaders['info'][sess]
+        for data in dataloaders[sess]:
+            ISource = AdaptVal(Variable(data['image'][:,:1]))
+            ITarget = AdaptVal(Variable(data['image'][:,1:2]))
+            pair_path_idx = data['pair_path'].numpy().tolist()
+            pair_path = [pair_path_list[idx] for idx in pair_path_idx]
+
+        if smooth_images:
+            # smooth both a little bit
+            params['image_smoothing'] = par_algconf['algconf']['image_smoothing']
+            cparams = params['image_smoothing']
+            s = SF.SmootherFactory(sz[2::], spacing).create_smoother(cparams)
+            ISource = s.smooth_scalar_field(ISource)
+            ITarget = s.smooth_scalar_field(ITarget)
+
+        if params['model']['registration_model']['forward_model']['smoother']['type'] == 'adaptiveNet':
+            params['model']['registration_model']['forward_model']['smoother']['input'] = [ISource, ITarget]
+            params['model']['registration_model']['forward_model']['smoother']['use_adp'] = True
+        else:
+            params['model']['registration_model']['forward_model']['smoother']['use_adp'] = False
 
 
-    # and now do the optimization
-    mo.optimize()
 
-    optimized_energy = mo.get_energy()
-    warped_image = mo.get_warped_image()
-    optimized_map = mo.get_map()
-    optimized_reg_parameters = mo.get_model_parameters()
+        mo.set_pair_path(pair_path)
 
+
+        mo.set_source_image(ISource)
+        mo.set_target_image(ITarget)
+
+
+        mo.set_saving_env()
+
+
+        # and now do the optimization
+        mo.optimize()
+
+        # optimized_energy = mo.get_energy()
+        # warped_image = mo.get_warped_image()
+        # optimized_map = mo.get_map()
+        # optimized_reg_parameters = mo.get_model_parameters()
+
+
+    md_I0 = None  # currently not included
     return warped_image, optimized_map, optimized_reg_parameters, optimized_energy, params, md_I0
+
+
+
 
 
 if __name__ == "__main__":
@@ -274,39 +315,39 @@ since = time()
 warped_image, optimized_map, optimized_reg_parameters, optimized_energy, params, md_I = \
     do_registration(gen_conf, par_algconf )
 
-print('The final energy was: E={energy}, similarityE={similarityE}, regE={regE}'
-                  .format(energy=optimized_energy[0],
-                          similarityE=optimized_energy[1],
-                          regE=optimized_energy[2]))
-
-if write_map is not None:
-    if optimized_map is not None:
-        #om_data = optimized_map.data.numpy()
-        #nrrd.write( write_map, om_data, md_I )
-        fileio.MapIO().write(write_map,optimized_map,md_I)
-    else:
-        print('Warning: Map cannot be written as it was not computed -- maybe you are using an image-based algorithm?')
-
-if write_warped_image is not None:
-    if warped_image is not None:
-        #wi_data = warped_image.data.numpy()
-        #nrrd.write(write_warped_image, wi_data, md_I)
-        fileio.ImageIO().write(write_warped_image,warped_image,md_I)
-    else:
-        print('Warning: Warped image cannot be written as it was not computed -- maybe you are using a map-based algorithm?')
-
-if write_reg_params is not None:
-    if optimized_reg_parameters is not None:
-        #rp_data = optimized_reg_parameters.data.numpy()
-        #nrrd.write(write_reg_params, rp_data, md_I)
-        fileio.GenericIO().write(write_reg_params,optimized_reg_parameters,md_I)
-    else:
-        print('Warning: optimized parameters were not computed and hence cannot be saved.')
-
-if used_config is not None:
-    print('Writing the used configuration to file.')
-    params.write_JSON( used_config + '_settings_clean.json')
-    params.write_JSON_comments( used_config + '_settings_comments.json')
+# print('The final energy was: E={energy}, similarityE={similarityE}, regE={regE}'
+#                   .format(energy=optimized_energy[0],
+#                           similarityE=optimized_energy[1],
+#                           regE=optimized_energy[2]))
+#
+# if write_map is not None:
+#     if optimized_map is not None:
+#         #om_data = optimized_map.data.numpy()
+#         #nrrd.write( write_map, om_data, md_I )
+#         fileio.MapIO().write(write_map,optimized_map,md_I)
+#     else:
+#         print('Warning: Map cannot be written as it was not computed -- maybe you are using an image-based algorithm?')
+#
+# if write_warped_image is not None:
+#     if warped_image is not None:
+#         #wi_data = warped_image.data.numpy()
+#         #nrrd.write(write_warped_image, wi_data, md_I)
+#         fileio.ImageIO().write(write_warped_image,warped_image,md_I)
+#     else:
+#         print('Warning: Warped image cannot be written as it was not computed -- maybe you are using a map-based algorithm?')
+#
+# if write_reg_params is not None:
+#     if optimized_reg_parameters is not None:
+#         #rp_data = optimized_reg_parameters.data.numpy()
+#         #nrrd.write(write_reg_params, rp_data, md_I)
+#         fileio.GenericIO().write(write_reg_params,optimized_reg_parameters,md_I)
+#     else:
+#         print('Warning: optimized parameters were not computed and hence cannot be saved.')
+#
+# if used_config is not None:
+#     print('Writing the used configuration to file.')
+#     params.write_JSON( used_config + '_settings_clean.json')
+#     params.write_JSON_comments( used_config + '_settings_comments.json')
 
 print("time {}".format(time()-since))
 
