@@ -37,7 +37,7 @@ class RegistrationDataset(Dataset):
         self.data_path = data_path
         self.transform = transform
         self.data_type = '*.h5py'
-        self.pair_list = self.get_file_list()
+        self.pair_path_list , self.pair_name_list= self.get_file_list()
 
     def get_file_list(self):
         f_filter = []
@@ -45,22 +45,24 @@ class RegistrationDataset(Dataset):
         for root, dirnames, filenames in os.walk(self.data_path):
             for filename in fnmatch.filter(filenames, self.data_type):
                 f_filter.append(os.path.join(root, filename))
-        return f_filter
+        return f_filter, [os.path.splitext(filename)[0] for filename in filenames]
 
     def __len__(self):
-        return len(self.pair_list)
+        return len(self.pair_name_list)
+
+    def retriv_file_id(self, filename):
+        return self.pair_name_list.index(filename)
 
     def __getitem__(self, idx):
-        dic = read_file(self.pair_list[idx])
+        dic = read_file(self.pair_path_list[idx])
         sample = {'image': dic['data'][0], 'info': dic['info'], 'label':dic['label'][0]}
         transformed={}
         if self.transform:
              transformed['image'] = self.transform(sample['image'])
              transformed['label'] = self.transform(sample['label'])
-             transformed['pair_path'] = np.asarray(sample['info']['pair_path'])
+             transformed['pair_path'] = self.retriv_file_id(sample['info']['pair_path'][0])
 
         return transformed
-
 
 
 class Normalize(object):
@@ -70,6 +72,7 @@ class Normalize(object):
         for image in img_pair:
             image[:]= 2*(image-np.min(image))/(np.max(image)-np.min(image)) -1
         return {'image': img_pair}
+
 
 
 

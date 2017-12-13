@@ -99,7 +99,9 @@ class DataManager(object):
         dataloaders = {x: torch.utils.data.DataLoader(transformed_dataset[x], batch_size=batch_size,
                                                 shuffle=True, num_workers=4) for x in sess_sel}
         dataloaders['data_size'] = {x: len(dataloaders[x]) for x in ['train', 'val']}
+        dataloaders['info'] = {x: transformed_dataset[x].pair_name_list for x in ['train', 'val']}
         print('dataloader is ready')
+
 
         return dataloaders
 
