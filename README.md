@@ -57,6 +57,8 @@ There are a few example registration implementations in the demos directory. Act
 * Most parts of the codes have been examined. In case of failure of the GPU code contact zyshen021@gmail.com; for all other failures contact mn@cs.unc.edu or open an issue in the github issue tracker.
     
 # Lastest modifications
+  * 12.13\
+             dataManger into the apps/mm-reg, the system works through\
   * 12.12\
              add dataManager, Registration net, dataloader for typical dataset. see sample in prepare data\
              add 'data_pool.py', a generalized dataset pool class\
