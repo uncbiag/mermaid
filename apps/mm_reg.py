@@ -22,6 +22,7 @@ import pyreg.module_parameters as pars
 import pyreg.utils as utils
 import pyreg.fileio as fileio
 from pyreg import data_utils
+from pyreg.prepare_data import DataManager
 
 prepare_data= True
 batch_size =100
@@ -49,6 +50,43 @@ def do_registration(gen_conf, par_algconf ):
     import pyreg.smoother_factory as SF
     import pyreg.multiscale_optimizer as MO
     from pyreg.config_parser import nr_of_threads
+
+    prepare_data = True
+
+    dataset_name = 'lpba'
+    task_name = 'lpba'
+    task_path = '/playpen/zyshen/data/lpba__slicing90'
+
+    if prepare_data:
+        data_path = '/playpen/data/quicksilver_data/testdata/LPBA40/brain_affine_icbm'
+        label_path = '/playpen/data/quicksilver_data/testdata/LPBA40/label_affine_icbm'
+        dataset_name = 'lpba'
+        task_name = 'lpba'
+        full_comb = False
+        output_path = '/playpen/zyshen/data/'
+        divided_ratio = (0.6, 0.2, 0.2)
+        slicing = 90
+
+        data_manager = DataManager(task_name=task_name, dataset_name=dataset_name)
+        data_manager.set_data_path(data_path)
+        data_manager.set_output_path(output_path)
+        data_manager.set_label_path(label_path)
+        data_manager.set_full_comb(full_comb)
+        data_manager.set_slicing(slicing)
+        data_manager.set_divided_ratio(divided_ratio)
+
+        data_manager.generate_saving_path()
+        data_manager.init_dataset()
+        data_manager.prepare_data()
+        data_manager.generate_task_path()
+    else:
+        data_manager = DataManager(task_name=task_name, dataset_name=dataset_name)
+        data_manager.get_task_path(task_path)
+
+    dataloaders = data_manager.data_loaders(batch_size=20)
+
+
+
 
     params = pars.ParameterDict()
 
