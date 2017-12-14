@@ -1,4 +1,5 @@
 from __future__ import print_function
+import progressbar as pb
 
 from torch.utils.data import Dataset
 
@@ -107,6 +108,7 @@ class UnlabeledDatSet(BaseDataSet):
         saving_path_list = divide_data_set(self.output_path, self.pair_name_list, self.divided_ratio)
         img_size = ()
         info = None
+        pbar = pb.ProgressBar(widgets=[pb.Percentage(), pb.Bar(), pb.ETA()], maxval=len(self.pair_path_list)).start()
         for i, pair in enumerate(self.pair_path_list):
             img1, info1 = self.read_file(pair[0])
             img2, info2 = self.read_file(pair[1])
@@ -122,6 +124,8 @@ class UnlabeledDatSet(BaseDataSet):
             img_pair = np.asarray([(img1, img2)])
             info = self.extract_pair_info(info1, info2)
             save_to_h5py(saving_path_list[i], img_pair, info, [self.pair_name_list[i]], verbose=False)
+            pbar.update(i+1)
+        pbar.finish()
         self.save_shared_info(info)
 
 
@@ -155,6 +159,7 @@ class LabeledDataSet(BaseDataSet):
         saving_path_list = divide_data_set(self.output_path, self.pair_name_list, self.divided_ratio)
         img_size = ()
         info = None
+        pbar = pb.ProgressBar(widgets=[pb.Percentage(), pb.Bar(), pb.ETA()], maxval=len(self.pair_path_list)).start()
         for i, pair in enumerate(self.pair_path_list):
             img1, info1 = self.read_file(pair[0])
             img2, info2 = self.read_file(pair[1])
@@ -177,6 +182,8 @@ class LabeledDataSet(BaseDataSet):
             label_pair = np.asarray([(label1,label2)])
             info = self.extract_pair_info(info1, info2)
             save_to_h5py(saving_path_list[i], img_pair, info, [self.pair_name_list[i]], label_pair, verbose=False)
+            pbar.update(i + 1)
+        pbar.finish()
         self.save_shared_info(info)
 
 
@@ -202,18 +209,20 @@ class VolumticDataSet(BaseDataSet):
     def __init__(self,name, dataset_type, file_type_list):
         BaseDataSet.__init__(self, name, dataset_type, file_type_list)
         self.slicing = -1
+        self.axis = -1
 
-    def set_slicing(self, slicing):
+    def set_slicing(self, slicing, axis):
         if slicing >0:
             print("slcing is set on , the slice of {} th dimension would be sliced ".format(slicing))
         self.slicing = slicing
+        self.axis = axis
 
 
     def read_file(self, file_path, verbose=False):
         if self.slicing != -1:
             if verbose:
                 print("slicing file: {}".format(file_path))
-            img, info = file_io_read_img_slice(file_path, self.slicing)
+            img, info = file_io_read_img_slice(file_path, self.slicing, self.axis)
         else:
             # check if is rihgt
             img, info= BaseDataSet.read_file(self,file_path)
@@ -357,7 +366,7 @@ if __name__ == "__main__":
     #
     #
     # lpba = LPBADataSet(name=name, full_comb=full_comb)
-    # lpba.set_slicing(90)
+    # lpba.set_slicing(90,1)
     # lpba.set_data_path(path)
     # lpba.set_output_path(output_path)
     # lpba.set_divided_ratio(divided_ratio)

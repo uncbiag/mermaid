@@ -38,44 +38,51 @@ def do_registration(gen_conf, par_algconf ):
 
     ############################################     data  setting  #############################################
 
-    prepare_data = False
-    dataset_name = 'oasis'
-    task_name = 'oasis'
+    dataset_name = 'lpba'
+    task_name = 'lpba'
 
-    task_path = '/playpen/zyshen/data/oasis_inter_slicing90'
+    # switch to exist task
+    switch_to_exist_task = False
+    task_root_path = '/playpen/zyshen/data/oasis_inter_slicing90'
 
-    if prepare_data:
-        #lpba
-        #data_path = '/playpen/data/quicksilver_data/testdata/LPBA40/brain_affine_icbm'
-        #label_path = '/playpen/data/quicksilver_data/testdata/LPBA40/label_affine_icbm'
-        #oasis
-        data_path ='/playpen/zyshen/data/oasis'
-        label_path = None
-        sched = 'inter'
-        full_comb = False
-        output_path = '/playpen/zyshen/data/'
-        divided_ratio = (0.6, 0.2, 0.2)
-        slicing = 90
+    # work on current task
+    prepare_data = True
+
+    # lpba
+    data_path = '/playpen/data/quicksilver_data/testdata/LPBA40/brain_affine_icbm'
+    label_path = '/playpen/data/quicksilver_data/testdata/LPBA40/label_affine_icbm'
+    # oasis
+    # data_path ='/playpen/zyshen/data/oasis'
+    # label_path = None
+    sched = 'inter'
+    full_comb = False
+    output_path = '/playpen/zyshen/data/'
+    divided_ratio = (0.8, 0.1, 0.1)
+    slicing = 100
+    axis = 2
+
+    if switch_to_exist_task:
+        data_manager = DataManager(task_name=task_name, dataset_name=dataset_name)
+        data_manager.manual_set_task_path(task_root_path)
+    else:
 
         data_manager = DataManager(task_name=task_name, dataset_name=dataset_name, sched=sched)
         data_manager.set_data_path(data_path)
         data_manager.set_output_path(output_path)
         data_manager.set_label_path(label_path)
         data_manager.set_full_comb(full_comb)
-        data_manager.set_slicing(slicing)
+        data_manager.set_slicing(slicing, axis)
         data_manager.set_divided_ratio(divided_ratio)
-
         data_manager.generate_saving_path()
-        data_manager.init_dataset()
-        data_manager.prepare_data()
         data_manager.generate_task_path()
-    else:
-        data_manager = DataManager(task_name=task_name, dataset_name=dataset_name)
-        data_manager.get_task_path(task_path)
+        if prepare_data:
+            data_manager.init_dataset()
+            data_manager.prepare_data()
+        task_root_path = data_manager.get_task_root_path()
 
     dataloaders = data_manager.data_loaders(batch_size=20)
     data_info = pars.ParameterDict()
-    data_info.load_JSON(os.path.join(task_path,'info.json'))
+    data_info.load_JSON(os.path.join(task_root_path,'info.json'))
     spacing = np.asarray(data_info['info']['spacing'])
     sz = data_info['info']['img_sz']
 

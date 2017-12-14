@@ -59,7 +59,7 @@ There are a few example registration implementations in the demos directory. Act
 # Lastest modifications
   * 12.13\
              dataManger into the apps/mm-reg, the system works through\
-             transfer to fileio when reading image in data_pool
+             transfer to fileio when reading image in data_pool\
              add adaptive_padding in fileio.py, to be favourable by the guassian fft
   * 12.12\
              add dataManager, Registration net, dataloader for typical dataset. see sample in prepare data\
