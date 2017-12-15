@@ -268,6 +268,10 @@ class ImageRegistrationOptimizer(Optimizer):
         """if mapLowResFactor <1, a lowres image needs to be created to parameterize some of the registration algorithms"""
         self.ITarget = None
         """target image"""
+        self.LSource = None
+        """ source label """
+        self.LTarget = None
+        """  target label """
         self.optimizer_name = None #''lbfgs_ls'
         """name of the optimizer to use"""
         self.optimizer_params = {}
@@ -422,6 +426,19 @@ class ImageRegistrationOptimizer(Optimizer):
         if self.mapLowResFactor is not None:
             self.lowResISource,_ = self.sampler.downsample_image_to_size(self.ISource,self.spacing,self.lowResSize[2::])
 
+    def set_source_label(self, LSource):
+        """
+        :param LSource:
+        :return:
+        """
+        self.LSource = LSource
+    def set_target_label(self, LTarget):
+        """
+        :param LTarget:
+        :return:
+        """
+        self.LTarget = LTarget
+
     def set_target_image(self, I):
         """
         Setting the target image which the source image should match after registration
@@ -429,6 +446,7 @@ class ImageRegistrationOptimizer(Optimizer):
         :param I: target image 
         """
         self.ITarget = I
+
 
     def set_optimizer_by_name(self, optimizer_name):
         """

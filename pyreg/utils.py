@@ -304,6 +304,19 @@ def identity_map(sz):
 
     return idnp
 
+def get_warped_label_map(label_map, phi, sched='nn'):
+    if sched == 'nn':
+        label_map.data.round_()
+        warped_label_map = compute_warped_image_multiNC(label_map, phi)
+        # check if here should be add assert
+        assert torch.sum(warped_label_map -warped_label_map.round())< 0.1, "nn interpolation is not precise"
+        warped_label_map.data.round_()
+    else:
+        raise ValueError, " the label warpping method is not implemented"
+
+
+
+
 def t2np( v ):
     """
     Takes a torch array and returns it as a numpy array on the cpu

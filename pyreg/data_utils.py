@@ -281,14 +281,26 @@ def file_io_read_img(path, normalize_spacing=True, normalize_intensities=True, s
     info = { 'spacing':spacing, 'img_size': im.shape}
     return im, info
 
-def file_io_read_img_slice(path, slicing, normalize_spacing=True, normalize_intensities=True, squeeze_image=True,adaptive_padding=4):
+def file_io_read_img_slice(path, slicing, axis, normalize_spacing=True, normalize_intensities=True, squeeze_image=True,adaptive_padding=4):
     im, hdr, spacing, normalized_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image,adaptive_padding)
     if normalize_spacing:
         spacing = normalized_spacing
     else:
         spacing = spacing
-    info = { 'spacing':spacing[1:], 'img_size': im[slicing].shape}
-    return im[slicing], info
+
+    if axis == 1:
+        slice = im[slicing]
+        slicing_spacing = spacing[1:]
+    elif axis == 2:
+        slice = im[:,slicing,:]
+        slicing_spacing = np.asarray([spacing[0], spacing[2]])
+    elif axis == 3:
+        slice = im[:,:,slicing]
+        slicing_spacing = spacing[:2]
+    else:
+        raise ValueError, "slicing axis exceed, should be 1-3"
+    info = { 'spacing':slicing_spacing, 'img_size': slice.shape}
+    return slice, info
 
 
 
@@ -303,16 +315,24 @@ def read_itk_img(path):
     info = {'img_size': ct_scan.shape}
     return np.squeeze(ct_scan), info
 
-def read_itk_img_slice(path, slicing):
+def read_itk_img_slice(path, slicing, axis):
     """
     :param path:
     :return: numpy image
     """
     itkimage = sitk.ReadImage(path)
     # Convert the image to a  numpy array first and then shuffle the dimensions to get axis in the order z,y,x
-    ct_scan = np.squeeze(sitk.GetArrayFromImage(itkimage))
-    info = {'img_size': ct_scan[slicing].shape}
-    return ct_scan[slicing], info
+    im = np.squeeze(sitk.GetArrayFromImage(itkimage))
+    if axis == 1:
+        slice = im[slicing]
+    elif axis == 2:
+        slice = im[:,slicing,:]
+    elif axis == 3:
+        slice = im[:,:,slicing]
+    else:
+        raise ValueError, "slicing axis exceed, should be 1-3"
+    info = {'img_size': slice.shape}
+    return slice, info
 
 
 def save_sz_sp_to_json(info, output_path):

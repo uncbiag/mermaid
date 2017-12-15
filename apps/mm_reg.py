@@ -48,12 +48,14 @@ def do_registration(gen_conf, par_algconf ):
     # work on current task
     prepare_data = True
 
-    # lpba
+    ###### lpba #####
     data_path = '/playpen/data/quicksilver_data/testdata/LPBA40/brain_affine_icbm'
     label_path = '/playpen/data/quicksilver_data/testdata/LPBA40/label_affine_icbm'
-    # oasis
+
+    ######  oasis #####
     # data_path ='/playpen/zyshen/data/oasis'
     # label_path = None
+
     sched = 'inter'
     full_comb = False
     output_path = '/playpen/zyshen/data/'
@@ -162,6 +164,10 @@ def do_registration(gen_conf, par_algconf ):
             ITarget = AdaptVal(Variable(data['image'][:,1:2]))
             pair_path_idx = data['pair_path'].numpy().tolist()
             pair_path = [pair_path_list[idx] for idx in pair_path_idx]
+            LSource, LTarget = None, None
+            if 'label' in data:
+                LSource = AdaptVal(Variable(data['label'][:, :1], voliate=True))
+                LTarget = AdaptVal(Variable(data['label'][:, 1:2], voliate=True))
 
             if smooth_images:
                 # smooth both a little bit
@@ -192,10 +198,13 @@ def do_registration(gen_conf, par_algconf ):
             # and now do the optimization
             mo.optimize()
 
-        # optimized_energy = mo.get_energy()
-        # warped_image = mo.get_warped_image()
-        # optimized_map = mo.get_map()
-        # optimized_reg_parameters = mo.get_model_parameters()
+            optimized_energy = mo.get_energy()
+            warped_image = mo.get_warped_image()
+            optimized_map = mo.get_map()
+            # optimized_reg_parameters = mo.get_model_parameters()
+            if LSource is not None:
+                LSource_warpped = utils.compute_warped_image_multiNC(LSource, optimized_map)
+                iou
 
 
     md_I0 = None  # currently not included
