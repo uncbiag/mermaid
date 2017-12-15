@@ -23,6 +23,7 @@ import pyreg.utils as utils
 import pyreg.fileio as fileio
 from pyreg import data_utils
 from pyreg.data_manager import DataManager
+from pyreg.metrics import get_multi_metric
 
 
 
@@ -204,7 +205,7 @@ def do_registration(gen_conf, par_algconf ):
             # optimized_reg_parameters = mo.get_model_parameters()
             if LSource is not None:
                 LSource_warpped = utils.compute_warped_image_multiNC(LSource, optimized_map)
-                metric_results = utils.get_multi_metric(LSource_warpped, LTarget, eval_label_list=None, rm_bg=False)
+                metric_results = get_multi_metric(LSource_warpped, LTarget, eval_label_list=None, rm_bg=False)
                 # To Do,  do further analysis on metric results
 
 
