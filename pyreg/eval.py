@@ -3,7 +3,16 @@ from __future__ import print_function
 import numpy as np
 
 
-def get_multi_metric(pred, gt, metric, eval_label_list = None, rm_bg=False):
+def get_multi_metric(pred, gt, eval_label_list = None, rm_bg=False):
+    """
+    implemented iou, dice, recall, precision metrics for each label of each instance in batch
+
+    :param pred:  predicted(warpped) label map Bx....
+    :param gt: ground truth label map  BxCx....
+    :param eval_label_list: manual selected label need to be evaluate
+    :param rm_bg: remove the background label, assume the background label is the first label of label_list when using auto detection
+    :return: Bx num_label_evaluated    dictonary, each item represents one metric method, a matrix for metric results of each label of each instance
+    """
     label_list = np.unique(gt).tolist()
     if rm_bg:
         label_list = label_list[1:]
@@ -12,21 +21,24 @@ def get_multi_metric(pred, gt, metric, eval_label_list = None, rm_bg=False):
             assert label in label_list, "label {} is not in label_list".format(label)
         label_list = eval_label_list
     num_label = len(label_list)
-    num_batch, num_channel = pred.shape[0], pred.shape[1]
-    dice_multi = np.zeros([num_batch,num_channel, num_label])
-    iou_multi = np.zeros([num_batch, num_channel, num_label])
-    precision_multi = np.zeros([num_batch, num_channel, num_label])
-    recall_multi = np.zeros([num_batch, num_channel, num_label])
+    num_batch = pred.shape[0]
+    dice_multi = np.zeros([num_batch, num_label])
+    iou_multi = np.zeros([num_batch, num_label])
+    precision_multi = np.zeros([num_batch, num_label])
+    recall_multi = np.zeros([num_batch, num_label])
     for l in range(num_label):
         label_pred = (pred == label_list[l]).astype(np.int32)
         label_gt = (gt == label_list[l]).astype(np.int32)
         for b in range(num_batch):
-            for c in range(num_channel):
-                metric_res = cal_metric(label_pred[b][c].reshape(-1),  label_gt[b][c].reshape(-1))
-                dice_multi[b][c][l] =metric_res['dice']
-                iou_multi[b][c][l] = metric_res['dice']
-                precision_multi[b][c][l] = metric_res['dice']
-                recall_multi[b][c][l] = metric_res['dice']
+            metric_res = cal_metric(label_pred[b].reshape(-1),  label_gt[b].reshape(-1))
+            dice_multi[b][l] =metric_res['dice']
+            iou_multi[b][l] = metric_res['dice']
+            precision_multi[b][l] = metric_res['dice']
+            recall_multi[b][l] = metric_res['dice']
+
+    multi_metric_res = {'iou': iou_multi, 'dice': dice_multi, 'recall': recall_multi, 'precision': precision_multi}
+
+    return multi_metric_res
 
 
 

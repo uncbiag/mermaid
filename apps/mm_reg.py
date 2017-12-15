@@ -204,7 +204,8 @@ def do_registration(gen_conf, par_algconf ):
             # optimized_reg_parameters = mo.get_model_parameters()
             if LSource is not None:
                 LSource_warpped = utils.compute_warped_image_multiNC(LSource, optimized_map)
-                iou
+                metric_results = utils.get_multi_metric(LSource_warpped, LTarget, eval_label_list=None, rm_bg=False)
+                # To Do,  do further analysis on metric results
 
 
     md_I0 = None  # currently not included
