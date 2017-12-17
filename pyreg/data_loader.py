@@ -61,7 +61,7 @@ class RegistrationDataset(Dataset):
         if self.transform:
              transformed['image'] = self.transform(sample['image'])
              if sample['label'] is not None:
-                transformed['label'] = self.transform(sample['label'])
+                transformed['label'] = self.transform(sample['label'][0])
              transformed['pair_path'] = self.retriv_file_id(sample['info']['pair_path'][0])
              transformed['spacing'] = self.transform(sample['info']['spacing'])
 

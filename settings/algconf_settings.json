@@ -17,7 +17,7 @@
                     "number_of_time_steps": 10, 
                     "smoother": {
                         "gaussian_std": 0.1,
-                        "type": "adaptiveNet"
+                        "type": "gaussian"
                     }
                 }, 
                 "similarity_measure": {
@@ -41,7 +41,7 @@
             }, 
             "name": "adam",
             "single_scale": {
-                "nr_of_iterations": 100
+                "nr_of_iterations": 10
             }
         }
     }

@@ -272,7 +272,8 @@ def read_images(source_image_name,target_image_name, normalize_spacing=True, nor
     return I0, I1, spacing, hdr0, hdr1
 
 
-def file_io_read_img(path, normalize_spacing=True, normalize_intensities=True, squeeze_image=True, adaptive_padding=4):
+def file_io_read_img(path, is_label, normalize_spacing=True, normalize_intensities=True, squeeze_image=True, adaptive_padding=4):
+    normalize_intensities = False if is_label else normalize_intensities
     im, hdr, spacing, normalized_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image,adaptive_padding)
     if normalize_spacing:
         spacing = normalized_spacing
@@ -281,7 +282,8 @@ def file_io_read_img(path, normalize_spacing=True, normalize_intensities=True, s
     info = { 'spacing':spacing, 'img_size': im.shape}
     return im, info
 
-def file_io_read_img_slice(path, slicing, axis, normalize_spacing=True, normalize_intensities=True, squeeze_image=True,adaptive_padding=4):
+def file_io_read_img_slice(path, slicing, axis, is_label, normalize_spacing=True, normalize_intensities=True, squeeze_image=True,adaptive_padding=4):
+    normalize_intensities = False if is_label else normalize_intensities
     im, hdr, spacing, normalized_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image,adaptive_padding)
     if normalize_spacing:
         spacing = normalized_spacing

@@ -15,6 +15,7 @@ import numpy as np
 import finite_differences as fd
 import torch.nn as nn
 import torch.nn.init as init
+from libraries.functions.nn_interpolation import get_nn_interpolation
 
 
 def compute_normalized_gaussian(X, mu, sig):
@@ -304,15 +305,16 @@ def identity_map(sz):
 
     return idnp
 
+
+
 def get_warped_label_map(label_map, phi, sched='nn'):
     if sched == 'nn':
-        label_map.data.round_()
-        warped_label_map = compute_warped_image_multiNC(label_map, phi)
+        warped_label_map = get_nn_interpolation(label_map, phi)
         # check if here should be add assert
-        assert torch.sum(warped_label_map -warped_label_map.round())< 0.1, "nn interpolation is not precise"
-        warped_label_map.data.round_()
+        assert abs(torch.sum(warped_label_map.data -warped_label_map.data.round()))< 0.1, "nn interpolation is not precise"
     else:
         raise ValueError, " the label warpping method is not implemented"
+    return warped_label_map
 
 
 
@@ -334,7 +336,7 @@ def checkNan(x):
 
 
 ##########################################  Adaptive Net ###################################################3
-def space_normal(tensors, std=1):
+def space_normal(tensors, std=0.1):
     """
     space normalize for the net kernel
     :param tensor:
@@ -611,7 +613,8 @@ class AdpSmoother(nn.Module):
     def forward(self, m,new_s=None):
         m = m * self.mask
         input = self.prepare_data(m,new_s)
-        x = self.net(input)
+        x= input
+        x = self.net(x)
         return x
 
 

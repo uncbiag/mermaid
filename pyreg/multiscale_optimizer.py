@@ -683,7 +683,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.rec_IWarped = self.model(self.ISource)
             loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget)
         loss.backward()
-        torch.nn.utils.clip_grad_norm(self.model.parameters(), 5)
+        torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
 
 
         if self.useMap:

@@ -47,7 +47,7 @@ def do_registration(gen_conf, par_algconf ):
     task_root_path = '/playpen/zyshen/data/oasis_inter_slicing90'
 
     # work on current task
-    prepare_data = True
+    prepare_data = False
 
     ###### lpba #####
     data_path = '/playpen/data/quicksilver_data/testdata/LPBA40/brain_affine_icbm'
@@ -167,8 +167,8 @@ def do_registration(gen_conf, par_algconf ):
             pair_path = [pair_path_list[idx] for idx in pair_path_idx]
             LSource, LTarget = None, None
             if 'label' in data:
-                LSource = AdaptVal(Variable(data['label'][:, :1], voliate=True))
-                LTarget = AdaptVal(Variable(data['label'][:, 1:2], voliate=True))
+                LSource = AdaptVal(Variable(data['label'][:, :1], volatile=True))
+                LTarget = AdaptVal(Variable(data['label'][:, 1:2], volatile=True))
 
             if smooth_images:
                 # smooth both a little bit
@@ -204,7 +204,7 @@ def do_registration(gen_conf, par_algconf ):
             optimized_map = mo.get_map()
             # optimized_reg_parameters = mo.get_model_parameters()
             if LSource is not None:
-                LSource_warpped = utils.compute_warped_image_multiNC(LSource, optimized_map)
+                LSource_warpped = utils.get_warped_label_map(LSource, optimized_map)
                 metric_results = get_multi_metric(LSource_warpped, LTarget, eval_label_list=None, rm_bg=False)
                 # To Do,  do further analysis on metric results
 
@@ -229,9 +229,9 @@ if __name__ == "__main__":
     parser.add_argument('--warped_image', required=False, help='Warped image after registration')
     parser.add_argument('--map', required=False, help='Computed map')
     parser.add_argument('--alg_conf', required=False, default='../settings/algconf_settings.json')
-    parser.add_argument('--visualize', action='store_false', default=True, help='visualizes the output')
+    parser.add_argument('--visualize', action='store_false', default=False, help='visualizes the output')
     parser.add_argument('--visualize_step', required=False, default=5, help='Number of iterations between visualization output')
-    parser.add_argument('--save_fig', required=False,  default=True, help='save visualized results')
+    parser.add_argument('--save_fig', required=False,  default=False, help='save visualized results')
     parser.add_argument('--save_fig_path', required=False, default='../data/saved_results', dest='save_fig_path', help='path to save figures')
     parser.add_argument('--used_config', default=None, help='Name to write out the used configuration')
     parser.add_argument('--use_multiscale', required=False,default=False, help='Uses multi-scale optimization')

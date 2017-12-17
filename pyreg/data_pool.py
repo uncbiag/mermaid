@@ -51,14 +51,14 @@ class BaseDataSet(object):
     def get_pair_name_list(self):
         return self.pair_name_list
 
-    def read_file(self, file_path):
+    def read_file(self, file_path, is_label=False):
         """
         currently, typical to medical image problem
         :param file_path:
         :return:
         """
         # img, info = read_itk_img(file_path)
-        img, info = file_io_read_img(file_path)
+        img, info = file_io_read_img(file_path, is_label=is_label)
         return img, info
 
     def extract_pair_info(self, info1, info2):
@@ -163,8 +163,8 @@ class LabeledDataSet(BaseDataSet):
         for i, pair in enumerate(self.pair_path_list):
             img1, info1 = self.read_file(pair[0])
             img2, info2 = self.read_file(pair[1])
-            label1, linfo1 = self.read_file(self.pair_label_path_list[i][0])
-            label2, linfo2 = self.read_file(self.pair_label_path_list[i][1])
+            label1, linfo1 = self.read_file(self.pair_label_path_list[i][0], is_label=True)
+            label2, linfo2 = self.read_file(self.pair_label_path_list[i][1], is_label=True)
             if i == 0:
                 img_size = img1.shape
                 check_same_size(img2, img_size)
@@ -218,11 +218,11 @@ class VolumticDataSet(BaseDataSet):
         self.axis = axis
 
 
-    def read_file(self, file_path, verbose=False):
+    def read_file(self, file_path, is_label=False, verbose=False):
         if self.slicing != -1:
             if verbose:
                 print("slicing file: {}".format(file_path))
-            img, info = file_io_read_img_slice(file_path, self.slicing, self.axis)
+            img, info = file_io_read_img_slice(file_path, self.slicing, self.axis, is_label=is_label)
         else:
             # check if is rihgt
             img, info= BaseDataSet.read_file(self,file_path)

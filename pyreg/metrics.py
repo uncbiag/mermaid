@@ -8,11 +8,13 @@ def get_multi_metric(pred, gt, eval_label_list = None, rm_bg=False):
     implemented iou, dice, recall, precision metrics for each label of each instance in batch
 
     :param pred:  predicted(warpped) label map Bx....
-    :param gt: ground truth label map  BxCx....
+    :param gt: ground truth label map  Bx....
     :param eval_label_list: manual selected label need to be evaluate
     :param rm_bg: remove the background label, assume the background label is the first label of label_list when using auto detection
     :return: Bx num_label_evaluated    dictonary, each item represents one metric method, a matrix for metric results of each label of each instance
     """
+    pred = pred.cpu().data.numpy()
+    gt = gt.cpu().data.numpy()
     label_list = np.unique(gt).tolist()
     if rm_bg:
         label_list = label_list[1:]
@@ -44,6 +46,7 @@ def get_multi_metric(pred, gt, eval_label_list = None, rm_bg=False):
 
 
 def cal_metric(label_pred, label_gt):
+    eps = 1e-11
     iou = -1
     recall = -1
     precision = -1
@@ -62,10 +65,10 @@ def cal_metric(label_pred, label_gt):
     fp = float(len(pred_loc) - len_intersection)
 
     if len(gt_loc) != 0:
-        iou = tp / float(len(union))
-        recall = tp/(tp+fn)
-        precision = tp/(tp+fp)
-        dice = (tn+fp)/(2*tp+fp+tn)
+        iou = tp / (float(len(union))+eps)
+        recall = tp/(tp+fn+eps)
+        precision = tp/(tp+fp+eps)
+        dice = 2*tp/(2*tp+fn+fp+eps)
 
     res={'iou': iou, 'dice': dice, 'recall': recall, 'precision': precision}
 
