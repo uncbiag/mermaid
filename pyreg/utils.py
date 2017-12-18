@@ -16,6 +16,13 @@ import numpy as np
 import finite_differences as fd
 
 def get_dim_of_affine_transform(Ab):
+    """
+    Returns the number of dimensions corresponding to an affine transformation  of the form y=Ax+b 
+    stored in a column vector. For A =[a1,a2,a3] the parameter vector is simply [a1;a2;a3;b], i.e.,
+    all columns stacked on top of each other
+    :param Ab: parameter vector
+    :return: dimensionality of transform (1,2,or 3)
+    """
     nr = len(Ab)
     if nr==2:
         return 1
@@ -27,6 +34,11 @@ def get_dim_of_affine_transform(Ab):
         raise ValueError('Only supports dimensions 1, 2, and 3.')
 
 def set_affine_transform_to_identity(Ab):
+    """
+    Sets the affine transformation as given by the column vector Ab to the identity transform.
+    :param Ab: Affine parameter vector (will be overwritten with the identity transform)
+    :return: n/a
+    """
     dim = get_dim_of_affine_transform(Ab)
 
     if dim==1:
@@ -45,6 +57,11 @@ def set_affine_transform_to_identity(Ab):
         raise ValueError('Only supports dimensions 1, 2, and 3.')
 
 def set_affine_transform_to_identity_multiN(Ab):
+    """
+    Set the affine transforms to the identity (in the case of arbitrary batch size)
+    :param Ab: Parameter vectors Bxpars (batch size x parameter vector); will be overwritten with identity transforms
+    :return: n/a
+    """
     sz = Ab.size()
     nrOfImages = sz[0]
     for nrI in range(nrOfImages):
@@ -52,6 +69,12 @@ def set_affine_transform_to_identity_multiN(Ab):
 
 
 def apply_affine_transform_to_map(Ab,phi):
+    """
+    Applies an affine transform to a map
+    :param Ab: affine transform parameter column vector
+    :param phi: map; format nrCxXxYxZ (nrC corresponds to dimension)
+    :return: returns transformed map
+    """
     sz = phi.size()
     nrOfChannels = sz[0]
 
@@ -76,6 +99,12 @@ def apply_affine_transform_to_map(Ab,phi):
     return phiR
 
 def apply_affine_transform_to_map_multiNC(Ab,phi):
+    """
+    Applies an affine transform to maps (for arbitrary batch size)
+    :param Ab: affine transform parameter column vectors (batchSize x parameter vector)
+    :param phi: maps; format batchxnrCxXxYxZ (nrC corresponds to dimension)
+    :return: returns transformed maps
+    """
     sz = phi.size()
     dim = get_dim_of_affine_transform(Ab[0,:])
     nrOfImages = Ab.size()[0]

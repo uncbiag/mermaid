@@ -611,7 +611,9 @@ class SVFMapLoss(RegistrationMapLoss):
 
 
 class AffineMapNet(RegistrationNet):
-
+    """
+    Registration network for affine transformation
+    """
     def __init__(self,sz,spacing,params):
         super(AffineMapNet, self).__init__(sz,spacing,params)
         self.dim = len(self.sz) - 2
@@ -686,7 +688,7 @@ class AffineMapNet(RegistrationNet):
 
 class AffineMapLoss(RegistrationMapLoss):
     """
-    Specialization of the loss function for SVF to a map-based solution
+    Specialization of the loss function for a map-based affine transformation
     """
 
     def __init__(self, Ab, sz, spacing, params):
