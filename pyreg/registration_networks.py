@@ -17,6 +17,7 @@ Currently implemented:
 import torch
 import torch.nn as nn
 from torch.autograd.variable import Variable
+from torch.nn.parameter import Parameter
 
 import rungekutta_integrators as RK
 import forward_models as FM
@@ -54,10 +55,6 @@ class RegistrationNet(nn.Module):
         """image spacing"""
         self.params = params
         """ParameterDict() object for the parameters"""
-        self.tFrom = 0.
-        """time to solve a model from"""
-        self.tTo = 1.
-        """time to solve a model to"""
         self.nrOfImages = sz[0]
         """the number of images, i.e., the batch size B"""
         self.nrOfChannels = sz[1]
@@ -90,13 +87,6 @@ class RegistrationNet(nn.Module):
         """
         pass
 
-    @abstractmethod
-    def create_integrator(self):
-        """
-        Abstract method to create an integrator for time-integration of a model
-        """
-        pass
-
     def downsample_registration_parameters(self, desiredSz):
         """
         Method to downsample the registration parameters spatially to a desired size. Should be overwritten by a derived class. 
@@ -125,7 +115,35 @@ class RegistrationNet(nn.Module):
         # not defined yet
         return None,None
 
-class SVFNet(RegistrationNet):
+class RegistrationNetTimeIntegration(RegistrationNet):
+    """
+        Abstract base-class for all the registration networks with time-integration
+        """
+    __metaclass__ = ABCMeta
+
+    def __init__(self, sz, spacing, params):
+        """
+        Constructor
+
+        :param sz: image size (BxCxXxYxZ format) 
+        :param spacing: spatial spacing, e.g., [0.1,0.1,0.2]
+        :param params: ParameterDict() object to hold general parameters
+        """
+        super(RegistrationNetTimeIntegration, self).__init__(sz,spacing,params)
+
+        self.tFrom = 0.
+        """time to solve a model from"""
+        self.tTo = 1.
+        """time to solve a model to"""
+
+    @abstractmethod
+    def create_integrator(self):
+        """
+        Abstract method to create an integrator for time-integration of a model
+        """
+        pass
+
+class SVFNet(RegistrationNetTimeIntegration):
     """
     Base class for SVF-type registrations. Provides a velocity field (as a parameter) and an integrator
     """
@@ -224,7 +242,7 @@ class SVFImageNet(SVFNet):
         return I1[0]
 
 
-class SVFQuasiMomentumNet(RegistrationNet):
+class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
     """
     Attempt at parameterizing SVF with a momentum-like vector field (EXPERIMENTAL, not working yet)
     """
@@ -592,7 +610,102 @@ class SVFMapLoss(RegistrationMapLoss):
         return self.regularizer.compute_regularizer_multiN(self.v)
 
 
-class ShootingVectorMomentumNet(RegistrationNet):
+class AffineMapNet(RegistrationNet):
+
+    def __init__(self,sz,spacing,params):
+        super(AffineMapNet, self).__init__(sz,spacing,params)
+        self.dim = len(self.sz) - 2
+        self.Ab = self.create_registration_parameters()
+
+    def create_registration_parameters(self):
+        pars = Parameter(AdaptVal(torch.zeros(self.nrOfImages,self.dim*self.dim+self.dim)))
+        utils.set_affine_transform_to_identity_multiN(pars.data)
+        return pars
+
+    def get_registration_parameters(self):
+        """
+        Returns the affine parameters as a vector
+
+        :return: affine parameter vector 
+        """
+        return self.Ab
+
+    def set_registration_parameters(self, p, sz, spacing):
+        """
+        Sets the affine parameters
+
+        :param p: affine parameter vector 
+        :param sz: size of the corresponding image
+        :param spacing: spacing of the corresponding image
+        """
+        self.Ab.data = p.data
+        self.sz = sz
+        self.spacing = spacing
+
+    def get_parameter_image_and_name_to_visualize(self):
+        """
+        Returns the velocity field parameter magnitude image and a name
+
+        :return: Returns the tuple (velocity_magnitude_image,name) 
+        """
+        name = 'Ab'
+        par_image = self.Ab
+        return par_image, name
+
+    def upsample_registration_parameters(self, desiredSz):
+        """
+        Upsamples the afffine parameters to a desired size (ie., just returns them)
+
+        :param desiredSz: desired size of the upsampled image
+        :return: returns a tuple (upsampled_pars,upsampled_spacing)
+        """
+        upsampled_spacing = self.spacing*(self.sz[2::].astype('float')/desiredSz[2::].astype('float'))
+        return self.Ab, upsampled_spacing
+
+    def downsample_registration_parameters(self, desiredSz):
+        """
+        Downsamples the affine parameters to a desired size (ie., just returns them)
+
+        :param desiredSz: desired size of the downsampled image 
+        :return: returns a tuple (downsampled_pars,downsampled_spacing)
+        """
+        downsampled_spacing = self.spacing*(self.sz[2::].astype('float')/desiredSz[2::].astype('float'))
+        return self.Ab, downsampled_spacing
+
+    def forward(self, phi, I0_source):
+        """
+        Solved the map-based equation forward
+
+        :param phi: initial condition for the map
+        :param I0_source: not used
+        :return: returns the map at time tTo
+        """
+        phi1 = utils.apply_affine_transform_to_map_multiNC(self.Ab,phi)
+        return phi1
+
+
+class AffineMapLoss(RegistrationMapLoss):
+    """
+    Specialization of the loss function for SVF to a map-based solution
+    """
+
+    def __init__(self, Ab, sz, spacing, params):
+        super(AffineMapLoss, self).__init__(sz, spacing, params)
+        self.Ab = Ab
+        """affine parameters"""
+
+    def compute_regularization_energy(self, I0_source):
+        """
+        Computes the regularizaton energy from the affine parameter
+
+        :param I0_source: not used 
+        :return: returns the regularization energy
+        """
+        regE = Variable(MyTensor(1).zero_(), requires_grad=False)
+        return regE # so far there is no regularization
+
+
+class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
     """
     Specialization to vector-momentum-based shooting for LDDMM
     """
@@ -897,7 +1010,7 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
         reg = (v * self.m).sum() * self.spacing.prod()
         return reg
 
-class ShootingScalarMomentumNet(RegistrationNet):
+class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
     """
     Specialization of the registration network to registrations with scalar momentum. Provides an integrator
     and the scalar momentum parameter.
