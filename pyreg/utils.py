@@ -10,9 +10,85 @@ import torch
 from torch.nn.parameter import Parameter
 from torch.autograd import Variable
 from libraries.modules.stn_nd import STN_ND_BCXYZ
-from data_wrapper import MyTensor,AdaptVal
+from data_wrapper import AdaptVal
+from data_wrapper import MyTensor
 import numpy as np
 import finite_differences as fd
+
+def get_dim_of_affine_transform(Ab):
+    nr = len(Ab)
+    if nr==2:
+        return 1
+    elif nr==6:
+        return 2
+    elif nr==12:
+        return 3
+    else:
+        raise ValueError('Only supports dimensions 1, 2, and 3.')
+
+def set_affine_transform_to_identity(Ab):
+    dim = get_dim_of_affine_transform(Ab)
+
+    if dim==1:
+        Ab.zero_()
+        Ab[0]=1.
+    elif dim==2:
+        Ab.zero_()
+        Ab[0]=1.
+        Ab[3]=1.
+    elif dim==3:
+        Ab.zero_()
+        Ab[0]=1.
+        Ab[4]=1.
+        Ab[8]=1.
+    else:
+        raise ValueError('Only supports dimensions 1, 2, and 3.')
+
+def set_affine_transform_to_identity_multiN(Ab):
+    sz = Ab.size()
+    nrOfImages = sz[0]
+    for nrI in range(nrOfImages):
+        set_affine_transform_to_identity(Ab[nrI,:])
+
+
+def apply_affine_transform_to_map(Ab,phi):
+    sz = phi.size()
+    nrOfChannels = sz[0]
+
+    dim = len(sz) - 1
+    if dim not in [1,2,3]:
+        raise ValueError('Only supports dimensions 1, 2, and 3.')
+
+    phiR = Variable(MyTensor(sz).zero_(), requires_grad=False).type_as(phi)
+
+    if dim == 1:
+        phiR = phi * Ab[0] + Ab[1]
+    elif dim == 2:
+        phiR[0, ...] = Ab[0] * phi[0, ...] + Ab[2] * phi[1, ...] + Ab[4]  # a_11x+a_21y+b1
+        phiR[1, ...] = Ab[1] * phi[0, ...] + Ab[3] * phi[1, ...] + Ab[5]  # a_12x+a_22y+b2
+    elif dim == 3:
+        phiR[0, ...] = Ab[0] * phi[0, ...] + Ab[3] * phi[1, ...] + Ab[6] * phi[2, ...] + Ab[9]
+        phiR[1, ...] = Ab[1] * phi[0, ...] + Ab[4] * phi[1, ...] + Ab[7] * phi[2, ...] + Ab[10]
+        phiR[2, ...] = Ab[2] * phi[0, ...] + Ab[5] * phi[1, ...] + Ab[8] * phi[2, ...] + Ab[11]
+    else:
+        raise ValueError('Only supports dimensions 1, 2, and 3.')
+
+    return phiR
+
+def apply_affine_transform_to_map_multiNC(Ab,phi):
+    sz = phi.size()
+    dim = get_dim_of_affine_transform(Ab[0,:])
+    nrOfImages = Ab.size()[0]
+    if nrOfImages != sz[0]:
+        raise ValueError('Incompatible number of affine transforms')
+    if dim != len(sz)-2:
+        raise ValueError('Incompatible number of affine transforms')
+
+    phiR = Variable(MyTensor(sz).zero_(), requires_grad=False).type_as(phi)
+    for nrI in range(nrOfImages):
+        phiR[nrI,...] = apply_affine_transform_to_map(Ab[nrI,:],phi[nrI,...])
+
+    return phiR
 
 def compute_normalized_gaussian(X, mu, sig):
     """

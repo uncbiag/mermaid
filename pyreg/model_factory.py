@@ -24,6 +24,7 @@ class ModelFactory(object):
         """spatial dimension"""
 
         self.models = {
+            'affine_map': (RN.AffineMapNet,RN.AffineMapLoss),
             'svf_map': (RN.SVFMapNet,RN.SVFMapLoss),
             'svf_image': (RN.SVFImageNet,RN.SVFImageLoss),
             'svf_scalar_momentum_image': (RN.SVFScalarMomentumImageNet,RN.SVFScalarMomentumImageLoss),
@@ -60,6 +61,7 @@ class ModelFactory(object):
         """
 
         print('\nKnown registration models are:')
+        print('   affine_map                           : map-based affine registration')
         print('   svf_map                              : map-based stationary velocity field')
         print('   svf_image                            : image-based stationary velocity field')
         print('   svf_scalar_momentum_image            : image-based stationary velocity field using the scalar momentum')
