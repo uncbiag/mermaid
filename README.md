@@ -58,7 +58,18 @@ There are a few example registration implementations in the demos directory. Act
     
 # Lastest modifications
   * 12.19\
-             add result_analysis
+             add result_analysis: an excel result analysis\
+             1. detailed results: saved in fig_save_path/results.xlsx\
+             ** Sheet1:  #total_filename * #metrics  recorded by iteraton\
+             ** batch_0: #batch_filename * #metric_by_label    recorded by iteration\
+             ** batch_1: same as batch_0\
+             ** ......\
+             2. task results: saved in ../data/summary.xlsx\
+             ** Sheet1:  task_name * #metrics  recorded by iteration
+
+
+
+
   * 12.16\
              add cuda nearest neighbour interpolation, and many fixes
   * 12.14\

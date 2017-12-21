@@ -208,9 +208,9 @@ def do_registration(gen_conf, par_algconf ):
             optimized_map = mo.get_map()
             batch_id += 1
             # optimized_reg_parameters = mo.get_model_parameters()
-            if batch_id ==3:
-                recorder.set_summary_based_env()
-                recorder.saving_results(sched='summary')
+            # if batch_id ==2:
+            #     #recorder.set_summary_based_env()
+            #     recorder.saving_results(sched='summary')
 
         if LSource is not None:
             recorder.set_summary_based_env()

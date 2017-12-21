@@ -41,11 +41,11 @@ def get_multi_metric(pred, gt, eval_label_list = None, rm_bg=False):
     for metric in multi_metric_res:
         for s in range(num_batch):
             no_n_index = np.where(multi_metric_res[metric][s]!=-1)
-            label_avg_res[metric][s] = float(np.sum(multi_metric_res[metric][s][no_n_index])/ len(set(no_n_index[0])))
+            label_avg_res[metric][s] = float(np.mean(multi_metric_res[metric][s][no_n_index]))
 
         for l in range(num_label):
             no_n_index = np.where(multi_metric_res[metric][:,l]!=-1)
-            batch_avg_res[metric][:,l] = float(np.sum(multi_metric_res[metric][:,l][no_n_index])/len(set(no_n_index[0])))
+            batch_avg_res[metric][:,l] = float(np.mean(multi_metric_res[metric][:,l][no_n_index]))
 
 
     return {'multi_metric_res':multi_metric_res,'label_avg_res':label_avg_res,'batch_avg_res':batch_avg_res,'label_list': label_list }

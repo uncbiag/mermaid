@@ -15,7 +15,7 @@ from data_wrapper import USE_CUDA, AdaptVal
 import model_factory as MF
 import image_sampling as IS
 from metrics import get_multi_metric
-from result_analysis import XlsxRecorder
+from res_recorder import XlsxRecorder
 import pandas as pd
 
 #from MyAdam import MyAdam
@@ -774,15 +774,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # performance analysis
         if self.useMap:
             if self.LSource is not None:
-                LSource_warpped = utils.get_warped_label_map(self.LSource, Warped )
-                LTarget = self.get_target_label()
-                metric_results_dic = get_multi_metric(LSource_warpped, LTarget, eval_label_list=None, rm_bg=False)
-                self.recorder.set_batch_based_env(self.get_pair_path(),self.get_batch_id())
-                info = {}
-                info['label_info'] = metric_results_dic['label_list']
-                info['iter_info'] = 'scale_' + str(self.n_scale) + '_iter_' + str(self.iter_count)
-                self.recorder.saving_results(sched='batch', results=metric_results_dic['multi_metric_res'],  info=info,averaged_results=metric_results_dic['batch_avg_res'])
-                self.recorder.saving_results(sched='buffer', results=metric_results_dic['label_avg_res'],  info=info,averaged_results=None)
+                if iter % 4 == 0:
+                    LSource_warpped = utils.get_warped_label_map(self.LSource, Warped )
+                    LTarget = self.get_target_label()
+                    metric_results_dic = get_multi_metric(LSource_warpped, LTarget, eval_label_list=None, rm_bg=False)
+                    self.recorder.set_batch_based_env(self.get_pair_path(),self.get_batch_id())
+                    info = {}
+                    info['label_info'] = metric_results_dic['label_list']
+                    info['iter_info'] = 'scale_' + str(self.n_scale) + '_iter_' + str(self.iter_count)
+                    self.recorder.saving_results(sched='batch', results=metric_results_dic['multi_metric_res'],  info=info,averaged_results=metric_results_dic['batch_avg_res'])
+                    self.recorder.saving_results(sched='buffer', results=metric_results_dic['label_avg_res'],  info=info,averaged_results=None)
 
         # result visualization
         if self.visualize:
