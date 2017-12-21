@@ -24,23 +24,31 @@ def get_multi_metric(pred, gt, eval_label_list = None, rm_bg=False):
         label_list = eval_label_list
     num_label = len(label_list)
     num_batch = pred.shape[0]
-    dice_multi = np.zeros([num_batch, num_label])
-    iou_multi = np.zeros([num_batch, num_label])
-    precision_multi = np.zeros([num_batch, num_label])
-    recall_multi = np.zeros([num_batch, num_label])
+    metrics = ['iou','dice','recall','precision']
+    multi_metric_res = {metric: np.zeros([num_batch,num_label]) for metric in metrics}
+    label_avg_res = {metric: np.zeros([num_batch,1]) for metric in metrics}
+    batch_avg_res = {metric: np.zeros([1,num_label]) for metric in metrics}
+
     for l in range(num_label):
         label_pred = (pred == label_list[l]).astype(np.int32)
         label_gt = (gt == label_list[l]).astype(np.int32)
         for b in range(num_batch):
             metric_res = cal_metric(label_pred[b].reshape(-1),  label_gt[b].reshape(-1))
-            dice_multi[b][l] =metric_res['dice']
-            iou_multi[b][l] = metric_res['dice']
-            precision_multi[b][l] = metric_res['dice']
-            recall_multi[b][l] = metric_res['dice']
+            for metric in metrics:
+                multi_metric_res[metric][b][l] =metric_res[metric]
+                
+    
+    for metric in multi_metric_res:
+        for s in range(num_batch):
+            no_n_index = np.where(multi_metric_res[metric][s]!=-1)
+            label_avg_res[metric][s] = float(np.sum(multi_metric_res[metric][s][no_n_index])/ len(set(no_n_index[0])))
 
-    multi_metric_res = {'iou': iou_multi, 'dice': dice_multi, 'recall': recall_multi, 'precision': precision_multi}
+        for l in range(num_label):
+            no_n_index = np.where(multi_metric_res[metric][:,l]!=-1)
+            batch_avg_res[metric][:,l] = float(np.sum(multi_metric_res[metric][:,l][no_n_index])/len(set(no_n_index[0])))
 
-    return multi_metric_res
+
+    return {'multi_metric_res':multi_metric_res,'label_avg_res':label_avg_res,'batch_avg_res':batch_avg_res,'label_list': label_list }
 
 
 

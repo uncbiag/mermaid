@@ -86,6 +86,7 @@ def do_registration(gen_conf, par_algconf ):
     dataloaders = data_manager.data_loaders(batch_size=20)
     data_info = pars.ParameterDict()
     data_info.load_JSON(os.path.join(task_root_path,'info.json'))
+    task_full_name = data_manager.get_full_task_name()
     spacing = np.asarray(data_info['info']['spacing'])
     sz = data_info['info']['img_sz']
 
@@ -155,11 +156,16 @@ def do_registration(gen_conf, par_algconf ):
     mo.set_model(model_name)
     mo.set_scale_factors(multi_scale_scale_factors)
     mo.set_number_of_iterations_per_scale(multi_scale_iterations_per_scale)
+    recorder = mo.init_recorder(task_full_name)
 
     #########################    batch iteration setting   ############################################
+    LSource, LTarget = None, None
+    metric_results_dic={}
     sessions = ['train']
+    batch_id = 0
     for sess in sessions:
         pair_path_list = dataloaders['info'][sess]
+        metric_results = []
         for data in dataloaders[sess]:
             ISource = AdaptVal(Variable(data['image'][:,:1]))
             ITarget = AdaptVal(Variable(data['image'][:,1:2]))
@@ -185,14 +191,12 @@ def do_registration(gen_conf, par_algconf ):
                 params['model']['registration_model']['forward_model']['smoother']['use_adp'] = False
 
 
-
             mo.set_pair_path(pair_path)
-
-
             mo.set_source_image(ISource)
             mo.set_target_image(ITarget)
-
-
+            mo.set_batch_id(batch_id)
+            mo.set_source_label(LSource)
+            mo.set_target_label(LTarget)
             mo.set_saving_env()
 
 
@@ -202,11 +206,16 @@ def do_registration(gen_conf, par_algconf ):
             optimized_energy = mo.get_energy()
             warped_image = mo.get_warped_image()
             optimized_map = mo.get_map()
+            batch_id += 1
             # optimized_reg_parameters = mo.get_model_parameters()
-            if LSource is not None:
-                LSource_warpped = utils.get_warped_label_map(LSource, optimized_map)
-                metric_results = get_multi_metric(LSource_warpped, LTarget, eval_label_list=None, rm_bg=False)
-                # To Do,  do further analysis on metric results
+            if batch_id ==3:
+                recorder.set_summary_based_env()
+                recorder.saving_results(sched='summary')
+
+        if LSource is not None:
+            recorder.set_summary_based_env()
+            recorder.saving_results(sched='summary')
+
 
 
     md_I0 = None  # currently not included

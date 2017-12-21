@@ -9,6 +9,7 @@ from data_pool import *
 class DataManager(object):
     def __init__(self, task_name, dataset_name, sched=''):
         self.task_name = task_name
+        self.full_task_name = None
         self.dataset_name = dataset_name
         self.sched = sched
         self.data_path = None
@@ -42,11 +43,20 @@ class DataManager(object):
     def set_divided_ratio(self,divided_ratio):
         self.divided_ratio = divided_ratio
 
+    def set_full_task_name(self, full_task_name):
+        self.full_task_name = full_task_name
+
+    def get_full_task_name(self):
+        return os.path.split(self.task_root_path)[1]
+
+
 
     def generate_saving_path(self):
         slicing_info = '_slicing_{}_axis_{}'.format(self.slicing, self.axis) if self.slicing>0 else ''
         comb_info = '_full_comb' if self.full_comb else ''
-        self.task_root_path = os.path.join(self.output_path,self.task_name+'_'+self.sched+slicing_info+comb_info)
+        full_task_name = self.task_name+'_'+self.sched+slicing_info+comb_info
+        self.set_full_task_name(full_task_name)
+        self.task_root_path = os.path.join(self.output_path,full_task_name)
 
     def generate_task_path(self):
         self.task_path = {x:os.path.join(self.task_root_path,x) for x in ['train','val', 'test']}
@@ -91,9 +101,9 @@ class DataManager(object):
         sess_sel = self.task_path
         transformed_dataset = {x: RegistrationDataset(data_path=sess_sel[x], transform=composed) for x in sess_sel}
         dataloaders = {x: torch.utils.data.DataLoader(transformed_dataset[x], batch_size=batch_size,
-                                                shuffle=True, num_workers=4) for x in sess_sel}
-        dataloaders['data_size'] = {x: len(dataloaders[x]) for x in ['train', 'val']}
-        dataloaders['info'] = {x: transformed_dataset[x].pair_name_list for x in ['train', 'val']}
+                                                shuffle=False, num_workers=4) for x in sess_sel}
+        dataloaders['data_size'] = {x: len(dataloaders[x]) for x in ['train', 'val','test']}
+        dataloaders['info'] = {x: transformed_dataset[x].pair_name_list for x in ['train', 'val','test']}
         print('dataloader is ready')
 
 
