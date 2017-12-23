@@ -533,7 +533,7 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
                             create_regularizer(cparams))
         """regularizer to compute the regularization energy"""
 
-        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        cparams = params[('similarity_measure',{},'settings for the similarity ')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to convert from momentum to velocity"""
 
@@ -720,7 +720,7 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
         self.m = m
         """momentum"""
 
-        cparams = params[('forward_model',{},'settings for the forward model')]
+        cparams = params[('similarity_measure',{},'settings for the similarity ')]
         self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
         """smoother to convert from momentum to velocity"""
 
@@ -782,7 +782,7 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
         self.m = m
         """vector momentum"""
 
-        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        cparams = params[('similarity_measure',{},'settings for the similarity ')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
@@ -912,7 +912,7 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
         self.m = m
         """vector momentum"""
 
-        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        cparams = params[('similarity_measure',{},'settings for the similarity ')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
@@ -1053,7 +1053,7 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
         self.lam = lam
         """scalar momentum"""
 
-        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        cparams = params[('similarity_measure',{},'settings for the similarity ')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
@@ -1107,7 +1107,7 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
         self.lam = lam
         """scalar momentum"""
 
-        cparams = params[('forward_model',{},'settings for the forward model')]
+        cparams = params[('similarity_measure',{},'settings for the similarity ')]
         self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
@@ -1163,7 +1163,7 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
         self.lam = lam
         """scalar momentum"""
 
-        cparams = params[('forward_model',{},'settings for the forward model')]
+        cparams = params[('similarity_measure',{},'settings for the similarity ')]
         self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
@@ -1225,7 +1225,7 @@ class SVFScalarMomentumMapLoss(RegistrationMapLoss):
         self.lam = lam
         """scalar momentum"""
 
-        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        cparams = params[('similarity_measure',{},'settings for the similarity ')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 

@@ -139,7 +139,7 @@ def get_datapro_settings(datapro_settings_filename = None ):
     datapro_params[('datapro',{},'settings for the data process')]
 
     datapro_params['datapro'][('dataset', {}, 'general settings for dataset')]
-    datapro_params['datapro']['dataset'][('name', 'lpba', 'name of the dataset: oasis, lpba, ibsr, cmuc' )]
+    datapro_params['datapro']['dataset'][('name', 'lpba', 'name of the dataset: oasis2d, lpba, ibsr, cmuc' )]
     datapro_params['datapro']['dataset'][('task_name', 'lpba_affined', 'task name for data process' )]
     datapro_params['datapro']['dataset'][('data_path', None, "data path of the  dataset, default settings are in datamanger")]
     datapro_params['datapro']['dataset'][('label_path', None, "data path of the  dataset, default settings are in datamanger")]

@@ -9,7 +9,7 @@
         }, 
         "model": {
             "deformation": {
-                "map_low_res_factor": 1.0, 
+                "map_low_res_factor": 0.5,
                 "name": "lddmm_shooting", 
                 "use_map": true
             }, 

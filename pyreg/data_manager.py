@@ -8,20 +8,46 @@ from data_pool import *
 
 class DataManager(object):
     def __init__(self, task_name, dataset_name, sched=''):
+        """
+        the class for easy data management
+        including two part: 1. preprocess data   2. set dataloader
+        1. preprocess data,  currently support lpba, ibsr, oasis2d, cumc,
+           the data will be saved in output_path/auto_generated_name/train|val|test
+           files are named by the pair_name, source_target.h5py
+        2. dataloader, pytorch multi-thread dataloader
+            return the results in dic
+
+        :param task_name: the name can help recognize the data
+        :param dataset_name: the name of the the dataset
+        :param sched: 'inter' or 'intra',  sched is can be used only when the dataset includes interpersonal and intrapersonal results,
+
+        """
         self.task_name = task_name
+        """name for easy recognition"""
         self.full_task_name = None
+        """name of the output folder"""
         self.dataset_name = dataset_name
         self.sched = sched
+        """inter, intra"""
         self.data_path = None
+        """path of the dataset"""
         self.output_path= None
+        """path of the processed data"""
         self.task_root_path = None
+        """output_path/full_task_name, or can be set manual"""
         self.label_path = None
+        """path of the labels of the dataset"""
         self.full_comb = False     #e.g [1,2,3,4] True:[1,2],[2,3],[3,4],[1,3],[1,4],[2,4]  False: [1,2],[2,3],[3,4]
+        """use all possible combination"""
         self.divided_ratio = [0.7,0.1,0.2]
+        """divided data into train, val, and test sets"""
         self.slicing = -1
+        """get the  nth slice(depend on image size) from the 3d volume"""
         self.axis = -1
+        """slice the nth axis(1,2,3) of the 3d volume"""
         self.dataset = None
         self.task_path =None
+        """train|val|test: dic task_root_path/train|val|test"""
 
 
     def set_data_path(self, data_path):
@@ -82,8 +108,13 @@ class DataManager(object):
     def get_task_root_path(self):
         return self.task_root_path
 
-    def manual_set_task_path(self, task_path):
-        self.task_path = {x:os.path.join(task_path,x) for x in ['train','val', 'test']}
+    def manual_set_task_root_path(self, task_root_path):
+        """
+        switch the task into existed task, this is the only setting need to be set
+        :param task_path: given existed task_root_path
+        :return:
+        """
+        self.task_path = {x:os.path.join(task_root_path,x) for x in ['train','val', 'test']}
         return self.task_path
 
 
@@ -93,7 +124,7 @@ class DataManager(object):
         if self.label_path is None:
             self.label_path = self.get_default_dataset_path(is_label=True)
 
-        if self.dataset_name =='oasis':
+        if self.dataset_name =='oasis2d':
             self.dataset = Oasis2DDataSet(name=self.task_name, sched=self.sched, full_comb= self.full_comb)
         elif self.dataset_name == 'lpba':
             self.dataset =  LPBADataSet(name=self.task_name, full_comb=self.full_comb)
@@ -115,10 +146,19 @@ class DataManager(object):
 
 
     def prepare_data(self):
+        """
+        preprocess data into h5py
+        :return:
+        """
         self.dataset.prepare_data()
 
 
     def data_loaders(self, batch_size=20):
+        """
+        pytorch dataloader
+        :param batch_size:  set the batch size
+        :return:
+        """
         composed = transforms.Compose([ToTensor()])
         sess_sel = self.task_path
         transformed_dataset = {x: RegistrationDataset(data_path=sess_sel[x], transform=composed) for x in sess_sel}
@@ -136,7 +176,7 @@ class DataManager(object):
 
 if __name__ == "__main__":
 
-    prepare_data = False
+    prepare_data = True
 
     dataset_name = 'lpba'
     task_name = 'lpba'
@@ -168,7 +208,7 @@ if __name__ == "__main__":
 
     else:
         data_manager = DataManager(task_name=task_name, dataset_name=dataset_name)
-        data_manager.manual_set_task_path(task_path)
+        data_manager.manual_set_task_root_path(task_path)
 
 
     dataloaders = data_manager.data_loaders(batch_size=20)

@@ -23,20 +23,20 @@ def list_dic(path):
 
 
 
-def list_pairwise(path, img_type, skip, sched):
+def list_pairwise(path, img_type, full_comb, sched):
     """
      return the list of  paths of the paired image  [N,2]
     :param path:  path of the folder
     :param img_type: filter and get the image of certain type
-    :param skip: if skip, return all possible pairs, if not, return pairs in increasing order
+    :param full_comb: if full_comb, return all possible pairs, if not, return pairs in increasing order
     :param sched: sched can be inter personal or intra personal
     :return:
     """
     if sched == 'intra':
         dic_list = list_dic(path)
-        pair_list = intra_pair(path, dic_list, img_type, skip)
+        pair_list = intra_pair(path, dic_list, img_type, full_comb)
     elif sched == 'inter':
-        pair_list = inter_pair(path, img_type, skip)
+        pair_list = inter_pair(path, img_type, full_comb)
     else:
         raise ValueError("schedule should be 'inter' or 'intra'")
     return pair_list
@@ -48,15 +48,16 @@ def check_full_comb_on(full_comb):
         print(" 'full_comb' is on, if you don't need all possible pair, set the 'full_com' False")
 
 
-def inter_pair(path, type, skip=False, mirrored=False):
+def inter_pair(path, type, full_comb=False, mirrored=False):
     """
     get the paired filename list
     :param path: dic path
     :param type: type filter, here should be [*1_a.bmp, *2_a.bmp]
-    :param skip: if skip, return all possible pairs, if not, return pairs in increasing order
+    :param full_comb: if full_comb, return all possible pairs, if not, return pairs in increasing order
+    :param mirrored: double the data,  generate pair2_pair1 from pair1_pair2
     :return: [N,2]
     """
-    check_full_comb_on(skip)
+    check_full_comb_on(full_comb)
     pair_list=[]
     for sub_type in type:
         f_path = join(path,'**', sub_type)
@@ -70,7 +71,7 @@ def inter_pair(path, type, skip=False, mirrored=False):
                     f_filter.append(os.path.join(root, filename))
 
         f_num = len(f_filter)
-        if not skip:
+        if not full_comb:
             pair = [[f_filter[idx], f_filter[idx + 1]] for idx in range(f_num - 1)]
         else:  # too many pairs , easy to out of memory
             raise ValueError("Warnning, too many pairs, be sure the disk is big enough. Comment this line if you want to continue ")
@@ -86,20 +87,24 @@ def inter_pair(path, type, skip=False, mirrored=False):
 
 
 def mirror_pair(pair_list):
+    """
+    double the data,  generate pair2_pair1 from pair1_pair2    :param pair_list:
+    :return:
+    """
     return pair_list + [[pair[1],pair[0]] for pair in pair_list]
 
 
 
-def intra_pair(path, dic_list, type, skip, mirrored=False):
+def intra_pair(path, dic_list, type, full_comb, mirrored=False):
     """
 
     :param path: dic path
     :param dic_list: each elem in list contain the path of folder which contains the instance from the same person
     :param type: type filter, here should be [*1_a.bmp, *2_a.bmp]
-    :param skip:  if skip, return all possible pairs, if not, return pairs in increasing order
+    :param full_comb:  if full_comb, return all possible pairs, if not, return pairs in increasing order
     :return: [N,2]
     """
-    check_full_comb_on(skip)
+    check_full_comb_on(full_comb)
     pair_list = []
     for dic in dic_list:
         if PYTHON_VERSION == 3:
@@ -114,7 +119,7 @@ def intra_pair(path, dic_list, type, skip, mirrored=False):
                     f_filter.append(os.path.join(root, filename))
         f_num = len(f_filter)
         assert f_num != 0
-        if not skip:
+        if not full_comb:
             pair = [[f_filter[idx], f_filter[idx + 1]] for idx in range(f_num - 1)]
         else:
             pair = []
@@ -161,6 +166,12 @@ def load_as_data(pair_list):
 
 
 def find_corr_map(pair_path_list, label_path):
+    """
+    get the label path from the image path, assume the file name is the same
+    :param pair_path_list: the path list of the image
+    :param label_path: the path of the label folder
+    :return:
+    """
     return [[os.path.join(label_path, os.path.split(pth)[1]) for pth in pair_path] for pair_path in pair_path_list]
 
 
@@ -203,6 +214,12 @@ def divide_data_set(root_path, pair_name_list, ratio):
 
 
 def generate_pair_name(pair_path_list,sched='mixed'):
+    """
+    rename the filename for different dataset,
+    :param pair_path_list: path of generated file
+    :param sched: 'mixed' 'custom
+    :return: return filename of the pair image
+    """
     if sched == 'mixed':
         return mixed_pair_name(pair_path_list)
     elif sched == 'custom':
@@ -210,6 +227,11 @@ def generate_pair_name(pair_path_list,sched='mixed'):
 
 
 def mixed_pair_name(pair_path_list):
+    """
+    the filename is orgnized as: patient1_id_slice1_id_patient2_id_slice2_id
+    :param pair_path_list:
+    :return:
+    """
     f = lambda name: os.path.split(name)
     get_in = lambda x: os.path.splitext(f(x)[1])[0]
     get_fn = lambda x: f(f(x)[0])[1]
@@ -218,6 +240,11 @@ def mixed_pair_name(pair_path_list):
     return img_pair_name_list
 
 def custom_pair_name(pair_path_list):
+    """
+        the filename is orgnized as: slice1_id_slice2_id
+        :param pair_path_list:
+        :return:
+        """
     f = lambda name: os.path.split(name)
     get_img_name = lambda x: os.path.splitext(f(x)[1])[0]
     img_pair_name_list = [get_img_name(pair_path[0])+'_'+get_img_name(pair_path[1]) for pair_path in pair_path_list]
@@ -283,6 +310,18 @@ def file_io_read_img(path, is_label, normalize_spacing=True, normalize_intensiti
     return im, info
 
 def file_io_read_img_slice(path, slicing, axis, is_label, normalize_spacing=True, normalize_intensities=True, squeeze_image=True,adaptive_padding=4):
+    """
+
+    :param path: file path
+    :param slicing: int, the nth slice of the img would be sliced
+    :param axis: int, the nth axis of the img would be sliced
+    :param is_label:  the img is label
+    :param normalize_spacing: normalized the spacing
+    :param normalize_intensities: normalized the img
+    :param squeeze_image:
+    :param adaptive_padding: padding the img to favored size, (divided by certain number, here is 4), here using default 4 , favored by cuda fft
+    :return:
+    """
     normalize_intensities = False if is_label else normalize_intensities
     im, hdr, spacing, normalized_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image,adaptive_padding)
     if normalize_spacing:
@@ -338,6 +377,12 @@ def read_itk_img_slice(path, slicing, axis):
 
 
 def save_sz_sp_to_json(info, output_path):
+    """
+    save img size and img spacing info into json
+    :param info:
+    :param output_path:
+    :return:
+    """
     par = pars.ParameterDict()
     par[('info',{},'shared information of data')]
     par['info'][('img_sz',info['img_size'], 'size of image')]
@@ -371,7 +416,7 @@ def write_file(path, dic, type='h5py'):
     """
 
     :param path: file path
-    :param dic:  which has three item : numpy 'data',  dic 'info' , string list 'pair_path'
+    :param dic:  which has three item : numpy 'data', numpy 'label'if exists,  dic 'info' , string list 'pair_path',
     :param type:
     :return:
     """
@@ -399,6 +444,8 @@ def save_to_h5py(path, img_pair_list, info, img_pair_path_list, label_pair_list=
     :param img_pair_list: list of image pair
     :param info: additional info
     :param img_pair_path_list:  list of path/name of image pair
+    :param img_pair_path_list:  list of path/name of corresponded label pair
+
     :return:
     """
     dic = {'data': img_pair_list, 'info': info, 'pair_path':img_pair_path_list, 'label': label_pair_list}

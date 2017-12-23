@@ -5,13 +5,21 @@ import numpy as np
 import os
 
 class XlsxRecorder(object):
-    def __init__(self, task_name,  saving_path):
-        self.task_name = task_name
+    """
+    xlsx recorder for results
+    including two recorder: one for current experiments, record details of results changed by iteration
+    the other is for record the summary of different expreiments, which is saved by  summary_path
+    """
+    def __init__(self, expr_name,  saving_path):
+        self.expr_name = expr_name
         self.saving_path = saving_path
+        """path of saving excel, default is the same as the path of saving figures"""
         self.writer_path = None
         self.xlsx_writer =  None
         self.summary_path = '../data/summary.xlsx'
+        """the path for summary, which can record results from different experiments"""
         self.measures = ['iou', 'precision', 'recall', 'dice']
+        """measures to record"""
         self.batch_count = {}
         self.row_space = 50
         self.column_space = 10
@@ -24,6 +32,8 @@ class XlsxRecorder(object):
         print("the update space in detailed files is {}".format(self.row_space))
 
     def init_summary(self):
+        """ init two recorders, initilzation would create a new recorder for this expriment, but would not clear
+         data in summary recorder,  instead it would append the new experiment summary to summary recorder"""
         if not os.path.exists(self.saving_path ):
             os.makedirs(self.saving_path )
         self.writer_path = os.path.join(self.saving_path, 'results.xlsx')
@@ -64,8 +74,6 @@ class XlsxRecorder(object):
 
 
     def set_summary_based_env(self):
-        # need to be set before each saving operation
-
         self.sheet_name = 'Sheet1'
         self.start_row = 0
 
@@ -132,10 +140,12 @@ class XlsxRecorder(object):
 
 
     def saving_label_averaged_results(self, results):
+        """
         # saved by iteration
         # results: dic: {iter_info1:{ metric1: nFile x 1 , metric2:...}, iter_info2:....}
         # saving the n_File*nAvgMetrics into xlsx_writer
         # including the iter_info
+        """
         start_column = 0
         results_summary = {iter_info: {metric:np.mean(results[iter_info][metric]).reshape(1) for metric in self.measures} for iter_info in self.iter_info_buffer}
         for iter_info in self.iter_info_buffer:
@@ -152,16 +162,18 @@ class XlsxRecorder(object):
 
 
     def saving_summary(self, results):
+        """
         # saved by iteration
         # saving the 1*nAvgMetrics into summary_book_path
         # including the task name and iter_info
+        """
         self.summary_writer.book = self.summary_book
         self.summary_writer.sheets = dict((ws.title, ws) for ws in self.summary_book.worksheets)
         col_name_list = [metric+iter_info for metric in self.measures for iter_info in self.iter_info_buffer]
         results_summary = {metric+iter_info: np.mean(results[iter_info][metric]).reshape(1) for metric in self.measures for iter_info in self.iter_info_buffer}
         df = pd.DataFrame.from_dict(results_summary)
         df = df[col_name_list]
-        df.index = pd.Index([self.task_name])
+        df.index = pd.Index([self.expr_name])
         startrow = self.summary_writer.sheets['Sheet1']._current_row + 1
         df.to_excel(self.summary_writer, startrow = startrow)
         self.summary_writer.save()

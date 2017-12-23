@@ -66,7 +66,7 @@ def do_registration():
 
     if switch_to_exist_task:
         data_manager = DataManager(task_name=task_name, dataset_name=dataset_name)
-        data_manager.manual_set_task_path(task_root_path)
+        data_manager.manual_set_task_root_path(task_root_path)
     else:
 
         data_manager = DataManager(task_name=task_name, dataset_name=dataset_name, sched=sched)
@@ -147,7 +147,7 @@ def do_registration():
         multi_scale_iterations_per_scale = par_optimizer['multi_scale']['scale_iterations']
 
 
-    mo = MO.MultiScaleRegistrationOptimizer(sz, spacing, use_map, map_low_res_factor, params)
+    mo = MO.MultiScaleRegistrationOptimizer([1,1]+sz, spacing, use_map, map_low_res_factor, params)
 
     optimizer_name = par_optimizer['name']
 
@@ -159,10 +159,11 @@ def do_registration():
     mo.set_save_fig(save_fig)
     mo.set_save_fig_path(save_fig_path)
     mo.set_save_fig_num(10)
+    mo.set_save_excel(save_excel)
     mo.set_model(model_name)
     mo.set_scale_factors(multi_scale_scale_factors)
     mo.set_number_of_iterations_per_scale(multi_scale_iterations_per_scale)
-    recorder = mo.init_recorder(task_full_name)
+    recorder = mo.init_recorder(expr_name)
 
     #########################    batch iteration setting   ############################################
     LSource, LTarget = None, None
@@ -211,7 +212,7 @@ def do_registration():
             batch_id += 1
 
 
-        if LSource is not None:
+        if LSource is not None and save_excel:
             recorder.set_summary_based_env()
             recorder.saving_results(sched='summary')
 

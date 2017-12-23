@@ -13,20 +13,27 @@ class BaseDataSet(object):
 
         :param name: name of data set
         :param dataset_type: ''mixed' like oasis including inter and  intra person  or 'custom' like LPBA40, only includes inter person
-        :param file_type_list: the file type to be includes like [*1_a.bmp, *2_a.bmp]
+        :param file_type_list: the file types to be filtered, like [*1_a.bmp, *2_a.bmp]
         :param data_path: path of the dataset
         """
         self.name = name
         self.data_path = None
+        """path of the dataset"""
         self.output_path = None
+        """path of the output directory"""
         self.pair_name_list = []
         self.pair_path_list = []
         self.file_type_list = file_type_list
         self.save_format = 'h5py'
+        """currently only support h5py"""
         self.sched = sched
+        """inter or intra, for inter-personal or intra-personal registration"""
         self.dataset_type = dataset_type
+        """custom or mixed"""
         self.normalize_sched = 'tp'
+        """ settings for normalization, currently not used"""
         self.divided_ratio = (0.7, 0.1, 0.2)
+        """divided the data into train, val, test set"""
 
     def generate_pair_list(self):
         pass
@@ -53,8 +60,9 @@ class BaseDataSet(object):
 
     def read_file(self, file_path, is_label=False):
         """
-        currently, typical to medical image problem
+        currently, default using file_io, reading medical format
         :param file_path:
+        :param  is_label: the file_path is label_file
         :return:
         """
         # img, info = read_itk_img(file_path)
@@ -89,7 +97,10 @@ class BaseDataSet(object):
 
 
 
-class UnlabeledDatSet(BaseDataSet):
+class UnlabeledDataSet(BaseDataSet):
+    """
+    unlabeled dataset
+    """
     def __init__(self, name, dataset_type, file_type_list, sched=None):
         BaseDataSet.__init__(self,name, dataset_type, file_type_list,sched)
 
@@ -100,7 +111,7 @@ class UnlabeledDatSet(BaseDataSet):
         :param pair_name_list: N*1 for 'mix': [folderName1_sliceName1_folderName2_sliceName2, .....]  for custom: [sliceName1_sliceName2, .....]
         :param ratio:  divide dataset into training val and test, based on ratio, e.g [0.7, 0.1, 0.2]
         :param saving_path_list: N*1 list of path for output files e.g [ouput_path/train/sliceName1_sliceName2.h5py,.........]
-        :param info: dic including pair information
+        :param info: dic including pair name information
         :param normalized_sched: normalized the image
         """
         random.shuffle(self.pair_path_list)
@@ -132,6 +143,9 @@ class UnlabeledDatSet(BaseDataSet):
 
 
 class LabeledDataSet(BaseDataSet):
+    """
+    labeled dataset
+    """
     def __init__(self, name, dataset_type, file_type_list, sched=None):
         BaseDataSet.__init__(self, name, dataset_type, file_type_list,sched)
         self.label_path = None
@@ -191,6 +205,9 @@ class LabeledDataSet(BaseDataSet):
 
 
 class CustomDataSet(BaseDataSet):
+    """
+    dataset format that orgnized as data_path/slice1, slic2, slice3 .......
+    """
     def __init__(self,name, dataset_type, file_type_list,full_comb=False):
         BaseDataSet.__init__(self, name, dataset_type, file_type_list)
         self.full_comb = full_comb
@@ -206,6 +223,9 @@ class CustomDataSet(BaseDataSet):
 
 
 class VolumticDataSet(BaseDataSet):
+    """
+    3D dataset
+    """
     def __init__(self,name, dataset_type, file_type_list):
         BaseDataSet.__init__(self, name, dataset_type, file_type_list)
         self.slicing = -1
@@ -219,12 +239,18 @@ class VolumticDataSet(BaseDataSet):
 
 
     def read_file(self, file_path, is_label=False, verbose=False):
+        """
+
+        :param file_path:the path of the file
+        :param is_label:the file is label file
+        :param verbose:
+        :return:
+        """
         if self.slicing != -1:
             if verbose:
                 print("slicing file: {}".format(file_path))
             img, info = file_io_read_img_slice(file_path, self.slicing, self.axis, is_label=is_label)
         else:
-            # check if is rihgt
             img, info= BaseDataSet.read_file(self,file_path)
         return img, info
 
@@ -232,6 +258,9 @@ class VolumticDataSet(BaseDataSet):
 
 
 class MixedDataSet(BaseDataSet):
+    """
+     include inter-personal and intra-personal data, which is orgnized as oasis2d, root/patient1_folder/slice1,slice2...
+    """
     def __init__(self, name, dataset_type, file_type_list, sched, full_comb=False):
         BaseDataSet.__init__(self, name,dataset_type, file_type_list, sched=sched)
         self.full_comb = full_comb
@@ -257,13 +286,13 @@ class MixedDataSet(BaseDataSet):
 
 
 
-class Oasis2DDataSet(UnlabeledDatSet, MixedDataSet):
+class Oasis2DDataSet(UnlabeledDataSet, MixedDataSet):
     """"
     sched:  'inter': inter_personal,  'intra': intra_personal
     """
     def __init__(self, name, sched, full_comb=False):
         file_type_list = ['*a.mhd'] if sched == 'intra' else ['*_1_a.mhd', '*_2_a.mhd', '*_3_a.mhd']
-        UnlabeledDatSet.__init__(self, name, 'mixed', file_type_list, sched)
+        UnlabeledDataSet.__init__(self, name, 'mixed', file_type_list, sched)
         MixedDataSet.__init__(self, name, 'mixed', file_type_list, sched, full_comb)
 
 

@@ -260,6 +260,11 @@ class ImageIO(FileIO):
         return I0, image_meta_data
 
     def _do_adaptive_padding(self, im):
+        """
+        padding the img to favored size, (divided by certain number, here is 4), here using default 4 , favored by cuda fft
+        :param im:
+        :return:
+        """
         im_sz = list(im.shape)
         dim = len(im_sz)
         dim_to_pad = [dim_sz%self.adaptive_padding!=0 and dim_sz>3 for dim_sz in im_sz]

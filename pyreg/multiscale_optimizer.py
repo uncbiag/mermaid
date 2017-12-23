@@ -309,6 +309,7 @@ class ImageRegistrationOptimizer(Optimizer):
         self.pair_path=None
         self.iter_count = 0
         self.recorder = None
+        self.save_excel = False
         self.light_analysis_on = None
 
 
@@ -386,6 +387,12 @@ class ImageRegistrationOptimizer(Optimizer):
 
     def get_recorder(self):
         return self.recorder
+
+    def set_save_excel(self, save_excel):
+        self.save_excel = save_excel
+
+    def get_save_excel(self):
+        return self.save_excel
 
 
     def get_save_fig_path(self):
@@ -786,7 +793,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         # performance analysis
 
-        if self.useMap and not self.light_analysis_on:
+        if self.useMap and not self.light_analysis_on and self.save_excel:
             if self.LSource is not None:
                 if iter % 4 == 0:
                     LSource_warpped = utils.get_warped_label_map(self.LSource, Warped )
@@ -995,6 +1002,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.recorder = XlsxRecorder(task_name, self.save_fig_path)
         return self.recorder
 
+
     def set_saving_env(self):
         if self.save_fig==True:
             # saving by files
@@ -1182,6 +1190,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 self.ssOpt.set_pair_path(self.get_pair_path())
                 self.ssOpt.set_n_scale(en_scale[1])
                 self.ssOpt.set_recorder(self.get_recorder())
+                self.ssOpt.set_save_excel(self.get_save_excel())
                 self.ssOpt.set_source_label(self.get_source_label())
                 self.ssOpt.set_target_label(self.get_target_label())
                 self.ssOpt.set_batch_id(self.get_batch_id())

@@ -11,7 +11,11 @@ def get_multi_metric(pred, gt, eval_label_list = None, rm_bg=False):
     :param gt: ground truth label map  Bx....
     :param eval_label_list: manual selected label need to be evaluate
     :param rm_bg: remove the background label, assume the background label is the first label of label_list when using auto detection
-    :return: Bx num_label_evaluated    dictonary, each item represents one metric method, a matrix for metric results of each label of each instance
+    :return: dictonary, has four items:  multi_metric_res, label_avg_res, batch_avg_res, label_list
+    multi_metric_res:{iou: Bx #label , dice: Bx#label...} ,
+    label_avg_res:{iou: Bx1 , dice: Bx1...} ,
+    batch_avg_res{iou: 1x#label , dice: 1x#label...} ,
+    label_list: the labels contained by batch
     """
     pred = pred.cpu().data.numpy()
     gt = gt.cpu().data.numpy()
