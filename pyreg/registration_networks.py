@@ -817,8 +817,8 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         :return: returns this integrator 
         """
         cparams = self.params[('forward_model',{},'settings for the forward model')]
-        cparams['sm_ins'] = self.smoother
-        epdiffMap = FM.EPDiffMap( self.sz, self.spacing, cparams )
+        #cparams['sm_ins'] = self.smoother
+        epdiffMap = FM.EPDiffMap( self.sz, self.spacing, cparams,self.smoother )
         return RK.RK4(epdiffMap.f,None,None,self.params)
 
     def forward(self, phi, I0_source):
@@ -830,7 +830,7 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         :return: returns the map at time tTo
         """
         mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo)
-        return mphi1[1], mphi1[0]
+        return mphi1[1]    #, mphi1[0]
 
 
 class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):

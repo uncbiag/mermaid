@@ -42,6 +42,7 @@ class SimpleRegistration(object):
         self.ITarget = ITarget
         self.sz = np.array( ISource.size() )
         self.optimizer = None
+        self.light_analysis_on = None
 
     @abstractmethod
     def register(self):
@@ -94,6 +95,9 @@ class SimpleRegistration(object):
         """
         return self.optimizer.get_model_parameters()
 
+    def set_light_analysis_on(self, light_analysis_on):
+        self.light_analysis_on = light_analysis_on
+
 class SimpleSingleScaleRegistration(SimpleRegistration):
     """
     Simple single scale registration
@@ -107,8 +111,10 @@ class SimpleSingleScaleRegistration(SimpleRegistration):
         Registers the source to the target image
         :return: n/a
         """
-
+        self.optimizer.set_light_analysis_on(self.light_analysis_on)
         self.optimizer.register(self.ISource,self.ITarget)
+
+
 
 class SimpleMultiScaleRegistration(SimpleRegistration):
     """
@@ -123,7 +129,9 @@ class SimpleMultiScaleRegistration(SimpleRegistration):
         Registers the source to the target image
         :return: n/a
         """
+        self.optimizer.set_light_analysis_on(self.light_analysis_on)
         self.optimizer.register(self.ISource,self.ITarget)
+
 
 
 class Optimizer(object):
@@ -712,11 +720,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 rec_tmp = self.model(self.lowResIdentityMap, self.lowResISource)
                 # now upsample to correct resolution
                 desiredSz = self.identityMap.size()[2::]
-                self.rec_phiWarped = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
+                self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
             else:
-                self.rec_phiWarped, last_m = self.model(self.identityMap, self.ISource)
+                self.rec_phiWarped = self.model(self.identityMap, self.ISource)
 
-            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, last_m)
+            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, m_last=None)
         else:
             self.rec_IWarped = self.model(self.ISource)
             loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget)

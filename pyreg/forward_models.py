@@ -538,11 +538,11 @@ class EPDiffMap(ForwardModel):
     :math:`\\phi_t+D\\phi v=0`
     """
 
-    def __init__(self, sz, spacing, params=None):
+    def __init__(self, sz, spacing, params=None, smoother=None):
         super(EPDiffMap, self).__init__(sz,spacing,params)
         #self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).create_smoother(params)
         #######################################3
-        self.smoother = params['sm_ins']
+        self.smoother = smoother
         self.use_net = True if self.params['smoother']['type'] == 'adaptiveNet' else False
         ##########################################
 
