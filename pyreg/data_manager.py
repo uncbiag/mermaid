@@ -49,6 +49,23 @@ class DataManager(object):
     def get_full_task_name(self):
         return os.path.split(self.task_root_path)[1]
 
+    def get_default_dataset_path(self,is_label):
+        default_data_path = {'lpba':'/playpen/data/quicksilver_data/testdata/LPBA40/brain_affine_icbm',
+                             'oasis': '/playpen/zyshen/data/oasis',
+                             'cumc':'/playpen/data/quicksilver_data/testdata/CUMC12/brain_affine_icbm',
+                             'ibsr': '/playpen/data/quicksilver_data/testdata/IBSR18/brain_affine_icbm'}
+
+        default_label_path = {'lpba': '/playpen/data/quicksilver_data/testdata/LPBA40/label_affine_icbm',
+                             'oasis': 'None',
+                             'cumc': '/playpen/data/quicksilver_data/testdata/CUMC12/label_affine_icbm',
+                             'ibsr': '/playpen/data/quicksilver_data/testdata/IBSR18/label_affine_icbm'}
+        if is_label:
+            return default_label_path[self.dataset_name]
+        else:
+            return default_data_path[self.dataset_name]
+
+
+
 
 
     def generate_saving_path(self):
@@ -70,10 +87,14 @@ class DataManager(object):
         return self.task_path
 
 
-
     def init_dataset(self):
+        if self.data_path is None:
+            self.data_path = self.get_default_dataset_path(is_label=False)
+        if self.label_path is None:
+            self.label_path = self.get_default_dataset_path(is_label=True)
+
         if self.dataset_name =='oasis':
-            self.dataset = OasisDataSet(name=self.task_name, sched=self.sched, full_comb= self.full_comb)
+            self.dataset = Oasis2DDataSet(name=self.task_name, sched=self.sched, full_comb= self.full_comb)
         elif self.dataset_name == 'lpba':
             self.dataset =  LPBADataSet(name=self.task_name, full_comb=self.full_comb)
             self.dataset.set_slicing(self.slicing, self.axis)
@@ -86,6 +107,7 @@ class DataManager(object):
             self.dataset = CUMCDataSet(name=self.task_name,full_comb= self.full_comb)
             self.dataset.set_slicing(self.slicing, self.axis)
             self.dataset.set_label_path(self.label_path)
+
         self.dataset.set_data_path(self.data_path)
         self.dataset.set_output_path(self.task_root_path)
         self.dataset.set_divided_ratio(self.divided_ratio)

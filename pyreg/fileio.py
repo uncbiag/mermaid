@@ -127,7 +127,7 @@ class ImageIO(FileIO):
         :param adaptive_padding:
         :return:
         """
-        if adaptive_padding<4:
+        if adaptive_padding<4 and adaptive_padding != -1:
             raise ValueError,"may confused with channel, adaptive padding must bigger than 4"
         self.adaptive_padding = adaptive_padding
 

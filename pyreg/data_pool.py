@@ -257,7 +257,7 @@ class MixedDataSet(BaseDataSet):
 
 
 
-class OasisDataSet(UnlabeledDatSet, MixedDataSet):
+class Oasis2DDataSet(UnlabeledDatSet, MixedDataSet):
     """"
     sched:  'inter': inter_personal,  'intra': intra_personal
     """
@@ -310,7 +310,7 @@ if __name__ == "__main__":
     # sched= 'intra'
     #
     # output_path = '/playpen/zyshen/data/'+ name+'_pre_'+ sched
-    # oasis = OasisDataSet(name='oasis',sched=sched, full_comb=True)
+    # oasis = Oasis2DDataSet(name='oasis',sched=sched, full_comb=True)
     # oasis.set_data_path(path)
     # oasis.set_output_path(output_path)
     # oasis.set_divided_ratio(divided_ratio)
@@ -322,7 +322,7 @@ if __name__ == "__main__":
     # sched='inter'
     # full_comb = False
     # output_path = '/playpen/zyshen/data/' + name + '_pre_' + sched
-    # oasis = OasisDataSet(name='oasis', sched=sched, full_comb=full_comb)
+    # oasis = Oasis2DDataSet(name='oasis', sched=sched, full_comb=full_comb)
     # oasis.set_data_path(path)
     # oasis.set_output_path(output_path)
     # oasis.set_divided_ratio(divided_ratio)

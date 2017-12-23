@@ -14,7 +14,7 @@
             "__doc__": "general model settings", 
             "deformation": {
                 "__doc__": "model describing the desired deformation model", 
-                "name": "['svf'|'svf_quasi_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum']", 
+                "map_low_res_factor": "Set to a value in (0,1) if a map-based solution should be computed at a lower internal resolution (image matching is still at full resolution", 
                 "use_map": "[True|False] either do computations via a map or directly using the image"
             }, 
             "registration_model": {
@@ -32,7 +32,8 @@
                     "__doc__": "model describing the similarity measure", 
                     "sigma": "1/sigma^2 weighting", 
                     "type": "[ssd|ncc]"
-                }
+                }, 
+                "type": "['svf'|'svf_quasi_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with '_map' or '_image' suffix"
             }
         }, 
         "optimizer": {

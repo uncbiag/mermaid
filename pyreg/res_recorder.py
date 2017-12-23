@@ -24,6 +24,8 @@ class XlsxRecorder(object):
         print("the update space in detailed files is {}".format(self.row_space))
 
     def init_summary(self):
+        if not os.path.exists(self.saving_path ):
+            os.makedirs(self.saving_path )
         self.writer_path = os.path.join(self.saving_path, 'results.xlsx')
         writer = pd.ExcelWriter(self.writer_path, engine='xlsxwriter')
         df = pd.DataFrame([])

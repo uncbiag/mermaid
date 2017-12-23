@@ -301,6 +301,11 @@ class ImageRegistrationOptimizer(Optimizer):
         self.pair_path=None
         self.iter_count = 0
         self.recorder = None
+        self.light_analysis_on = None
+
+
+    def set_light_analysis_on(self, light_analysis_on):
+        self.light_analysis_on = light_analysis_on
 
 
     def turn_visualization_on(self):
@@ -772,7 +777,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         iter = self.iter_count
 
         # performance analysis
-        if self.useMap:
+
+        if self.useMap and not self.light_analysis_on:
             if self.LSource is not None:
                 if iter % 4 == 0:
                     LSource_warpped = utils.get_warped_label_map(self.LSource, Warped )
@@ -788,13 +794,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # result visualization
         if self.visualize:
             visual_param = {}
-            visual_param['save_fig'] = self.save_fig
-            visual_param['save_fig_path'] = self.save_fig_path
-            visual_param['save_fig_path_byname'] = os.path.join(self.save_fig_path,'byname')
-            visual_param['save_fig_path_byiter'] = os.path.join(self.save_fig_path,'byiter')
-            visual_param['save_fig_num'] = self.save_fig_num
-            visual_param['pair_path'] = self.pair_path
-            visual_param['iter'] = 'scale_'+str(self.n_scale) + '_iter_' + str(self.iter_count)
+            if not self.light_analysis_on:
+                visual_param['save_fig'] = self.save_fig
+                visual_param['save_fig_path'] = self.save_fig_path
+                visual_param['save_fig_path_byname'] = os.path.join(self.save_fig_path,'byname')
+                visual_param['save_fig_path_byiter'] = os.path.join(self.save_fig_path,'byiter')
+                visual_param['save_fig_num'] = self.save_fig_num
+                visual_param['pair_path'] = self.pair_path
+                visual_param['iter'] = 'scale_'+str(self.n_scale) + '_iter_' + str(self.iter_count)
+            else:
+                visual_param['save_fig'] = False
 
             if iter % self.visualize_step == 0:
                 vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize()
@@ -956,6 +965,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param modelName: the name of the model (string)
         """
         self.model_name = modelName
+
 
     def set_pair_path(self,pair_paths):
         # f = lambda name: os.path.split(name)
@@ -1155,16 +1165,19 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             self.ssOpt.set_visualization(self.get_visualization())
             self.ssOpt.set_visualize_step(self.get_visualize_step())
-            self.ssOpt.set_expr_name(self.get_expr_name())
-            self.ssOpt.set_save_fig(self.get_save_fig())
-            self.ssOpt.set_save_fig_path(self.get_save_fig_path())
-            self.ssOpt.set_save_fig_num(self.get_save_fig_num())
-            self.ssOpt.set_pair_path(self.get_pair_path())
-            self.ssOpt.set_n_scale(en_scale[1])
-            self.ssOpt.set_recorder(self.get_recorder())
-            self.ssOpt.set_source_label(self.get_source_label())
-            self.ssOpt.set_target_label(self.get_target_label())
-            self.ssOpt.set_batch_id(self.get_batch_id())
+            self.ssOpt.set_light_analysis_on(self.light_analysis_on)
+            if not self.light_analysis_on:
+                self.ssOpt.set_expr_name(self.get_expr_name())
+                self.ssOpt.set_save_fig(self.get_save_fig())
+                self.ssOpt.set_save_fig_path(self.get_save_fig_path())
+                self.ssOpt.set_save_fig_num(self.get_save_fig_num())
+                self.ssOpt.set_pair_path(self.get_pair_path())
+                self.ssOpt.set_n_scale(en_scale[1])
+                self.ssOpt.set_recorder(self.get_recorder())
+                self.ssOpt.set_source_label(self.get_source_label())
+                self.ssOpt.set_target_label(self.get_target_label())
+                self.ssOpt.set_batch_id(self.get_batch_id())
+
 
 
 
