@@ -39,6 +39,7 @@ so.set_number_of_iterations(ds.nr_of_iterations)
 
 so.set_source_image(ISource)
 so.set_target_image(ITarget)
+so.set_light_analysis_on(True)
 
 # and now do the optimization
 so.optimize()

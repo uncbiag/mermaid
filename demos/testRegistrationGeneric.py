@@ -90,6 +90,7 @@ so.set_rel_ftol(1e-10)
 
 so.set_source_image(ISource)
 so.set_target_image(ITarget)
+so.set_light_analysis_on(True)
 
 # and now do the optimization
 so.optimize()
