@@ -9,6 +9,14 @@ class XlsxRecorder(object):
     xlsx recorder for results
     including two recorder: one for current experiments, record details of results changed by iteration
     the other is for record the summary of different expreiments, which is saved by  summary_path
+
+    1. detailed results: saved in fig_save_path/results.xlsx
+        ** Sheet1: #total_filename x #metrics,   along each row direction, are the records by iteraton
+        ** batch_0: #batch_filename x #metric_by_label , along each column direction, are the records by iteration
+        ** batch_1: same as batch_0
+        ** ......
+    2. task results: saved in ../data/summary.xlsx
+        ** Sheet1: task_name * #metrics recorded by iteration
     """
     def __init__(self, expr_name,  saving_path):
         self.expr_name = expr_name
@@ -32,8 +40,9 @@ class XlsxRecorder(object):
         print("the update space in detailed files is {}".format(self.row_space))
 
     def init_summary(self):
-        """ init two recorders, initilzation would create a new recorder for this expriment, but would not clear
-         data in summary recorder,  instead it would append the new experiment summary to summary recorder"""
+        """ init two recorders, initilzation would create a new recorder for this experiment, recording all details
+            at the same time it would load the data from summary recorder, then it would append the new experiment summary to summary recorder
+        """
         if not os.path.exists(self.saving_path ):
             os.makedirs(self.saving_path )
         self.writer_path = os.path.join(self.saving_path, 'results.xlsx')
@@ -109,9 +118,10 @@ class XlsxRecorder(object):
 
     def saving_results(self,sched, results=None, info=None, averaged_results=None):
         """
-        the results should be different for each sched
-        batch: the result should be dic , each measure inside should be B x N_label
-        buffer: the result should be dic, each measure inside should be N_img x 1
+        the input results should be different for each sched
+        batch: the input result should be dic , each measure inside should be B x N_label
+        buffer: the input result should be dic, each measure inside should be N_img x 1
+        summary: no input needed, the summary could be got from the buffer
 
         :param results:
         :param sched:
