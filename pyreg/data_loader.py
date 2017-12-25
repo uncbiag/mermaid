@@ -10,8 +10,6 @@ from data_utils import *
 from time import time
 
 
-
-
 class RegistrationDataset(Dataset):
     """registration dataset."""
 
@@ -42,7 +40,7 @@ class RegistrationDataset(Dataset):
     def __len__(self):
         return len(self.pair_name_list)
 
-    def retriv_file_id(self, filename):
+    def retrieve_file_id(self, filename):
         """ get the index of the file in the filelist"""
         return self.pair_name_list.index(filename)
 
@@ -58,7 +56,7 @@ class RegistrationDataset(Dataset):
              transformed['image'] = self.transform(sample['image'])
              if sample['label'] is not None:
                 transformed['label'] = self.transform(sample['label'][0])
-             transformed['pair_path'] = self.retriv_file_id(sample['info']['pair_path'][0])
+             transformed['pair_path'] = self.retrieve_file_id(sample['info']['pair_path'][0])
              transformed['spacing'] = self.transform(sample['info']['spacing'])
 
         return transformed
@@ -74,18 +72,9 @@ class Normalize(object):
 
 
 
-
-
 class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, sample):
 
         return torch.from_numpy(sample)
-
-
-
-
-
-
-

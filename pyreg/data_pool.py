@@ -93,10 +93,6 @@ class BaseDataSet(object):
 
 
 
-
-
-
-
 class UnlabeledDataSet(BaseDataSet):
     """
     unlabeled dataset
@@ -222,7 +218,7 @@ class CustomDataSet(BaseDataSet):
         return pair_path_list
 
 
-class VolumticDataSet(BaseDataSet):
+class VolumetricDataSet(BaseDataSet):
     """
     3D dataset
     """
@@ -298,26 +294,26 @@ class Oasis2DDataSet(UnlabeledDataSet, MixedDataSet):
 
 
 
-class LPBADataSet(VolumticDataSet,LabeledDataSet, CustomDataSet):
+class LPBADataSet(VolumetricDataSet, LabeledDataSet, CustomDataSet):
     def __init__(self, name, full_comb=True):
-        VolumticDataSet.__init__(self, name, 'custom', ['*.nii'])
+        VolumetricDataSet.__init__(self, name, 'custom', ['*.nii'])
         LabeledDataSet.__init__(self, name, 'custom', ['*.nii'])
         CustomDataSet.__init__(self,name, 'custom', ['*.nii'], full_comb)
 
 
 
 
-class IBSRDataSet(VolumticDataSet,LabeledDataSet, CustomDataSet):
+class IBSRDataSet(VolumetricDataSet, LabeledDataSet, CustomDataSet):
     def __init__(self, name, full_comb=True):
-        VolumticDataSet.__init__(self, name, 'custom', ['*.nii'])
+        VolumetricDataSet.__init__(self, name, 'custom', ['*.nii'])
         LabeledDataSet.__init__(self, name, 'custom', ['*.nii'])
         CustomDataSet.__init__(self, name, 'custom', ['*.nii'], full_comb)
 
 
 
-class CUMCDataSet(VolumticDataSet,LabeledDataSet, CustomDataSet):
+class CUMCDataSet(VolumetricDataSet, LabeledDataSet, CustomDataSet):
     def __init__(self, name, full_comb=True):
-        VolumticDataSet.__init__(self, name, 'custom', ['*.nii'])
+        VolumetricDataSet.__init__(self, name, 'custom', ['*.nii'])
         LabeledDataSet.__init__(self, name, 'custom', ['*.nii'])
         CustomDataSet.__init__(self, name, 'custom', ['*.nii'], full_comb)
 

@@ -90,10 +90,6 @@ class DataManager(object):
         else:
             return default_data_path[self.dataset_name]
 
-
-
-
-
     def generate_saving_path(self):
         slicing_info = '_slicing_{}_axis_{}'.format(self.slicing, self.axis) if self.slicing>0 else ''
         comb_info = '_full_comb' if self.full_comb else ''
@@ -144,7 +140,6 @@ class DataManager(object):
         self.dataset.set_divided_ratio(self.divided_ratio)
 
 
-
     def prepare_data(self):
         """
         preprocess data into h5py
@@ -171,8 +166,7 @@ class DataManager(object):
 
         return dataloaders
 
-
-
+# TODO: support generic path names here
 
 if __name__ == "__main__":
 
