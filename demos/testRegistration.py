@@ -49,7 +49,9 @@ ITarget = s.smooth_scalar_field(ITarget)
 so = MO.SimpleSingleScaleRegistration(ISource, ITarget, spacing, params)
 so.get_optimizer().set_visualization( True )
 so.get_optimizer().set_visualize_step( 3 )
+so.set_light_analysis_on(True)
 so.register()
+
 
 energy = so.get_energy()
 

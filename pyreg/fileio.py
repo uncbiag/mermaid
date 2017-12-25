@@ -96,6 +96,8 @@ class ImageIO(FileIO):
         """Intensity normalizes an image after reading (default: False)"""
         self.squeeze_image = False
         """squeezes the image when reading; e.g., dimension 1x256x256 becomes 256x256"""
+        self.adaptive_padding = -1
+        """ padding the img to favorable size default img.shape%adaptive_padding = 0"""
 
     def turn_intensity_normalization_on(self):
         """
@@ -116,6 +118,18 @@ class ImageIO(FileIO):
         :param int_norm: image intensity normalization on (True) or off (False) 
         """
         self.intensity_normalize_image = int_norm
+
+    def set_adaptive_padding(self, adaptive_padding):
+        """
+        if adaptive_padding != -1 adaptive padding on
+        padding the img to favorable size  e.g  img.shape%adaptive_padding = 0
+        padding size should be bigger than 3, to avoid confused with channel
+        :param adaptive_padding:
+        :return:
+        """
+        if adaptive_padding<4 and adaptive_padding != -1:
+            raise ValueError,"may confused with channel, adaptive padding must bigger than 4"
+        self.adaptive_padding = adaptive_padding
 
     def get_intensity_normalization(self):
         """
@@ -245,7 +259,24 @@ class ImageIO(FileIO):
         """
         return I0, image_meta_data
 
-    def read(self, filename, intensity_normalize=False, squeeze_image=False ):
+    def _do_adaptive_padding(self, im):
+        """
+        padding the img to favored size, (divided by certain number, here is 4), here using default 4 , favored by cuda fft
+        :param im:
+        :return:
+        """
+        im_sz = list(im.shape)
+        dim = len(im_sz)
+        dim_to_pad = [dim_sz%self.adaptive_padding!=0 and dim_sz>3 for dim_sz in im_sz]
+        dim_rem = [dim_sz//self.adaptive_padding for dim_sz in im_sz]
+        new_dim_sz = [(dim_rem[i]+1)*self.adaptive_padding if dim_to_pad[i] else im_sz[i] for i in range(dim)]
+        before_id = [(new_dim_sz[i] -im_sz[i]+1)//2 for i in range(dim)]
+        after_id = [new_dim_sz[i] - im_sz[i] - before_id[i] for i in range(dim)]
+        padding_loc = tuple([(before_id[i],after_id[i]) for i in range(dim)])
+        new_img = np.lib.pad(im, padding_loc, 'edge')
+        return new_img
+
+    def read(self, filename, intensity_normalize=False, squeeze_image=False, adaptive_padding=-1, verbose=False):
         """
         Reads the image assuming and converts it to NxCxXxYxC format if needed 
         :param filename: filename to be read
@@ -256,8 +287,9 @@ class ImageIO(FileIO):
         """
         self.set_intensity_normalization(intensity_normalize)
         self.set_squeeze_image(squeeze_image)
-
-        print('Reading image: ' + filename)
+        self.set_adaptive_padding(adaptive_padding)
+        if verbose:
+            print('Reading image: ' + filename)
 
         if self._is_nrrd_filename(filename):
             # load with the dedicated nrrd reader (can also read higher dimensional files)
@@ -266,6 +298,7 @@ class ImageIO(FileIO):
             # read with the itk reader (can also read other file formats)
             im_itk = itk.imread(filename)
             im, hdr = self._convert_itk_image_to_numpy(im_itk)
+
 
         if not hdr.has_key('spacing'):
             print('Image does not seem to have spacing information.')
@@ -282,18 +315,25 @@ class ImageIO(FileIO):
         normalized_spacing = spacing # will be changed if image is squeezed
 
         if self.squeeze_image==True:
-            print('Squeezing image')
+            if verbose:
+                print('Squeezing image')
             dim = len(im.shape)
             sz = im.shape
             im = im.squeeze()
             dimSqueezed = len(im.shape)
             sz_squeezed = im.shape
             if dim!=dimSqueezed:
-                print('Squeezing changed dimension from ' + str(dim) + ' -> ' + str(dimSqueezed))
+                if verbose:
+                    print('Squeezing changed dimension from ' + str(dim) + ' -> ' + str(dimSqueezed))
             squeezed_spacing = self._compute_squeezed_spacing(spacing,dim,sz,dimSqueezed)
-            print( 'squeezed_spacing = ' + str(squeezed_spacing))
+            if verbose:
+                print( 'squeezed_spacing = ' + str(squeezed_spacing))
             normalized_spacing = squeezed_spacing / (np.array(sz_squeezed) - 1)
-            print('Normalized spacing = ' + str(normalized_spacing))
+            if verbose:
+                print('Normalized spacing = ' + str(normalized_spacing))
+
+        if adaptive_padding>0:
+            im = self._do_adaptive_padding(im)
 
         if self.intensity_normalize_image==True:
             im = IM.IntensityNormalizeImage().defaultIntensityNormalization(im)

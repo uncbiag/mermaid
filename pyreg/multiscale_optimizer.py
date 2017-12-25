@@ -3,18 +3,21 @@ This package enables easy single-scale and multi-scale optimization support.
 """
 
 from abc import ABCMeta, abstractmethod
-
+import os
 import time
 import utils
 import visualize_registration_results as vizReg
 import custom_optimizers as CO
 import numpy as np
-
 import torch
 from torch.autograd import Variable
 from data_wrapper import USE_CUDA, AdaptVal
 import model_factory as MF
 import image_sampling as IS
+from metrics import get_multi_metric
+from res_recorder import XlsxRecorder
+import pandas as pd
+
 #from MyAdam import MyAdam
 
 # add some convenience functionality
@@ -39,6 +42,7 @@ class SimpleRegistration(object):
         self.ITarget = ITarget
         self.sz = np.array( ISource.size() )
         self.optimizer = None
+        self.light_analysis_on = None
 
     @abstractmethod
     def register(self):
@@ -91,6 +95,9 @@ class SimpleRegistration(object):
         """
         return self.optimizer.get_model_parameters()
 
+    def set_light_analysis_on(self, light_analysis_on):
+        self.light_analysis_on = light_analysis_on
+
 class SimpleSingleScaleRegistration(SimpleRegistration):
     """
     Simple single scale registration
@@ -104,8 +111,10 @@ class SimpleSingleScaleRegistration(SimpleRegistration):
         Registers the source to the target image
         :return: n/a
         """
-
+        self.optimizer.set_light_analysis_on(self.light_analysis_on)
         self.optimizer.register(self.ISource,self.ITarget)
+
+
 
 class SimpleMultiScaleRegistration(SimpleRegistration):
     """
@@ -120,7 +129,9 @@ class SimpleMultiScaleRegistration(SimpleRegistration):
         Registers the source to the target image
         :return: n/a
         """
+        self.optimizer.set_light_analysis_on(self.light_analysis_on)
         self.optimizer.register(self.ISource,self.ITarget)
+
 
 
 class Optimizer(object):
@@ -164,6 +175,7 @@ class Optimizer(object):
         """relative termination tolerance for optimizer"""
         self.last_successful_step_size_taken = None
         """Records the last successful step size an optimizer took (possible use: propogate step size between multiscale levels"""
+        self.batch_id = -1
 
         if (self.mapLowResFactor is not None):
             self.lowResSize = self._get_low_res_size_from_size( sz, self.mapLowResFactor )
@@ -188,6 +200,7 @@ class Optimizer(object):
         :return: n/a
         """
         self.last_successful_step_size_taken=lr
+
 
     def get_last_successful_step_size_taken(self):
         """
@@ -236,6 +249,12 @@ class Optimizer(object):
         """
         return self.rel_ftol
 
+    def set_batch_id(self, batch_id):
+        self.batch_id = batch_id
+
+    def get_batch_id(self):
+        return self.batch_id
+
     @abstractmethod
     def set_model(self, modelName):
         """
@@ -268,6 +287,10 @@ class ImageRegistrationOptimizer(Optimizer):
         """if mapLowResFactor <1, a lowres image needs to be created to parameterize some of the registration algorithms"""
         self.ITarget = None
         """target image"""
+        self.LSource = None
+        """ source label """
+        self.LTarget = None
+        """  target label """
         self.optimizer_name = None #''lbfgs_ls'
         """name of the optimizer to use"""
         self.optimizer_params = {}
@@ -278,6 +301,20 @@ class ImageRegistrationOptimizer(Optimizer):
         """if True figures are created during the run"""
         self.visualize_step = 10
         """how often the figures are updated; each self.visualize_step-th iteration"""
+        self.nrOfIterations = None
+        """the maximum number of iterations for the optimizer"""
+        self.save_fig_path=None
+        self.save_fig=None
+        self.save_fig_num =None
+        self.pair_path=None
+        self.iter_count = 0
+        self.recorder = None
+        self.save_excel = False
+        self.light_analysis_on = None
+
+
+    def set_light_analysis_on(self, light_analysis_on):
+        self.light_analysis_on = light_analysis_on
 
 
     def turn_visualization_on(self):
@@ -295,40 +332,123 @@ class ImageRegistrationOptimizer(Optimizer):
     def set_visualization(self, vis):
         """
         Set if visualization should be on (True) or off (False)
-        
-        :param vis: visualization status on (True) or off (False) 
+
+        :param vis: visualization status on (True) or off (False)
         """
         self.visualize = vis
 
     def get_visualization(self):
         """
         Returns the visualization status
-        
-        :return: Returns True if visualizations will be displayed and False otherwise 
+
+        :return: Returns True if visualizations will be displayed and False otherwise
         """
         return self.visualize
 
     def set_visualize_step(self, nr_step):
         """
         Set after how many steps a visualization should be updated
-        
-        :param nr_step: 
+
+        :param nr_step:
         """
         self.visualize_step = nr_step
+
 
     def get_visualize_step(self):
         """
         Returns after how many steps visualizations are updated
-        
+
         :return: after how many steps visualizations are updated
         """
         return self.visualize_step
+
+    def set_save_fig(self,save_fig):
+        """
+        :param save_fig: True: save the visualized figs
+        :return:
+        """
+        self.save_fig = save_fig
+    def get_save_fig(self):
+        """
+        :param save_fig: True: get the visualized figs
+        :return:
+        """
+        return self.save_fig
+
+    def set_save_fig_path(self, save_fig_path):
+        """
+        the path of saved figures, default is the ../data/expr_name
+        :param save_fig_path:
+        :return:
+        """
+        self.save_fig_path = save_fig_path
+    def set_recorder(self, recorder):
+        self.recorder = recorder
+
+    def get_recorder(self):
+        return self.recorder
+
+    def set_save_excel(self, save_excel):
+        self.save_excel = save_excel
+
+    def get_save_excel(self):
+        return self.save_excel
+
+
+    def get_save_fig_path(self):
+        """
+        the path of saved figures, default is the ../data/expr_name
+        :param save_fig_path:
+        :return:
+        """
+        return self.save_fig_path
+
+
+    def set_save_fig_num(self, save_fig_num=1):
+        """
+        set the num of the fig to save
+        :param save_fig_num:
+        :return:
+        """
+        self.save_fig_num = save_fig_num
+    def get_save_fig_num(self):
+        """
+        set the num of the fig to save
+        :param save_fig_num:
+        :return:
+        """
+        return self.save_fig_num
+
+    def set_expr_name(self, expr_name):
+        """
+        the name of experiments
+        :param expr_name:
+        :return:
+        """
+        self.expr_name = expr_name
+
+    def get_expr_name(self):
+        """
+        the name of experiments
+        :param expr_name:
+        :return:
+        """
+        return self.expr_name
+
+    def set_pair_path(self, pair_paths):
+        self.pair_path = pair_paths
+
+
+    def get_pair_path(self):
+        return self.pair_path
+
+
 
     def register(self,ISource,ITarget):
         """
         Registers the source to the target image
         :param ISource: source image
-        :param ITarget: target image 
+        :param ITarget: target image
         :return: n/a
         """
         self.set_source_image(ISource)
@@ -338,26 +458,46 @@ class ImageRegistrationOptimizer(Optimizer):
     def set_source_image(self, I):
         """
         Setting the source image which should be deformed to match the target image
-        
+
         :param I: source image
         """
         self.ISource = I
         if self.mapLowResFactor is not None:
             self.lowResISource,_ = self.sampler.downsample_image_to_size(self.ISource,self.spacing,self.lowResSize[2::])
 
+    def set_source_label(self, LSource):
+        """
+        :param LSource:
+        :return:
+        """
+        self.LSource = LSource
+    def set_target_label(self, LTarget):
+        """
+        :param LTarget:
+        :return:
+        """
+        self.LTarget = LTarget
+
+    def get_source_label(self):
+        return self.LSource
+
+    def get_target_label(self):
+        return self.LTarget
+
     def set_target_image(self, I):
         """
         Setting the target image which the source image should match after registration
-        
-        :param I: target image 
+
+        :param I: target image
         """
         self.ITarget = I
+
 
     def set_optimizer_by_name(self, optimizer_name):
         """
         Set the desired optimizer by name (only lbfgs and adam are currently supported)
-        
-        :param optimizer_name: name of the optimizer (string) to be used 
+
+        :param optimizer_name: name of the optimizer (string) to be used
         """
         self.optimizer_name = optimizer_name
         self.params['optimizer']['name'] = optimizer_name
@@ -365,7 +505,7 @@ class ImageRegistrationOptimizer(Optimizer):
     def get_optimizer_by_name(self):
         """
         Get the name (string) of the optimizer that was selected
-        
+
         :return: name (string) of the optimizer
         """
         return self.optimizer_name
@@ -373,15 +513,15 @@ class ImageRegistrationOptimizer(Optimizer):
     def set_optimizer(self, opt):
         """
         Set the optimizer. Not by name, but instead by passing the optimizer object which should be instantiated
-        
-        :param opt: optimizer object 
+
+        :param opt: optimizer object
         """
         self.optimizer = opt
 
     def get_optimizer(self):
         """
         Returns the optimizer object which was set to perform the optimization
-        
+
         :return: optimizer object
         """
         return self.optimizer
@@ -389,18 +529,26 @@ class ImageRegistrationOptimizer(Optimizer):
     def set_optimizer_params(self, opt_params):
         """
         Set the desired parameters of the optimizer. This is done by passing a dictionary, for example, dict(lr=0.01)
-        
-        :param opt_params: dictionary holding the parameters of an optimizer  
+
+        :param opt_params: dictionary holding the parameters of an optimizer
         """
         self.optimizer_params = opt_params
+
+
+
+
+
+
+
+
 
 
 class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     """
     Optimizer operating on a single scale. Typically this will be the full image resolution.
-    
+
     .. todo::
-        Check what the best way to adapt the tolerances for the pre-defined optimizers; 
+        Check what the best way to adapt the tolerances for the pre-defined optimizers;
         tying it to rel_ftol is not really correct.
     """
 
@@ -425,9 +573,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
-        self.nrOfIterations = None
-        """the maximum number of iterations for the optimizer"""
-        self.iter_count = 0
+
         self.rec_energy = None
         self.rec_similarityEnergy = None
         self.rec_regEnergy = None
@@ -441,7 +587,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         Returns the current energy
         :return: Returns a tuple (energy, similarity energy, regularization energy)
         """
-        return self.rec_energy.data.numpy(), self.rec_similarityEnergy.data.numpy(), self.rec_regEnergy.data.numpy()
+        return self.rec_energy.cpu().data.numpy(), self.rec_similarityEnergy.cpu().data.numpy(), self.rec_regEnergy.cpu().data.numpy()
 
     def get_warped_image(self):
         """
@@ -457,11 +603,21 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         return self.rec_phiWarped
 
+
+
+    def set_n_scale(self, n_scale):
+        """
+        the path of saved figures, default is the ../data/expr_name
+        :param save_fig_path:
+        :return:
+        """
+        self.n_scale = n_scale
+
     def set_model(self, modelName):
         """
         Sets the model that should be solved
-        
-        :param modelName: name of the model that should be solved (string) 
+
+        :param modelName: name of the model that should be solved (string)
         """
 
         self.params['model']['registration_model']['type'] = ( modelName, "['svf'|'svf_quasi_momentum'|'svf_scalar_momentum'|'svf_vector_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with '_map' or '_image' suffix" )
@@ -481,8 +637,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def add_similarity_measure(self, simName, simMeasure):
         """
         Adds a custom similarity measure.
-        
-        :param simName: name of the similarity measure (string) 
+
+        :param simName: name of the similarity measure (string)
         :param simMeasure: similarity measure itself (class object that can be instantiated)
         """
         self.criterion.add_similarity_measure(simName, simMeasure)
@@ -491,8 +647,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def add_model(self, modelName, modelNetworkClass, modelLossClass):
         """
         Adds a custom model and its loss function
-        
-        :param modelName: name of the model to be added (string) 
+
+        :param modelName: name of the model to be added (string)
         :param modelNetworkClass: registration model itself (class object that can be instantiated)
         :param modelLossClass: registration loss (class object that can be instantiated)
         """
@@ -502,8 +658,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def set_model_parameters(self, p):
         """
         Set the parameters of the registration model
-        
-        :param p: parameters 
+
+        :param p: parameters
         """
         if (self.useMap) and (self.mapLowResFactor is not None):
             self.model.set_registration_parameters(p, self.lowResSize, self.lowResSpacing)
@@ -513,16 +669,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def get_model_parameters(self):
         """
         Returns the parameters of the model
-         
-        :return: model parameters 
+
+        :return: model parameters
         """
         return self.model.get_registration_parameters()
 
     def upsample_model_parameters(self, desiredSize):
         """
         Upsamples the model parameters
-        
-        :param desiredSize: desired size after upsampling, e.g., [100,20,50] 
+
+        :param desiredSize: desired size after upsampling, e.g., [100,20,50]
         :return: returns a tuple (upsampled_parameters,upsampled_spacing)
         """
         return self.model.upsample_registration_parameters(desiredSize)
@@ -530,8 +686,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def downsample_model_parameters(self, desiredSize):
         """
         Downsamples the model parameters
-        
-        :param desiredSize: desired size after downsampling, e.g., [50,50,40] 
+
+        :param desiredSize: desired size after downsampling, e.g., [50,50,40]
         :return: returns a tuple (downsampled_parameters,downsampled_spacing)
         """
         return self.model.downsample_registration_parameters(desiredSize)
@@ -539,15 +695,15 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def _set_number_of_iterations_from_multi_scale(self, nrIter):
         """
         Same as set_number_of_iterations with the exception that this is not recored in the parameter structure since it comes from the multi-scale setting
-        :param nrIter: number of iterations 
+        :param nrIter: number of iterations
         """
         self.nrOfIterations = nrIter
 
     def set_number_of_iterations(self, nrIter):
         """
         Set the number of iterations of the optimizer
-        
-        :param nrIter: number of iterations 
+
+        :param nrIter: number of iterations
         """
         self.params['optimizer'][('single_scale', {}, 'single scale settings')]
         self.params['optimizer']['single_scale']['nr_of_iterations'] = (nrIter, 'number of iterations')
@@ -557,8 +713,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def get_number_of_iterations(self):
         """
         Returns the number of iterations of the solver
-        
-        :return: number of set iterations 
+
+        :return: number of set iterations
         """
         return self.nrOfIterations
 
@@ -571,17 +727,20 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 rec_tmp = self.model(self.lowResIdentityMap, self.lowResISource)
                 # now upsample to correct resolution
                 desiredSz = self.identityMap.size()[2::]
-                self.rec_phiWarped,_ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
+                self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
             else:
                 self.rec_phiWarped = self.model(self.identityMap, self.ISource)
 
-            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget)
+            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, m_last=None)
         else:
             self.rec_IWarped = self.model(self.ISource)
             loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget)
         loss.backward()
+        torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
+
 
         if self.useMap:
+
             if self.iter_count % 1 == 0:
                 self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
                     self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget)
@@ -603,6 +762,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
 
         cur_energy = utils.t2np(energy.float())
+        # energy analysis
 
         if self.last_energy is not None:
 
@@ -631,14 +791,42 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.last_energy = cur_energy
         iter = self.iter_count
 
+        # performance analysis
+
+        if self.useMap and not self.light_analysis_on and self.save_excel:
+            if self.LSource is not None:
+                if iter % 4 == 0:
+                    LSource_warpped = utils.get_warped_label_map(self.LSource, Warped )
+                    LTarget = self.get_target_label()
+                    metric_results_dic = get_multi_metric(LSource_warpped, LTarget, eval_label_list=None, rm_bg=False)
+                    self.recorder.set_batch_based_env(self.get_pair_path(),self.get_batch_id())
+                    info = {}
+                    info['label_info'] = metric_results_dic['label_list']
+                    info['iter_info'] = 'scale_' + str(self.n_scale) + '_iter_' + str(self.iter_count)
+                    self.recorder.saving_results(sched='batch', results=metric_results_dic['multi_metric_res'],  info=info,averaged_results=metric_results_dic['batch_avg_res'])
+                    self.recorder.saving_results(sched='buffer', results=metric_results_dic['label_avg_res'],  info=info,averaged_results=None)
+
+        # result visualization
         if self.visualize:
+            visual_param = {}
+            if not self.light_analysis_on:
+                visual_param['save_fig'] = self.save_fig
+                visual_param['save_fig_path'] = self.save_fig_path
+                visual_param['save_fig_path_byname'] = os.path.join(self.save_fig_path,'byname')
+                visual_param['save_fig_path_byiter'] = os.path.join(self.save_fig_path,'byiter')
+                visual_param['save_fig_num'] = self.save_fig_num
+                visual_param['pair_path'] = self.pair_path
+                visual_param['iter'] = 'scale_'+str(self.n_scale) + '_iter_' + str(self.iter_count)
+            else:
+                visual_param['save_fig'] = False
+
             if iter % self.visualize_step == 0:
                 vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize()
                 if self.useMap:
                     I1Warped = utils.compute_warped_image_multiNC(self.ISource, Warped)
-                    vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, Warped)
+                    vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, Warped, visual_param)
                 else:
-                    vizReg.show_current_images(iter, self.ISource, self.ITarget, Warped, vizImage, vizName)
+                    vizReg.show_current_images(iter, self.ISource, self.ITarget, Warped, vizImage, vizName, visual_param)
 
         return False
 
@@ -740,6 +928,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         print('time:', time.time() - start)
 
 
+
+
+
 class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     """
     Class to perform multi-scale optimization. Essentially puts a loop around multiple calls of the
@@ -775,8 +966,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def add_similarity_measure(self, simName, simMeasure):
         """
         Adds a custom similarity measure
-        
-        :param simName: name of the similarity measure (string) 
+
+        :param simName: name of the similarity measure (string)
         :param simMeasure: the similarity measure itself (an object that can be instantiated)
         """
         self.addSimName = simName
@@ -785,16 +976,54 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def set_model(self, modelName):
         """
         Set the model to be optimized over by name
-        
-        :param modelName: the name of the model (string) 
+
+        :param modelName: the name of the model (string)
         """
         self.model_name = modelName
+
+
+    def set_pair_path(self,pair_paths):
+        # f = lambda name: os.path.split(name)
+        # get_in = lambda x: os.path.splitext(f(x)[1])[0]
+        # get_fn = lambda x: f(f(x)[0])[1]
+        # get_img_name = lambda x: get_fn(x)+'_'+get_in(x)
+        # img_pair_name = [get_img_name(pair_path[0])+'_'+get_img_name(pair_path[1]) for pair_path in pair_paths]
+        self.pair_path = pair_paths
+
+    def set_save_fig_path(self, save_fig_path):
+        """
+        the path of saved figures, default is the ../data/expr_name
+        :param save_fig_path:
+        :return:
+        """
+        self.save_fig_path = os.path.join(save_fig_path, self.expr_name)
+
+    def init_recorder(self, task_name):
+        self.recorder = XlsxRecorder(task_name, self.save_fig_path)
+        return self.recorder
+
+
+    def set_saving_env(self):
+        if self.save_fig==True:
+            # saving by files
+            for file_name in self.pair_path[:self.save_fig_num]:
+                save_folder = os.path.join(os.path.join(self.save_fig_path,'byname'),file_name)
+                if not os.path.exists(save_folder):
+                    os.makedirs(save_folder)
+
+            # saving by iterations
+            for idx, scale in enumerate(self.scaleFactors):
+                for i in range(self.scaleIterations[idx]):
+                    if i%self.visualize_step == 0:
+                        save_folder = os.path.join(os.path.join(self.save_fig_path,'byiter'),'scale_'+str(scale) + '_iter_' + str(i))
+                        if not os.path.exists(save_folder):
+                            os.makedirs(save_folder)
 
     def add_model(self, add_model_name, add_model_networkClass, add_model_lossClass):
         """
         Adds a custom model to be optimized over
-        
-        :param add_model_name: name of the model (string) 
+
+        :param add_model_name: name of the model (string)
         :param add_model_networkClass: network model itself (as an object that can be instantiated)
         :param add_model_lossClass: loss of the model (as an object that can be instantiated)
         """
@@ -805,8 +1034,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def set_scale_factors(self, scaleFactors):
         """
         Set the scale factors for the solution. Should be in decending order, e.g., [1.0, 0.5, 0.25]
-        
-        :param scaleFactors: scale factors for the multi-scale solution hierarchy 
+
+        :param scaleFactors: scale factors for the multi-scale solution hierarchy
         """
 
         self.params['optimizer']['multi_scale']['scale_factors'] = (scaleFactors, 'how images are scaled')
@@ -815,7 +1044,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def set_number_of_iterations_per_scale(self, scaleIterations):
         """
         Sets the number of iterations that will be performed per scale of the multi-resolution hierarchy. E.g, [50,100,200]
-        
+
         :param scaleIterations: number of iterations per scale (array)
         """
 
@@ -952,6 +1181,22 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             self.ssOpt.set_visualization(self.get_visualization())
             self.ssOpt.set_visualize_step(self.get_visualize_step())
+            self.ssOpt.set_light_analysis_on(self.light_analysis_on)
+            if not self.light_analysis_on:
+                self.ssOpt.set_expr_name(self.get_expr_name())
+                self.ssOpt.set_save_fig(self.get_save_fig())
+                self.ssOpt.set_save_fig_path(self.get_save_fig_path())
+                self.ssOpt.set_save_fig_num(self.get_save_fig_num())
+                self.ssOpt.set_pair_path(self.get_pair_path())
+                self.ssOpt.set_n_scale(en_scale[1])
+                self.ssOpt.set_recorder(self.get_recorder())
+                self.ssOpt.set_save_excel(self.get_save_excel())
+                self.ssOpt.set_source_label(self.get_source_label())
+                self.ssOpt.set_target_label(self.get_target_label())
+                self.ssOpt.set_batch_id(self.get_batch_id())
+
+
+
 
             self.ssOpt.set_source_image(ISourceC)
             self.ssOpt.set_target_image(ITargetC)

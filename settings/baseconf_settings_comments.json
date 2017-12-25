@@ -2,8 +2,6 @@
     "baseconf": {
         "__doc__": "determines if settings should be loaded from file and visualization options", 
         "load_settings_from_file": "if set to True configuration settings are loaded from file", 
-        "save_settings_to_file": "if set to True configuration settings are saved to file", 
-        "visualize": "if set to true intermediate results are visualized", 
-        "visualize_step": "visualization after how many steps"
+        "save_settings_to_file": "if set to True configuration settings are saved to file"
     }
 }

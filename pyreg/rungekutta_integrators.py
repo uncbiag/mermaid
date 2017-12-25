@@ -1,11 +1,13 @@
 """
 Simple (explicit) Runge-Kutta integrators to forward integrate dynamic forward models
 """
+from __future__ import print_function
+
 from abc import ABCMeta, abstractmethod
 
 import torch
 from torch.autograd import Variable
-
+import pyreg.utils as utils
 import numpy as np
 
 class RKIntegrator(object):
@@ -131,6 +133,13 @@ class RK4(RKIntegrator):
     """
     Runge-Kutta 4 integration
     """
+    def debugging(self,input,t,k):
+        x = utils.checkNan(input)
+        if np.sum(x):
+            print("find nan at {} step".format(t))
+            print("flag m: {}, location k{}".format(x[0],k))
+            print("flag phi: {}, location k{}".format(x[1],k))
+            raise ValueError, "nan error"
 
     def solve_one_step(self, x, t, dt):
         """
@@ -142,9 +151,13 @@ class RK4(RKIntegrator):
         :return: state at x+dt
         """
         k1 = self._xts(self.f(t, x, self.u(t, self.pars), self.pars), dt)
+        #self.debugging(k1,t,1)
         k2 = self._xts(self.f(t + 0.5 * dt, self._xpyts(x, k1, 0.5), self.u(t + 0.5 * dt, self.pars), self.pars), dt)
+        #self.debugging(k2, t, 2)
         k3 = self._xts(self.f(t + 0.5 * dt, self._xpyts(x, k2, 0.5), self.u(t + 0.5 * dt, self.pars), self.pars), dt)
+        #self.debugging(k3, t, 3)
         k4 = self._xts(self.f(t + dt, self._xpy(x, k3), self.u(t + dt, self.pars), self.pars), dt)
+        #self.debugging(k4, t, 4)
 
         # now iterate over all the elements of the list describing state x
         xp1 = []

@@ -438,6 +438,73 @@ class GaussianFourierSmoother(GaussianSmoother):
         else:
             return ce.inverse_fourier_convolution(v, self.FFilter)
 
+
+
+
+class AdaptiveSmoother(Smoother):
+    """
+    Performs Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
+    than spatial Gaussian smoothing on the CPU in large dimensions.
+    """
+
+    def __init__(self, sz, spacing, params):
+        super(AdaptiveSmoother, self).__init__(sz, spacing, params)
+        """standard deviation of Gaussian"""
+        self.net_sched = params[('net_sched', 'm_fixed', 'std for the Gaussian')]
+        self.sz = sz
+        self.spacing = spacing
+        self.FFilter = None
+        self.moving, self.target = params['input']
+        inputs ={}
+        inputs['s'] = self.moving
+        inputs['t'] = self.target
+        self.smoother = utils.AdpSmoother(inputs, len(sz))
+        utils.init_weights(self.smoother, init_type='normal')
+        if USE_CUDA:
+           self.smoother = self.smoother.cuda()
+        #self.sm_filter = utils.nn.Conv2d(2, 2, 3, 1, padding=1,groups=2, bias=False).cuda()
+
+        """filter in Fourier domain"""
+
+    def adaptive_smooth(self, m, phi, using_map=True):
+        """
+
+        :param m:
+        :param phi:
+        :param using_map:
+        :return:
+        """
+        if using_map:
+            I = utils.compute_warped_image_multiNC(self.moving, phi)
+        else:
+            I = None
+        v = self.smoother(m, I.detach())
+        return v
+
+
+    def smooth_scalar_field(self, v, vout=None):
+        pass
+
+    def inverse_smooth_scalar_field(self, v, vout=None):
+        """
+        Inverse-smooth the scalar field using Gaussian smoothing in the Fourier domain
+        (with the inverse of the Fourier transform of the Gaussian; EXPERIMENTAL, requires regularization
+        to avoid divisions by zero. DO NOT USE AT THE MOMENT.)
+
+        :param v: image to inverse-smooth
+        :param vout: if not None returns the result in this variable
+        :return: inverse-smoothed image
+        """
+
+        raise ValueError("inverse smooth scalar field is not implemented")
+
+
+
+
+
+
+
+
 class SmootherFactory(object):
     """
     Factory to quickly create different types of smoothers.
@@ -487,5 +554,7 @@ class SmootherFactory(object):
             return GaussianFourierSmoother(self.sz,self.spacing,cparams)
         elif smootherType=='gaussianSpatial':
             return GaussianSpatialSmoother(self.sz,self.spacing,cparams)
+        elif smootherType=='adaptiveNet':
+            return AdaptiveSmoother(self.sz, self.spacing, cparams)
         else:
             raise ValueError( 'Smoother: ' + smootherType + ' not known')

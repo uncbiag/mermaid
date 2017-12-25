@@ -57,6 +57,41 @@ There are a few example registration implementations in the demos directory. Act
 * Most parts of the codes have been examined. In case of failure of the GPU code contact zyshen021@gmail.com; for all other failures contact mn@cs.unc.edu or open an issue in the github issue tracker.
     
 # Lastest modifications
+  * 12.19\
+             add result_analysis: an excel result analysis\
+             1. detailed results: saved in fig_save_path/results.xlsx\
+             ** Sheet1:  #total_filename * #metrics  recorded by iteraton\
+             ** batch_0: #batch_filename * #metric_by_label    recorded by iteration\
+             ** batch_1: same as batch_0\
+             ** ......\
+             2. task results: saved in ../data/summary.xlsx\
+             ** Sheet1:  task_name * #metrics  recorded by iteration
+
+
+
+
+  * 12.16\
+             add cuda nearest neighbour interpolation, and many fixes
+  * 12.14\
+             add evalution method iou, recall, precison(overlapping), dice
+  * 12.13\
+             dataManger into the apps/mm-reg, the system works through\
+             transfer to fileio when reading image in data_pool\
+             add adaptive_padding in fileio.py, to be favourable by the guassian fft
+  * 12.12\
+             add dataManager, Registration net, dataloader for typical dataset. see sample in prepare data\
+             add 'data_pool.py', a generalized dataset pool class\
+             support inter intra personal dataset likeo asis, support inter-personal like lpba, IBSR, CUMU dataset\
+             support 2D and 3D dataset\
+             support labeled and unlabeled dataset\
+             support 2D img, label slicing
+  * 12.11\
+             support oasis inter intra registration\
+             support saving results, /data/saved_result/taskname,  settings can be found in commandline parsers\
+             support adaptiveNet (can be founded in smoother class) in llddmm mapping(tested),  which embedding networks between m and v\
+             &nbsp;&nbsp;&nbsp;  (other possible combinations like [I_t, m and v], [I_0,m and v]  also implemented but still underdevelop)\
+             add m_1 into loss for avoid explosion ( maybe useful in small time step, cannot avoid explosion in large time_step)
+
   * 12.05:   Added various momentum-based SVF models (SVFScalarMomentumImageNet, SVFScalarMomentumMapNet, SVFVectorMomentumImageNet, SVFVectorMomentumMapNet )
   * 12.05:   Added tests for the registration algorithms
   * 12.02:   Simplified interface. Petter parameters. Low-res capability (requires new arguent mapLowResFactor to be specified when calling the functions).

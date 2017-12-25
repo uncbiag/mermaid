@@ -14,6 +14,11 @@ from data_wrapper import AdaptVal
 from data_wrapper import MyTensor
 import numpy as np
 import finite_differences as fd
+import torch.nn as nn
+import torch.nn.init as init
+from libraries.functions.nn_interpolation import get_nn_interpolation
+import pandas as pd
+
 
 def get_dim_of_affine_transform(Ab):
     """
@@ -406,6 +411,22 @@ def identity_map(sz):
 
     return idnp
 
+
+
+def get_warped_label_map(label_map, phi, sched='nn'):
+    if sched == 'nn':
+        warped_label_map = get_nn_interpolation(label_map, phi)
+        # check if here should be add assert
+        assert abs(torch.sum(warped_label_map.data -warped_label_map.data.round()))< 0.1, "nn interpolation is not precise"
+    else:
+        raise ValueError, " the label warpping method is not implemented"
+    return warped_label_map
+
+
+
+
+
+
 def t2np( v ):
     """
     Takes a torch array and returns it as a numpy array on the cpu
@@ -414,4 +435,297 @@ def t2np( v ):
     :return: numpy array
     """
     return (v.data).cpu().numpy()
+
+def checkNan(x):
+    """"
+    input should be list of Variable
+    """
+    return [len(np.argwhere(np.isnan(elem.cpu().data.numpy()))) for elem in x]
+
+
+##########################################  Adaptive Net ###################################################3
+def space_normal(tensors, std=0.1):
+    """
+    space normalize for the net kernel
+    :param tensor:
+    :param mean:
+    :param std:
+    :return:
+    """
+    if isinstance(tensors, Variable):
+        space_normal(tensors.data, std=std)
+        return tensors
+    for n in range(tensors.size()[0]):
+        for c in range(tensors.size()[1]):
+            dim = tensors[n][c].dim()
+            sz = tensors[n][c].size()
+            mus = np.zeros(dim)
+            stds = std * np.ones(dim)
+            id =identity_map(sz)
+            g = compute_normalized_gaussian(id, mus, stds)
+            tensors[n,c] = torch.from_numpy(g)
+
+
+def weights_init_uniform(m):
+    classname = m.__class__.__name__
+    # print(classname)
+    if classname.find('Conv') != -1:
+        init.uniform(m.weight.data, 0.038, 0.042)
+    elif classname.find('Linear') != -1:
+        init.uniform(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm2d') != -1:
+        init.uniform(m.weight.data, 1.0, 0.02)
+        init.constant(m.bias.data, 0.0)
+
+def weights_init_normal(m):
+    classname = m.__class__.__name__
+    # print(classname)
+    if classname.find('Conv') != -1:
+        space_normal(m.weight.data)
+    elif classname.find('Linear') != -1:
+        space_normal(m.weight.data)
+    elif classname.find('BatchNorm2d') != -1:
+        init.uniform(m.weight.data, 1.0, 0.02)
+        init.constant(m.bias.data, 0.0)
+
+def weights_init_rd_normal(m):
+    classname = m.__class__.__name__
+    # print(classname)
+    if classname.find('Conv') != -1:
+        init.normal(m.weight.data)
+    elif classname.find('Linear') != -1:
+        init.normal(m.weight.data)
+    elif classname.find('BatchNorm2d') != -1:
+        init.uniform(m.weight.data, 1.0, 0.02)
+        init.constant(m.bias.data, 0.0)
+
+def weights_init_xavier(m):
+    classname = m.__class__.__name__
+    # print(classname)
+    if classname.find('Conv') != -1:
+        init.xavier_normal(m.weight.data, gain=1)
+    elif classname.find('Linear') != -1:
+        init.xavier_normal(m.weight.data, gain=1)
+    elif classname.find('BatchNorm2d') != -1:
+        init.uniform(m.weight.data, 1.0, 0.02)
+        init.constant(m.bias.data, 0.0)
+
+
+def weights_init_kaiming(m):
+    classname = m.__class__.__name__
+    # print(classname)
+    if classname.find('Conv') != -1:
+        init.kaiming_normal(m.weight.data, a=0, mode='fan_in')
+    elif classname.find('Linear') != -1:
+        init.kaiming_normal(m.weight.data, a=0, mode='fan_in')
+    elif classname.find('BatchNorm2d') != -1:
+        init.uniform(m.weight.data, 1.0, 0.02)
+        init.constant(m.bias.data, 0.0)
+
+
+def weights_init_orthogonal(m):
+    classname = m.__class__.__name__
+    print(classname)
+    if classname.find('Conv') != -1:
+        init.orthogonal(m.weight.data, gain=1)
+    elif classname.find('Linear') != -1:
+        init.orthogonal(m.weight.data, gain=1)
+    elif classname.find('BatchNorm2d') != -1:
+        init.uniform(m.weight.data, 1.0, 0.02)
+        init.constant(m.bias.data, 0.0)
+
+
+def init_weights(net, init_type='normal'):
+    print('initialization method [%s]' % init_type)
+    if init_type == 'rd_normal':
+        net.apply(weights_init_rd_normal)
+    elif init_type == 'normal':
+        net.apply(weights_init_normal)
+    elif init_type == 'uniform':
+        net.apply(weights_init_uniform)
+    elif init_type == 'xavier':
+        net.apply(weights_init_xavier)
+    elif init_type == 'kaiming':
+        net.apply(weights_init_kaiming)
+    elif init_type == 'orthogonal':
+        net.apply(weights_init_orthogonal)
+    else:
+        raise NotImplementedError('initialization method [%s] is not implemented' % init_type)
+
+def organize_data(moving, target, sched='depth_concat'):
+    if sched == 'depth_concat':
+        input = torch.cat([moving, target], dim=1)
+    elif sched == 'width_concat':
+        input = torch.cat((moving, target), dim=3)
+    elif sched =='list_concat':
+        input = torch.cat((moving.unsqueeze(0),target.unsqueeze(0)),dim=0)
+    elif sched == 'difference':
+        input = moving-target
+    return input
+
+
+def bh(m,gi,go):
+    print("Grad Input")
+    print(torch.sum(gi[0].data), torch.sum(gi[1].data))
+    print("Grad Output")
+    print(torch.sum(go[0].data))
+    return gi[0],gi[1], gi[2]
+
+
+
+class ConvBnRel(nn.Module):
+    # conv + bn (optional) + relu
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, active_unit='relu', same_padding=False,
+                 bn=False, reverse=False, bias=False):
+        super(ConvBnRel, self).__init__()
+        padding = int((kernel_size - 1) / 2) if same_padding else 0
+        if not reverse:
+            self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding=padding, bias=bias)
+        else:
+            self.conv = nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding=padding,bias=bias)
+        #y = \frac{x - mean[x]}{ \sqrt{Var[x] + \epsilon}} * gamma + beta
+        #When affine=False the output of BatchNorm is equivalent to considering gamma=1 and beta=0 as constants.
+        self.bn = nn.BatchNorm2d(out_channels, eps=0.0001, momentum=0, affine=True) if bn else None
+        if active_unit == 'relu':
+            self.active_unit = nn.ReLU(inplace=True)
+        elif active_unit == 'elu':
+            self.active_unit = nn.ELU(inplace=True)
+        else:
+            self.active_unit = None
+
+    def forward(self, x):
+        x = self.conv(x)
+        if self.bn is not None:
+            x = self.bn(x)
+        if self.active_unit is not None:
+            x = self.active_unit(x)
+        return x
+
+class FcRel(nn.Module):
+    # fc+ relu(option)
+    def __init__(self, in_features, out_features, active_unit='relu'):
+        super(FcRel, self).__init__()
+        self.fc = nn.Linear(in_features, out_features)
+        if active_unit == 'relu':
+            self.active_unit = nn.ReLU(inplace=True)
+        elif active_unit == 'elu':
+            self.active_unit = nn.ELU(inplace=True)
+        else:
+            self.active_unit = None
+
+    def forward(self, x):
+        x = self.fc(x)
+        if self.active_unit is not None:
+            x = self.active_unit(x)
+        return x
+
+
+class AdpSmoother(nn.Module):
+    """
+    a simple conv implementation, generate displacement field
+    """
+    def __init__(self, inputs, dim, net_sched=None):
+        # settings should include [using_bias, using bn, using elu]
+        # inputs should be a dictionary could contain ['s'],['t']
+        super(AdpSmoother, self).__init__()
+        self.dim = dim
+        self.net_sched = 'm_only'
+        self.s = inputs['s'].detach()
+        self.t = inputs['t'].detach()
+        self.mask = Parameter(torch.cat([torch.ones(inputs['s'].size())]*dim, 1), requires_grad = True)
+        self.get_net_sched()
+        #self.net.register_backward_hook(bh)
+
+    def get_net_sched(self, debugging=True, using_bn=True, active_unit='relu', using_sigmoid=False , kernel_size=5):
+        # return the self.net and self.net_input
+        padding_size = (kernel_size-1)//2
+        if self.net_sched == 'm_only':
+            if debugging:
+                self.net = nn.Conv2d(2, 2, kernel_size, 1, padding=padding_size, bias=False,groups=2)
+            else:
+                net = \
+                    [ConvBnRel(self.dim, 20, 5, active_unit=active_unit, same_padding=True, bn=using_bn),
+                     ConvBnRel(20,self.dim, 5, active_unit=active_unit, same_padding=True, bn=using_bn)]
+                if using_sigmoid:
+                    net += [nn.Sigmoid()]
+                self.net = nn.Sequential(*net)
+
+        elif self.net_sched =='m_f_s':
+            if debugging:
+                self.net = nn.Conv2d(self.dim+1, self.dim, kernel_size, 1, padding=padding_size, bias=False)
+            else:
+                net = \
+                    [ConvBnRel(self.dim +1, 20, 5, active_unit=active_unit, same_padding=True, bn=using_bn),
+                       ConvBnRel(20, self.dim, 5, active_unit=active_unit, same_padding=True, bn=using_bn)]
+                if using_sigmoid:
+                    net += [nn.Sigmoid()]
+                self.net = nn.Sequential(*net)
+
+        elif self.net_sched == 'm_d_s':
+            if debugging:
+                self.net = nn.Conv2d(self.dim+1, self.dim, kernel_size, 1, padding=padding_size, bias=False)
+            else:
+                net = \
+                    [ConvBnRel(self.dim + 1, 20, 5, active_unit=active_unit, same_padding=True, bn=using_bn),
+                       ConvBnRel(20, self.dim, 5, active_unit=active_unit, same_padding=True, bn=using_bn)]
+                if using_sigmoid:
+                    net += [nn.Sigmoid()]
+                self.net = nn.Sequential(*net)
+
+        elif self.net_sched == 'm_f_s_t':
+            if debugging:
+                self.net = nn.Conv2d(self.dim+2, self.dim, kernel_size, 1, padding=padding_size, bias=False)
+            else:
+                net = \
+                    [ConvBnRel(self.dim + 2, 20, 5, active_unit=active_unit, same_padding=True, bn=using_bn),
+                       ConvBnRel(20, self.dim, 5, active_unit=active_unit, same_padding=True, bn=using_bn)]
+                if using_sigmoid:
+                    net += [nn.Sigmoid()]
+                self.net = nn.Sequential(*net)
+        elif self.net_sched == 'm_d_s_f_t':
+            if debugging:
+                self.net = nn.Conv2d(self.dim + 2, self.dim, kernel_size, 1, padding=padding_size, bias=False)
+            else:
+                net = \
+                    [ConvBnRel(self.dim + 2, 20, 5, active_unit=active_unit, same_padding=True, bn=using_bn),
+                     ConvBnRel(20, self.dim, 5, active_unit=active_unit, same_padding=True, bn=using_bn)]
+                if using_sigmoid:
+                    net += [nn.Sigmoid()]
+                self.net = nn.Sequential(*net)
+
+
+    def prepare_data(self, m, new_s):
+        input=None
+        if self.net_sched == 'm_only':
+            input = m
+        elif self.net_sched == 'm_f_s':
+            input = organize_data(m,self.s,sched='depth_concat')
+        elif self.net_sched == 'm_d_s':
+            input = organize_data(m, new_s, sched='depth_concat')
+        elif self.net_sched == 'm_f_s_t':
+            input = organize_data(m, self.s, sched='depth_concat')
+            input = organize_data(input, self.t, sched='depth_concat')
+        elif self.net_sched == 'm_f_s_t':
+            input = organize_data(m, self.s, sched='depth_concat')
+            input = organize_data(input, self.t, sched='depth_concat')
+        elif self.net_sched == 'm_d_s_f_t':
+            input = organize_data(m, new_s, sched='depth_concat')
+            input = organize_data(input, self.t, sched='depth_concat')
+
+        return input
+
+
+
+
+
+    def forward(self, m,new_s=None):
+        m = m * self.mask
+        input = self.prepare_data(m,new_s)
+        x= input
+        x = self.net(x)
+        return x
+
+
+
+
 

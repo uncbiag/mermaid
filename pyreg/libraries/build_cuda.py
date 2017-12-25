@@ -14,6 +14,9 @@ extra_objects_2D=[]
 sources_3D = []
 headers_3D = []
 extra_objects_3D =[]
+sources_nn = []
+headers_nn = []
+extra_objects_nn =[]
 defines = []
 
 with_cuda = False
@@ -26,6 +29,9 @@ if torch.cuda.is_available():
     headers_2D += ['src/my_lib_cuda_2D.h']
     sources_3D += ['src/my_lib_cuda_3D.c']
     headers_3D += ['src/my_lib_cuda_3D.h']
+    sources_nn += ['src/nn_interpolation.c']
+    headers_nn += ['src/nn_interpolation.h']
+
     defines += [('WITH_CUDA', None)]
     with_cuda = True
 
@@ -34,9 +40,11 @@ print(this_file)
 extra_objects_1D += ['src/my_lib_cuda_1D.cu.o']
 extra_objects_2D += ['src/my_lib_cuda_2D.cu.o']
 extra_objects_3D += ['src/my_lib_cuda_3D.cu.o']
+extra_objects_nn += ['src/nn_interpolation.cu.o']
 extra_objects_1D = [os.path.join(this_file, fname) for fname in extra_objects_1D]
 extra_objects_2D = [os.path.join(this_file, fname) for fname in extra_objects_2D]
 extra_objects_3D = [os.path.join(this_file, fname) for fname in extra_objects_3D]
+extra_objects_nn = [os.path.join(this_file, fname) for fname in extra_objects_nn]
 
 ffi_1D = create_extension(
     '_ext.my_lib_1D',
@@ -70,9 +78,19 @@ ffi_3D = create_extension(
     extra_objects=extra_objects_3D
 )
 
+ffi_nn = create_extension(
+    '_ext.nn_interpolation',
+    headers=headers_nn,
+    sources=sources_nn,
+    define_macros=defines,
+    relative_to=__file__,
+    with_cuda=with_cuda,
+    extra_objects=extra_objects_nn
+)
 
 if __name__ == '__main__':
     ffi_1D.build()
     ffi_2D.build()
     ffi_3D.build()
+    ffi_nn.build()
  

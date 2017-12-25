@@ -1,0 +1,27 @@
+{
+    "datapro": {
+        "dataset": {
+            "data_path": {}, 
+            "label_path": {}, 
+            "name": "lpba", 
+            "output_path": "/playpen/zyshen/data/", 
+            "task_name": "lpba"
+        }, 
+        "mode": {
+            "all_comb": false, 
+            "axis": 2, 
+            "divided_ratio": [
+                0.8, 
+                0.1, 
+                0.1
+            ], 
+            "prepare_data": false, 
+            "sched": "inter", 
+            "slicing": 100
+        }, 
+        "switch": {
+            "switch_to_exist_task": false, 
+            "task_root_path": "/playpen/zyshen/data/oasis_inter_slicing90"
+        }
+    }
+}

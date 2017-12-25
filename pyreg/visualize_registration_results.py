@@ -1,14 +1,19 @@
+from __future__ import print_function
+import matplotlib as matplt
+matplt.use('Agg')
+#matplt.use('Agg')
 """
 Some utility functions to display the registration results
 """
 
 import matplotlib.pyplot as plt
 import numpy as np
-
+import os
 import utils
 import viewers
-
-def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped):
+dpi=500
+extension= '.png'
+def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visual_param=None, i=0):
 
     if (vizImage is not None) and (phiWarped is not None):
         sp_s = 231
@@ -59,7 +64,14 @@ def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped):
         plt.plot(utils.t2np(vizImage))
         plt.title(vizName)
 
-    plt.show()
+    if i==0:
+        plt.show()
+    if visual_param['save_fig']:
+        file_name = visual_param['pair_path'][i]
+        join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
+        plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
+        plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
+
 
 def checkerboard_2d(I0,I1,nrOfTiles=8):
     """
@@ -80,7 +92,7 @@ def checkerboard_2d(I0,I1,nrOfTiles=8):
     cb_image = I0*cb_grid + I1*(1-cb_grid)
     return cb_image
 
-def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName):
+def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_param=None, i=0):
 
     if (vizImage is not None):
         sp_s = 231
@@ -124,9 +136,15 @@ def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName):
         plt.colorbar()
         plt.title(vizName)
 
-    plt.show()
+    if i==0:
+        plt.show()
+    if visual_param['save_fig']:
+        file_name = visual_param['pair_path'][i]
+        join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
+        plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
+        plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
 
-def _show_current_images_2d_map(iS, iT, iW, iter, vizImage, vizName, phiWarped):
+def _show_current_images_2d_map(iS, iT, iW, iter, vizImage, vizName, phiWarped, visual_param=None, i=0):
 
     if (vizImage is not None) and (phiWarped is not None):
         sp_s = 231
@@ -194,18 +212,25 @@ def _show_current_images_2d_map(iS, iT, iW, iter, vizImage, vizName, phiWarped):
         plt.colorbar()
         plt.title(vizName)
 
-    plt.show()
+    if i==0:
+        plt.show()
+    if visual_param['save_fig']:
+        file_name = visual_param['pair_path'][i]
+        join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
+        plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
+        plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
+        plt.clf()
 
 
-def _show_current_images_2d(iS, iT, iW, iter, vizImage, vizName, phiWarped):
+def _show_current_images_2d(iS, iT, iW, iter, vizImage, vizName, phiWarped, visual_param=None, i=0):
 
     if phiWarped is not None:
-        _show_current_images_2d_map(iS, iT, iW, iter, vizImage, vizName, phiWarped)
+        _show_current_images_2d_map(iS, iT, iW, iter, vizImage, vizName, phiWarped, visual_param, i)
     else:
-        _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName)
+        _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_param, i)
 
 
-def _show_current_images_3d(iS, iT, iW, iter, vizImage, vizName, phiWarped):
+def _show_current_images_3d(iS, iT, iW, iter, vizImage, vizName, phiWarped, visual_param=None, i=0):
 
     if (phiWarped is not None) and (vizImage is not None):
         fig, ax = plt.subplots(5,3)
@@ -290,10 +315,17 @@ def _show_current_images_3d(iS, iT, iW, iter, vizImage, vizName, phiWarped):
         feh.synchronize([ax[0][1], ax[1][1], ax[2][1]])
         feh.synchronize([ax[0][2], ax[1][2], ax[2][2]])
 
-    plt.show()
+
+    if i==0:
+        plt.show()
+    if visual_param['save_fig']:
+        file_name = visual_param['pair_path'][i]
+        join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
+        plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
+        plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
 
 
-def show_current_images(iter, iS, iT, iW, vizImage=None, vizName=None, phiWarped=None):
+def show_current_images(iter, iS, iT, iW, vizImages=None, vizName=None, phiWarped=None, visual_param=None):
     """
     Visualizes the current images during registration
     
@@ -316,30 +348,39 @@ def show_current_images(iter, iS, iT, iW, vizImage=None, vizName=None, phiWarped
 
     dim = iS.ndimension()-2
 
-    iSF = iS[0,0,...]
-    iTF = iT[0,0,...]
-    iWF = iW[0,0,...]
-
-    if phiWarped is not None:
-        pwF = phiWarped[0,...]
+    if visual_param['save_fig'] == True:
+        save_fig_num = min(visual_param['save_fig_num'], len(visual_param['pair_path']))
+        print("num {} of pair would be saved in {}".format(save_fig_num,visual_param['save_fig_path']))
     else:
-        pwF = None
+        save_fig_num = 1
 
-    if dim==1:
-        _show_current_images_1d(iSF, iTF, iWF, iter, vizImage, vizName, pwF)
-    elif dim==2:
-        _show_current_images_2d(iSF, iTF, iWF, iter, vizImage, vizName, pwF)
-    elif dim==3:
-        _show_current_images_3d(iSF, iTF, iWF, iter, vizImage, vizName, pwF)
-    else:
-        raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
 
-    '''
-    plt.show(block=False)
-    plt.draw_all(force=True)
+    for i in range(save_fig_num):
+        iSF = iS[i,0,...]
+        iTF = iT[i,0,...]
+        iWF = iW[i,0,...]
+        vizImage = vizImages[i,...]
 
-    print( 'Click mouse to continue press any key to exit' )
-    wasKeyPressed = plt.waitforbuttonpress()
-    if wasKeyPressed:
-        sys.exit()
-    '''
+        if phiWarped is not None:
+            pwF = phiWarped[i,...]
+        else:
+            pwF = None
+
+        if dim==1:
+            _show_current_images_1d(iSF, iTF, iWF, iter, vizImage, vizName, pwF, visual_param, i)
+        elif dim==2:
+            _show_current_images_2d(iSF, iTF, iWF, iter, vizImage, vizName, pwF, visual_param, i)
+        elif dim==3:
+            _show_current_images_3d(iSF, iTF, iWF, iter, vizImage, vizName, pwF, visual_param, i)
+        else:
+            raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
+
+        '''
+        plt.show(block=False)
+        plt.draw_all(force=True)
+    
+        print( 'Click mouse to continue press any key to exit' )
+        wasKeyPressed = plt.waitforbuttonpress()
+        if wasKeyPressed:
+            sys.exit()
+        '''

@@ -63,7 +63,7 @@ def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scal
         model_name = model_name + '_image'
 
     # general parameters
-    params['registration_model'] = par_algconf['algconf']['model']['registration_model']
+    params['model']['registration_model'] = par_algconf['algconf']['model']['registration_model']
 
     torch.set_num_threads( nr_of_threads )
     print('Number of pytorch threads set to: ' + str(torch.get_num_threads()))
@@ -107,6 +107,7 @@ def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scal
 
     mo.set_scale_factors(multi_scale_scale_factors)
     mo.set_number_of_iterations_per_scale(multi_scale_iterations_per_scale)
+    mo.set_light_analysis_on(True)
 
     # and now do the optimization
     mo.optimize()
@@ -127,8 +128,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Registers two images')
 
     required = parser.add_argument_group('required arguments')
-    required.add_argument('--moving_image', required=True, default='../test_data/brain_slices/ws_slice.nrrd', help='Moving image')
-    required.add_argument('--target_image', required=True, default='../test_data/brain_slices/wt_slice.nrrd', help='Target image')
+    required.add_argument('--moving_image', required=False, default='../test_data/brain_slices/ws_slice.nrrd', help='Moving image')
+    required.add_argument('--target_image', required=False, default='../test_data/brain_slices/wt_slice.nrrd', help='Target image')
 
     parser.add_argument('--warped_image', required=False, help='Warped image after registration')
     parser.add_argument('--map', required=False, help='Computed map')
@@ -225,6 +226,3 @@ if used_config is not None:
     params.write_JSON_comments( used_config + '_settings_comments.json')
 
 print("time {}".format(time()-since))
-
-
-

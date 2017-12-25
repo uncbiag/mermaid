@@ -1,7 +1,7 @@
 {
     "algconf": {
         "image_smoothing": {
-            "smooth_images": true, 
+            "smooth_images": false, 
             "smoother": {
                 "gaussian_std": 0.01, 
                 "type": "gaussian"
@@ -9,6 +9,7 @@
         }, 
         "model": {
             "deformation": {
+                "map_low_res_factor": 0.5,
                 "name": "lddmm_shooting", 
                 "use_map": true
             }, 
@@ -22,6 +23,10 @@
                 }, 
                 "similarity_measure": {
                     "sigma": 0.1, 
+                    "smoother": {
+                        "gaussian_std": 0.1, 
+                        "type": "gaussian"
+                    }, 
                     "type": "ssd"
                 }
             }
@@ -37,11 +42,12 @@
                     10, 
                     20, 
                     20
-                ]
+                ], 
+                "use_multiscale": false
             }, 
-            "name": "lbfgs_ls", 
+            "name": "adam", 
             "single_scale": {
-                "nr_of_iterations": 20
+                "nr_of_iterations": 10
             }
         }
     }

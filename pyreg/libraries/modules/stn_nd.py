@@ -10,7 +10,7 @@ This is needed for the map-based registrations for example.
 #TODO
 
 from torch.nn.modules.module import Module
-from functions.stn_nd import STNFunction_ND, STNFunction_ND_BCXYZ, STNFunction
+from pyreg.libraries.functions.stn_nd import STNFunction_ND, STNFunction_ND_BCXYZ, STNFunction
 
 class STN_ND(Module):
     """

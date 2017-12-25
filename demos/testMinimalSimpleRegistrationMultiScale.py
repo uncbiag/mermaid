@@ -34,6 +34,8 @@ params['optimizer']['single_scale']['nr_of_iterations'] = 50
 so = MO.SimpleMultiScaleRegistration(ISource,ITarget,spacing,params)
 so.get_optimizer().set_visualization( ds.visualize )
 so.get_optimizer().set_visualize_step( ds.visualize_step )
+so.set_light_analysis_on(True)
+
 so.register()
 
 params.write_JSON( 'testMinimalSimpleRegistrationMultiScale_' + model_name + '_settings_clean.json')

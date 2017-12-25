@@ -8,14 +8,14 @@
     }, 
     "model": {
         "deformation": {
-            "map_low_res_factor": 1.0, 
+            "map_low_res_factor": 1.0,
             "use_map": false
         }, 
         "registration_model": {
             "forward_model": {
                 "number_of_time_steps": 10, 
                 "smoother": {
-                    "gaussian_std": 0.15, 
+                    "gaussian_std": 0.05,
                     "type": "gaussian"
                 }
             }, 
