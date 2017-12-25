@@ -285,7 +285,7 @@ class RHSLibrary(object):
 
     def _rhs_epdiff_singleN(self, m, v,rhsm):
         if self.dim == 1:
-            rhsm[:]= -self.fdt.dXc(m[:,:, 0] * v[:,0, :]) - self.fdt.dXc(v[:,0, :]) * m[:,0, :]
+            rhsm[:]= -self.fdt.dXc(m[:,0, :] * v[:,0, :]) - self.fdt.dXc(v[:,0, :]) * m[:,0, :]
         elif self.dim == 2:
             #rhsm = Variable(MyTensor(m.size()).zero_(), requires_grad=False)
             # (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)

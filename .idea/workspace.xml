@@ -2,10 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="2a6ebea8-85ec-4a48-b09a-a51cda4864ba" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/data_loader.py" afterPath="$PROJECT_DIR$/pyreg/data_loader.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/data_manager.py" afterPath="$PROJECT_DIR$/pyreg/data_manager.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/data_pool.py" afterPath="$PROJECT_DIR$/pyreg/data_pool.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/TODO.md" afterPath="$PROJECT_DIR$/TODO.md" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/pyreg/forward_models.py" afterPath="$PROJECT_DIR$/pyreg/forward_models.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -46,7 +44,7 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="data_pool.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="data_pool.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/pyreg/data_pool.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="3300">
@@ -58,11 +56,20 @@
           </provider>
         </entry>
       </file>
+      <file leaf-file-name="forward_models.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/pyreg/forward_models.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="255">
+              <caret line="287" column="43" lean-forward="false" selection-start-line="287" selection-start-column="43" selection-end-line="287" selection-end-column="43" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
     </leaf>
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>gdk</find>
       <find>map_low_res_factor</find>
       <find>int</find>
       <find>self.int</find>
@@ -92,6 +99,7 @@
       <find>gaussia</find>
       <find>compute_regularization_energy</find>
       <find>gau</find>
+      <find>singleN</find>
     </findStrings>
     <replaceStrings>
       <replace>extension</replace>
@@ -112,7 +120,6 @@
         <option value="$PROJECT_DIR$/pyreg/data_utils.py" />
         <option value="$PROJECT_DIR$/pyreg/model_factory.py" />
         <option value="$PROJECT_DIR$/pyreg/utils.py" />
-        <option value="$PROJECT_DIR$/pyreg/forward_models.py" />
         <option value="$PROJECT_DIR$/pyreg/rungekutta_integrators.py" />
         <option value="$PROJECT_DIR$/pyreg/visualize_registration_results.py" />
         <option value="$PROJECT_DIR$/pyreg/multiscale_optimizer.py" />
@@ -125,6 +132,7 @@
         <option value="$PROJECT_DIR$/pyreg/data_manager.py" />
         <option value="$PROJECT_DIR$/pyreg/data_loader.py" />
         <option value="$PROJECT_DIR$/pyreg/data_pool.py" />
+        <option value="$PROJECT_DIR$/pyreg/forward_models.py" />
       </list>
     </option>
   </component>
@@ -860,16 +868,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/pyreg/forward_models.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="342">
-          <caret line="217" column="0" lean-forward="false" selection-start-line="217" selection-start-column="0" selection-end-line="217" selection-end-column="0" />
-          <folding>
-            <element signature="e#989#1028#0" expanded="false" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/pyreg/registration_networks.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="15">
@@ -931,6 +929,14 @@
           <folding>
             <element signature="e#0#37#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/pyreg/forward_models.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="255">
+          <caret line="287" column="43" lean-forward="false" selection-start-line="287" selection-start-column="43" selection-end-line="287" selection-end-column="43" />
+          <folding />
         </state>
       </provider>
     </entry>
