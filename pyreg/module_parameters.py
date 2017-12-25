@@ -148,7 +148,7 @@ class ParameterDict(object):
 
         if type(value)==dict:
             # only add if this is an empty dictionary
-            if len(value)!=0:
+            if len(value)==0:
                 self._set_current_category(key, comment)
             else:
                 raise ValueError('Can only add empty dictionaries')

@@ -82,6 +82,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.params)
         so.get_optimizer().set_visualization(False)
+        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 2.49891615], similarityE=[ 0.78662372], regE=[ 1.71229231], relF=[ 0.00913821]
@@ -102,6 +103,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
         so.get_optimizer().set_visualization(False)
+        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 0.02742532], similarityE=[ 0.02321979], regE=[ 0.00420553], relF=[ 0.00610944]
@@ -121,6 +123,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
         so.get_optimizer().set_visualization(False)
+        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 0.01725787], similarityE=[ 0.01244521], regE=[ 0.00481266], relF=[ 0.]
@@ -139,6 +142,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
         mo.get_optimizer().set_visualization(False)
+        mo.set_light_analysis_on(True)
         mo.register()
 
         # E=[ 0.08246735], similarityE=[ 0.07836073], regE=[ 0.00410663], relF=[ 0.01147533]
@@ -158,6 +162,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
         mo.get_optimizer().set_visualization(False)
+        mo.set_light_analysis_on(True)
         mo.register()
 
         # E=[ 0.01843772], similarityE=[ 0.01369324], regE=[ 0.00474448], relF=[ 0.00353257]
@@ -177,6 +182,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
         mo.get_optimizer().set_visualization(False)
+        mo.set_light_analysis_on(True)
         mo.register()
 
         # E = [0.05379514], similarityE = [0.05005502], regE = [0.00374013], relF = [0.02199404]
@@ -197,6 +203,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
         mo.get_optimizer().set_visualization(False)
+        mo.set_light_analysis_on(True)
         mo.register()
 
         # E=[ 0.02130384], similarityE=[ 0.01675734], regE=[ 0.0045465], relF=[ 0.00699624]
@@ -216,6 +223,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.params)
         so.get_optimizer().set_visualization(False)
+        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 1.99103928], similarityE=[ 0.43856502], regE=[ 1.55247426], relF=[ 0.01893948]
@@ -234,6 +242,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.params)
         so.get_optimizer().set_visualization(False)
+        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 0.0579784], similarityE=[ 0.05422445], regE=[ 0.00375395], relF=[ 0.01241212]
@@ -253,6 +262,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.params)
         so.get_optimizer().set_visualization(False)
+        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 0.01588291], similarityE=[ 0.01131474], regE=[ 0.00456817], relF=[ 0.00034867]
@@ -274,6 +284,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
         so.get_optimizer().set_visualization(False)
+        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 0.59089059], similarityE=[ 0.58405572], regE=[ 0.00683488], relF=[ 0.00551791]
@@ -294,6 +305,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
         so.get_optimizer().set_visualization(False)
+        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 0.50193405], similarityE=[ 0.49500716], regE=[ 0.00692687], relF=[ 0.00335134]
@@ -315,6 +327,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
         so.get_optimizer().set_visualization(False)
+        so.set_light_analysis_on(True)
         so.register()
 
         #  E=[ 0.01570327], similarityE=[ 0.00999644], regE=[ 0.00570683], relF=[ 0.00794008]
@@ -335,6 +348,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
         so.get_optimizer().set_visualization(False)
+        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 0.01703692], similarityE=[ 0.01153301], regE=[ 0.00550391], relF=[ 0.0029047]
