@@ -15,7 +15,7 @@
             "forward_model": {
                 "number_of_time_steps": 10, 
                 "smoother": {
-                    "gaussian_std": 0.05,
+                    "gaussian_std": 0.15,
                     "type": "gaussian"
                 }
             }, 
@@ -27,7 +27,7 @@
             "similarity_measure": {
                 "sigma": 0.1, 
                 "type": "ssd"
-            }, 
+            },
             "type": "lddmm_shooting_image"
         }
     }, 
