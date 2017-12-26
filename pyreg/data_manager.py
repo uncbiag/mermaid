@@ -77,12 +77,12 @@ class DataManager(object):
 
     def get_default_dataset_path(self,is_label):
         default_data_path = {'lpba':'/playpen/data/quicksilver_data/testdata/LPBA40/brain_affine_icbm',
-                             'oasis': '/playpen/zyshen/data/oasis',
+                             'oasis2d': '/playpen/zyshen/data/oasis',
                              'cumc':'/playpen/data/quicksilver_data/testdata/CUMC12/brain_affine_icbm',
                              'ibsr': '/playpen/data/quicksilver_data/testdata/IBSR18/brain_affine_icbm'}
 
         default_label_path = {'lpba': '/playpen/data/quicksilver_data/testdata/LPBA40/label_affine_icbm',
-                             'oasis': 'None',
+                             'oasis2d': 'None',
                              'cumc': '/playpen/data/quicksilver_data/testdata/CUMC12/label_affine_icbm',
                              'ibsr': '/playpen/data/quicksilver_data/testdata/IBSR18/label_affine_icbm'}
         if is_label:
