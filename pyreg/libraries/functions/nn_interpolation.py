@@ -2,7 +2,7 @@ from pyreg.data_wrapper import USE_CUDA, MyTensor, AdaptVal
 from cffi import FFI
 import torch
 from torch.autograd import Variable
-from pyreg.libraries._ext import nn_interpolation
+from pyreg.libraries._ext import nn_interpolation, my_lib_nn
 
 ffi = FFI()
 
@@ -17,6 +17,8 @@ def nn_interpolation_fn_sel(input1, input2, output, ndim, device_c, use_cuda=USE
             nn_interpolation.nearestNeighBCWH_updateOutput_cuda_2D(input1, input2, output, device_c)
         elif ndim == 3:
             nn_interpolation.nearestNeighBCWHD_updateOutput_cuda_3D(input1, input2, output, device_c)
+    else:
+        my_lib_nn.nearestNeighBCXYZ_updateOutput_ND(input1, input2, output, ndim)
 
 
 def get_nn_interpolation(input1, input2):
