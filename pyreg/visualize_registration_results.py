@@ -64,7 +64,7 @@ def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visua
         plt.plot(utils.t2np(vizImage))
         plt.title(vizName)
 
-    if i==0:
+    if i==0 and visual_param['visualize']:
         plt.show()
     if visual_param['save_fig']:
         file_name = visual_param['pair_path'][i]
@@ -136,7 +136,7 @@ def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_p
         plt.colorbar()
         plt.title(vizName)
 
-    if i==0:
+    if i==0 and visual_param['visualize']:
         plt.show()
     if visual_param['save_fig']:
         file_name = visual_param['pair_path'][i]
@@ -212,7 +212,7 @@ def _show_current_images_2d_map(iS, iT, iW, iter, vizImage, vizName, phiWarped, 
         plt.colorbar()
         plt.title(vizName)
 
-    if i==0:
+    if i==0 and visual_param['visualize']:
         plt.show()
     if visual_param['save_fig']:
         file_name = visual_param['pair_path'][i]
@@ -316,7 +316,7 @@ def _show_current_images_3d(iS, iT, iW, iter, vizImage, vizName, phiWarped, visu
         feh.synchronize([ax[0][2], ax[1][2], ax[2][2]])
 
 
-    if i==0:
+    if i==0 and visual_param['visualize']:
         plt.show()
     if visual_param['save_fig']:
         file_name = visual_param['pair_path'][i]

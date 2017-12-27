@@ -814,9 +814,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     self.recorder.saving_results(sched='buffer', results=metric_results_dic['label_avg_res'],  info=info,averaged_results=None)
 
         # result visualization
-        if self.visualize:
+        if self.visualize or self.save_fig:
             visual_param = {}
             if not self.light_analysis_on:
+                visual_param['visualize'] = self.visualize
                 visual_param['save_fig'] = self.save_fig
                 visual_param['save_fig_path'] = self.save_fig_path
                 visual_param['save_fig_path_byname'] = os.path.join(self.save_fig_path,'byname')

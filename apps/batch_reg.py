@@ -127,7 +127,7 @@ def do_registration():
 
     par_respro = pars.ParameterDict()
     par_respro.load_JSON('../settings/respro_settings.json')
-    expr_name = par_respro['respro']['expr_name']
+    expr_name = par_respro['respro']['expr_name']+ '_' + task_full_name
     visualize = par_respro['respro']['visualize']
     visualize_step = par_respro['respro']['visualize_step']
     save_fig = par_respro['respro']['save_fig']
