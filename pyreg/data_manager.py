@@ -110,6 +110,7 @@ class DataManager(object):
         :param task_path: given existed task_root_path
         :return:
         """
+        self.task_root_path = task_root_path
         self.task_path = {x:os.path.join(task_root_path,x) for x in ['train','val', 'test']}
         return self.task_path
 

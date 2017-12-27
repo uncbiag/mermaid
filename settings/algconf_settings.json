@@ -9,7 +9,7 @@
         }, 
         "model": {
             "deformation": {
-                "map_low_res_factor": 0.5,
+                "map_low_res_factor": 0.5, 
                 "name": "lddmm_shooting", 
                 "use_map": true
             }, 
@@ -22,11 +22,14 @@
                     }
                 }, 
                 "similarity_measure": {
-                    "sigma": 0.1, 
-                    "smoother": {
-                        "gaussian_std": 0.1, 
-                        "type": "gaussian"
+                    "develop_mod": {
+                        "smoother": {
+                            "gaussian_std": 0.1, 
+                            "type": "gaussian"
+                        }
                     }, 
+                    "develop_mod_on": true,
+                    "sigma": 0.1, 
                     "type": "ssd"
                 }
             }

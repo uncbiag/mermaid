@@ -5,7 +5,7 @@
             "label_path": {}, 
             "name": "lpba", 
             "output_path": "/playpen/zyshen/data/", 
-            "task_name": "lpba"
+            "task_name": "lpba3d"
         }, 
         "mode": {
             "all_comb": false, 
@@ -15,13 +15,13 @@
                 0.1, 
                 0.1
             ], 
-            "prepare_data": false, 
+            "prepare_data": false,
             "sched": "inter", 
-            "slicing": 100
+            "slicing": -1
         }, 
         "switch": {
-            "switch_to_exist_task": false, 
-            "task_root_path": "/playpen/zyshen/data/oasis_inter_slicing90"
+            "switch_to_exist_task": true ,
+            "task_root_path": "/playpen/zyshen/data/lpba3d_inter"
         }
     }
 }
