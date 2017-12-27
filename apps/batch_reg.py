@@ -83,7 +83,7 @@ def do_registration():
             data_manager.prepare_data()
         task_root_path = data_manager.get_task_root_path()
 
-    dataloaders = data_manager.data_loaders(batch_size=2)
+    dataloaders = data_manager.data_loaders(batch_size=1)
     data_info = pars.ParameterDict()
     data_info.load_JSON(os.path.join(task_root_path,'info.json'))
     task_full_name = data_manager.get_full_task_name()

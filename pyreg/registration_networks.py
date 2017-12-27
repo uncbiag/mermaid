@@ -550,7 +550,7 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
         self.regularizer = (RF.RegularizerFactory(self.spacing).
                             create_regularizer(cparams))
         """regularizer to compute the regularization energy"""
-        if params['similarity_measure']['develop_mod_on']:
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
         else:
             cparams = self.params[('forward_model', {}, 'settings for the forward model')]
@@ -837,7 +837,7 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
         self.m = m
         """momentum"""
 
-        if params['similarity_measure']['develop_mod_on']:
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
         else:
             cparams = self.params[('forward_model', {}, 'settings for the forward model')]
@@ -902,7 +902,7 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
         self.m = m
         """vector momentum"""
 
-        if params['similarity_measure']['develop_mod_on']:
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
         else:
             cparams = self.params[('forward_model', {}, 'settings for the forward model')]
@@ -967,7 +967,7 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         self.m = m
         """vector momentum"""
 
-        if params['similarity_measure']['develop_mod_on']:
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
         else:
             cparams = self.params[('forward_model', {}, 'settings for the forward model')]
@@ -1038,7 +1038,7 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
         self.m = m
         """vector momentum"""
 
-        if params['similarity_measure']['develop_mod_on']:
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
         else:
             cparams = self.params[('forward_model', {}, 'settings for the forward model')]
@@ -1182,7 +1182,7 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
         self.lam = lam
         """scalar momentum"""
 
-        if params['similarity_measure']['develop_mod_on']:
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
         else:
             cparams = self.params[('forward_model', {}, 'settings for the forward model')]
@@ -1239,7 +1239,7 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
         self.lam = lam
         """scalar momentum"""
 
-        if params['similarity_measure']['develop_mod_on']:
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
         else:
             cparams = self.params[('forward_model', {}, 'settings for the forward model')]
@@ -1298,7 +1298,7 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
         self.lam = lam
         """scalar momentum"""
 
-        if params['similarity_measure']['develop_mod_on']:
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
         else:
             cparams = self.params[('forward_model', {}, 'settings for the forward model')]
@@ -1363,7 +1363,7 @@ class SVFScalarMomentumMapLoss(RegistrationMapLoss):
         self.lam = lam
         """scalar momentum"""
 
-        if params['similarity_measure']['develop_mod_on']:
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
         else:
             cparams = self.params[('forward_model', {}, 'settings for the forward model')]
