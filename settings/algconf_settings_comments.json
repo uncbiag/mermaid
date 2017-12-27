@@ -31,12 +31,16 @@
                 }, 
                 "similarity_measure": {
                     "__doc__": "model describing the similarity measure", 
-                    "sigma": "1/sigma^2 weighting", 
-                    "smoother": {
-                        "__doc__": "how the smoothing of velocity fields is done", 
-                        "gaussian_std": "standard deviation for smoothing", 
-                        "type": "type of smoothing"
+                    "develop_mod": {
+                        "__doc__": "developing mode ", 
+                        "smoother": {
+                            "__doc__": "how the smoothing of velocity fields is done ", 
+                            "gaussian_std": "standard deviation for smoothing", 
+                            "type": "type of smoothing"
+                        }
                     }, 
+                    "develop_mod_on": "if true would allow develop settings ", 
+                    "sigma": "1/sigma^2 weighting", 
                     "type": "[ssd|ncc]"
                 }
             }

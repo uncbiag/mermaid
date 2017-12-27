@@ -109,7 +109,7 @@ class XlsxRecorder(object):
         """
         metric_avg_dic={}
         for iter_info,avg_list in self.avg_buffer.items():
-            metric_results_tmp = {metric: [np.squeeze(result[metric]) for result in avg_list] for metric in
+            metric_results_tmp = {metric: [result[metric] for result in avg_list] for metric in
                                   self.measures}
             metric_avg_dic[iter_info] = {metric: np.concatenate(metric_results_tmp[metric], 0) for metric in metric_results_tmp}
         return  metric_avg_dic
@@ -157,9 +157,9 @@ class XlsxRecorder(object):
         # including the iter_info
         """
         start_column = 0
-        results_summary = {iter_info: {metric:np.mean(results[iter_info][metric]).reshape(1) for metric in self.measures} for iter_info in self.iter_info_buffer}
+        results_summary = {iter_info: {metric:np.mean(results[iter_info][metric]).reshape(1,1) for metric in self.measures} for iter_info in self.iter_info_buffer}
         for iter_info in self.iter_info_buffer:
-            iter_expand = {metric: np.concatenate((results[iter_info][metric], results_summary[iter_info][metric]), 0) for metric in self.measures}
+            iter_expand = {metric: np.squeeze(np.concatenate((results[iter_info][metric], results_summary[iter_info][metric]), 0)) for metric in self.measures}
             df = pd.DataFrame.from_dict(iter_expand)
             df = df[self.measures]
             df.index = pd.Index(self.name_list_buffer+['average'])

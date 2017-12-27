@@ -311,10 +311,17 @@ class ImageRegistrationOptimizer(Optimizer):
         self.recorder = None
         self.save_excel = False
         self.light_analysis_on = None
+        self.limit_max_batch = -1
 
 
     def set_light_analysis_on(self, light_analysis_on):
         self.light_analysis_on = light_analysis_on
+
+    def set_limit_max_batch(self, limit_max_batch):
+        self.limit_max_batch= limit_max_batch
+
+    def get_limit_max_batch(self):
+        return self.limit_max_batch
 
 
     def turn_visualization_on(self):

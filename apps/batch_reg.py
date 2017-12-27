@@ -83,7 +83,7 @@ def do_registration():
             data_manager.prepare_data()
         task_root_path = data_manager.get_task_root_path()
 
-    dataloaders = data_manager.data_loaders(batch_size=20)
+    dataloaders = data_manager.data_loaders(batch_size=2)
     data_info = pars.ParameterDict()
     data_info.load_JSON(os.path.join(task_root_path,'info.json'))
     task_full_name = data_manager.get_full_task_name()
@@ -163,6 +163,7 @@ def do_registration():
     mo.set_model(model_name)
     mo.set_scale_factors(multi_scale_scale_factors)
     mo.set_number_of_iterations_per_scale(multi_scale_iterations_per_scale)
+    mo.set_limit_max_batch(2)
     recorder = mo.init_recorder(expr_name)
 
     #########################    batch iteration setting   ############################################
@@ -210,6 +211,8 @@ def do_registration():
 
 
             batch_id += 1
+            if batch_id > mo.get_limit_max_batch():
+                break
 
 
         if LSource is not None and save_excel:
