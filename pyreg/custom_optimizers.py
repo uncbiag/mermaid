@@ -201,7 +201,8 @@ class LBFGS_LS(Optimizer):
             ############################################################
             # directional derivative
             #print  flat_grad.size(), d.size()
-            gtd = flat_grad.float().dot(d.float())  # g * d
+            #gtd = flat_grad.float().dot(d.float())  # g * d
+            gtd = (flat_grad*d).sum() # mn modification
 
             # check that progress can be made along that direction
             if gtd > -tolerance_change:
