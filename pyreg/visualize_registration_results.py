@@ -1,7 +1,10 @@
 from __future__ import print_function
 import matplotlib as matplt
-matplt.use('Agg')
-#matplt.use('Agg')
+
+from config_parser import MATPLOTLIB_AGG
+if MATPLOTLIB_AGG:
+    matplt.use('Agg')
+
 """
 Some utility functions to display the registration results
 """

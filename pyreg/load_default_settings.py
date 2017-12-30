@@ -1,11 +1,21 @@
 import pyreg.config_parser as cp
 from pyreg.config_parser import nr_of_threads
 
-par_democonf = cp.get_democonf_settings()['democonf']
-par_baseconf = cp.get_baseconf_settings()['baseconf']
-par_algconf = cp.get_algconf_settings()['algconf']
-par_respro = cp.get_respro_settings()['respro']
+# read the baseconf config alway from file (the same is true for the compute_settings)
+par_baseconf = cp.get_baseconf_settings(cp.get_default_baseconf_settings_filenames()[0])['baseconf']
 
+if par_baseconf['load_default_settings_from_default_setting_files']:
+    # load all the settings from the default files in the settings directory
+    par_democonf = cp.get_democonf_settings(cp.get_default_democonf_settings_filenames()[0])['democonf']
+    par_algconf = cp.get_algconf_settings(cp.get_default_algconf_settings_filenames()[0])['algconf']
+    par_respro = cp.get_respro_settings(cp.get_default_respro_settings_filenames()[0])['respro']
+    par_datapro = cp.get_datapro_settings(cp.get_default_datapro_settings_filenames()[0])['datapro']
+else:
+    # otherwise get the default settings from config_parser.py
+    par_democonf = cp.get_democonf_settings()['democonf']
+    par_algconf = cp.get_algconf_settings()['algconf']
+    par_respro = cp.get_respro_settings()['respro']
+    par_datapro = cp.get_datapro_settings()['datapro']
 
 use_map = par_algconf['model']['deformation']['use_map']
 map_low_res_factor = par_algconf['model']['deformation']['map_low_res_factor']

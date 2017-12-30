@@ -16,7 +16,12 @@ import numpy as np
 import finite_differences as fd
 import torch.nn as nn
 import torch.nn.init as init
-from libraries.functions.nn_interpolation import get_nn_interpolation
+
+try:
+    from libraries.functions.nn_interpolation import get_nn_interpolation
+except ImportError:
+    print('WARNING: nn_interpolation could not be imported (only supported in CUDA at the moment), some functionality may not be available.')
+
 import pandas as pd
 
 

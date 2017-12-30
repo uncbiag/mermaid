@@ -816,8 +816,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # result visualization
         if self.visualize or self.save_fig:
             visual_param = {}
+            visual_param['visualize'] = self.visualize
             if not self.light_analysis_on:
-                visual_param['visualize'] = self.visualize
                 visual_param['save_fig'] = self.save_fig
                 visual_param['save_fig_path'] = self.save_fig_path
                 visual_param['save_fig_path_byname'] = os.path.join(self.save_fig_path,'byname')

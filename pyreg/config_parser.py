@@ -8,83 +8,105 @@ import multiprocessing as mp
 this_directory = os.path.dirname(__file__)
 # __file__ is the absolute path to the current python file.
 
-compute_settings_filename = os.path.join(this_directory, r'../settings/compute_settings.json')
-compute_settings_comments_filename = os.path.join(this_directory, r'../settings/compute_settings_comments.json')
+_compute_settings_filename = os.path.join(this_directory, r'../settings/compute_settings.json')
+_compute_settings_comments_filename = os.path.join(this_directory, r'../settings/compute_settings_comments.json')
 
-baseconf_settings_filename = os.path.join(this_directory, r'../settings/baseconf_settings.json')
-baseconf_settings_filename_comments = os.path.join(this_directory, r'../settings/baseconf_settings_comments.json')
+_baseconf_settings_filename = os.path.join(this_directory, r'../settings/baseconf_settings.json')
+_baseconf_settings_filename_comments = os.path.join(this_directory, r'../settings/baseconf_settings_comments.json')
 
-algconf_settings_filename = os.path.join(this_directory, r'../settings/algconf_settings.json')
-algconf_settings_filename_comments = os.path.join(this_directory, r'../settings/algconf_settings_comments.json')
+_algconf_settings_filename = os.path.join(this_directory, r'../settings/algconf_settings.json')
+_algconf_settings_filename_comments = os.path.join(this_directory, r'../settings/algconf_settings_comments.json')
 
-democonf_settings_filename = os.path.join(this_directory, r'../settings/democonf_settings.json')
-democonf_settings_filename_comments = os.path.join(this_directory, r'../settings/democonf_settings_comments.json')
+_democonf_settings_filename = os.path.join(this_directory, r'../settings/democonf_settings.json')
+_democonf_settings_filename_comments = os.path.join(this_directory, r'../settings/democonf_settings_comments.json')
 
-datapro_settings_filename = os.path.join(this_directory, r'../settings/datapro_settings.json')
-datapro_settings_filename_comments = os.path.join(this_directory, r'../settings/datapro_settings_comments.json')
+_datapro_settings_filename = os.path.join(this_directory, r'../settings/datapro_settings.json')
+_datapro_settings_filename_comments = os.path.join(this_directory, r'../settings/datapro_settings_comments.json')
 
-respro_settings_filename = os.path.join(this_directory, r'../settings/respro_settings.json')
-respro_settings_filename_comments = os.path.join(this_directory, r'../settings/respro_settings_comments.json')
+_respro_settings_filename = os.path.join(this_directory, r'../settings/respro_settings.json')
+_respro_settings_filename_comments = os.path.join(this_directory, r'../settings/respro_settings_comments.json')
+
+def get_default_compute_settings_filenames():
+    return (_compute_settings_filename,_compute_settings_comments_filename)
+
+def get_default_baseconf_settings_filenames():
+    return (_baseconf_settings_filename,_baseconf_settings_filename_comments)
+
+def get_default_democonf_settings_filenames():
+    return (_democonf_settings_filename,_democonf_settings_filename_comments)
+
+def get_default_algconf_settings_filenames():
+    return (_algconf_settings_filename,_algconf_settings_filename_comments)
+
+def get_default_datapro_settings_filenames():
+    return (_datapro_settings_filename,_datapro_settings_filename_comments)
+
+def get_default_respro_settings_filenames():
+    return (_respro_settings_filename,_respro_settings_filename_comments)
 
 # First get the computational settings that will be used in various parts of the library
 compute_params = pars.ParameterDict()
 compute_params.print_settings_off()
-compute_params.load_JSON(compute_settings_filename)
+compute_params.load_JSON(get_default_compute_settings_filenames()[0])
 
 compute_params[('compute',{},'how computations are done')]
 CUDA_ON = compute_params['compute'][('CUDA_ON',False,'Determines if the code should be run on the GPU')]
 USE_FLOAT16 = compute_params['compute'][('USE_FLOAT16',False,'if set to True uses half-precision - not recommended')]
 nr_of_threads = compute_params['compute'][('nr_of_threads',mp.cpu_count(),'set the maximal number of threads')]
+MATPLOTLIB_AGG = compute_params['compute'][('MATPLOTLIB_AGG',False,'Determines how matplotlib plots images. Set to True for remote debugging')]
+
+def get_baseconf_settings( baseconf_settings_filename = None ):
+
+    # These are the parameters for the general I/O and example cases
+    baseconf_params = pars.ParameterDict()
+    baseconf_params[('baseconf',{},'determines if settings should be loaded from file and visualization options')]
+
+    if baseconf_settings_filename is not None:
+        print( 'Loading baseconf configuration from: ' + baseconf_settings_filename )
+        baseconf_params.load_JSON( baseconf_settings_filename )
+    else:
+        print( 'Using default baseconf settings from config_parser.py')
+
+    baseconf_params['baseconf'][('load_default_settings_from_default_setting_files',False,'if set to True default configuration files (in settings directory) are first loaded')]
+    baseconf_params['baseconf'][('load_settings_from_file',True,'if set to True configuration settings are loaded from file')]
+    baseconf_params['baseconf'][('save_settings_to_file',True,'if set to True configuration settings are saved to file')]
+
+    if not baseconf_params['baseconf']['load_default_settings_from_default_setting_files']:
+        print('HINT: Only compute_settings.json and baseconf_settings.json will be read from file by default.')
+        print('HINT: Set baseconf.load_default_settings_from_default_setting_files to True if you want to use the other setting files in directory settings.')
+        print('HINT: Otherwise the defaults will be as defined in config_parser.py.')
+
+    return baseconf_params
 
 def get_democonf_settings( democonf_settings_filename = None ):
 
     # These are the parameters for the general I/O and example cases
     democonf_params = pars.ParameterDict()
-
-    if democonf_settings_filename is None:
-        this_directory = os.path.dirname(__file__)
-        # __file__ is the absolute path to the current python file.
-        democonf_settings_filename = os.path.join(this_directory, r'../settings/democonf_settings.json')
-
-    democonf_params.load_JSON( democonf_settings_filename )
-
     democonf_params[('democonf', {}, 'settings for demo images/examples')]
+
+    if democonf_settings_filename is not None:
+        print( 'Loading democonf configuration from: ' + democonf_settings_filename )
+        democonf_params.load_JSON( democonf_settings_filename )
+    else:
+        print( 'Using default democonf settings from config_parser.py' )
+
     democonf_params['democonf'][('dim', 2, 'Spatial dimension for demo examples 1/2/3')]
     democonf_params['democonf'][('example_img_len', 128, 'side length of image cube for example')]
     democonf_params['democonf'][('use_real_images', False, 'if set to true using real and otherwise synthetic images')]
 
     return democonf_params
 
-def get_baseconf_settings( baseconf_settings_filename = None ):
-
-    # These are the parameters for the general I/O and example cases
-    baseconf_params = pars.ParameterDict()
-
-    if baseconf_settings_filename is None:
-        this_directory = os.path.dirname(__file__)
-        # __file__ is the absolute path to the current python file.
-        baseconf_settings_filename = os.path.join(this_directory, r'../settings/baseconf_settings.json')
-
-    baseconf_params.load_JSON( baseconf_settings_filename )
-    baseconf_params[('baseconf',{},'determines if settings should be loaded from file and visualization options')]
-    baseconf_params['baseconf'][('load_settings_from_file',True,'if set to True configuration settings are loaded from file')]
-    baseconf_params['baseconf'][('save_settings_to_file',True,'if set to True configuration settings are saved to file')]
-
-
-    return baseconf_params
-
 def get_algconf_settings( algconf_settings_filename = None ):
 
     # These are the parameters for the general I/O and example cases
     algconf_params = pars.ParameterDict()
-
-    if algconf_settings_filename is None:
-        this_directory = os.path.dirname(__file__)
-        # __file__ is the absolute path to the current python file.
-        algconf_settings_filename = os.path.join(this_directory, r'../settings/algconf_settings.json')
-
-    algconf_params.load_JSON( algconf_settings_filename )
     algconf_params[('algconf',{},'settings for the registration algorithms')]
+
+    if algconf_settings_filename is not None:
+        print( 'Loading algconf configuration from: ' + algconf_settings_filename )
+        algconf_params.load_JSON( algconf_settings_filename )
+    else:
+        print( 'Using default algconf settings from config_parser.py')
 
     algconf_params['algconf'][('optimizer', {}, 'optimizer settings')]
     algconf_params['algconf']['optimizer'][('name', 'lbfgs_ls', 'name of the optimizer: [lbfgs_ls|adam]')]
@@ -106,8 +128,8 @@ def get_algconf_settings( algconf_settings_filename = None ):
     algconf_params['algconf']['model']['registration_model'][('forward_model', {}, 'Holds the parameters for the forward model')]
     algconf_params['algconf']['model']['registration_model']['forward_model'][('number_of_time_steps', 10, 'Number of time steps for integration (if applicable)')]
     algconf_params['algconf']['model']['registration_model']['forward_model'][('smoother', {}, 'how the smoothing of velocity fields is done')]
-    algconf_params['algconf']['model']['registration_model']['forward_model']['smoother'][('type', 'gaussian', 'type of smoothing')]
-    algconf_params['algconf']['model']['registration_model']['forward_model']['smoother'][('gaussian_std', 0.1, 'standard deviation for smoothing')]
+    algconf_params['algconf']['model']['registration_model']['forward_model']['smoother'][('type', 'multiGaussian', 'type of smoothing')]
+    algconf_params['algconf']['model']['registration_model']['forward_model']['smoother'][('multi_gaussian_stds', [0.05,0.1,0.15,0.2,0.25], 'standard deviations for smoothing')]
 
     algconf_params['algconf']['model']['registration_model'][('similarity_measure', {}, 'model describing the similarity measure')]
     algconf_params['algconf']['model']['registration_model']['similarity_measure'][('sigma', 0.1, '1/sigma^2 weighting')]
@@ -127,19 +149,17 @@ def get_algconf_settings( algconf_settings_filename = None ):
     return algconf_params
 
 
-
 def get_datapro_settings(datapro_settings_filename = None ):
 
     # These are the parameters for the general I/O and example cases
     datapro_params = pars.ParameterDict()
-
-    if datapro_settings_filename is None:
-        this_directory = os.path.dirname(__file__)
-        # __file__ is the absolute path to the current python file.
-        datapro_settings_filename = os.path.join(this_directory, r'../settings/datapro_settings.json')
-
-    datapro_params.load_JSON( datapro_settings_filename )
     datapro_params[('datapro',{},'settings for the data process')]
+
+    if datapro_settings_filename is not None:
+        print( 'Loading datapro configuration from: ' + datapro_settings_filename )
+        datapro_params.load_JSON( datapro_settings_filename )
+    else:
+        print( 'Using default datapro settings from config_parser.py')
 
     datapro_params['datapro'][('dataset', {}, 'general settings for dataset')]
     datapro_params['datapro']['dataset'][('name', 'lpba', 'name of the dataset: oasis2d, lpba, ibsr, cmuc' )]
@@ -161,17 +181,16 @@ def get_datapro_settings(datapro_settings_filename = None ):
     return datapro_params
 
 
-
 def get_respro_settings(respro_settings_filename = None):
+
     respro_params = pars.ParameterDict()
+    respro_params[('respro', {}, 'settings for the results process')]
 
-    if respro_settings_filename is None:
-        this_directory = os.path.dirname(__file__)
-        # __file__ is the absolute path to the current python file.
-        respro_settings_filename = os.path.join(this_directory, r'../settings/respro_settings.json')
-
-    respro_params.load_JSON(respro_settings_filename)
-    respro_params[('respro',{},'settings for the results process')]
+    if respro_settings_filename is not None:
+        print( 'Loading respro configuration from: ' + respro_settings_filename )
+        respro_params.load_JSON(respro_settings_filename)
+    else:
+        print( 'Using default respro settings from config_parser.py')
 
     respro_params['respro'][('expr_name', 'reg', 'name of experiment')]
     respro_params['respro'][('visualize', True, 'if set to true intermediate results are visualized')]
@@ -183,36 +202,27 @@ def get_respro_settings(respro_settings_filename = None):
 
     return respro_params
 
-
-
-
 # write out the configuration files (when called as a script; in this way we can boostrap a new configuration)
 
 if __name__ == "__main__":
 
-    compute_params.write_JSON(compute_settings_filename)
-    compute_params.write_JSON_comments(compute_settings_comments_filename)
-
-    democonf_params = get_democonf_settings()
-    democonf_params.write_JSON(democonf_settings_filename)
-    democonf_params.write_JSON_comments(democonf_settings_filename_comments)
+    compute_params.write_JSON_and_JSON_comments(get_default_compute_settings_filenames())
 
     baseconf_params = get_baseconf_settings()
-    baseconf_params.write_JSON(baseconf_settings_filename)
-    baseconf_params.write_JSON_comments(baseconf_settings_filename_comments)
+    baseconf_params.write_JSON_and_JSON_comments(get_default_baseconf_settings_filenames())
+
+    democonf_params = get_democonf_settings()
+    democonf_params.write_JSON_and_JSON_comments(get_default_democonf_settings_filenames())
 
     algconf_params = get_algconf_settings()
-    algconf_params.write_JSON(algconf_settings_filename)
-    algconf_params.write_JSON_comments(algconf_settings_filename_comments)
+    algconf_params.write_JSON_and_JSON_comments(get_default_algconf_settings_filenames())
 
     datapro_params = get_datapro_settings()
-    datapro_params.write_JSON(datapro_settings_filename)
-    datapro_params.write_JSON_comments(datapro_settings_filename_comments)
-
+    datapro_params.write_JSON_and_JSON_comments(get_default_datapro_settings_filenames())
 
     respro_params = get_respro_settings()
-    respro_params.write_JSON(respro_settings_filename)
-    respro_params.write_JSON_comments(respro_settings_filename_comments)
+    respro_params.write_JSON_and_JSON_comments(get_default_respro_settings_filenames())
+
 
 
 
