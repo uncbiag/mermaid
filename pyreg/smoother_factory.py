@@ -368,38 +368,20 @@ class GaussianFourierSmoother(GaussianSmoother):
     than spatial Gaussian smoothing on the CPU in large dimensions.
     """
 
+    __metaclass__ = ABCMeta
+
     def __init__(self, sz, spacing, params):
-        super(GaussianFourierSmoother,self).__init__(sz,spacing,params)
-        self.gaussianStd = params[('gaussian_std', 0.15 ,'std for the Gaussian' )]
-        """standard deviation of Gaussian"""
+        super(GaussianFourierSmoother, self).__init__(sz, spacing, params)
         self.FFilter = None
         """filter in Fourier domain"""
 
+    @abstractmethod
     def _create_filter(self):
-
-        mus = np.zeros(self.dim)
-        stds = self.gaussianStd*np.ones(self.dim)
-        id = utils.identity_map(self.sz)
-        g = utils.compute_normalized_gaussian(id, mus, stds)
-
-        self.FFilter = ce.create_complex_fourier_filter(g, self.sz)
-
-    def set_gaussian_std(self,gstd):
         """
-        Set the standard deviation of the Gaussian filter
-        
-        :param gstd: standard deviation 
+        Creates the Gaussian filter in the Fourier domain (needs to be assigned to self.FFilter)
+        :return: n/a
         """
-        self.gaussianStd = gstd
-        self.params['gaussian_std'] = self.gaussianStd
-
-    def get_gaussian_std(self):
-        """
-        Return the standard deviation of the Gaussian filter
-        
-        :return: standard deviation of Gaussian filter 
-        """
-        return self.gaussianStd
+        pass
 
     def smooth_scalar_field(self, v, vout=None):
         """
@@ -438,6 +420,87 @@ class GaussianFourierSmoother(GaussianSmoother):
         else:
             return ce.inverse_fourier_convolution(v, self.FFilter)
 
+class SingleGaussianFourierSmoother(GaussianFourierSmoother):
+    """
+    Performs Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
+    than spatial Gaussian smoothing on the CPU in large dimensions.
+    """
+
+    def __init__(self, sz, spacing, params):
+        super(SingleGaussianFourierSmoother,self).__init__(sz,spacing,params)
+        self.gaussianStd = params[('gaussian_std', 0.15 ,'std for the Gaussian' )]
+        """standard deviation of Gaussian"""
+
+    def _create_filter(self):
+
+        mus = np.zeros(self.dim)
+        stds = self.gaussianStd*np.ones(self.dim)
+        id = utils.identity_map(self.sz)
+        g = utils.compute_normalized_gaussian(id, mus, stds)
+
+        self.FFilter = ce.create_complex_fourier_filter(g, self.sz)
+
+    def set_gaussian_std(self,gstd):
+        """
+        Set the standard deviation of the Gaussian filter
+        
+        :param gstd: standard deviation 
+        """
+        self.gaussianStd = gstd
+        self.params['gaussian_std'] = self.gaussianStd
+
+    def get_gaussian_std(self):
+        """
+        Return the standard deviation of the Gaussian filter
+        
+        :return: standard deviation of Gaussian filter 
+        """
+        return self.gaussianStd
+
+
+class MultiGaussianFourierSmoother(GaussianFourierSmoother):
+    """
+    Performs multi Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
+    than spatial Gaussian smoothing on the CPU in large dimensions.
+    """
+
+    def __init__(self, sz, spacing, params):
+        super(MultiGaussianFourierSmoother, self).__init__(sz, spacing, params)
+        self.multi_gaussian_stds = np.array( params[('multi_gaussian_stds', [0.05,0.1,0.15,0.2,0.25], 'std deviations for the Gaussians')] )
+        default_multi_gaussian_weights = self.multi_gaussian_stds
+        default_multi_gaussian_weights /= default_multi_gaussian_weights.sum()
+        """standard deviations of Gaussians"""
+        self.multi_gaussian_weights = np.array( params[('multi_gaussian_weights', default_multi_gaussian_weights, 'weights for the multiple Gaussians')] )
+        """weights for the Gaussians"""
+
+        assert len(self.multi_gaussian_weights)==len(self.multi_gaussian_stds)
+
+        weight_sum = self.multi_gaussian_weights.sum()
+        if weight_sum!=1.:
+            print('WARNING: multi-Gaussian weights do not sum to one. Projecting them.')
+            self.multi_gaussian_weights += (1.-weight_sum)/len(self.multi_gaussian_weights)
+            params['multi_gaussian_weights'] = self.multi_gaussian_weights.tolist()
+
+        assert (np.array(self.multi_gaussian_weights)).sum()==1.
+
+    def _create_filter(self):
+
+        mus = np.zeros(self.dim)
+        id = utils.identity_map(self.sz)
+
+        assert len(self.multi_gaussian_stds)>0
+        assert len(self.multi_gaussian_weights)>0
+
+        nr_of_gaussians = len(self.multi_gaussian_stds)
+
+        for nr in range(nr_of_gaussians):
+            stds = self.multi_gaussian_stds[nr] * np.ones(self.dim)
+            g = self.multi_gaussian_weights[nr] * utils.compute_normalized_gaussian(id, mus, stds)
+
+            if nr==0:
+                self.FFilter = ce.create_complex_fourier_filter(g, self.sz)
+            else:
+                self.FFilter += ce.create_complex_fourier_filter(g, self.sz)
 
 
 
@@ -499,12 +562,6 @@ class AdaptiveSmoother(Smoother):
         raise ValueError("inverse smooth scalar field is not implemented")
 
 
-
-
-
-
-
-
 class SmootherFactory(object):
     """
     Factory to quickly create different types of smoothers.
@@ -547,11 +604,13 @@ class SmootherFactory(object):
 
         cparams = params[('smoother',{})]
         smootherType = cparams[('type', self.default_smoother_type,
-                                          'type of smoother (difusion/gaussian/gaussianSpatial)' )]
+                                          'type of smoother (diffusion|gaussian|multiGaussian|gaussianSpatial|adaptiveNet)' )]
         if smootherType=='diffusion':
             return DiffusionSmoother(self.sz,self.spacing,cparams)
         elif smootherType=='gaussian':
-            return GaussianFourierSmoother(self.sz,self.spacing,cparams)
+            return SingleGaussianFourierSmoother(self.sz,self.spacing,cparams)
+        elif smootherType=='multiGaussian':
+            return MultiGaussianFourierSmoother(self.sz,self.spacing,cparams)
         elif smootherType=='gaussianSpatial':
             return GaussianSpatialSmoother(self.sz,self.spacing,cparams)
         elif smootherType=='adaptiveNet':

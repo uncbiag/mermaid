@@ -42,6 +42,15 @@ class ParameterDict(object):
         except IOError as e:
             print('Could not open file = ' + fileName + '; ignoring request.')
 
+    def write_JSON_and_JSON_comments(self,fileNames):
+        """
+        Writes the JSON configuration to a file
+
+        :param fileNames: filename tuple; first entry is filename for configuration, second for comments
+        """
+        self.write_JSON(fileNames[0])
+        self.write_JSON_comments(fileNames[1])
+
     def write_JSON(self, fileName):
         """
         Writes the JSON configuration to a file
