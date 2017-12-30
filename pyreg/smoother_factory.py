@@ -470,7 +470,7 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
         default_multi_gaussian_weights = self.multi_gaussian_stds
         default_multi_gaussian_weights /= default_multi_gaussian_weights.sum()
         """standard deviations of Gaussians"""
-        self.multi_gaussian_weights = np.array( params[('multi_gaussian_weights', default_multi_gaussian_weights, 'weights for the multiple Gaussians')] )
+        self.multi_gaussian_weights = np.array( params[('multi_gaussian_weights', default_multi_gaussian_weights.tolist(), 'weights for the multiple Gaussians')] )
         """weights for the Gaussians"""
 
         assert len(self.multi_gaussian_weights)==len(self.multi_gaussian_stds)
