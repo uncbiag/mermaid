@@ -482,7 +482,7 @@ class RegistrationLoss(nn.Module):
         return sim
 
     @abstractmethod
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Abstract method computing the regularization energy based on the registration parameters and (if desired) the initial image
         
@@ -500,7 +500,7 @@ class RegistrationImageLoss(RegistrationLoss):
     def __init__(self,sz,spacing,params):
         super(RegistrationImageLoss, self).__init__(sz,spacing,params)
 
-    def get_energy(self, I1_warped, I0_source, I1_target, m_last=None):
+    def get_energy(self, I1_warped, I0_source, I1_target):
         """
         Computes the overall registration energy as E = E_sim + E_reg
         
@@ -511,13 +511,10 @@ class RegistrationImageLoss(RegistrationLoss):
         """
         sim = self.compute_similarity_energy(I1_warped, I1_target)
         reg = self.compute_regularization_energy(I0_source)
-        reg_m_last = 0.0
-        if m_last is not None:
-            reg_m_last = self.compute_regularization_energy(I0_source, m_last)
-        energy = sim + reg + reg_m_last
+        energy = sim + reg
         return energy, sim, reg
 
-    def forward(self, I1_warped, I0_source, I1_target, m_last=None):
+    def forward(self, I1_warped, I0_source, I1_target):
         """
         Computes the loss by evaluating the energy
         :param I1_warped: warped image
@@ -525,7 +522,7 @@ class RegistrationImageLoss(RegistrationLoss):
         :param I1_target: target image
         :return: registration energy
         """
-        energy, sim, reg = self.get_energy(I1_warped, I0_source, I1_target, m_last)
+        energy, sim, reg = self.get_energy(I1_warped, I0_source, I1_target)
         return energy
 
 
@@ -541,7 +538,7 @@ class RegistrationMapLoss(RegistrationLoss):
         max_displacement = cparams[('max_displacement',0.05,'Max displacement penalty added to loss function of limit_displacement set to True')]
         self.max_displacement_sqr = max_displacement**2
 
-    def get_energy(self, phi0, phi1, I0_source, I1_target, m_last= None):
+    def get_energy(self, phi0, phi1, I0_source, I1_target):
         """
         Compute the energy by warping the source image via the map and then comparing it to the target image
         
@@ -554,9 +551,7 @@ class RegistrationMapLoss(RegistrationLoss):
         I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1)
         sim = self.compute_similarity_energy(I1_warped, I1_target)
         reg = self.compute_regularization_energy(I0_source)
-        reg_last = 0.
-        if m_last is not None:
-            reg_last = self.compute_regularization_energy(I0_source,m_last)
+
 
         if self.limit_displacement:
             # first compute squared displacement
@@ -572,11 +567,11 @@ class RegistrationMapLoss(RegistrationLoss):
                 dispMax = ( torch.sqrt( ((phi1-phi0)**2).sum(1) ) ).max()
                 print( 'Max disp = ' + str( utils.t2np( dispMax )))
         factor=1
-        reg = reg *factor +reg_last
+        reg = reg *factor
         energy = sim + reg
         return energy, sim, reg
 
-    def forward(self, phi0, phi1, I0_source, I1_target, m_last=None):
+    def forward(self, phi0, phi1, I0_source, I1_target):
         """
         Compute the loss function value by evaluating the registration energy
         
@@ -586,7 +581,7 @@ class RegistrationMapLoss(RegistrationLoss):
         :param I1_target: target image
         :return: returns the value of the loss function (i.e., the registration energy)
         """
-        energy, sim, reg = self.get_energy(phi0, phi1, I0_source, I1_target, m_last)
+        energy, sim, reg = self.get_energy(phi0, phi1, I0_source, I1_target)
         return energy
 
 
@@ -613,7 +608,7 @@ class SVFImageLoss(RegistrationImageLoss):
                             create_regularizer(cparams))
         """regularizer to compute the regularization energy"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Computing the regularization energy
         
@@ -653,7 +648,7 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to convert from momentum to velocity"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Compute the regularization energy from the momentum
         
@@ -661,8 +656,6 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
         :return: returns the regularization energy
         """
         m = self.m
-        if m_last is not None:
-            m = m_last
         v = self.smoother.smooth_vector_field_multiN(m)
         return self.regularizer.compute_regularizer_multiN(v)
 
@@ -710,7 +703,7 @@ class SVFMapLoss(RegistrationMapLoss):
                             create_regularizer(cparams))
         """regularizer to compute the regularization energy"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Computes the regularizaton energy from the velocity field parameter
         
@@ -735,7 +728,7 @@ class DiffusionMapLoss(RegistrationMapLoss):
                             create_regularizer_by_name('diffusion',cparams))
         """regularizer to compute the regularization energy"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Computes the regularizaton energy from the velocity field parameter
 
@@ -760,7 +753,7 @@ class TotalVariationMapLoss(RegistrationMapLoss):
                             create_regularizer_by_name('totalVariation',cparams))
         """regularizer to compute the regularization energy"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Computes the regularizaton energy from the velocity field parameter
 
@@ -785,7 +778,7 @@ class CurvatureMapLoss(RegistrationMapLoss):
                             create_regularizer_by_name('curvature',cparams))
         """regularizer to compute the regularization energy"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Computes the regularizaton energy from the velocity field parameter
 
@@ -1014,15 +1007,13 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
         self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
         """smoother to convert from momentum to velocity"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Computes the regularzation energy based on the inital momentum
         :param I0_source: not used
         :return: regularization energy
         """
         m = self.m
-        if m_last is not None:
-            m = m_last
         v = self.smoother.smooth_vector_field_multiN(m)
         reg = (v * m).sum() * self.spacing.prod()
         return reg
@@ -1079,7 +1070,7 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
 
@@ -1087,8 +1078,6 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
         :return: returns the regularization energy
         """
         m = self.m
-        if m_last is not None:
-            m = m_last
 
         v = self.smoother.smooth_vector_field_multiN(m)
         reg = (v * m).sum() * self.spacing.prod()
@@ -1147,7 +1136,7 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         self.use_net = True if cparams['smoother']['type'] == 'adaptiveNet' else False
         """smoother to obtain the velocity field from the momentum field"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Commputes the regularization energy from the initial vector momentum
         
@@ -1155,8 +1144,6 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
         m = self.m
-        if m_last is not None:
-            m = m_last
         v = self.smoother.smooth_vector_field_multiN(m)
 
         reg = (v * m).sum() * self.spacing.prod()
@@ -1215,7 +1202,7 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
 
@@ -1223,8 +1210,6 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
         m = self.m
-        if m_last is not None:
-            m = m_last
         v = self.smoother.smooth_vector_field_multiN(m)
         reg = (v * m).sum() * self.spacing.prod()
         return reg
@@ -1359,7 +1344,7 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
 
@@ -1416,7 +1401,7 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
         self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
         
@@ -1475,7 +1460,7 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
         self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Computes the regularizaton energy from the initial vector momentum as computed from the scalar momentum
         
@@ -1540,7 +1525,7 @@ class SVFScalarMomentumMapLoss(RegistrationMapLoss):
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
-    def compute_regularization_energy(self, I0_source, m_last=None):
+    def compute_regularization_energy(self, I0_source):
         """
         Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
 
