@@ -25,6 +25,9 @@ class ModelFactory(object):
 
         self.models = {
             'affine_map': (RN.AffineMapNet,RN.AffineMapLoss),
+            'diffusion_map': (RN.RegistrationNetDisplacement,RN.DiffusionMapLoss),
+            'curvature_map': (RN.RegistrationNetDisplacement,RN.CurvatureMapLoss),
+            'total_variation_map': (RN.RegistrationNetDisplacement,RN.TotalVariationMapLoss),
             'svf_map': (RN.SVFMapNet,RN.SVFMapLoss),
             'svf_image': (RN.SVFImageNet,RN.SVFImageLoss),
             'svf_scalar_momentum_image': (RN.SVFScalarMomentumImageNet,RN.SVFScalarMomentumImageLoss),
@@ -62,6 +65,9 @@ class ModelFactory(object):
 
         print('\nKnown registration models are:')
         print('   affine_map                           : map-based affine registration')
+        print('   diffusion_map                        : displacement-based diffusion registration')
+        print('   curvature_map                        : displacement-based curvature registration')
+        print('   total_variation_map                  : displacement-based total variation registration')
         print('   svf_map                              : map-based stationary velocity field')
         print('   svf_image                            : image-based stationary velocity field')
         print('   svf_scalar_momentum_image            : image-based stationary velocity field using the scalar momentum')
