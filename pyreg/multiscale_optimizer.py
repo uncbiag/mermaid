@@ -733,7 +733,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             else:
                 self.rec_phiWarped = self.model(self.identityMap, self.ISource)
 
-            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, m_last=None)
+            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget)
         else:
             self.rec_IWarped = self.model(self.ISource)
             loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget)

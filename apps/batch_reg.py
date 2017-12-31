@@ -10,7 +10,9 @@ Contributors:
 
 from __future__ import print_function
 import matplotlib as matplt
-matplt.use('Agg')
+from pyreg.config_parser import MATPLOTLIB_AGG
+if MATPLOTLIB_AGG:
+    matplt.use('Agg')
 import set_pyreg_paths
 
 # first do the torch imports
