@@ -6,6 +6,7 @@ from abc import ABCMeta, abstractmethod
 import torch
 from torch.autograd import Variable
 from data_wrapper import AdaptVal
+import utils
 
 class SimilarityMeasure(object):
     """
@@ -102,7 +103,10 @@ class SSDSimilarity(SimilarityMeasure):
         :param I1: second image
         :return: SSD
         """
-        return AdaptVal(((I0.float() - I1.float()) ** 2).sum() / (self.sigma ** 2) * self.volumeElement)
+
+        # TODO: This is to avoid a current pytorch bug 0.3.0 which cannot properly deal with infinity or NaN
+        return AdaptVal((utils.remove_infs_from_variable((I0- I1) ** 2)).sum() / (self.sigma ** 2) * self.volumeElement)
+        #return AdaptVal(((I0 - I1) ** 2).sum() / (self.sigma ** 2) * self.volumeElement)
 
 class NCCSimilarity(SimilarityMeasure):
     """
@@ -141,6 +145,7 @@ class NCCSimilarity(SimilarityMeasure):
        :return: (1-NCC^2)/sigma^2
        """
 
+        # TODO: may require a safeguard against infinity
         ncc = ((cI0-cI0.mean().expand_as(cI0))*(cI1-cI1.mean().expand_as(cI1))).mean()/(cI0.std()*cI1.std())
         # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
         return (1-ncc**2) / (self.sigma ** 2)

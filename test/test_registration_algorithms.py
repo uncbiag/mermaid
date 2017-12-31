@@ -358,6 +358,16 @@ class Test_registration_algorithms(unittest.TestCase):
         npt.assert_almost_equal(energy[1], 0.01153301, decimal = 4)
         npt.assert_almost_equal(energy[2], 0.00550391, decimal = 4)
 
+
+def run_test_by_name( testName ):
+    suite = unittest.TestSuite()
+    suite.addTest(Test_registration_algorithms(testName))
+    runner = unittest.TextTestRunner()
+    runner.run(suite)
+
+#run_test_by_name('test_svf_scalar_momentum_image_single_scale')
+
+
 if __name__ == '__main__':
     if foundHTMLTestRunner:
         unittest.main(testRunner=HtmlTestRunner.HTMLTestRunner(output='test_output'))

@@ -25,7 +25,7 @@
                     "number_of_time_steps": "Number of time steps for integration (if applicable)", 
                     "smoother": {
                         "__doc__": "how the smoothing of velocity fields is done", 
-                        "gaussian_std": "standard deviation for smoothing", 
+                        "multi_gaussian_stds": "standard deviations for smoothing", 
                         "type": "type of smoothing"
                     }
                 }, 

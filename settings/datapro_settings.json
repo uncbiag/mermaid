@@ -20,8 +20,8 @@
             "slicing": 100
         }, 
         "switch": {
-            "switch_to_exist_task": false, 
-            "task_root_path": "/playpen/zyshen/data/oasis_inter_slicing90"
+            "switch_to_exist_task": true,
+            "task_root_path": "/playpen/zyshen/data/lpba3d_inter"
         }
     }
 }

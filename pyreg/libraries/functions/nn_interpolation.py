@@ -2,7 +2,7 @@ from pyreg.data_wrapper import USE_CUDA, MyTensor, AdaptVal
 from cffi import FFI
 import torch
 from torch.autograd import Variable
-from pyreg.libraries._ext import nn_interpolation, my_lib_nn
+from pyreg.libraries._ext import my_lib_nn
 
 ffi = FFI()
 

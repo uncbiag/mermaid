@@ -9,6 +9,8 @@ Contributors:
 # (for example to support color-images or general multi-modal registration scenarios)
 
 from __future__ import print_function
+import matplotlib as matplt
+matplt.use('Agg')
 import set_pyreg_paths
 
 # first do the torch imports
@@ -25,8 +27,7 @@ from pyreg import data_utils
 from pyreg.data_manager import DataManager
 from pyreg.metrics import get_multi_metric
 
-
-
+torch.cuda.set_device(2)
 
 def do_registration():
 
