@@ -9,7 +9,7 @@
             "label_path": {
                 "__doc__": "data path of the  dataset, default settings are in datamanger"
             }, 
-            "name": "name of the dataset: oasis, lpba, ibsr, cmuc", 
+            "name": "name of the dataset: oasis2d, lpba, ibsr, cmuc", 
             "output_path": "the path to save the processed data", 
             "task_name": "task name for data process"
         }, 

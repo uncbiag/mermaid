@@ -51,6 +51,150 @@ class Regularizer(object):
             reg = reg + self._compute_regularizer(v[nrI, ...])
         return reg
 
+
+class DiffusionRegularizer(Regularizer):
+    """
+    Implements a diffusion regularizer sum of squared gradients of vector field components
+    """
+
+    def __init__(self, spacing, params):
+        """
+        Constructor
+
+        :param spacing: spatial spacing 
+        :param params: ParameterDict dictionary instance
+        """
+        super(DiffusionRegularizer, self).__init__(spacing, params)
+
+    def _compute_regularizer(self, d):
+        # just do the standard component-wise norm of gradient squared
+
+        if self.dim == 1:
+            return self._compute_regularizer_1d(d)
+        elif self.dim == 2:
+            return self._compute_regularizer_2d(d)
+        elif self.dim == 3:
+            return self._compute_regularizer_3d(d)
+        else:
+            raise ValueError('Regularizer is currently only supported in dimensions 1 to 3')
+
+    # None in the following refers to batch, which is added here for compatibility, the following [0] is used for this reason
+    # now compute the norm
+
+    def _compute_regularizer_1d(self, d):
+        return (self.fdt.dXc(d[None, 0, :])[0]**2).sum() * self.volumeElement
+
+    def _compute_regularizer_2d(self, d):
+        return ( (self.fdt.dXc(d[None, 0, :, :])[0] ** 2) +
+                 (self.fdt.dYc(d[None, 0, :, :])[0] ** 2) +
+                 (self.fdt.dXc(d[None, 1, :, :])[0] ** 2) +
+                 (self.fdt.dYc(d[None, 1, :, :])[0] ** 2)).sum() * self.volumeElement
+
+    def _compute_regularizer_3d(self, d):
+        return ( (self.fdt.dXc(d[None, 0, :, :, :])[0] ** 2) +
+                 (self.fdt.dYc(d[None, 0, :, :, :])[0] ** 2) +
+                 (self.fdt.dZc(d[None, 0, :, :, :])[0] ** 2) +
+                 (self.fdt.dXc(d[None, 1, :, :, :])[0] ** 2) +
+                 (self.fdt.dYc(d[None, 1, :, :, :])[0] ** 2) +
+                 (self.fdt.dZc(d[None, 1, :, :, :])[0] ** 2) +
+                 (self.fdt.dXc(d[None, 2, :, :, :])[0] ** 2) +
+                 (self.fdt.dYc(d[None, 2, :, :, :])[0] ** 2) +
+                 (self.fdt.dZc(d[None, 2, :, :, :])[0] ** 2) ).sum() * self.volumeElement
+
+
+class CurvatureRegularizer(Regularizer):
+    """
+    Implements a curvature regularizer sum of squared Laplacians of the vector field components
+    """
+
+    def __init__(self, spacing, params):
+        """
+        Constructor
+
+        :param spacing: spatial spacing 
+        :param params: ParameterDict dictionary instance
+        """
+        super(CurvatureRegularizer, self).__init__(spacing, params)
+
+    def _compute_regularizer(self, d):
+        # just do the standard component-wise norm of gradient squared
+
+        if self.dim == 1:
+            return self._compute_regularizer_1d(d)
+        elif self.dim == 2:
+            return self._compute_regularizer_2d(d)
+        elif self.dim == 3:
+            return self._compute_regularizer_3d(d)
+        else:
+            raise ValueError('Regularizer is currently only supported in dimensions 1 to 3')
+
+    # None in the following refers to batch, which is added here for compatibility, the following [0] is used for this reason
+    # now compute the norm
+
+    def _compute_regularizer_1d(self, d):
+        return (self.fdt.lap(d[None, 0, :])[0]**2).sum() * self.volumeElement
+
+    def _compute_regularizer_2d(self, d):
+        return ( (self.fdt.lap(d[None, 0, :, :])[0] ** 2) +
+                 (self.fdt.lap(d[None, 1, :, :])[0] ** 2)).sum() * self.volumeElement
+
+    def _compute_regularizer_3d(self, d):
+        return ( (self.fdt.lap(d[None, 0, :, :, :])[0] ** 2) +
+                 (self.fdt.lap(d[None, 1, :, :, :])[0] ** 2) +
+                 (self.fdt.lap(d[None, 2, :, :, :])[0] ** 2) +
+                 (self.fdt.dYc(d[None, 2, :, :, :])[0] ** 2) ).sum() * self.volumeElement
+
+
+class TotalVariationRegularizer(Regularizer):
+    """
+    Implements a total variation regularizer sum of Euclidean norms of gradient of vector field components
+    """
+
+    def __init__(self, spacing, params):
+        """
+        Constructor
+
+        :param spacing: spatial spacing 
+        :param params: ParameterDict dictionary instance
+        """
+        super(TotalVariationRegularizer, self).__init__(spacing, params)
+
+    def _compute_regularizer(self, d):
+        # just do the standard component-wise Euclidean norm of the gradient
+
+        if self.dim == 1:
+            return self._compute_regularizer_1d(d)
+        elif self.dim == 2:
+            return self._compute_regularizer_2d(d)
+        elif self.dim == 3:
+            return self._compute_regularizer_3d(d)
+        else:
+            raise ValueError('Regularizer is currently only supported in dimensions 1 to 3')
+
+    # None in the following refers to batch, which is added here for compatibility, the following [0] is used for this reason
+    # now compute the norm
+
+    def _compute_regularizer_1d(self, d):
+        return ((self.fdt.dXc(d[None, 0, :])[0]**2)**0.5).sum() * self.volumeElement
+
+    def _compute_regularizer_2d(self, d):
+        return ( ((self.fdt.dXc(d[None, 0, :, :])[0] ** 2) +
+                 (self.fdt.dYc(d[None, 0, :, :])[0] ** 2))**0.5 +
+                 ((self.fdt.dXc(d[None, 1, :, :])[0] ** 2) +
+                 (self.fdt.dYc(d[None, 1, :, :])[0] ** 2))**0.5).sum() * self.volumeElement
+
+    def _compute_regularizer_3d(self, d):
+        return ( ((self.fdt.dXc(d[None, 0, :, :, :])[0] ** 2) +
+                 (self.fdt.dYc(d[None, 0, :, :, :])[0] ** 2) +
+                 (self.fdt.dZc(d[None, 0, :, :, :])[0] ** 2))**0.5 +
+                 ((self.fdt.dXc(d[None, 1, :, :, :])[0] ** 2) +
+                 (self.fdt.dYc(d[None, 1, :, :, :])[0] ** 2) +
+                 (self.fdt.dZc(d[None, 1, :, :, :])[0] ** 2))**0.5 +
+                 ((self.fdt.dXc(d[None, 2, :, :, :])[0] ** 2) +
+                 (self.fdt.dYc(d[None, 2, :, :, :])[0] ** 2) +
+                 (self.fdt.dZc(d[None, 2, :, :, :])[0] ** 2))**0.5 ).sum() * self.volumeElement
+
+
 class HelmholtzRegularizer(Regularizer):
     """
     Implements a Helmholtz regularizer
@@ -167,23 +311,64 @@ class RegularizerFactory(object):
         """
         self.default_regularizer_type = 'helmholtz'
 
+    def set_default_regularizer_type_to_diffusion(self):
+        """
+        Sets the default regularizer type to diffusion 
+        """
+        self.default_regularizer_type = 'diffusion'
+
+    def set_default_regularizer_type_to_total_variation(self):
+        """
+        Sets the default regularizer type to totalVariation 
+        """
+        self.default_regularizer_type = 'totalVariation'
+
+    def set_default_regularizer_type_to_curvature(self):
+        """
+        Sets the default regularizer type to curvature 
+        """
+        self.default_regularizer_type = 'curvature'
+
+    def _get_regularizer_instance(self, regularizerType, cparams):
+        if regularizerType == 'helmholtz':
+            return HelmholtzRegularizer(self.spacing, cparams)
+        elif regularizerType == 'totalVariation':
+            return TotalVariationRegularizer(self.spacing, cparams)
+        elif regularizerType == 'diffusion':
+            return DiffusionRegularizer(self.spacing, cparams)
+        elif regularizerType == 'curvature':
+            return CurvatureRegularizer(self.spacing, cparams)
+        else:
+            raise ValueError('Regularizer: ' + regularizerType + ' not known')
+
+    def create_regularizer_by_name(self, regularizerType, params):
+        """
+        Create a regularizer by name. This is a convenience function in the case where
+        there should be no free choice of regularizer (because a particular one is required for a model)
+        :param regularizerType: name of the regularizer: helmholtz|totalVariation|diffusion|curvature
+        :param params: ParameterDict instance
+        :return: returns a regularizer which can compute the regularization energy
+        """
+        cparams = params[('regularizer', {}, 'Parameters for the regularizer')]
+        cparams['type'] = regularizerType
+
+        return self._get_regularizer_instance(regularizerType,cparams)
+
     def create_regularizer(self, params):
         """
         Create the regularizer
         
         :param params: ParameterDict instance, expecting category 'regularizer', with variables 'type' and any settings the regularizer may require
           
-        :return: returns the regularization energy
+        :return: returns the regularizer which can commpute the regularization energy
         """
 
         cparams = params[('regularizer',{},'Parameters for the regularizer')]
         regularizerType = cparams[('type',self.default_regularizer_type,
                                              'type of regularizer (only helmholtz at the moment)')]
 
-        if regularizerType=='helmholtz':
-            return HelmholtzRegularizer(self.spacing,cparams)
-        else:
-            raise ValueError( 'Regularizer: ' + regularizerType + ' not known')
+        return self._get_regularizer_instance(regularizerType,cparams)
+
 
 
 

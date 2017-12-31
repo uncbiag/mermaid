@@ -228,7 +228,7 @@ class VolumetricDataSet(BaseDataSet):
         self.axis = -1
 
     def set_slicing(self, slicing, axis):
-        if slicing >0:
+        if slicing >0 and axis>0:
             print("slcing is set on , the slice of {} th dimension would be sliced ".format(slicing))
         self.slicing = slicing
         self.axis = axis
@@ -247,7 +247,7 @@ class VolumetricDataSet(BaseDataSet):
                 print("slicing file: {}".format(file_path))
             img, info = file_io_read_img_slice(file_path, self.slicing, self.axis, is_label=is_label)
         else:
-            img, info= BaseDataSet.read_file(self,file_path)
+            img, info= BaseDataSet.read_file(self,file_path,is_label=is_label)
         return img, info
 
 

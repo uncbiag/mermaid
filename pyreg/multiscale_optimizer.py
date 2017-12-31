@@ -190,7 +190,7 @@ class Optimizer(object):
         self.params['model']['deformation']['use_map']= (useMap, '[True|False] either do computations via a map or directly using the image')
         self.params['model']['deformation']['map_low_res_factor'] = (mapLowResFactor, 'Set to a value in (0,1) if a map-based solution should be computed at a lower internal resolution (image matching is still at full resolution')
 
-        self.params['optimizer']['single_scale'][('rel_ftol',self.rel_ftol,'relative termination tolerance for optimizer')]
+        self.rel_ftol = self.params['optimizer']['single_scale'][('rel_ftol',self.rel_ftol,'relative termination tolerance for optimizer')]
 
     def set_last_successful_step_size_taken(self,lr):
         """
@@ -242,6 +242,7 @@ class Optimizer(object):
         """
         self.rel_ftol = rel_ftol
         self.params['optimizer']['single_scale']['rel_ftol'] = (rel_ftol,'relative termination tolerance for optimizer')
+        self.rel_ftol = self.params['optimizer']['single_scale']['rel_ftol']
 
     def get_rel_ftol(self):
         """
@@ -311,10 +312,17 @@ class ImageRegistrationOptimizer(Optimizer):
         self.recorder = None
         self.save_excel = False
         self.light_analysis_on = None
+        self.limit_max_batch = -1
 
 
     def set_light_analysis_on(self, light_analysis_on):
         self.light_analysis_on = light_analysis_on
+
+    def set_limit_max_batch(self, limit_max_batch):
+        self.limit_max_batch= limit_max_batch
+
+    def get_limit_max_batch(self):
+        return self.limit_max_batch
 
 
     def turn_visualization_on(self):
@@ -533,12 +541,6 @@ class ImageRegistrationOptimizer(Optimizer):
         :param opt_params: dictionary holding the parameters of an optimizer
         """
         self.optimizer_params = opt_params
-
-
-
-
-
-
 
 
 
@@ -807,7 +809,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     self.recorder.saving_results(sched='buffer', results=metric_results_dic['label_avg_res'],  info=info,averaged_results=None)
 
         # result visualization
-        if self.visualize:
+        if self.visualize or self.save_fig:
             visual_param = {}
             visual_param['visualize'] = self.visualize
             if not self.light_analysis_on:

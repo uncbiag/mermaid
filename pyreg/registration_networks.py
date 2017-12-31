@@ -116,6 +116,102 @@ class RegistrationNet(nn.Module):
         # not defined yet
         return None,None
 
+
+class RegistrationNetDisplacement(RegistrationNet):
+    """
+        Abstract base-class for all the registration networks without time-integration
+        which directly estimate a deformation field.
+        """
+
+    def __init__(self, sz, spacing, params):
+        """
+        Constructor
+
+        :param sz: image size (BxCxXxYxZ format) 
+        :param spacing: spatial spacing, e.g., [0.1,0.1,0.2]
+        :param params: ParameterDict() object to hold general parameters
+        """
+        super(RegistrationNetDisplacement, self).__init__(sz,spacing,params)
+
+        self.d = self.create_registration_parameters()
+        """displacement field that will be optimized over"""
+
+    def create_registration_parameters(self):
+        """
+        Creates the displacement field that is being optimized over
+    
+        :return: displacement field parameter 
+        """
+        return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
+
+
+    def get_registration_parameters(self):
+        """
+        Returns the displacement field parameter
+    
+        :return: dispalcement field parameter 
+        """
+        return self.d
+
+
+    def set_registration_parameters(self, p, sz, spacing):
+        """
+        Sets the displacement field registration parameter
+    
+        :param p: displacement field 
+        :param sz: size of the corresponding image
+        :param spacing: spacing of the corresponding image
+        """
+        self.d.data = p.data
+        self.sz = sz
+        self.spacing = spacing
+
+
+    def get_parameter_image_and_name_to_visualize(self):
+        """
+        Returns the displacement field parameter magnitude image and a name
+    
+        :return: Returns the tuple (displacement_magnitude_image,name) 
+        """
+        name = '|d|'
+        par_image = ((self.d[:, ...] ** 2).sum(1)) ** 0.5  # assume BxCxXxYxZ format
+        return par_image, name
+
+
+    def upsample_registration_parameters(self, desiredSz):
+        """
+        Upsamples the displacement field to a desired size
+    
+        :param desiredSz: desired size of the upsampled displacement field 
+        :return: returns a tuple (upsampled_image,upsampled_spacing)
+        """
+        sampler = IS.ResampleImage()
+        dUpsampled, upsampled_spacing = sampler.upsample_image_to_size(self.d, self.spacing, desiredSz)
+        return dUpsampled, upsampled_spacing
+
+
+    def downsample_registration_parameters(self, desiredSz):
+        """
+        Downsamples the displacemebt field to a desired size
+    
+        :param desiredSz: desired size of the downsampled displacement field 
+        :return: returns a tuple (downsampled_image,downsampled_spacing)
+        """
+        sampler = IS.ResampleImage()
+        dDownsampled, downsampled_spacing = sampler.downsample_image_to_size(self.d, self.spacing, desiredSz)
+        return dDownsampled, downsampled_spacing
+
+    def forward(self, phi, I0_source):
+        """
+        Solved the map-based equation forward
+
+        :param phi: initial condition for the map
+        :param I0_source: not used
+        :return: returns the map with the displacement subtracted
+        """
+        return (phi-self.d)
+
+
 class RegistrationNetTimeIntegration(RegistrationNet):
     """
         Abstract base-class for all the registration networks with time-integration
@@ -550,8 +646,10 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
         self.regularizer = (RF.RegularizerFactory(self.spacing).
                             create_regularizer(cparams))
         """regularizer to compute the regularization energy"""
-
-        cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
+            cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        else:
+            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to convert from momentum to velocity"""
 
@@ -621,6 +719,80 @@ class SVFMapLoss(RegistrationMapLoss):
         """
         return self.regularizer.compute_regularizer_multiN(self.v)
 
+class DiffusionMapLoss(RegistrationMapLoss):
+    """
+    Specialization of the loss function for displacement-based registration to diffusion registration
+    """
+
+    def __init__(self, d, sz, spacing, params):
+        super(DiffusionMapLoss, self).__init__(sz, spacing, params)
+        self.d = d
+        """displacement field parameter"""
+
+        cparams = params[('loss', {}, 'settings for the loss function')]
+
+        self.regularizer = (RF.RegularizerFactory(self.spacing).
+                            create_regularizer_by_name('diffusion',cparams))
+        """regularizer to compute the regularization energy"""
+
+    def compute_regularization_energy(self, I0_source, m_last=None):
+        """
+        Computes the regularizaton energy from the velocity field parameter
+
+        :param I0_source: not used 
+        :return: returns the regularization energy
+        """
+        return self.regularizer.compute_regularizer_multiN(self.d)
+
+class TotalVariationMapLoss(RegistrationMapLoss):
+    """
+    Specialization of the loss function for displacement-based registration to diffusion registration
+    """
+
+    def __init__(self, d, sz, spacing, params):
+        super(TotalVariationMapLoss, self).__init__(sz, spacing, params)
+        self.d = d
+        """displacement field parameter"""
+
+        cparams = params[('loss', {}, 'settings for the loss function')]
+
+        self.regularizer = (RF.RegularizerFactory(self.spacing).
+                            create_regularizer_by_name('totalVariation',cparams))
+        """regularizer to compute the regularization energy"""
+
+    def compute_regularization_energy(self, I0_source, m_last=None):
+        """
+        Computes the regularizaton energy from the velocity field parameter
+
+        :param I0_source: not used 
+        :return: returns the regularization energy
+        """
+        return self.regularizer.compute_regularizer_multiN(self.d)
+
+class CurvatureMapLoss(RegistrationMapLoss):
+    """
+    Specialization of the loss function for displacement-based registration to diffusion registration
+    """
+
+    def __init__(self, d, sz, spacing, params):
+        super(CurvatureMapLoss, self).__init__(sz, spacing, params)
+        self.d = d
+        """displacement field parameter"""
+
+        cparams = params[('loss', {}, 'settings for the loss function')]
+
+        self.regularizer = (RF.RegularizerFactory(self.spacing).
+                            create_regularizer_by_name('curvature',cparams))
+        """regularizer to compute the regularization energy"""
+
+    def compute_regularization_energy(self, I0_source, m_last=None):
+        """
+        Computes the regularizaton energy from the velocity field parameter
+
+        :param I0_source: not used 
+        :return: returns the regularization energy
+        """
+        return self.regularizer.compute_regularizer_multiN(self.d)
 
 class AffineMapNet(RegistrationNet):
     """
@@ -835,7 +1007,10 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
         self.m = m
         """momentum"""
 
-        cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
+            cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        else:
+            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
         """smoother to convert from momentum to velocity"""
 
@@ -897,7 +1072,10 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
         self.m = m
         """vector momentum"""
 
-        cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
+            cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        else:
+            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
@@ -959,7 +1137,10 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         self.m = m
         """vector momentum"""
 
-        cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
+            cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        else:
+            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         #cparams['smoother']['type'] = 'gaussian'
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         #self.smoother = params['forward_model']['sm_ins']
@@ -1027,7 +1208,10 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
         self.m = m
         """vector momentum"""
 
-        cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
+            cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        else:
+            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
@@ -1168,7 +1352,10 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
         self.lam = lam
         """scalar momentum"""
 
-        cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
+            cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        else:
+            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
@@ -1222,7 +1409,10 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
         self.lam = lam
         """scalar momentum"""
 
-        cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
+            cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        else:
+            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
@@ -1278,7 +1468,10 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
         self.lam = lam
         """scalar momentum"""
 
-        cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
+            cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        else:
+            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 
@@ -1340,7 +1533,10 @@ class SVFScalarMomentumMapLoss(RegistrationMapLoss):
         self.lam = lam
         """scalar momentum"""
 
-        cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
+            cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        else:
+            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
 

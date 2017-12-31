@@ -5,11 +5,11 @@
             "label_path": {}, 
             "name": "lpba", 
             "output_path": "/playpen/zyshen/data/", 
-            "task_name": "lpba"
+            "task_name": "lpba_affined"
         }, 
         "mode": {
             "all_comb": false, 
-            "axis": 2, 
+            "axis": 3, 
             "divided_ratio": [
                 0.8, 
                 0.1, 

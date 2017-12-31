@@ -57,6 +57,8 @@ There are a few example registration implementations in the demos directory. Act
 * Most parts of the codes have been examined. In case of failure of the GPU code contact zyshen021@gmail.com; for all other failures contact mn@cs.unc.edu or open an issue in the github issue tracker.
     
 # Lastest modifications
+  * 12.30: added diffusion, curvature, and total variation registration models.
+  * 12.29: added multi Gaussian smoother
   * 12.19\
              add result_analysis: an excel result analysis\
              1. detailed results: saved in fig_save_path/results.xlsx\
