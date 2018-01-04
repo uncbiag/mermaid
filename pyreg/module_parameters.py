@@ -7,7 +7,7 @@ registration runs. See the corresponding note for a brief description on how to 
 import json
 
 class ParameterDict(object):
-    def __init__(self,initDict=None):
+    def __init__(self,initDict=None,printSettings=True):
         if initDict is not None:
             if type(initDict)==type(self):
                 self.ext = initDict.ext
@@ -19,7 +19,7 @@ class ParameterDict(object):
         self.int = {}
         self.com = {}
         self.currentCategoryName = 'root'
-        self.printSettings = True
+        self.printSettings = printSettings
 
     def __str__(self):
 
@@ -181,7 +181,7 @@ class ParameterDict(object):
             # we do not want to over-write any settings here
             if self.printSettings:
                 print('Creating new category: ' + currentCategoryName)
-                self.ext[key] = {}
+            self.ext[key] = {}
 
         self.int[key] = {}
         self.com[key] = {}
@@ -224,7 +224,7 @@ class ParameterDict(object):
                         if len(comment)>0:
                             self.com[key]['__doc__'] = comment
 
-                newpar = ParameterDict()
+                newpar = ParameterDict(printSettings=self.printSettings)
                 currentCategoryName = self.currentCategoryName + '.' + str(key)
                 newpar._set_value_of_instance(self.ext[key], self.int[key], self.com[key], currentCategoryName)
 
@@ -248,7 +248,7 @@ class ParameterDict(object):
                 if len(defaultValue)==0:
                     self._set_current_category(key, comment)
                     # and now we need to return it
-                    newpar = ParameterDict()
+                    newpar = ParameterDict(printSettings=self.printSettings)
                     currentCategoryName = self.currentCategoryName + '.' + str(key)
                     newpar._set_value_of_instance(self.ext[key], self.int[key], self.com[key], currentCategoryName)
 

@@ -132,37 +132,6 @@ def intra_pair(path, dic_list, type, full_comb, mirrored=False):
     return pair_list
 
 
-def load_as_data(pair_list):
-    """
-    :param pair_list:  pair_list is the list of the path of the paired image
-    :return: img_pair_list, type: numpy, size: (2N,2,img_h,img_w)    2N contains the N pair and N reversed pair
-             info, type: dic, items: img_h, img_w, pair_num, pair_path
-    """
-    img_pair_list = []
-    img_pair_path_list = []
-    standard=()
-
-    for i, pair in enumerate(pair_list):
-        img1 =read_itk_img(pair[0])
-        img2 =read_itk_img(pair[1])
-
-        # check img size
-        if i==0:
-            standard = img1.shape
-            check_same_size(img2, standard)
-        else:
-            check_same_size(img1,standard)
-            check_same_size(img2,standard)
-        normalize_img(img1)
-        normalize_img(img2)
-        img_pair_list += [(img1, img2)]
-        img_pair_list += [(img2, img1)]
-        img_pair_path_list += [[pair[0],pair[1]]]
-        img_pair_path_list += [[pair[1], pair[0]]]
-
-    assert len(img_pair_list) == 2*len(pair_list)
-    info = {'img_h': standard[0], 'img_w': standard[1], 'pair_num': len(img_pair_list)}
-    return np.asarray(img_pair_list), info, img_pair_path_list
 
 
 def find_corr_map(pair_path_list, label_path):
@@ -283,22 +252,6 @@ def normalize_img(image, sched='tp'):
     elif sched == 't':
         image[:] = (image - np.min(image)) / (np.max(image) - np.min(image))
 
-def read_images(source_image_name,target_image_name, normalize_spacing=True, normalize_intensities=True, squeeze_image=True):
-
-    I0,hdr0,spacing0,normalized_spacing0 = fileio.ImageIO().read_to_nc_format(source_image_name, intensity_normalize=normalize_intensities, squeeze_image=squeeze_image)
-    I1,hdr1,spacing1,normalized_spacing1 = fileio.ImageIO().read_to_nc_format(target_image_name, intensity_normalize=normalize_intensities, squeeze_image=squeeze_image)
-
-    assert (np.all( spacing0 == spacing1) )
-    # TODO: do a better test for equality for the images here
-
-    if normalize_spacing:
-        spacing = normalized_spacing0
-    else:
-        spacing = spacing0
-
-    print('Spacing = ' + str(spacing))
-
-    return I0, I1, spacing, hdr0, hdr1
 
 
 def file_io_read_img(path, is_label, normalize_spacing=True, normalize_intensities=True, squeeze_image=True, adaptive_padding=4):
@@ -346,36 +299,6 @@ def file_io_read_img_slice(path, slicing, axis, is_label, normalize_spacing=True
     return slice, info
 
 
-
-def read_itk_img(path):
-    """
-    :param path:
-    :return: numpy image
-    """
-    itkimage = sitk.ReadImage(path)
-    # Convert the image to a  numpy array first and then shuffle the dimensions to get axis in the order z,y,x
-    ct_scan = sitk.GetArrayFromImage(itkimage)
-    info = {'img_size': ct_scan.shape}
-    return np.squeeze(ct_scan), info
-
-def read_itk_img_slice(path, slicing, axis):
-    """
-    :param path:
-    :return: numpy image
-    """
-    itkimage = sitk.ReadImage(path)
-    # Convert the image to a  numpy array first and then shuffle the dimensions to get axis in the order z,y,x
-    im = np.squeeze(sitk.GetArrayFromImage(itkimage))
-    if axis == 1:
-        slice = im[slicing]
-    elif axis == 2:
-        slice = im[:,slicing,:]
-    elif axis == 3:
-        slice = im[:,:,slicing]
-    else:
-        raise ValueError, "slicing axis exceed, should be 1-3"
-    info = {'img_size': slice.shape}
-    return slice, info
 
 
 def save_sz_sp_to_json(info, output_path):
