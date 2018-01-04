@@ -62,13 +62,7 @@ class RegistrationDataset(Dataset):
         return transformed
 
 
-class Normalize(object):
-    """-1,1 normalization , this method will not be used but remained, normalization has been done when reading data"""
-    def __call__(self, sample):
-        img_pair = sample['image']
-        for image in img_pair:
-            image[:]= 2*(image-np.min(image))/(np.max(image)-np.min(image)) -1
-        return {'image': img_pair}
+
 
 
 
