@@ -9,6 +9,7 @@ A basic installation requires the installation of a few python packages. Most of
   * conda install pytorch torchvision cuda80 -c soumith
   * conda install cffi
   * conda install -c conda-forge itk
+  * conda install progressbar
   * conda install sphinx
   * pip install pytorch-fft
   * pip install pynrrd

@@ -443,10 +443,6 @@ def get_warped_label_map(label_map, phi, sched='nn'):
     return warped_label_map
 
 
-
-
-
-
 def t2np( v ):
     """
     Takes a torch array and returns it as a numpy array on the cpu
@@ -454,7 +450,11 @@ def t2np( v ):
     :param v: torch array
     :return: numpy array
     """
-    return (v.data).cpu().numpy()
+
+    if type( v ) == torch.autograd.variable.Variable:
+        return (v.data).cpu().numpy()
+    else:
+        return v.cpu().numpy()
 
 def checkNan(x):
     """"

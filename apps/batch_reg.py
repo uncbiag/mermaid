@@ -9,11 +9,12 @@ Contributors:
 # (for example to support color-images or general multi-modal registration scenarios)
 
 from __future__ import print_function
+import set_pyreg_paths
+
 import matplotlib as matplt
 from pyreg.config_parser import MATPLOTLIB_AGG
 if MATPLOTLIB_AGG:
     matplt.use('Agg')
-import set_pyreg_paths
 
 # first do the torch imports
 import torch
@@ -29,7 +30,7 @@ from pyreg import data_utils
 from pyreg.data_manager import DataManager
 from pyreg.metrics import get_multi_metric
 
-torch.cuda.set_device(2)
+# torch.cuda.set_device(2)
 
 def do_registration():
 
@@ -37,7 +38,6 @@ def do_registration():
     import pyreg.smoother_factory as SF
     import pyreg.multiscale_optimizer as MO
     from pyreg.config_parser import nr_of_threads
-
 
 
     ############################################     data  setting  #############################################
@@ -94,10 +94,6 @@ def do_registration():
     sz = data_info['info']['img_sz']
 
 
-
-
-
-
     ################################  task  setting  ###################################
 
     par_algconf = pars.ParameterDict()
@@ -138,8 +134,6 @@ def do_registration():
     save_excel = par_respro['respro']['save_excel']
 
     use_multi_scale = par_algconf['algconf']['optimizer']['multi_scale']['use_multiscale']
-
-
 
     if not use_multi_scale:
         # create multi-scale settings for single-scale solution
@@ -221,8 +215,6 @@ def do_registration():
         if LSource is not None and save_excel:
             recorder.set_summary_based_env()
             recorder.saving_results(sched='summary')
-
-
 
 
 

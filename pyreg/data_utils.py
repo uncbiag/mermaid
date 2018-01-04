@@ -16,11 +16,13 @@ import pyreg.fileio as fileio
 import pyreg.module_parameters as pars
 
 
-
-
 def list_dic(path):
+    """
+    Returns all the dictionaries found in the given path.
+    :param path: Input path
+    :return: list of dictionaries in this path.
+    """
     return [ dic for dic in listdir(path) if not isfile(join(path,dic))]
-
 
 
 def list_pairwise(path, img_type, full_comb, sched):
@@ -29,7 +31,7 @@ def list_pairwise(path, img_type, full_comb, sched):
     :param path:  path of the folder
     :param img_type: filter and get the image of certain type
     :param full_comb: if full_comb, return all possible pairs, if not, return pairs in increasing order
-    :param sched: sched can be inter personal or intra personal
+    :param sched: sched can be inter personal or intra personal ('intra'|'inter')
     :return:
     """
     if sched == 'intra':
@@ -74,7 +76,7 @@ def inter_pair(path, type, full_comb=False, mirrored=False):
         if not full_comb:
             pair = [[f_filter[idx], f_filter[idx + 1]] for idx in range(f_num - 1)]
         else:  # too many pairs , easy to out of memory
-            raise ValueError("Warnning, too many pairs, be sure the disk is big enough. Comment this line if you want to continue ")
+            raise ValueError("Warning, too many pairs, be sure the disk is big enough. Comment this line if you want to continue ")
             pair = []
             for i in range(f_num - 1):
                 pair_tmp = [[f_filter[i], f_filter[idx + i]] for idx in range(1,f_num - i)]
@@ -85,14 +87,12 @@ def inter_pair(path, type, full_comb=False, mirrored=False):
     return pair_list
 
 
-
 def mirror_pair(pair_list):
     """
     double the data,  generate pair2_pair1 from pair1_pair2    :param pair_list:
     :return:
     """
     return pair_list + [[pair[1],pair[0]] for pair in pair_list]
-
 
 
 def intra_pair(path, dic_list, type, full_comb, mirrored=False):
@@ -175,8 +175,12 @@ def find_corr_map(pair_path_list, label_path):
     return [[os.path.join(label_path, os.path.split(pth)[1]) for pth in pair_path] for pair_path in pair_path_list]
 
 
-
 def make_dir(path):
+    """
+    Creates a directory
+    :param path: 
+    :return: 
+    """
     is_exist = os.path.exists(path)
     if not is_exist:
         os.makedirs(path)
@@ -241,10 +245,10 @@ def mixed_pair_name(pair_path_list):
 
 def custom_pair_name(pair_path_list):
     """
-        the filename is orgnized as: slice1_id_slice2_id
-        :param pair_path_list:
-        :return:
-        """
+    the filename is orgnized as: slice1_id_slice2_id
+    :param pair_path_list:
+    :return:
+    """
     f = lambda name: os.path.split(name)
     get_img_name = lambda x: os.path.splitext(f(x)[1])[0]
     img_pair_name_list = [get_img_name(pair_path[0])+'_'+get_img_name(pair_path[1]) for pair_path in pair_path_list]
@@ -257,8 +261,6 @@ def check_same_size(img, standard):
     :param standard: standarded image size
     """
     assert img.shape == standard, "img size must be the same"
-
-
 
 
 

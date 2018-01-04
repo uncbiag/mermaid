@@ -9,6 +9,9 @@ import utils
 import torch
 import pyreg.image_manipulations as IM
 import numpy as np
+import glob
+
+from pyreg.config_parser import USE_FLOAT16
 
 from abc import ABCMeta, abstractmethod
 
@@ -22,6 +25,49 @@ class FileIO(object):
         """
         Constructor
         """
+        if USE_FLOAT16:
+            self.default_datatype = 'float16'
+        else:
+            self.default_datatype = 'float32'
+
+        self.datatype_conversion = True
+        """Automatically convers the datatype to the default_data_type when loading or writing"""
+
+    def turn_datatype_conversion_on(self):
+        """
+        Turns the automatic datatype conversion on
+        :return: n/a
+        """
+        self.datatype_conversion = True
+
+    def turn_datatype_conversion_off(self):
+        """
+        Turns the automatic datatype conversion off
+        :return: n/a
+        """
+        self.datatype_conversion = False
+
+    def is_datatype_conversion_on(self):
+        """
+        Returns True if automatic datatype conversion is on (default), otherwise False
+        :return: True if dataype conversion is on otherwise False
+        """
+        return self.datatype_conversion
+
+    def set_default_datatype(self,dtype):
+        """
+        Sets the default data type that will be used if data_type_conversion is on
+        :param dtype: standard dataype (e.g., 'float16', 'float32')
+        :return: n/a
+        """
+        self.default_datatype = dtype
+
+    def get_default_datatype(self):
+        """
+        Get the default data type
+        :return: default data type
+        """
+        return self.default_datatype
 
     # check if we are dealing with a nrrd file
     def _is_nrrd_filename(self,filename):
@@ -60,9 +106,14 @@ class FileIO(object):
                 (type(data) == torch.cuda.ShortTensor) or \
                 (type(data) == torch.cuda.IntTensor) or \
                 (type(data) == torch.cuda.LongTensor):
-            return utils.t2np(data)
+            datar = utils.t2np(data)
         else:
-            return data
+            datar = data
+
+        if self.datatype_conversion:
+            return datar.astype(self.default_datatype)
+        else:
+            return datar
 
     @abstractmethod
     def read(self, filename):
@@ -75,20 +126,21 @@ class FileIO(object):
         pass
 
     @abstractmethod
-    def write(self, filename, data, hdr):
+    def write(self, filename, data, hdr=None):
         """
         Abstract method to write a file
         
         :param filename: filename to write the data to
         :param data: data array that should be written (will be converted to numpy on the fly if necessary) 
-        :param hdr: hdr information for the file (in form of a dictionary)
+        :param hdr: optional header information for the file (in form of a dictionary)
         :return: n/a
         """
         pass
 
 class ImageIO(FileIO):
     """
-    Class to read images
+    Class to read images. All the image reading should be performed via this class. In this way everything
+    will be read and processed consistently.
     """
     def __init__(self):
         super(ImageIO, self).__init__()
@@ -125,7 +177,7 @@ class ImageIO(FileIO):
         padding the img to favorable size  e.g  img.shape%adaptive_padding = 0
         padding size should be bigger than 3, to avoid confused with channel
         :param adaptive_padding:
-        :return:
+        :return: n/a
         """
         if adaptive_padding<4 and adaptive_padding != -1:
             raise ValueError,"may confused with channel, adaptive padding must bigger than 4"
@@ -236,7 +288,10 @@ class ImageIO(FileIO):
         return True
 
     def _convert_itk_image_to_numpy(self,I0_itk):
-        I0 = itk.GetArrayViewFromImage(I0_itk)
+        if self.datatype_conversion:
+            I0 = itk.GetArrayViewFromImage(I0_itk).astype(self.default_datatype)
+        else:
+            I0 = itk.GetArrayViewFromImage(I0_itk)
         image_meta_data = dict()
         image_meta_data['space origin'] = self._convert_itk_vector_to_numpy(I0_itk.GetOrigin())
         image_meta_data['spacing'] = self._convert_itk_vector_to_numpy(I0_itk.GetSpacing())
@@ -278,7 +333,7 @@ class ImageIO(FileIO):
 
     def read(self, filename, intensity_normalize=False, squeeze_image=False, adaptive_padding=-1, verbose=False):
         """
-        Reads the image assuming and converts it to NxCxXxYxC format if needed 
+        Reads the image assuming it is a single channel 
         :param filename: filename to be read
         :param intensity_normalize: uses image intensity normalization
         :param squeeze_image: squeezes image first (e.g, from 1x128x128 to 128x128)
@@ -299,6 +354,8 @@ class ImageIO(FileIO):
             im_itk = itk.imread(filename)
             im, hdr = self._convert_itk_image_to_numpy(im_itk)
 
+        if self.datatype_conversion:
+            im = im.astype(self.default_datatype)
 
         if not hdr.has_key('spacing'):
             print('Image does not seem to have spacing information.')
@@ -342,10 +399,52 @@ class ImageIO(FileIO):
 
         return im,hdr,spacing,normalized_spacing
 
+    def read_batch_to_nc_format(self,filenames,intensity_normalize=False,squeeze_image=False ):
+        """
+        Wrapper around read_to_nc_format which allows to read a whole batch of images at once (as specified
+        in filenames) and returns the image in format NxCxXxYxZ. An individual image is assumed to have a single intensity channel.
+        :param filenames: list of filenames to be read or expression with wildcard
+        :param intensity_normalize: if set to True uses image intensity normalization
+        :param squeeze_image: squeezed individual image first (e.g, from 1x128x128 to 128x128)
+        :return Will return the read files, their header information, their spacing, and their normalized spacing \
+         (as a tuple: im,hdr,spacing,normalized_spacing). The assumption is that all files have the same
+         header and spacing. So only one is returned for the entire batch.
+        """
+
+        ims = None
+        hdr = None
+        spacing = None
+        normalized_spacing = None
+
+        if type(filenames)!=list:
+            # this is a glob expression
+            filenames = glob.glob(filenames)
+
+        nr_of_files = len(filenames)
+
+        for counter,filename in enumerate(filenames):
+            if not os.path.isfile(filename):
+                raise ValueError( 'File: ' + filename + ' does not exist.')
+            if counter==0:
+                # simply load the file (this will determine the headers size and dimension)
+                im,hdr,spacing,normalized_spacing = self.read_to_nc_format(filename,intensity_normalize=intensity_normalize,squeeze_image=squeeze_image)
+                sz = list(im.shape)
+                sz[0] = nr_of_files
+                print('Size:')
+                print(sz)
+                ims = np.zeros(sz,dtype=im.dtype)
+                ims[0,...] = im
+            else:
+                im, _, _, _ = self.read_to_nc_format(filename,intensity_normalize=intensity_normalize,squeeze_image=squeeze_image)
+                ims[counter,...] = im
+
+        return ims, hdr, spacing, normalized_spacing
+
     def read_to_nc_format(self,filename,intensity_normalize=False,squeeze_image=False ):
         """
         Reads the image assuming it is single channel and of XxYxZ format and convert it to NxCxXxYxC format 
         :param filename: filename to be read
+        :param intensity_normalize: if set to True uses image intensity normalization
         :param squeeze_image: squeezes image first (e.g, from 1x128x128 to 128x128)
         :return: Will return the read file, its header information, the spacing, and the normalized spacing \
          (as a tuple: im,hdr,spacing,normalized_spacing)
@@ -356,7 +455,7 @@ class ImageIO(FileIO):
 
     def read_to_map_compatible_format(self,filename,map,intensity_normalize=False,squeeze_image=False):
         """
-        Reads the image and makes sure it is compatiblle with the map. If it is not it tries to fix the format.
+        Reads the image and makes sure it is compatible with the map. If it is not it tries to fix the format.
         :param filename: filename to be read
         :param map: map which is used to determine the format
         :return: Will return the read file, its header information, the spacing, and the normalized spacing \
@@ -384,18 +483,52 @@ class ImageIO(FileIO):
 
         return im,hdr,spacing,normalized_spacing
 
-    def write(self, filename, data, hdr):
+    def write_batch_to_individual_files(self,filenames,data,hdr=None):
+        """
+        Takes a batch of images in the NxCxXxYxZ format and writes them out as individual files.
+        Currently an image can only have one channel, i,e., C=1.
+        :param filenames: either a list of filenames (one for each N) or one filename which will then be written out with different indices.
+        :param data: image data in NxCxXxYxZ format 
+        :param hdr: optional hrd, all images will get the same
+        :return: n/a
+        """
+
+        npd = self._convert_data_to_numpy_if_needed(data)
+        sz = npd.shape
+        nr_of_images = sz[0]
+        nr_of_channels = sz[1]
+        if nr_of_channels!=1:
+            raise ValueError('Only one intensity channel is currently supported')
+
+        if type(filenames)==list:
+            nr_of_filenames = len(filenames)
+            if nr_of_filenames!=nr_of_images:
+                raise ValueError('Error: a filename needs to be specified for each image in the batch')
+            # filenames were specified separately
+            for counter,filename in enumerate(filenames):
+                self.write(filename,npd[counter,0,...].squeeze(),hdr)
+        else:
+            # there is one filename specified as a pattern
+            filenamepattern, file_extension = os.path.splitext(filenames)
+            for counter in range(nr_of_images):
+                current_filename = filenamepattern + '_' + str(counter).zfill(4) + file_extension
+                self.write(current_filename,npd[counter,0,...].squeeze(),hdr)
+
+    def write(self, filename, data, hdr=None):
         if not self._is_nrrd_filename(filename):
             print('Sorry, currently only nrrd files are supported as output. Aborting.')
             return
         # now write it out
         print('Writing image: ' + filename)
-        nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ), hdr)
+        if hdr is not None:
+            nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ), hdr)
+        else:
+            nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ))
 
 
 class GenericIO(FileIO):
     """
-    Class to read images
+    Generic class to read nrrd images. Can be used for example to write out registration parameters.
     """
 
     def __init__(self):
@@ -407,21 +540,25 @@ class GenericIO(FileIO):
             return None, None
         else:
             print('Reading: ' + filename)
-            map, map_hdr = nrrd.read(filename)
-            return map, map_hdr
+            data, data_hdr = nrrd.read(filename)
+            if self.datatype_conversion:
+                data = data.astype(self.default_datatype)
+            return data, data_hdr
 
-    def write(self, filename, data, hdr):
+    def write(self, filename, data, hdr=None):
         if not self._is_nrrd_filename(filename):
             print('Sorry, currently only nrrd files are supported when writing. Aborting.')
             return
         else:
             print('Writing: ' + filename)
-            nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ), hdr)
-
+            if hdr is not None:
+                nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ), hdr)
+            else:
+                nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ) )
 
 class MapIO(GenericIO):
     """
-    Class to read images
+    Generic class to read and write maps as nrrd files. Trivially derived from GenericIO.
     """
 
     def __init__(self):
