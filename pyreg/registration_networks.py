@@ -538,7 +538,7 @@ class RegistrationMapLoss(RegistrationLoss):
         max_displacement = cparams[('max_displacement',0.05,'Max displacement penalty added to loss function of limit_displacement set to True')]
         self.max_displacement_sqr = max_displacement**2
 
-    def get_energy(self, phi0, phi1, I0_source, I1_target):
+    def get_energy(self, phi0, phi1, I0_source, I1_target, lowres_I0):
         """
         Compute the energy by warping the source image via the map and then comparing it to the target image
         
@@ -546,11 +546,15 @@ class RegistrationMapLoss(RegistrationLoss):
         :param phi1: map (mapping the source image to the target image, defined in the space of the target image) 
         :param I0_source: source image
         :param I1_target: target image
+        :param lowres_I0: for map with reduced resolution this is the downsampled source image, may be needed to compute the regularization energy
         :return: registration energy
         """
         I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1)
         sim = self.compute_similarity_energy(I1_warped, I1_target)
-        reg = self.compute_regularization_energy(I0_source)
+        if lowres_I0 is not None:
+            reg = self.compute_regularization_energy(lowres_I0)
+        else:
+            reg = self.compute_regularization_energy(I0_source)
 
 
         if self.limit_displacement:
@@ -571,7 +575,7 @@ class RegistrationMapLoss(RegistrationLoss):
         energy = sim + reg
         return energy, sim, reg
 
-    def forward(self, phi0, phi1, I0_source, I1_target):
+    def forward(self, phi0, phi1, I0_source, I1_target, lowres_I0):
         """
         Compute the loss function value by evaluating the registration energy
         
@@ -579,9 +583,10 @@ class RegistrationMapLoss(RegistrationLoss):
         :param phi1:  map (mapping the source image to the target image, defined in the space of the target image) 
         :param I0_source: source image
         :param I1_target: target image
+        :param lowres_I0: for map with reduced resolution this is the downsampled source image, may be needed to compute the regularization energy
         :return: returns the value of the loss function (i.e., the registration energy)
         """
-        energy, sim, reg = self.get_energy(phi0, phi1, I0_source, I1_target)
+        energy, sim, reg = self.get_energy(phi0, phi1, I0_source, I1_target, lowres_I0)
         return energy
 
 
