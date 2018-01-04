@@ -7,3 +7,4 @@ cffi
 itk
 sphinx
 pynrrd
+progressbar

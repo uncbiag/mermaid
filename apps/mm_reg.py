@@ -128,8 +128,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Registers two images')
 
     required = parser.add_argument_group('required arguments')
-    required.add_argument('--moving_image', required=False, default='../test_data/brain_slices/ws_slice.nrrd', help='Moving image')
-    required.add_argument('--target_image', required=False, default='../test_data/brain_slices/wt_slice.nrrd', help='Target image')
+    required.add_argument('--moving_image', required=True, default='../test_data/brain_slices/ws_slice.nrrd', help='Moving image')
+    required.add_argument('--target_image', required=True, default='../test_data/brain_slices/wt_slice.nrrd', help='Target image')
 
     parser.add_argument('--warped_image', required=False, help='Warped image after registration')
     parser.add_argument('--map', required=False, help='Computed map')
