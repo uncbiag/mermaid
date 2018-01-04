@@ -50,6 +50,7 @@ ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
 ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
 
 params['model']['deformation']['map_low_res_factor'] = 0.5
+params['model']['registration_model']['type'] = 'lddmm_shooting_scalar_momentum_map'
 params['optimizer']['single_scale']['nr_of_iterations'] = 20
 so = MO.SimpleSingleScaleRegistration(ISource,ITarget,spacing,params)
 so.get_optimizer().set_visualization( ds.visualize )
