@@ -733,10 +733,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             else:
                 self.rec_phiWarped = self.model(self.identityMap, self.ISource)
 
-            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource)
+            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource,
+                                  self.model.get_variables_to_transfer_to_loss_function())
         else:
             self.rec_IWarped = self.model(self.ISource)
-            loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget)
+            loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget, self.model.get_variables_to_transfer_to_loss_function())
         loss.backward()
         #torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
 
@@ -745,11 +746,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             if self.iter_count % 1 == 0:
                 self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
-                    self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource)
+                    self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource, self.model.get_variables_to_transfer_to_loss_function())
         else:
             if self.iter_count % 1 == 0:
                 self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
-                    self.rec_IWarped, self.ISource, self.ITarget)
+                    self.rec_IWarped, self.ISource, self.ITarget, self.model.get_variables_to_transfer_to_loss_function())
 
         return loss
 

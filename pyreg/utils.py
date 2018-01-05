@@ -336,6 +336,14 @@ def create_ND_vector_field_variable(sz):
     csz = np.array([dim]+list(csz))
     return AdaptVal(Variable(torch.zeros(csz.tolist()), requires_grad=False))
 
+def create_vector_parameter(nr_of_elements):
+    """
+    Creates a vector parameters with a specified number of elements
+    :param nr_of_elements: number of vector elements
+    :return: returns the parameter vector
+    """
+    return Parameter(AdaptVal(torch.zeros(nr_of_elements)))
+
 def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
     """
     Create vector field torch Parameter of given size

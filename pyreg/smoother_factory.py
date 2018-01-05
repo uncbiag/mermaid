@@ -32,11 +32,38 @@ class Smoother(object):
         """dimension"""
         self.params = params
         """ParameterDict() parameter object holding various configuration options"""
+        self.optimizer_params = None
+
+    def create_optimization_vector_parameters(self):
+        raise ValueError('Not implemented.')
+
+    def _smoothing_parameter_setup(self):
+        """
+        When implementing a new smoother, make sure this methods gets called before the smoothing is computed,
+        ideally at the beginning ot the implementation of smooth_scalar_field
+        :return: 
+        """
+        if self.optimizer_params is not None:
+            # then we optimize over them
+            self.refresh_optimization_parameters()
+
+    # TODO: make sure this is consistently implemented everywhere
+    def create_or_recreate_smoother(self):
+        """
+        Method to create or recreate a smoother. Overwrite if something specific needs to be done when setting up a smoother.
+        Then call it within refresh_optimization_parameters if the parameters changed in the meantime.
+        :return: 
+        """
+        pass
+
+    def refresh_optimization_parameters(self):
+        raise ValueError('Not implemented.')
 
     @abstractmethod
     def smooth_scalar_field(self, I, Iout=None):
         """
         Abstract method to smooth a scalar field. Only this method should be overwritten in derived classes.
+        Needs to call _smoothing_parameter_setup() at the very beginning.
         
         :param I: input image to smooth 
         :param Iout: if not None then result is returned in this variable
@@ -47,7 +74,8 @@ class Smoother(object):
     @abstractmethod
     def inverse_smooth_scalar_field(self, I, Iout=None):
         """
-        Experimental abstract method (NOT PROPERLY TESTED) to apply "inverse"-smoothing to a scalar field
+        Experimental abstract method (NOT PROPERLY TESTED) to apply "inverse"-smoothing to a scalar field.
+        Needs to call _smoothing_parameter_setup() at the very beginning.
         
         :param I: input image to inverse smooth 
         :param Iout: if not None then result is returned in this variable
@@ -219,6 +247,9 @@ class DiffusionSmoother(Smoother):
         :param vout: if not None returns the result in this variable
         :return: smoothed image
         """
+
+        self._smoothing_parameter_setup()
+
         # basically just solving the heat equation for a few steps
         if vout is not None:
             Sv = vout
@@ -349,6 +380,8 @@ class GaussianSpatialSmoother(GaussianSmoother):
         :param vout: if not None returns the result in this variable
         :return: smoothed image
         """
+        self._smoothing_parameter_setup()
+
         self.sz = v.size()
         if self.filter is None:
             self._create_filter()
@@ -375,6 +408,9 @@ class GaussianFourierSmoother(GaussianSmoother):
         self.FFilter = None
         """filter in Fourier domain"""
 
+    def create_or_recreate_smoother(self):
+        self._create_filter()
+
     @abstractmethod
     def _create_filter(self):
         """
@@ -391,6 +427,8 @@ class GaussianFourierSmoother(GaussianSmoother):
         :param vout: if not None returns the result in this variable
         :return: smoothed image
         """
+
+        self._smoothing_parameter_setup()
 
         # just doing a Gaussian smoothing
         # we need to instantiate a new filter function here every time for the autograd to work
@@ -412,6 +450,9 @@ class GaussianFourierSmoother(GaussianSmoother):
         :param vout: if not None returns the result in this variable
         :return: inverse-smoothed image
         """
+
+        self._smoothing_parameter_setup()
+
         if self.FFilter is None:
             self._create_filter()
         if vout is not None:
@@ -430,6 +471,8 @@ class SingleGaussianFourierSmoother(GaussianFourierSmoother):
         super(SingleGaussianFourierSmoother,self).__init__(sz,spacing,params)
         self.gaussianStd = params[('gaussian_std', 0.15 ,'std for the Gaussian' )]
         """standard deviation of Gaussian"""
+        self.gaussianStd_min = params[('gaussian_std_min', 0.00001 ,'minimal allowed std for the Gaussian' )]
+        """minimal allowed standard deviation during optimization"""
 
     def _create_filter(self):
 
@@ -457,6 +500,18 @@ class SingleGaussianFourierSmoother(GaussianFourierSmoother):
         """
         return self.gaussianStd
 
+    def create_optimization_vector_parameters(self):
+        self.optimizer_params = utils.create_vector_parameter(1)
+        self.optimizer_params[0] = self.gaussianStd
+        return self.optimizer_params
+
+    def refresh_optimization_parameters(self):
+        if self.optimizer_params[0]<=self.gaussianStd_min:
+            self.optimizer_params[0].data = self.gaussianStd_min
+        if self.optimizer_params[0]!=self.gaussianStd:
+            self.gaussianStd = self.optimizer_params[0]
+            self.create_or_recreate_smoother()
+
 
 class MultiGaussianFourierSmoother(GaussianFourierSmoother):
     """
@@ -472,6 +527,8 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
         """standard deviations of Gaussians"""
         self.multi_gaussian_weights = np.array( params[('multi_gaussian_weights', default_multi_gaussian_weights.tolist(), 'weights for the multiple Gaussians')] )
         """weights for the Gaussians"""
+        self.gaussianStd_min = params[('gaussian_std_min', 0.00001, 'minimal allowed std for the Gaussians')]
+        """minimal allowed standard deviation during optimization"""
 
         assert len(self.multi_gaussian_weights)==len(self.multi_gaussian_stds)
 
@@ -502,6 +559,44 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
             else:
                 self.FFilter += ce.create_complex_fourier_filter(g, self.sz)
 
+
+    def create_optimization_vector_parameters(self):
+        nr_of_stds = len(self.multi_gaussian_stds)
+        self.optimizer_params = utils.create_vector_parameter(2*nr_of_stds)
+        for i in range(nr_of_stds):
+            self.optimizer_params[i] = self.multi_gaussian_stds[i]
+            self.optimizer_params[i+nr_of_stds] = self.multi_gaussian_weights[i]
+        return self.optimizer_params
+
+    def _project_parameter_vector_if_necessary(self):
+        # all standard deviations need to be positive and the weights need to be non-negative
+        nr_of_stds = len(self.multi_gaussian_stds)
+        for i in range(nr_of_stds):
+            if self.optimizer_params[i]<=self.gaussianStd_min:
+                self.optimizer_params[i].data = self.gaussianStd_min
+            if self.optimizer_params[i+nr_of_stds]<0:
+                self.optimizer_params[i+nr_of_stds]=0
+
+        # now make sure the weights sum up to one and if not project them back
+        weight_sum = self.optimizer_params[nr_of_stds:].sum()
+        if weight_sum!=1.:
+            self.optimizer_params[nr_of_stds:].data += (1.-weight_sum)/nr_of_stds
+
+    def refresh_optimization_parameters(self):
+        self._project_parameter_vector_if_necessary()
+        # now check if current settings correspond to the parameter vector
+        nr_of_stds = len(self.multi_gaussian_stds)
+        needs_refresh = False
+        for i in range(nr_of_stds):
+            if self.optimizer_params[i] != self.multi_gaussian_stds[i]:
+                self.multi_gaussian_stds[i] = self.optimizer_params[i]
+                needs_refresh = True
+            if self.optimizer_params[i+nr_of_stds] != self.multi_gaussian_weights[i]:
+                self.multi_gaussian_weights[i] = self.optimizer_params[i+nr_of_stds]
+                needs_refresh = True
+
+        if needs_refresh:
+            self.create_or_recreate_smoother()
 
 
 class AdaptiveSmoother(Smoother):
