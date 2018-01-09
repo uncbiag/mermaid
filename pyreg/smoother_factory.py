@@ -32,12 +32,28 @@ class Smoother(object):
         """dimension"""
         self.params = params
         """ParameterDict() parameter object holding various configuration options"""
+        self.optimizer_params = None
+
+    def get_optimization_parameters(self):
+        """
+        Returns the optimizer parameters for a smoother. Returns None of there are none, or if optimization is disabled.
+        :return: Optimizer parameters
+        """
+        return None
+
+    def get_custom_optimizer_output_string(self):
+        """
+        Returns a customized string describing a smoother's setting. Will be displayed during optimization.
+        Useful to overwrite if optimizing over smoother parameters.
+        :return: string
+        """
+        return ''
 
     @abstractmethod
     def smooth_scalar_field(self, I, Iout=None):
         """
         Abstract method to smooth a scalar field. Only this method should be overwritten in derived classes.
-        
+
         :param I: input image to smooth 
         :param Iout: if not None then result is returned in this variable
         :return: should return the a smoothed scalar field, image dimension XxYxZ
@@ -47,8 +63,8 @@ class Smoother(object):
     @abstractmethod
     def inverse_smooth_scalar_field(self, I, Iout=None):
         """
-        Experimental abstract method (NOT PROPERLY TESTED) to apply "inverse"-smoothing to a scalar field
-        
+        Experimental abstract method (NOT PROPERLY TESTED) to apply "inverse"-smoothing to a scalar field.
+
         :param I: input image to inverse smooth 
         :param Iout: if not None then result is returned in this variable
         :return: should return the inverse-smoothed scalar field, image dimension XxYxZ
@@ -219,6 +235,7 @@ class DiffusionSmoother(Smoother):
         :param vout: if not None returns the result in this variable
         :return: smoothed image
         """
+
         # basically just solving the heat equation for a few steps
         if vout is not None:
             Sv = vout
@@ -283,10 +300,7 @@ class GaussianSpatialSmoother(GaussianSmoother):
 
         self.smoothingKernel = self._create_smoothing_kernel(self.k_sz)
         self.required_padding = (self.k_sz-1)/2
-        ##################################3
-        k_sz = self.k_sz
-        ###########################################################
-        ###################################
+
         if self.dim==1:
             self.filter =AdaptVal(Variable(torch.from_numpy(self.smoothingKernel)))
         elif self.dim==2:
@@ -349,6 +363,7 @@ class GaussianSpatialSmoother(GaussianSmoother):
         :param vout: if not None returns the result in this variable
         :return: smoothed image
         """
+
         self.sz = v.size()
         if self.filter is None:
             self._create_filter()
@@ -412,6 +427,7 @@ class GaussianFourierSmoother(GaussianSmoother):
         :param vout: if not None returns the result in this variable
         :return: inverse-smoothed image
         """
+
         if self.FFilter is None:
             self._create_filter()
         if vout is not None:
@@ -419,6 +435,97 @@ class GaussianFourierSmoother(GaussianSmoother):
             return vout
         else:
             return ce.inverse_fourier_convolution(v, self.FFilter)
+
+
+class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
+    """
+    Performs Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
+    than spatial Gaussian smoothing on the CPU in large dimensions.
+    """
+
+    def __init__(self, sz, spacing, params):
+        super(AdaptiveSingleGaussianFourierSmoother, self).__init__(sz, spacing, params)
+        self.gaussianStd = np.array(params[('gaussian_std', [0.15], 'std for the Gaussian')])
+        """standard deviation of Gaussian"""
+        self.gaussianStd_min = params[('gaussian_std_min', 0.00001, 'minimal allowed std for the Gaussian')]
+        """minimal allowed standard deviation during optimization"""
+        self.optimize_over_smoother_parameters = params[('optimize_over_smoother_parameters', False, 'if set to true the smoother will be optimized')]
+        """determines if we should optimize over the smoother parameters"""
+
+        self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz,spacing)
+
+        self.optimizer_params = self._create_optimization_vector_parameters()
+
+    def get_custom_optimizer_output_string(self):
+        return ", smooth(std)= " + np.array_str(self.get_gaussian_std()[0].data.numpy(),precision=3)
+
+    def get_optimization_parameters(self):
+        if self.optimize_over_smoother_parameters:
+            return self.optimizer_params
+        else:
+            return None
+
+    def _get_gaussian_std_from_optimizer_params(self):
+        # project if needed
+        if self.optimizer_params.data[0]<self.gaussianStd_min:
+            self.optimizer_params.data[0] = self.gaussianStd_min
+        return self.optimizer_params[0]
+
+    def _set_gaussian_std_optimizer_params(self,g_std):
+        self.optimizer_params.data[0]=g_std
+
+    def set_gaussian_std(self, gstd):
+        """
+        Set the standard deviation of the Gaussian filter
+
+        :param gstd: standard deviation 
+        """
+        self.params['gaussian_std'] = gstd
+        self._set_gaussian_std_optimizer_params(gstd)
+
+    def get_gaussian_std(self):
+        """
+        Return the standard deviation of the Gaussian filter
+
+        :return: standard deviation of Gaussian filter 
+        """
+        gaussianStd = self._get_gaussian_std_from_optimizer_params()
+        return gaussianStd
+
+    def smooth_scalar_field(self, v, vout=None):
+        """
+        Smooth the scalar field using Gaussian smoothing in the Fourier domain
+
+        :param v: image to smooth
+        :param vout: if not None returns the result in this variable
+        :return: smoothed image
+        """
+
+        # just doing a Gaussian smoothing
+        if vout is not None:
+            vout = ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std())
+            return vout
+        else:
+            return ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std())
+
+    def inverse_smooth_scalar_field(self, v, vout=None):
+        """
+        Inverse-smooth the scalar field using Gaussian smoothing in the Fourier domain
+        (with the inverse of the Fourier transform of the Gaussian; EXPERIMENTAL, requires regularization
+        to avoid divisions by zero. DO NOT USE AT THE MOMENT.)
+
+        :param v: image to inverse-smooth
+        :param vout: if not None returns the result in this variable
+        :return: inverse-smoothed image
+        """
+
+        raise ValueError("Not yet implemented")
+
+    def _create_optimization_vector_parameters(self):
+        self.optimizer_params = utils.create_vector_parameter(1)
+        self.optimizer_params.data[0] = self.gaussianStd[0]
+        return self.optimizer_params
+
 
 class SingleGaussianFourierSmoother(GaussianFourierSmoother):
     """
@@ -430,6 +537,8 @@ class SingleGaussianFourierSmoother(GaussianFourierSmoother):
         super(SingleGaussianFourierSmoother,self).__init__(sz,spacing,params)
         self.gaussianStd = params[('gaussian_std', 0.15 ,'std for the Gaussian' )]
         """standard deviation of Gaussian"""
+        self.gaussianStd_min = params[('gaussian_std_min', 0.00001 ,'minimal allowed std for the Gaussian' )]
+        """minimal allowed standard deviation during optimization"""
 
     def _create_filter(self):
 
@@ -438,7 +547,7 @@ class SingleGaussianFourierSmoother(GaussianFourierSmoother):
         id = utils.identity_map(self.sz)
         g = utils.compute_normalized_gaussian(id, mus, stds)
 
-        self.FFilter = ce.create_complex_fourier_filter(g, self.sz)
+        self.FFilter,_ = ce.create_complex_fourier_filter(g, self.sz)
 
     def set_gaussian_std(self,gstd):
         """
@@ -498,10 +607,155 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
             g = self.multi_gaussian_weights[nr] * utils.compute_normalized_gaussian(id, mus, stds)
 
             if nr==0:
-                self.FFilter = ce.create_complex_fourier_filter(g, self.sz)
+                self.FFilter,_ = ce.create_complex_fourier_filter(g, self.sz)
             else:
-                self.FFilter += ce.create_complex_fourier_filter(g, self.sz)
+                cFilter,_ = ce.create_complex_fourier_filter(g, self.sz)
+                self.FFilter += cFilter
 
+
+class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
+    """
+    Performs Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
+    than spatial Gaussian smoothing on the CPU in large dimensions.
+    """
+
+    def __init__(self, sz, spacing, params):
+        super(AdaptiveMultiGaussianFourierSmoother, self).__init__(sz, spacing, params)
+
+        self.multi_gaussian_stds = np.array(params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')])
+        default_multi_gaussian_weights = self.multi_gaussian_stds
+        default_multi_gaussian_weights /= default_multi_gaussian_weights.sum()
+        """standard deviations of Gaussians"""
+        self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', default_multi_gaussian_weights.tolist(), 'weights for the multiple Gaussians')])
+        """weights for the Gaussians"""
+        self.gaussianStd_min = params[('gaussian_std_min', 0.00001, 'minimal allowed std for the Gaussians')]
+        """minimal allowed standard deviation during optimization"""
+        self.optimize_over_smoother_parameters = params[('optimize_over_smoother_parameters', False, 'if set to true the smoother will be optimized')]
+        """determines if we should optimize over the smoother parameters"""
+
+        assert len(self.multi_gaussian_weights) == len(self.multi_gaussian_stds)
+
+        weight_sum = self.multi_gaussian_weights.sum()
+        if weight_sum != 1.:
+            print('WARNING: multi-Gaussian weights do not sum to one. Projecting them.')
+            self.multi_gaussian_weights += (1. - weight_sum) / len(self.multi_gaussian_weights)
+            params['multi_gaussian_weights'] = self.multi_gaussian_weights.tolist()
+
+        assert (np.array(self.multi_gaussian_weights)).sum() == 1.
+
+        self.nr_of_gaussians = len(self.multi_gaussian_stds)
+        self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz,spacing,self.nr_of_gaussians)
+        self.optimizer_params = self._create_optimization_vector_parameters()
+
+    def get_custom_optimizer_output_string(self):
+        return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.numpy(),precision=3) + \
+               ", smooth(weights)= " + np.array_str(self.get_gaussian_weights().data.numpy(),precision=3)
+
+    def get_optimization_parameters(self):
+        if self.optimize_over_smoother_parameters:
+            return self.optimizer_params
+        else:
+            return None
+
+    def _project_parameter_vector_if_necessary(self):
+        # all standard deviations need to be positive and the weights need to be non-negative
+        for i in range(self.nr_of_gaussians):
+            if self.optimizer_params.data[i] <= self.gaussianStd_min:
+                self.optimizer_params.data[i] = self.gaussianStd_min
+            if self.optimizer_params.data[i + self.nr_of_gaussians] < 0:
+                self.optimizer_params.data[i + self.nr_of_gaussians] = 0
+
+        # now make sure the weights sum up to one and if not project them back
+        weight_sum = self.optimizer_params.data[self.nr_of_gaussians:].sum()
+        if weight_sum != 1.:
+            self.optimizer_params.data[self.nr_of_gaussians:] += (1. - weight_sum) / self.nr_of_gaussians
+
+    def _get_gaussian_weights_from_optimizer_params(self):
+        # project if needed
+        self._project_parameter_vector_if_necessary()
+        return self.optimizer_params[self.nr_of_gaussians:]
+
+    def _set_gaussian_weights_optimizer_params(self,gweights):
+        self.optimizer_params.data[self.nr_of_gaussians:]=gweights
+
+    def set_gaussian_weights(self, gweights):
+        """
+        Sets the weights for the multi-Gaussian smoother
+        :param gweights: vector of weights
+        :return: n/a
+        """
+        self.params['multi_gaussian_weights'] = gweights
+        self._set_gaussian_weights_optimizer_params(gweights)
+
+    def get_gaussian_weights(self):
+        """
+        Returns the weights for the multi-Gaussian smoother
+        :return: vector of weights
+        """
+        gaussianWeights = self._get_gaussian_weights_from_optimizer_params()
+        return gaussianWeights
+
+    def _get_gaussian_stds_from_optimizer_params(self):
+        # project if needed
+        self._project_parameter_vector_if_necessary()
+        return self.optimizer_params[0:self.nr_of_gaussians]
+
+    def _set_gaussian_stds_optimizer_params(self,g_stds):
+        self.optimizer_params.data[0:self.nr_of_gaussians]=g_stds
+
+    def set_gaussian_stds(self, gstds):
+        """
+        Set the standard deviation of the Gaussian filter
+
+        :param gstd: standard deviation
+        """
+        self.params['multi_gaussian_stds'] = gstds
+        self._set_gaussian_std_optimizer_params(gstds)
+
+    def get_gaussian_stds(self):
+        """
+        Return the standard deviations of the Gaussian filters
+
+        :return: standard deviation of Gaussian filter
+        """
+        gaussianStds = self._get_gaussian_stds_from_optimizer_params()
+        return gaussianStds
+
+    def smooth_scalar_field(self, v, vout=None):
+        """
+        Smooth the scalar field using Gaussian smoothing in the Fourier domain
+
+        :param v: image to smooth
+        :param vout: if not None returns the result in this variable
+        :return: smoothed image
+        """
+
+        # just doing a Gaussian smoothing
+        if vout is not None:
+            vout = ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_stds(),self.get_gaussian_weights())
+            return vout
+        else:
+            return ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_stds(),self.get_gaussian_weights())
+
+    def inverse_smooth_scalar_field(self, v, vout=None):
+        """
+        Inverse-smooth the scalar field using Gaussian smoothing in the Fourier domain
+        (with the inverse of the Fourier transform of the Gaussian; EXPERIMENTAL, requires regularization
+        to avoid divisions by zero. DO NOT USE AT THE MOMENT.)
+
+        :param v: image to inverse-smooth
+        :param vout: if not None returns the result in this variable
+        :return: inverse-smoothed image
+        """
+
+        raise ValueError("Not yet implemented")
+
+    def _create_optimization_vector_parameters(self):
+        self.optimizer_params = utils.create_vector_parameter(2 * self.nr_of_gaussians)
+        for i in range(self.nr_of_gaussians):
+            self.optimizer_params.data[i] = self.multi_gaussian_stds[i]
+            self.optimizer_params.data[i + self.nr_of_gaussians] = self.multi_gaussian_weights[i]
+        return self.optimizer_params
 
 
 class AdaptiveSmoother(Smoother):
@@ -604,13 +858,17 @@ class SmootherFactory(object):
 
         cparams = params[('smoother',{})]
         smootherType = cparams[('type', self.default_smoother_type,
-                                          'type of smoother (diffusion|gaussian|multiGaussian|gaussianSpatial|adaptiveNet)' )]
+                                          'type of smoother (diffusion|gaussian|adaptive_gaussian|multiGaussian|adaptive_multiGaussian|gaussianSpatial|adaptiveNet)' )]
         if smootherType=='diffusion':
             return DiffusionSmoother(self.sz,self.spacing,cparams)
         elif smootherType=='gaussian':
             return SingleGaussianFourierSmoother(self.sz,self.spacing,cparams)
+        elif smootherType=='adaptive_gaussian':
+            return AdaptiveSingleGaussianFourierSmoother(self.sz,self.spacing,cparams)
         elif smootherType=='multiGaussian':
             return MultiGaussianFourierSmoother(self.sz,self.spacing,cparams)
+        elif smootherType=='adaptive_multiGaussian':
+            return AdaptiveMultiGaussianFourierSmoother(self.sz,self.spacing,cparams)
         elif smootherType=='gaussianSpatial':
             return GaussianSpatialSmoother(self.sz,self.spacing,cparams)
         elif smootherType=='adaptiveNet':

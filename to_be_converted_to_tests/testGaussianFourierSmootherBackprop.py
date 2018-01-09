@@ -65,7 +65,7 @@ stds = gaussianStd * np.ones(dim)
 id = utils.identity_map(szEx)
 g = utils.compute_normalized_gaussian(id, mus, stds)
 
-FFilter = ce.create_complex_fourier_filter(g, szEx)
+FFilter,_ = ce.create_complex_fourier_filter(g, szEx)
 fc1 = ce.FourierConvolution(FFilter)
 I1 = fc1(ISource)
 

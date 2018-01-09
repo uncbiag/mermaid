@@ -24,7 +24,6 @@ import forward_models as FM
 from data_wrapper import AdaptVal
 import regularizer_factory as RF
 import similarity_measure_factory as SM
-import smoother_factory as sf
 
 import smoother_factory as SF
 import image_sampling as IS
@@ -60,6 +59,23 @@ class RegistrationNet(nn.Module):
         """the number of images, i.e., the batch size B"""
         self.nrOfChannels = sz[1]
         """the number of image channels, i.e., C"""
+
+    def get_variables_to_transfer_to_loss_function(self):
+        """
+        This is a function that can be overwritten by models to allow to return variables which are also 
+        needed for the computation of the loss function. Returns None by default, but can for example be used
+        to pass parameters or smoothers which are needed for the model itself and its loss. By convention
+        these variables should be returned as a dictionary.
+        :return: 
+        """
+        return None
+
+    def get_custom_optimizer_output_string(self):
+        """
+        Can be overwritten by a method to allow for additional optimizer output (on top of the energy values)
+        :return: 
+        """
+        return ''
 
     @abstractmethod
     def create_registration_parameters(self):
@@ -350,11 +366,16 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
+        self.smoother_params = self.smoother.get_optimization_parameters()
+        """smoother parameters to be optimized over if supported by smoother"""
         self.v = self.smoother.smooth_vector_field_multiN(self.m)
         """corresponding velocity field"""
 
         self.integrator = self.create_integrator()
         """integrator to solve the forward model"""
+
+    def get_custom_optimizer_output_string(self):
+        return self.smoother.get_custom_optimizer_output_string()
 
     def create_registration_parameters(self):
         """
@@ -414,7 +435,7 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
     def create_integrator(self):
         """
         Creates the integrator that solve the advection equation (based on the smoothed momentum)
-        :return: 
+        :return: returns this integrator
         """
         cparams = self.params[('forward_model',{},'settings for the forward model')]
         advection = FM.AdvectImage(self.sz, self.spacing)
@@ -468,12 +489,13 @@ class RegistrationLoss(nn.Module):
         """
         self.smFactory.add_similarity_measure(simName,simMeasure)
 
-    def compute_similarity_energy(self, I1_warped, I1_target):
+    def compute_similarity_energy(self, I1_warped, I1_target, variables_from_forward_model=None):
         """
         Computing the image matching energy based on the selected similarity measure
         
         :param I1_warped: warped image at time tTo 
         :param I1_target: target image to register to 
+        :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :return: returns the value for image similarity energy
         """
         if self.similarityMeasure is None:
@@ -482,11 +504,12 @@ class RegistrationLoss(nn.Module):
         return sim
 
     @abstractmethod
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source, variables_from_forward_model=None):
         """
         Abstract method computing the regularization energy based on the registration parameters and (if desired) the initial image
         
         :param I0_source: Initial image 
+        :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :return: should return the valie for the regularization energy
         """
         pass
@@ -500,29 +523,31 @@ class RegistrationImageLoss(RegistrationLoss):
     def __init__(self,sz,spacing,params):
         super(RegistrationImageLoss, self).__init__(sz,spacing,params)
 
-    def get_energy(self, I1_warped, I0_source, I1_target):
+    def get_energy(self, I1_warped, I0_source, I1_target, variables_from_forward_model=None):
         """
         Computes the overall registration energy as E = E_sim + E_reg
         
         :param I1_warped: warped image 
         :param I0_source: source image
         :param I1_target: target image
+        :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :return: return the energy value
         """
-        sim = self.compute_similarity_energy(I1_warped, I1_target)
-        reg = self.compute_regularization_energy(I0_source)
+        sim = self.compute_similarity_energy(I1_warped, I1_target, variables_from_forward_model)
+        reg = self.compute_regularization_energy(I0_source, variables_from_forward_model)
         energy = sim + reg
         return energy, sim, reg
 
-    def forward(self, I1_warped, I0_source, I1_target):
+    def forward(self, I1_warped, I0_source, I1_target, variables_from_forward_model=None):
         """
         Computes the loss by evaluating the energy
         :param I1_warped: warped image
         :param I0_source: source image
         :param I1_target: target image
+        :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :return: registration energy
         """
-        energy, sim, reg = self.get_energy(I1_warped, I0_source, I1_target)
+        energy, sim, reg = self.get_energy(I1_warped, I0_source, I1_target, variables_from_forward_model)
         return energy
 
 
@@ -538,7 +563,7 @@ class RegistrationMapLoss(RegistrationLoss):
         max_displacement = cparams[('max_displacement',0.05,'Max displacement penalty added to loss function of limit_displacement set to True')]
         self.max_displacement_sqr = max_displacement**2
 
-    def get_energy(self, phi0, phi1, I0_source, I1_target, lowres_I0):
+    def get_energy(self, phi0, phi1, I0_source, I1_target, lowres_I0, variables_from_forward_model=None ):
         """
         Compute the energy by warping the source image via the map and then comparing it to the target image
         
@@ -547,14 +572,15 @@ class RegistrationMapLoss(RegistrationLoss):
         :param I0_source: source image
         :param I1_target: target image
         :param lowres_I0: for map with reduced resolution this is the downsampled source image, may be needed to compute the regularization energy
+        :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :return: registration energy
         """
         I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1)
-        sim = self.compute_similarity_energy(I1_warped, I1_target)
+        sim = self.compute_similarity_energy(I1_warped, I1_target, variables_from_forward_model)
         if lowres_I0 is not None:
-            reg = self.compute_regularization_energy(lowres_I0)
+            reg = self.compute_regularization_energy(lowres_I0, variables_from_forward_model)
         else:
-            reg = self.compute_regularization_energy(I0_source)
+            reg = self.compute_regularization_energy(I0_source, variables_from_forward_model)
 
 
         if self.limit_displacement:
@@ -575,7 +601,7 @@ class RegistrationMapLoss(RegistrationLoss):
         energy = sim + reg
         return energy, sim, reg
 
-    def forward(self, phi0, phi1, I0_source, I1_target, lowres_I0):
+    def forward(self, phi0, phi1, I0_source, I1_target, lowres_I0, variables_from_forward_model=None ):
         """
         Compute the loss function value by evaluating the registration energy
         
@@ -584,9 +610,10 @@ class RegistrationMapLoss(RegistrationLoss):
         :param I0_source: source image
         :param I1_target: target image
         :param lowres_I0: for map with reduced resolution this is the downsampled source image, may be needed to compute the regularization energy
+        :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :return: returns the value of the loss function (i.e., the registration energy)
         """
-        energy, sim, reg = self.get_energy(phi0, phi1, I0_source, I1_target, lowres_I0)
+        energy, sim, reg = self.get_energy(phi0, phi1, I0_source, I1_target, lowres_I0, variables_from_forward_model)
         return energy
 
 
@@ -613,11 +640,12 @@ class SVFImageLoss(RegistrationImageLoss):
                             create_regularizer(cparams))
         """regularizer to compute the regularization energy"""
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source, variables_from_forward_model=None):
         """
         Computing the regularization energy
         
         :param I0_source: source image (not used)
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         return self.regularizer.compute_regularizer_multiN(self.v)
@@ -650,14 +678,17 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
         else:
             cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+
+        #TODO: support smoother optimization here -> move smoother to model instead of loss function
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to convert from momentum to velocity"""
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source, variables_from_forward_model=None):
         """
         Compute the regularization energy from the momentum
         
         :param I0_source: not used
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         m = self.m
@@ -708,11 +739,12 @@ class SVFMapLoss(RegistrationMapLoss):
                             create_regularizer(cparams))
         """regularizer to compute the regularization energy"""
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source, variables_from_forward_model=None):
         """
         Computes the regularizaton energy from the velocity field parameter
         
         :param I0_source: not used 
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         return self.regularizer.compute_regularizer_multiN(self.v)
@@ -733,11 +765,12 @@ class DiffusionMapLoss(RegistrationMapLoss):
                             create_regularizer_by_name('diffusion',cparams))
         """regularizer to compute the regularization energy"""
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source, variables_from_forward_model=None):
         """
         Computes the regularizaton energy from the velocity field parameter
 
         :param I0_source: not used 
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         return self.regularizer.compute_regularizer_multiN(self.d)
@@ -758,11 +791,12 @@ class TotalVariationMapLoss(RegistrationMapLoss):
                             create_regularizer_by_name('totalVariation',cparams))
         """regularizer to compute the regularization energy"""
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source, variables_from_forward_model=None):
         """
         Computes the regularizaton energy from the velocity field parameter
 
         :param I0_source: not used 
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         return self.regularizer.compute_regularizer_multiN(self.d)
@@ -783,11 +817,12 @@ class CurvatureMapLoss(RegistrationMapLoss):
                             create_regularizer_by_name('curvature',cparams))
         """regularizer to compute the regularization energy"""
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source, variables_from_forward_model=None):
         """
         Computes the regularizaton energy from the velocity field parameter
 
         :param I0_source: not used 
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         return self.regularizer.compute_regularizer_multiN(self.d)
@@ -878,11 +913,12 @@ class AffineMapLoss(RegistrationMapLoss):
         self.Ab = Ab
         """affine parameters"""
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source, variables_from_forward_model=None):
         """
         Computes the regularizaton energy from the affine parameter
 
         :param I0_source: not used 
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         regE = Variable(MyTensor(1).zero_(), requires_grad=False)
@@ -896,12 +932,25 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
     def __init__(self,sz,spacing,params):
         super(ShootingVectorMomentumNet, self).__init__(sz, spacing, params)
         self.m = self.create_registration_parameters()
-        self.smoother = sf.SmootherFactory(self.sz[2::], self.spacing).create_smoother(params['forward_model'])
+        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        """smoother"""
+        self.smoother_params = self.smoother.get_optimization_parameters()
+        """smoother parameters to be optimized over if supported by smoother"""
+
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':
             self.add_module('mod_smoother', self.smoother.smoother)
         """vector momentum"""
         self.integrator = self.create_integrator()
         """integrator to solve EPDiff variant"""
+
+    def get_custom_optimizer_output_string(self):
+        return self.smoother.get_custom_optimizer_output_string()
+
+    def get_variables_to_transfer_to_loss_function(self):
+        d = dict()
+        d['smoother'] = self.smoother
+        return d
 
     def create_registration_parameters(self):
         """
@@ -982,7 +1031,7 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
         """
 
         cparams = self.params[('forward_model',{},'settings for the forward model')]
-        epdiffImage = FM.EPDiffImage( self.sz, self.spacing, cparams )
+        epdiffImage = FM.EPDiffImage( self.sz, self.spacing, self.smoother, cparams )
         return RK.RK4(epdiffImage.f,None,None,cparams)
 
     def forward(self, I):
@@ -992,6 +1041,7 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
         :param I: Initial condition for image 
         :return: returns the image at time tTo
         """
+
         mI1 = self.integrator.solve([self.m,I], self.tFrom, self.tTo)
         return mI1[1]
 
@@ -1004,22 +1054,26 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
         super(LDDMMShootingVectorMomentumImageLoss, self).__init__(sz,spacing,params)
         self.m = m
         """momentum"""
-
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
+            self.develop_smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
+            """smoother to convert from momentum to velocity"""
         else:
-            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
-        """smoother to convert from momentum to velocity"""
+            self.develop_smoother = None
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source, variables_from_forward_model):
         """
         Computes the regularzation energy based on the inital momentum
         :param I0_source: not used
+        :param variables_from_forward_model: (not used)
         :return: regularization energy
         """
         m = self.m
-        v = self.smoother.smooth_vector_field_multiN(m)
+        if self.develop_smoother is not None:
+            v = self.develop_smoother.smooth_vector_field_multiN(m)
+        else:
+            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+
         reg = (v * m).sum() * self.spacing.prod()
         return reg
 
@@ -1030,10 +1084,6 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
 
     def __init__(self, sz, spacing, params):
         super(SVFVectorMomentumImageNet, self).__init__(sz, spacing, params)
-
-        cparams = params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
-        """smoother to go from momentum to velocity"""
 
     def create_integrator(self):
         """
@@ -1067,24 +1117,27 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
         super(SVFVectorMomentumImageLoss, self).__init__(sz, spacing, params)
         self.m = m
         """vector momentum"""
-
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
+            self.develop_smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+            """smoother to go from momentum to velocity"""
         else:
-            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
-        """smoother to go from momentum to velocity"""
+            self.develop_smoother = None
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source, variables_from_forward_model):
         """
         Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
 
         :param I0_source: source image
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         m = self.m
 
-        v = self.smoother.smooth_vector_field_multiN(m)
+        if self.develop_smoother is not None:
+            v = self.develop_smoother.smooth_vector_field_multiN(m)
+        else:
+            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
         reg = (v * m).sum() * self.spacing.prod()
         return reg
 
@@ -1104,8 +1157,7 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         :return: returns this integrator 
         """
         cparams = self.params[('forward_model',{},'settings for the forward model')]
-        #cparams['sm_ins'] = self.smoother
-        epdiffMap = FM.EPDiffMap( self.sz, self.spacing, cparams,self.smoother )
+        epdiffMap = FM.EPDiffMap( self.sz, self.spacing, self.smoother, cparams )
         return RK.RK4(epdiffMap.f,None,None,self.params)
 
     def forward(self, phi, I0_source):
@@ -1116,8 +1168,9 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         :param I0_source: not used
         :return: returns the map at time tTo
         """
+
         mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo)
-        return mphi1[1]    #, mphi1[0]
+        return mphi1[1]
 
 
 class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
@@ -1133,23 +1186,27 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
 
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
+            self.develop_smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+            """smoother to obtain the velocity field from the momentum field"""
+            self.use_net = True if cparams['smoother']['type'] == 'adaptiveNet' else False
         else:
-            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        #cparams['smoother']['type'] = 'gaussian'
-        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
-        #self.smoother = params['forward_model']['sm_ins']
-        self.use_net = True if cparams['smoother']['type'] == 'adaptiveNet' else False
-        """smoother to obtain the velocity field from the momentum field"""
+            self.develop_smoother = None
+            self.use_net = False
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source, variables_from_forward_model):
         """
         Commputes the regularization energy from the initial vector momentum
         
         :param I0_source: not used 
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         m = self.m
-        v = self.smoother.smooth_vector_field_multiN(m)
+
+        if self.develop_smoother is not None:
+            v = self.develop_smoother.smooth_vector_field_multiN(m)
+        else:
+            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
 
         reg = (v * m).sum() * self.spacing.prod()
         return reg
@@ -1161,10 +1218,6 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
 
     def __init__(self, sz, spacing, params):
         super(SVFVectorMomentumMapNet, self).__init__(sz, spacing, params)
-
-        cparams = params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
-        """smoother to go from momentum to velocity"""
 
     def create_integrator(self):
         """
@@ -1199,23 +1252,28 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
         super(SVFVectorMomentumMapLoss, self).__init__(sz, spacing, params)
         self.m = m
         """vector momentum"""
-
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
+            self.develop_smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+            """smoother to go from momentum to velocity"""
         else:
-            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
-        """smoother to go from momentum to velocity"""
+            self.develop_smoother = None
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source,variables_from_forward_model):
         """
         Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
 
         :param I0_source: source image
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         m = self.m
-        v = self.smoother.smooth_vector_field_multiN(m)
+
+        if self.develop_smoother is not None:
+            v = self.develop_smoother.smooth_vector_field_multiN(m)
+        else:
+            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+
         reg = (v * m).sum() * self.spacing.prod()
         return reg
 
@@ -1228,8 +1286,24 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
         super(ShootingScalarMomentumNet, self).__init__(sz, spacing, params)
         self.lam = self.create_registration_parameters()
         """scalar momentum"""
+        cparams = params[('forward_model', {}, 'settings for the forward model')]
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        """smoother"""
+        self.smoother_params = self.smoother.get_optimization_parameters()
+        """smoother parameters to be optimized over if supported by smoother"""
+
+        if params['forward_model']['smoother']['type'] == 'adaptiveNet':
+            self.add_module('mod_smoother', self.smoother.smoother)
         self.integrator = self.create_integrator()
         """integrator to integrate EPDiff and associated equations (for image or map)"""
+
+    def get_custom_optimizer_output_string(self):
+        return self.smoother.get_custom_optimizer_output_string()
+
+    def get_variables_to_transfer_to_loss_function(self):
+        d = dict()
+        d['smoother'] = self.smoother
+        return d
 
     def create_registration_parameters(self):
         """
@@ -1304,10 +1378,6 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
     def __init__(self, sz, spacing, params):
         super(SVFScalarMomentumImageNet, self).__init__(sz, spacing, params)
 
-        cparams = params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
-        """smoother to go from momentum to velocity"""
-
     def create_integrator(self):
         """
         Creates an integrator integrating the scalar momentum conservation law and an advection equation for the image
@@ -1341,23 +1411,28 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
         super(SVFScalarMomentumImageLoss, self).__init__(sz, spacing, params)
         self.lam = lam
         """scalar momentum"""
-
-        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
-            cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        if params['similarity_measure'][('develop_mod_on', False, 'developing mode')]:
+            cparams = params[('similarity_measure', {}, 'settings for the similarity ')]
+            self.develop_smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+            """smoother to go from momentum to velocity"""
         else:
-            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
-        """smoother to go from momentum to velocity"""
+            self.develop_smoother = None
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source,variables_from_forward_model):
         """
         Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
 
         :param I0_source: source image 
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
-        v = self.smoother.smooth_vector_field_multiN(m)
+
+        if self.develop_smoother is not None:
+            v = self.develop_smoother.smooth_vector_field_multiN(m)
+        else:
+            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+
         reg = (v * m).sum() * self.spacing.prod()
         return reg
 
@@ -1376,7 +1451,7 @@ class LDDMMShootingScalarMomentumImageNet(ShootingScalarMomentumNet):
         :return: returns this integrator 
         """
         cparams = self.params[('forward_model',{},'settings for the forward model')]
-        epdiffScalarMomentumImage = FM.EPDiffScalarMomentumImage( self.sz, self.spacing, cparams )
+        epdiffScalarMomentumImage = FM.EPDiffScalarMomentumImage( self.sz, self.spacing, self.smoother, cparams )
         return RK.RK4(epdiffScalarMomentumImage.f,None,None,cparams)
 
     def forward(self, I):
@@ -1398,23 +1473,28 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
         super(LDDMMShootingScalarMomentumImageLoss, self).__init__(sz,spacing,params)
         self.lam = lam
         """scalar momentum"""
-
-        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
-            cparams = params[('similarity_measure',{},'settings for the similarity ')]
+        if params['similarity_measure'][('develop_mod_on', False, 'developing mode')]:
+            cparams = params[('similarity_measure', {}, 'settings for the similarity ')]
+            self.develop_smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+            """smoother to go from momentum to velocity"""
         else:
-            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
-        """smoother to go from momentum to velocity"""
+            self.develop_smoother = None
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source,variables_from_forward_model):
         """
         Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
         
         :param I0_source: source image 
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
-        v = self.smoother.smooth_vector_field_multiN(m)
+
+        if self.develop_smoother is not None:
+            v = self.develop_smoother.smooth_vector_field_multiN(m)
+        else:
+            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+
         reg = (v * m).sum() * self.spacing.prod()
         return reg
 
@@ -1434,7 +1514,7 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
         :return: returns this integrator 
         """
         cparams = self.params[('forward_model',{},'settings for the forward model')]
-        epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, cparams )
+        epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, self.smoother, cparams )
         return RK.RK4(epdiffScalarMomentumMap.f,None,None,cparams)
 
     def forward(self, phi, I0_source):
@@ -1460,20 +1540,25 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
 
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
+            self.develop_smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
+            """smoother to go from momentum to velocity for development configuration"""
         else:
-            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
-        """smoother to go from momentum to velocity"""
+            self.develop_smoother = None
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source,variables_from_forward_model):
         """
         Computes the regularizaton energy from the initial vector momentum as computed from the scalar momentum
         
-        :param I0_source: initial image 
+        :param I0_source: initial image
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
-        v = self.smoother.smooth_vector_field_multiN(m)
+        if self.develop_smoother is not None:
+            v = self.develop_smoother.smooth_vector_field_multiN(m)
+        else:
+            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+
         reg = (v * m).sum() * self.spacing.prod()
         return reg
 
@@ -1484,10 +1569,6 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
 
     def __init__(self, sz, spacing, params):
         super(SVFScalarMomentumMapNet, self).__init__(sz, spacing, params)
-
-        cparams = params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
-        """smoother to go from momentum to velocity"""
 
     def create_integrator(self):
         """
@@ -1525,19 +1606,24 @@ class SVFScalarMomentumMapLoss(RegistrationMapLoss):
 
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
+            self.develop_smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+            """smoother to go from momentum to velocity"""
         else:
-            cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
-        """smoother to go from momentum to velocity"""
+            self.develop_smoother = None
 
-    def compute_regularization_energy(self, I0_source):
+    def compute_regularization_energy(self, I0_source,variables_from_forward_model):
         """
         Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
 
         :param I0_source: source image
+        :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
-        v = self.smoother.smooth_vector_field_multiN(m)
+        if self.develop_smoother is not None:
+            v = self.develop_smoother.smooth_vector_field_multiN(m)
+        else:
+            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+
         reg = (v * m).sum() * self.spacing.prod()
         return reg

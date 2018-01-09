@@ -23,10 +23,8 @@ Futhermore the following (RHSs) are provided
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import finite_differences as fd
-import smoother_factory as sf
 import utils
 from data_wrapper import MyTensor
-import torch
 from torch.autograd import Variable
 
 class RHSLibrary(object):
@@ -502,9 +500,9 @@ class EPDiffImage(ForwardModel):
     
     :math:`I_t+\\nabla I^Tv=0`
     """
-    def __init__(self, sz, spacing, params=None):
+    def __init__(self, sz, spacing, smoother, params=None):
         super(EPDiffImage, self).__init__(sz, spacing,params)
-        self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).create_smoother(params)
+        self.smoother = smoother
 
     def f(self,t, x, u, pars):
         """
@@ -538,13 +536,10 @@ class EPDiffMap(ForwardModel):
     :math:`\\phi_t+D\\phi v=0`
     """
 
-    def __init__(self, sz, spacing, params=None, smoother=None):
+    def __init__(self, sz, spacing, smoother, params=None):
         super(EPDiffMap, self).__init__(sz,spacing,params)
-        #self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).create_smoother(params)
-        #######################################3
         self.smoother = smoother
         self.use_net = True if self.params['smoother']['type'] == 'adaptiveNet' else False
-        ##########################################
 
     def debugging(self,input,t):
         x = utils.checkNan(input)
@@ -589,10 +584,10 @@ class EPDiffScalarMomentum(ForwardModel):
     Base class for scalar momentum EPDiff solutions. Defines a smoother that can be commonly used.
     """
 
-    def __init__(self, sz, spacing, params):
+    def __init__(self, sz, spacing, smoother, params):
         super(EPDiffScalarMomentum,self).__init__(sz,spacing,params)
 
-        self.smoother = sf.SmootherFactory(self.sz[2::],self.spacing).create_smoother(params)
+        self.smoother = smoother
 
 
 class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
@@ -609,8 +604,8 @@ class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
     :math:`\\lambda_t + div(\\lambda v)=0`
     """
 
-    def __init__(self, sz, spacing, params=None):
-        super(EPDiffScalarMomentumImage, self).__init__(sz, spacing, params)
+    def __init__(self, sz, spacing, smoother, params=None):
+        super(EPDiffScalarMomentumImage, self).__init__(sz, spacing, smoother, params)
 
     def f(self, t, x, u, pars):
         """
@@ -654,8 +649,8 @@ class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
     :math:`\\lambda_t + div(\\lambda v)=0`
     """
 
-    def __init__(self, sz, spacing, params=None):
-        super(EPDiffScalarMomentumImage, self).__init__(sz, spacing,params)
+    def __init__(self, sz, spacing, smoother, params=None):
+        super(EPDiffScalarMomentumImage, self).__init__(sz, spacing, smoother, params)
 
     def f(self,t, x, u, pars):
         """
@@ -701,8 +696,8 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
     :math:`\\Phi_t+D\\Phi v=0`
     """
 
-    def __init__(self, sz, spacing, params=None):
-        super(EPDiffScalarMomentumMap, self).__init__(sz,spacing,params)
+    def __init__(self, sz, spacing, smoother, params=None):
+        super(EPDiffScalarMomentumMap, self).__init__(sz,spacing, smoother, params)
 
 
     def f(self,t, x, u, pars):

@@ -582,6 +582,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.rec_phiWarped = None
         self.rec_IWarped = None
         self.last_energy = None
+        self.rec_custom_optimizer_output_string = ''
         """the evaluation information"""
 
     def get_energy(self):
@@ -733,27 +734,29 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             else:
                 self.rec_phiWarped = self.model(self.identityMap, self.ISource)
 
-            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource)
+            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource,
+                                  self.model.get_variables_to_transfer_to_loss_function())
         else:
             self.rec_IWarped = self.model(self.ISource)
-            loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget)
+            loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget, self.model.get_variables_to_transfer_to_loss_function())
         loss.backward()
         #torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
 
+        self.rec_custom_optimizer_output_string = self.model.get_custom_optimizer_output_string()
 
         if self.useMap:
 
             if self.iter_count % 1 == 0:
                 self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
-                    self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource)
+                    self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource, self.model.get_variables_to_transfer_to_loss_function())
         else:
             if self.iter_count % 1 == 0:
                 self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
-                    self.rec_IWarped, self.ISource, self.ITarget)
+                    self.rec_IWarped, self.ISource, self.ITarget, self.model.get_variables_to_transfer_to_loss_function())
 
         return loss
 
-    def analysis(self, energy, similarityEnergy, regEnergy, Warped):
+    def analysis(self, energy, similarityEnergy, regEnergy, Warped, custom_optimizer_output_string = ''):
         """
         print out the and visualize the result
         :param energy:
@@ -771,12 +774,13 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             # relative function toleranc: |f(xi)-f(xi+1)|/(1+|f(xi)|)
             rel_f = abs(self.last_energy - cur_energy) / (1 + abs(cur_energy))
 
-            print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF={relF}'
+            print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF={relF} {cos}'
                   .format(iter=self.iter_count,
                           energy=cur_energy,
                           similarityE=utils.t2np(similarityEnergy.float()),
                           regE=utils.t2np(regEnergy.float()),
-                          relF=rel_f))
+                          relF=rel_f,
+                          cos=custom_optimizer_output_string))
 
             # check if relative convergence tolerance is reached
             if rel_f < self.rel_ftol:
@@ -784,11 +788,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 return True
 
         else:
-            print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF=n/a'
+            print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF=n/a {cos}'
                   .format(iter=self.iter_count,
                           energy=cur_energy,
                           similarityE=utils.t2np(similarityEnergy.float()),
-                          regE=utils.t2np(regEnergy.float())))
+                          regE=utils.t2np(regEnergy.float()),
+                          cos=custom_optimizer_output_string))
 
         self.last_energy = cur_energy
         iter = self.iter_count
@@ -921,16 +926,14 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 self.last_successful_step_size_taken = self.optimizer_instance.last_step_size_taken()
 
             if self.useMap:
-                tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_phiWarped)
+                tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_phiWarped, self.rec_custom_optimizer_output_string)
             else:
-                tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_IWarped)
+                tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_IWarped, self.rec_custom_optimizer_output_string)
             if tolerance_reached:
                 break
             self.iter_count = iter+1
 
         print('time:', time.time() - start)
-
-
 
 
 

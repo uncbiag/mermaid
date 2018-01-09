@@ -39,7 +39,7 @@ def are_indices_close(loc):
     return True
 
 
-def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True):
+def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True, maxIndex=None):
     """
     Creates a filter in the Fourier domain given a spatial array defining the filter
     
@@ -47,19 +47,22 @@ def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True):
     :param sz: Desired size of the filter in the Fourier domain.
     :param enforceMaxSymmetry: If set to *True* (default) forces the filter to be real and hence forces the filter
         in the spatial domain to be symmetric
-    :return: Returns the complex coefficients for the filter in the Fourier domain
+    :param maxIndex: specifies the index of the maximum which will be used to enforceMaxSymmetry. If it is not
+        defined, the maximum is simply computed
+    :return: Returns the complex coefficients for the filter in the Fourier domain and the maxIndex 
     """
     # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
     sz = np.array(sz)
     if enforceMaxSymmetry:
-        maxIndex = np.unravel_index(np.argmax(spatial_filter), spatial_filter.shape)
-        maxValue = spatial_filter[maxIndex]
-        loc = np.where(spatial_filter == maxValue)
-        nrOfMaxValues = len(loc[0])
-        if nrOfMaxValues > 1:
-            # now need to check if they are close to each other
-            if not are_indices_close(loc):
-                raise ValueError('Cannot enforce max symmetry as maximum is not unique')
+        if maxIndex is None:
+            maxIndex = np.unravel_index(np.argmax(spatial_filter), spatial_filter.shape)
+            maxValue = spatial_filter[maxIndex]
+            loc = np.where(spatial_filter == maxValue)
+            nrOfMaxValues = len(loc[0])
+            if nrOfMaxValues > 1:
+                # now need to check if they are close to each other
+                if not are_indices_close(loc):
+                    raise ValueError('Cannot enforce max symmetry as maximum is not unique')
 
         spatial_filter_max_at_zero = np.roll(spatial_filter, -np.array(maxIndex),
                                              range(len(spatial_filter.shape)))
@@ -74,12 +77,12 @@ def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True):
             f_filter = create_numpy_filter(spatial_filter_max_at_zero, sz)
             abs_filter = np.absolute(f_filter)
 
-        return abs_filter
+        return abs_filter,maxIndex
     else:
         if USE_CUDA:
-            return create_cuda_filter(spatial_filter)
+            return create_cuda_filter(spatial_filter),maxIndex
         else:
-            return create_numpy_filter(spatial_filter, sz)
+            return create_numpy_filter(spatial_filter, sz),maxIndex
 
 
 def create_cuda_filter(spatial_filter, sz):
@@ -125,6 +128,7 @@ def sel_fftn(dim):
         else:
             raise ValueError('Only 3D cpu fft supported')
         return f
+
 def sel_ifftn(dim):
     """
     select the cpu and gpu version of the ifft
@@ -218,8 +222,6 @@ class FourierConvolution(Function):
             # print( 'max(real) = ' + str( (abs( conv_output.real )).max() ) )
 
 
-
-
     # This function has only a single output, so it gets only one gradient
     def backward(self, grad_output):
         """
@@ -283,8 +285,6 @@ class FourierConvolution(Function):
             return torch.FloatTensor(grad_input)
             # print( 'grad max(imag) = ' + str( (abs( grad_input_c.imag )).max() ) )
             # print( 'grad max(real) = ' + str( (abs( grad_input_c.real )).max() ) )
-
-
 
 
 class InverseFourierConvolution(Function):
@@ -442,10 +442,492 @@ def inverse_fourier_convolution(input, complex_fourier_filter):
     return InverseFourierConvolution(complex_fourier_filter)(input)
 
 
+class GaussianFourierFilterGenerator(object):
+    def __init__(self, sz, spacing, nr_of_gaussians=1):
+        self.sz = sz
+        """image size"""
+        self.spacing = spacing
+        """image spacing"""
+        self.volumeElement = self.spacing.prod()
+        """volume of pixel/voxel"""
+        self.dim = len(spacing)
+        """dimension"""
+        self.nr_of_gaussians = nr_of_gaussians
+        """number of Gaussians (to be able to support multi-Gaussian)"""
+
+        self.mus = np.zeros(self.dim)
+        # TODO: storing the identity map may be a little wasteful
+        self.id = utils.identity_map(self.sz)
+
+        self.complex_gaussian_fourier_filters = [None] * self.nr_of_gaussians
+        self.max_indices = [None]*self.nr_of_gaussians
+        self.sigmas_complex_gaussian_fourier_filters = [None]*self.nr_of_gaussians
+        self.complex_gaussian_fourier_xsqr_filters = [None]*self.nr_of_gaussians
+        self.sigmas_complex_gaussian_fourier_xsqr_filters = [None]*self.nr_of_gaussians
+
+
+    def get_number_of_gaussians(self):
+        return self.nr_of_gaussians
+
+    def get_dimension(self):
+        return self.dim
+
+    def _compute_complex_gaussian_fourier_filter(self,sigma):
+
+        stds = sigma * np.ones(self.dim)
+        gaussian_spatial_filter = utils.compute_normalized_gaussian(self.id, self.mus, stds)
+        complex_gaussian_fourier_filter,max_index = create_complex_fourier_filter(gaussian_spatial_filter,self.sz,True)
+        return complex_gaussian_fourier_filter,max_index
+
+    def _compute_complex_gaussian_fourier_xsqr_filter(self,sigma,max_index=None):
+
+        if max_index is None:
+            raise ValueError('A Gaussian filter needs to be generated / requested *before* any other filter')
+
+        # TODO: maybe compute this jointly with the gaussian filter itself to avoid computing the spatial filter twice
+        stds = sigma * np.ones(self.dim)
+        gaussian_spatial_filter = utils.compute_normalized_gaussian(self.id, self.mus, stds)
+        gaussian_spatial_xsqr_filter = gaussian_spatial_filter*(self.id**2).sum(axis=0)
+
+        complex_gaussian_fourier_xsqr_filter,max_index = create_complex_fourier_filter(gaussian_spatial_xsqr_filter,self.sz,True,max_index)
+        return complex_gaussian_fourier_xsqr_filter,max_index
+
+    def get_gaussian_xsqr_filters(self,sigmas):
+        """
+        Returns complex Gaussian Fourier filter multiplied with x**2 with standard deviation sigma. 
+        Only recomputes the filter if sigma has changed.
+        :param sigmas: standard deviation of the filter as a list
+        :return: Returns the complex Gaussian Fourier filter
+        """
+
+        # only recompute the ones that need to be recomputed
+        for i,sigma in enumerate(sigmas):
+
+            need_to_recompute = False
+            if self.sigmas_complex_gaussian_fourier_xsqr_filters[i] is None:
+                need_to_recompute = True
+            elif self.complex_gaussian_fourier_xsqr_filters[i] is None:
+                need_to_recompute = True
+            #elif not torch.equal(sigma,self.sigmas_complex_gaussian_fourier_xsqr_filters[i]):
+            elif sigma!=self.sigmas_complex_gaussian_fourier_xsqr_filters[i]:
+                need_to_recompute = True
+            else:
+                need_to_recompute = False
+
+            if need_to_recompute:
+                self.sigmas_complex_gaussian_fourier_xsqr_filters[i] = sigma #.clone()
+                self.complex_gaussian_fourier_xsqr_filters[i],_ = self._compute_complex_gaussian_fourier_xsqr_filter(sigma,self.max_indices[i])
+
+        return self.complex_gaussian_fourier_xsqr_filters
+
+
+    def get_gaussian_filters(self,sigmas):
+        """
+        Returns a complex Gaussian Fourier filter with standard deviation sigma. 
+        Only recomputes the filter if sigma has changed.
+        :param sigma: standard deviation of filter.
+        :return: Returns the complex Gaussian Fourier filter
+        """
+
+        # only recompute the ones that need to be recomputed
+        for i, sigma in enumerate(sigmas):
+
+            need_to_recompute = False
+            if self.sigmas_complex_gaussian_fourier_filters[i] is None:
+                need_to_recompute = True
+            elif self.complex_gaussian_fourier_filters[i] is None:
+                need_to_recompute = True
+            #elif not torch.equal(sigma,self.sigmas_complex_gaussian_fourier_filters[i]):
+            elif sigma!=self.sigmas_complex_gaussian_fourier_filters[i]:
+                need_to_recompute = True
+            else:
+                need_to_recompute = False
+
+            if need_to_recompute:
+                self.sigmas_complex_gaussian_fourier_filters[i] = sigma #.clone()
+                self.complex_gaussian_fourier_filters[i], self.max_indices[i] = self._compute_complex_gaussian_fourier_filter(sigma)
+
+        return self.complex_gaussian_fourier_filters
+
+class FourierGaussianConvolution(Function):
+    """
+    pyTorch function to compute Gaussian convolutions in the Fourier domain: f = g*h.
+    Also allows to differentiate through the Gaussian standard deviation.
+    """
+
+    def __init__(self, gaussian_fourier_filter_generator):
+        """
+        Constructor for the Fouier-based convolution
+        :param sigma: standard deviation for the filter
+        """
+        # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
+        super(FourierGaussianConvolution, self).__init__()
+
+        self.gaussian_fourier_filter_generator = gaussian_fourier_filter_generator
+        self.dim = self.gaussian_fourier_filter_generator.get_dimension()
+
+        self.fftn = sel_fftn(self.dim)
+        self.ifftn = sel_ifftn(self.dim)
+
+    def _compute_convolution_CUDA(self,input,complex_fourier_filter):
+        input = FFTVal(input, ini=1)
+        f_input_real, f_input_imag = self.fftn(input)
+        f_filter_real = complex_fourier_filter
+        f_filter_real.expand_as(f_input_real)
+        f_conv_real = f_input_real * f_filter_real
+        f_conv_imag = f_input_imag * f_filter_real
+        conv_ouput_real = self.ifftn(f_conv_real, f_conv_imag)
+        result = conv_ouput_real
+
+        return FFTVal(result, ini=-1)
+
+    def _compute_convolution_CPU(self,input,complex_fourier_filter):
+        if self.dim < 3:
+            conv_output = self.ifftn(self.fftn(input.numpy()) * complex_fourier_filter)
+            result = conv_output.real  # should in principle be real
+        elif self.dim == 3:
+            result = np.zeros(input.shape)
+            for batch in range(input.size()[0]):
+                for ch in range(input.size()[1]):
+                    conv_output = self.ifftn(self.fftn(input[batch, ch].numpy()) * complex_fourier_filter)
+                    result[batch, ch] = conv_output.real
+        else:
+            raise ValueError("cpu fft smooth should be 1d-3d")
+
+        return torch.FloatTensor(result)
+        # print( 'max(imag) = ' + str( (abs( conv_output.imag )).max() ) )
+        # print( 'max(real) = ' + str( (abs( conv_output.real )).max() ) )
+
+
+    def _compute_input_gradient_CUDA(self,grad_output,complex_fourier_filter):
+        grad_output = FFTVal(grad_output, ini=1)
+        # print grad_output.view(-1,1).sum()
+        f_go_real, f_go_imag = self.fftn(grad_output)
+        f_filter_real = complex_fourier_filter
+        f_filter_real.expand_as(f_go_real)
+        f_conv_real = f_go_real * f_filter_real
+        f_conv_conj_imag = f_go_imag * f_filter_real
+        grad_input = self.ifftn(f_conv_real, f_conv_conj_imag)
+
+        return FFTVal(grad_input, ini=-1)
+
+    def _compute_input_gradient_CPU(self,grad_output,complex_fourier_filter):
+        numpy_go = grad_output.numpy()
+        # we use the conjugate because the assumption was that the spatial filter is real
+        # THe following two lines should be correct
+        if self.dim < 3:
+            grad_input_c = (self.ifftn(np.conjugate(complex_fourier_filter) * self.fftn(numpy_go)))
+            grad_input = grad_input_c.real
+        elif self.dim == 3:
+            grad_input = np.zeros(numpy_go.shape)
+            assert grad_output.dim() == 5
+            for batch in range(grad_output.size()[0]):
+                for ch in range(grad_output.size()[1]):
+                    grad_input_c = (
+                        self.ifftn(np.conjugate(complex_fourier_filter) * self.fftn(numpy_go[batch, ch])))
+                    grad_input[batch, ch] = grad_input_c.real
+        else:
+            raise ValueError("cpu fft smooth should be 1d-3d")
+
+        return torch.FloatTensor(grad_input)
+
+    def _compute_sigma_gradient_CUDA(self,input,sigma,grad_output,complex_fourier_filter,complex_fourier_xsqr_filter):
+        convolved_input = self._compute_convolution_CUDA(input, complex_fourier_filter)
+        grad_sigma = -1. / sigma * self.dim * (grad_output.numpy() * convolved_input).sum()
+        convolved_input_xsqr = self._compute_convolution_CUDA(input, complex_fourier_xsqr_filter)
+        grad_sigma += 1. / (sigma ** 3) * (grad_output.numpy() * convolved_input_xsqr).sum()
+
+        return grad_sigma
+
+    # TODO: gradient appears to be incorrect
+    def _compute_sigma_gradient_CPU(self,input,sigma,grad_output,complex_fourier_filter,complex_fourier_xsqr_filter):
+        convolved_input = self._compute_convolution_CPU(input,complex_fourier_filter)
+        grad_sigma = -1./sigma*self.dim*(grad_output.numpy()*convolved_input).sum()
+        convolved_input_xsqr = self._compute_convolution_CPU(input,complex_fourier_xsqr_filter)
+        grad_sigma += 1./(sigma**3)*(grad_output.numpy()*convolved_input_xsqr).sum()
+
+        return grad_sigma
+
+
+class FourierSingleGaussianConvolution(FourierGaussianConvolution):
+    """
+    pyTorch function to compute Gaussian convolutions in the Fourier domain: f = g*h.
+    Also allows to differentiate through the Gaussian standard deviation.
+    """
+
+    def __init__(self, gaussian_fourier_filter_generator):
+        """
+        Constructor for the Fouier-based convolution
+        :param sigma: standard deviation for the filter
+        """
+        # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
+        super(FourierSingleGaussianConvolution, self).__init__(gaussian_fourier_filter_generator)
+
+        self.gaussian_fourier_filter_generator = gaussian_fourier_filter_generator
+
+        self.complex_fourier_filter = None
+        self.complex_fourier_xsqr_filter = None
+
+        self.input = None
+        self.sigma = None
+
+    def forward(self, input, sigma):
+        """
+        Performs the Fourier-based filtering
+        the 3d cpu fft is not implemented in fftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
+        1d 2d cpu works well because fft and fft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
+
+        in gpu implementation, the rfft is used for efficiency, which means the filter should be symmetric
+        :param input: Image
+        :return: Filtered-image
+        """
+
+        self.input = input
+        self.sigma = sigma
+
+        self.complex_fourier_filter = self.gaussian_fourier_filter_generator.get_gaussian_filters(self.sigma)[0]
+        self.complex_fourier_xsqr_filter = self.gaussian_fourier_filter_generator.get_gaussian_xsqr_filters(self.sigma)[0]
+
+        # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
+        # filter_imag =0, then get  ac + bci
+
+        if USE_CUDA:
+            return self._compute_convolution_CUDA(input,self.complex_fourier_filter)
+        else:
+            return self._compute_convolution_CPU(input,self.complex_fourier_filter)
+
+    # This function has only a single output, so it gets only one gradient
+    def backward(self, grad_output):
+        """
+        Computes the gradient
+        the 3d cpu ifft is not implemented in ifftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
+        1d 2d cpu works well because ifft and ifft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
+
+        in gpu implementation, the irfft is used for efficiency, which means the filter should be symmetric
+        :param grad_output: Gradient output of previous layer
+        :return: Gradient including the Fourier-based convolution
+        """
+
+        # Initialize all gradients w.r.t. inputs to
+        # None. Thanks to the fact that additional trailing Nones are
+        # ignored, the return statement is simple even when the function has
+        # optional inputs.
+
+        grad_input = grad_sigma = None
+
+        # These needs_input_grad checks are optional and there only to
+        # improve efficiency. If you want to make your code simpler, you can
+        # skip them. Returning gradients for inputs that don't require it is
+        # not an error.
+
+        # first compute the gradient with respect to the input
+        if self.needs_input_grad[0]:
+            # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
+            # input_imag =0, then get  ac + bci
+            if USE_CUDA:
+                grad_input = self._compute_input_gradient_CUDA(grad_output,self.complex_fourier_filter)
+            else:
+                grad_input = self._compute_input_gradient_CPU(grad_output,self.complex_fourier_filter)
+
+        # now compute the gradient with respect to the standard deviation of the filter
+        if self.needs_input_grad[1]:
+            if USE_CUDA:
+                grad_sigma = self._compute_sigma_gradient_CUDA(self.input,self.sigma,grad_output,self.complex_fourier_filter,self.complex_fourier_xsqr_filter)
+            else:
+                grad_sigma = self._compute_sigma_gradient_CPU(self.input,self.sigma,grad_output,self.complex_fourier_filter,self.complex_fourier_xsqr_filter)
+
+        # now return the computed gradients
+        return grad_input, grad_sigma
+
+
+def fourier_single_gaussian_convolution(input, gaussian_fourier_filter_generator,sigma):
+    """
+    Convenience function for Fourier-based Gaussian convolutions. Make sure to use this one (instead of directly
+    using the class FourierGaussianConvolution). This will assure that each call generates its own instance
+    and hence autograd will work properly
+
+    :param input: Input image
+    :param gaussian_fourier_filter_generator: generator which will create Gaussian Fourier filter (and caches them)
+    :param sigma: standard deviation for the Gaussian filter 
+    :return: 
+    """
+    # First braces create a Function object. Any arguments given here
+    # will be passed to __init__. Second braces will invoke the __call__
+    # operator, that will then use forward() to compute the result and
+    # return it.
+    return FourierSingleGaussianConvolution(gaussian_fourier_filter_generator)(input,sigma)
+
+
+class FourierMultiGaussianConvolution(FourierGaussianConvolution):
+    """
+    pyTorch function to compute multi Gaussian convolutions in the Fourier domain: f = g*h.
+    Also allows to differentiate through the Gaussian standard deviation.
+    """
+
+    def __init__(self, gaussian_fourier_filter_generator):
+        """
+        Constructor for the Fouier-based convolution
+        :param sigma: standard deviation for the filter
+        """
+        # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
+        super(FourierMultiGaussianConvolution, self).__init__(gaussian_fourier_filter_generator)
+
+        self.gaussian_fourier_filter_generator = gaussian_fourier_filter_generator
+        self.nr_of_gaussians = gaussian_fourier_filter_generator.get_number_of_gaussians()
+
+        self.complex_fourier_filters = [None]*self.nr_of_gaussians
+        self.complex_fourier_xsqr_filters = [None]*self.nr_of_gaussians
+
+        self.input = None
+        self.weights = None
+        self.sigmas = None
+
+    def forward(self, input, sigmas, weights):
+        """
+        Performs the Fourier-based filtering
+        the 3d cpu fft is not implemented in fftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
+        1d 2d cpu works well because fft and fft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
+
+        in gpu implementation, the rfft is used for efficiency, which means the filter should be symmetric
+        :param input: Image
+        :return: Filtered-image
+        """
+
+        self.input = input
+        self.sigmas = sigmas
+        self.weights = weights
+
+        assert(len(self.sigmas)==len(self.weights))
+        assert(len(self.sigmas)==self.nr_of_gaussians)
+
+        self.complex_fourier_filters = self.gaussian_fourier_filter_generator.get_gaussian_filters(self.sigmas)
+        self.complex_fourier_xsqr_filters = self.gaussian_fourier_filter_generator.get_gaussian_xsqr_filters(self.sigmas)
+
+        # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
+        # filter_imag =0, then get  ac + bci
+
+        ret = torch.zeros_like(input)
+
+        for i in range(self.nr_of_gaussians):
+            if USE_CUDA:
+                ret += self.weights[i]*self._compute_convolution_CUDA(input,self.complex_fourier_filters[i])
+            else:
+                ret+= self.weights[i]*self._compute_convolution_CPU(input,self.complex_fourier_filters[i])
+
+        return ret
+
+    def _compute_input_gradient_CUDA_multi_gaussian(self,grad_output,complex_fourier_filters):
+        grad_input = torch.zeros_like(self.input)
+        for i in range(self.nr_of_gaussians):
+            grad_input += self.weights[i]*self._compute_input_gradient_CUDA(grad_output, complex_fourier_filters[i])
+        return grad_input
+
+    def _compute_input_gradient_CPU_multi_gaussian(self,grad_output,complex_fourier_filters):
+        grad_input = torch.zeros_like(self.input)
+        for i in range(self.nr_of_gaussians):
+            grad_input += self.weights[i] * self._compute_input_gradient_CPU(grad_output,complex_fourier_filters[i])
+        return grad_input
+
+    def _compute_sigmas_gradient_CUDA_multi_gaussian(self,input,sigmas,grad_output,complex_fourier_filters,complex_fourier_xsqr_filters):
+        grad_sigmas = torch.zeros_like(sigmas)
+        for i in range(self.nr_of_gaussians):
+            grad_sigmas[i] = self.weights[i] * self._compute_sigma_gradient_CUDA(input,sigmas[i],grad_output,
+                                                                                complex_fourier_filters[i],
+                                                                                complex_fourier_xsqr_filters[i])
+        return grad_sigmas
+
+    def _compute_sigmas_gradient_CPU_multi_gaussian(self,input,sigmas,grad_output,complex_fourier_filters,complex_fourier_xsqr_filters):
+        grad_sigmas = torch.zeros_like(sigmas)
+        for i in range(self.nr_of_gaussians):
+            grad_sigmas[i] = self.weights[i] * self._compute_sigma_gradient_CPU(input,sigmas[i],grad_output,
+                                                                                complex_fourier_filters[i],
+                                                                                complex_fourier_xsqr_filters[i])
+        return grad_sigmas
+
+    def _compute_weights_gradient_CUDA_multi_gaussian(self,input,weights,grad_output,complex_fourier_filters):
+        grad_weights = torch.zeros_like(weights)
+        for i in range(self.nr_of_gaussians):
+            grad_weights[i] = (grad_output*self._compute_convolution_CUDA(input,complex_fourier_filters[i])).sum()
+        return grad_weights
+
+    def _compute_weights_gradient_CPU_multi_gaussian(self,input,weights,grad_output,complex_fourier_filters):
+        grad_weights = torch.zeros_like(weights)
+        for i in range(self.nr_of_gaussians):
+            grad_weights[i] = (grad_output * self._compute_convolution_CPU(input, self.complex_fourier_filters[i])).sum()
+        return grad_weights
+
+    # This function has only a single output, so it gets only one gradient
+    def backward(self, grad_output):
+        """
+        Computes the gradient
+        the 3d cpu ifft is not implemented in ifftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
+        1d 2d cpu works well because ifft and ifft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
+
+        in gpu implementation, the irfft is used for efficiency, which means the filter should be symmetric
+        :param grad_output: Gradient output of previous layer
+        :return: Gradient including the Fourier-based convolution
+        """
+
+        # Initialize all gradients w.r.t. inputs to
+        # None. Thanks to the fact that additional trailing Nones are
+        # ignored, the return statement is simple even when the function has
+        # optional inputs.
+
+        grad_input = grad_sigmas = grad_weights = None
+
+        # These needs_input_grad checks are optional and there only to
+        # improve efficiency. If you want to make your code simpler, you can
+        # skip them. Returning gradients for inputs that don't require it is
+        # not an error.
+
+        # first compute the gradient with respect to the input
+        if self.needs_input_grad[0]:
+            # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
+            # input_imag =0, then get  ac + bci
+            if USE_CUDA:
+                grad_input = self._compute_input_gradient_CUDA_multi_gaussian(grad_output,self.complex_fourier_filters)
+            else:
+                grad_input = self._compute_input_gradient_CPU_multi_gaussian(grad_output,self.complex_fourier_filters)
+
+        # now compute the gradient with respect to the standard deviation of the filter
+        if self.needs_input_grad[1]:
+            if USE_CUDA:
+                grad_sigmas = self._compute_sigmas_gradient_CUDA_multi_gaussian(self.input,self.sigmas,grad_output,self.complex_fourier_filters,self.complex_fourier_xsqr_filters)
+            else:
+                grad_sigmas = self._compute_sigmas_gradient_CPU_multi_gaussian(self.input,self.sigmas,grad_output,self.complex_fourier_filters,self.complex_fourier_xsqr_filters)
+
+        if self.needs_input_grad[2]:
+            if USE_CUDA:
+                grad_weights = self._compute_weights_gradient_CUDA_multi_gaussian(self.input,self.weights,grad_output,self.complex_fourier_filters)
+            else:
+                grad_weights = self._compute_weights_gradient_CPU_multi_gaussian(self.input,self.weights,grad_output,self.complex_fourier_filters)
+
+        # now return the computed gradients
+        return grad_input, grad_sigmas, grad_weights
+
+def fourier_multi_gaussian_convolution(input, gaussian_fourier_filter_generator,sigma,weights):
+    """
+    Convenience function for Fourier-based multi Gaussian convolutions. Make sure to use this one (instead of directly
+    using the class FourierGaussianConvolution). This will assure that each call generates its own instance
+    and hence autograd will work properly
+
+    :param input: Input image
+    :param gaussian_fourier_filter_generator: generator which will create Gaussian Fourier filter (and caches them)
+    :param sigma: standard deviations for the Gaussian filter (need to be positive)
+    :param weights: weights for the multi-Gaussian kernel (need to sum up to one and need to be positive)
+    :return: 
+    """
+    # First braces create a Function object. Any arguments given here
+    # will be passed to __init__. Second braces will invoke the __call__
+    # operator, that will then use forward() to compute the result and
+    # return it.
+    return FourierMultiGaussianConvolution(gaussian_fourier_filter_generator)(input,sigma,weights)
+
+
 def check_fourier_conv():
     """
     Convenience function to check the gradient. Fails, as pytorch's check appears to have difficulty
-    
+
     :return: True if analytical and numerical gradient are the same
 
     .. todo::
@@ -455,7 +937,7 @@ def check_fourier_conv():
     # evaluated with these tensors are close enough to numerical
     # approximations and returns True if they all verify this condition.
     # TODO: Seems to fail at the moment, check why if there are issues with the gradient
-    sz = np.array([20, 20],dtype='int64')
+    sz = np.array([20, 20], dtype='int64')
     # f = np.ones(sz)
     f = 1 / 400. * np.ones(sz)
     dim = len(sz)
@@ -464,10 +946,11 @@ def check_fourier_conv():
     stds = np.ones(dim)
     id = utils.identity_map(sz)
     g = 100 * utils.compute_normalized_gaussian(id, mus, stds)
-    FFilter = create_complex_fourier_filter(g, sz)
+    FFilter,_ = create_complex_fourier_filter(g, sz)
     input = AdaptVal(Variable(torch.randn([1, 1] + list(sz)), requires_grad=True))
     test = gradcheck(FourierConvolution(FFilter), input, eps=1e-6, atol=1e-4)
     print(test)
+
 
 def check_run_forward_and_backward():
     """
@@ -477,10 +960,12 @@ def check_run_forward_and_backward():
     """
     sz = [20, 20]
     f = 1 / 400. * np.ones(sz)
-    FFilter = create_complex_fourier_filter(f, sz, False)
+    FFilter,_ = create_complex_fourier_filter(f, sz, False)
     input = Variable(torch.randn(sz).float(), requires_grad=True)
     fc = FourierConvolution(FFilter)(input)
     # print( fc )
     fc.backward(torch.randn(sz).float())
     print(input.grad)
+
+
 
