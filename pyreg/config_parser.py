@@ -128,8 +128,13 @@ def get_algconf_settings( algconf_settings_filename = None ):
     algconf_params['algconf']['model']['registration_model'][('forward_model', {}, 'Holds the parameters for the forward model')]
     algconf_params['algconf']['model']['registration_model']['forward_model'][('number_of_time_steps', 10, 'Number of time steps for integration (if applicable)')]
     algconf_params['algconf']['model']['registration_model']['forward_model'][('smoother', {}, 'how the smoothing of velocity fields is done')]
-    algconf_params['algconf']['model']['registration_model']['forward_model']['smoother'][('type', 'multiGaussian', 'type of smoothing')]
-    algconf_params['algconf']['model']['registration_model']['forward_model']['smoother'][('multi_gaussian_stds', [0.05,0.1,0.15,0.2,0.25], 'standard deviations for smoothing')]
+    #algconf_params['algconf']['model']['registration_model']['forward_model']['smoother'][('type', 'multiGaussian', 'type of smoothing')]
+    #algconf_params['algconf']['model']['registration_model']['forward_model']['smoother'][('multi_gaussian_stds', [0.05,0.1,0.15,0.2,0.25], 'standard deviations for smoothing')]
+
+    algconf_params['algconf']['model']['registration_model']['forward_model']['smoother'][
+        ('type', 'gaussian', 'type of smoothing')]
+    algconf_params['algconf']['model']['registration_model']['forward_model']['smoother'][
+        ('gaussian_std', 0.15, 'standard deviations for smoothing')]
 
     algconf_params['algconf']['model']['registration_model'][('similarity_measure', {}, 'model describing the similarity measure')]
     algconf_params['algconf']['model']['registration_model']['similarity_measure'][('sigma', 0.1, '1/sigma^2 weighting')]

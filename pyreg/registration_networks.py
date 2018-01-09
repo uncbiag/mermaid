@@ -24,7 +24,6 @@ import forward_models as FM
 from data_wrapper import AdaptVal
 import regularizer_factory as RF
 import similarity_measure_factory as SM
-import smoother_factory as sf
 
 import smoother_factory as SF
 import image_sampling as IS
@@ -70,6 +69,13 @@ class RegistrationNet(nn.Module):
         :return: 
         """
         return None
+
+    def get_custom_optimizer_output_string(self):
+        """
+        Can be overwritten by a method to allow for additional optimizer output (on top of the energy values)
+        :return: 
+        """
+        return ''
 
     @abstractmethod
     def create_registration_parameters(self):
@@ -360,11 +366,16 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
+        self.smoother_params = self.smoother.get_optimization_parameters()
+        """smoother parameters to be optimized over if supported by smoother"""
         self.v = self.smoother.smooth_vector_field_multiN(self.m)
         """corresponding velocity field"""
 
         self.integrator = self.create_integrator()
         """integrator to solve the forward model"""
+
+    def get_custom_optimizer_output_string(self):
+        return self.smoother.get_custom_optimizer_output_string()
 
     def create_registration_parameters(self):
         """
@@ -667,6 +678,8 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
         else:
             cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+
+        #TODO: support smoother optimization here -> move smoother to model instead of loss function
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to convert from momentum to velocity"""
 
@@ -920,12 +933,19 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         super(ShootingVectorMomentumNet, self).__init__(sz, spacing, params)
         self.m = self.create_registration_parameters()
         cparams = params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = sf.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        """smoother"""
+        self.smoother_params = self.smoother.get_optimization_parameters()
+        """smoother parameters to be optimized over if supported by smoother"""
+
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':
             self.add_module('mod_smoother', self.smoother.smoother)
         """vector momentum"""
         self.integrator = self.create_integrator()
         """integrator to solve EPDiff variant"""
+
+    def get_custom_optimizer_output_string(self):
+        return self.smoother.get_custom_optimizer_output_string()
 
     def get_variables_to_transfer_to_loss_function(self):
         d = dict()
@@ -1021,6 +1041,7 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
         :param I: Initial condition for image 
         :return: returns the image at time tTo
         """
+
         mI1 = self.integrator.solve([self.m,I], self.tFrom, self.tTo)
         return mI1[1]
 
@@ -1147,6 +1168,7 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         :param I0_source: not used
         :return: returns the map at time tTo
         """
+
         mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo)
         return mphi1[1]
 
@@ -1265,11 +1287,18 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
         self.lam = self.create_registration_parameters()
         """scalar momentum"""
         cparams = params[('forward_model', {}, 'settings for the forward model')]
-        self.smoother = sf.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        """smoother"""
+        self.smoother_params = self.smoother.get_optimization_parameters()
+        """smoother parameters to be optimized over if supported by smoother"""
+
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':
             self.add_module('mod_smoother', self.smoother.smoother)
         self.integrator = self.create_integrator()
         """integrator to integrate EPDiff and associated equations (for image or map)"""
+
+    def get_custom_optimizer_output_string(self):
+        return self.smoother.get_custom_optimizer_output_string()
 
     def get_variables_to_transfer_to_loss_function(self):
         d = dict()
