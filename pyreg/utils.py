@@ -173,35 +173,6 @@ def compute_normalized_gaussian(X, mu, sig):
         raise ValueError('Can only compute Gaussians in dimensions 1-3')
 
 
-def compute_normalized_gaussian_var(X, mu, sig):
-    """
-    Computes a normalized Gaussian
-
-    :param X: map with coordinates at which to evaluate 
-    :param mu: array indicating the mean
-    :param sig: array indicating the standard deviations for the different dimensions
-    :return: normalized Gaussian
-    """
-    dim = len(mu)
-    if dim == 1:
-        g = torch.exp(-(X[0, :] - mu[0])**2 / (2*sig[0]**2 ))
-        g = g / g.sum()
-        return g
-    elif dim == 2:
-        g = torch.exp(-(X[0, :, :] - mu[0])**2 / (2*sig[0]**2)
-                   - (X[1, :, :] - mu[1])**2 / (2*sig[1]**2))
-        g = g / g.sum()
-        return g
-    elif dim == 3:
-        g = torch.exp(-(X[0, :, :] - mu[0]) ** 2 / (2 * sig[0] ** 2)
-                      - (X[1, :, :] - mu[1]) ** 2 / (2 * sig[1] ** 2)
-                      - (X[2, :, :] - mu[2]) ** 2 / (2 * sig[2] ** 2))
-        g = g / g.sum()
-        return g
-    else:
-        raise ValueError('Can only compute Gaussians in dimensions 1-3')
-
-
 '''
 def computeWarpedImage_1d( I0, phi):
     stn = STN_ND(1)
