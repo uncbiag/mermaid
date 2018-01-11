@@ -66,8 +66,8 @@ if ds.smooth_images:
     params['image_smoothing'] = ds.par_algconf['image_smoothing']
     cparams = params['image_smoothing']
     s = SF.SmootherFactory(sz[2::], spacing).create_smoother(cparams)
-    ISource = s.smooth_scalar_field(ISource)
-    ITarget = s.smooth_scalar_field(ITarget)
+    ISource = s.smooth(ISource)
+    ITarget = s.smooth(ITarget)
 
 use_map = False # this custom registration algorithm does not use a map, so force it to False
 map_low_res_factor = None
