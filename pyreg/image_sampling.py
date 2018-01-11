@@ -123,7 +123,7 @@ class ResampleImage(object):
         newSz = IZ.size()[-1 - dim + 1::]
 
         smoother = SF.DiffusionSmoother(newSz, newspacing, self.params)
-        smoothedImage_multiNC = smoother.smooth_scalar_field_multiNC(IZ)
+        smoothedImage_multiNC = smoother.smooth(IZ)
 
         return smoothedImage_multiNC,newspacing
 
@@ -148,7 +148,7 @@ class ResampleImage(object):
             raise('For downsampling sizes need to decrease')
 
         smoother = SF.DiffusionSmoother(sz, spacing, self.params)
-        smoothedImage_multiNC = smoother.smooth_scalar_field_multiNC(I)
+        smoothedImage_multiNC = smoother.smooth(I)
 
         idDes = AdaptVal(Variable(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC))))
         newspacing = spacing*(sz[2::].astype('float')/desiredSizeNC[2::].astype('float'))
@@ -178,7 +178,7 @@ class ResampleImage(object):
         newSz = IZ.size()[-1-dim+1::]
 
         smoother = SF.DiffusionSmoother(newSz, newspacing, self.params)
-        smoothedImage_multiNC = smoother.smooth_scalar_field_multiNC(IZ)
+        smoothedImage_multiNC = smoother.smooth(IZ)
 
         return smoothedImage_multiNC,newspacing
 
@@ -198,7 +198,7 @@ class ResampleImage(object):
         scaling = np.tile( scalingFactor, dim )
 
         smoother = SF.DiffusionSmoother(sz,spacing,self.params)
-        smoothedImage_multiNC = smoother.smooth_scalar_field_multiNC(I)
+        smoothedImage_multiNC = smoother.smooth(I)
 
         return self._zoom_image_multiNC(smoothedImage_multiNC,spacing,scaling)
 
@@ -221,7 +221,7 @@ class ResampleImage(object):
         newSz = vZ.size()[-1 - dim + 1::]
 
         smoother = SF.DiffusionSmoother(newSz, newspacing, self.params)
-        smoothedImage_multiNC = smoother.smooth_vector_field_multiN(vZ)
+        smoothedImage_multiNC = smoother.smooth(vZ)
 
         return smoothedImage_multiNC, newspacing
 
@@ -241,7 +241,7 @@ class ResampleImage(object):
         scaling = np.tile(scalingFactor, dim)
 
         smoother = SF.DiffusionSmoother(sz, spacing, self.params)
-        smoothedV_multiN = smoother.smooth_vector_field_multiN(v)
+        smoothedV_multiN = smoother.smooth(v)
 
         # for zooming purposes we can just treat it as a multi-channel image
         return self._zoom_image_multiNC(smoothedV_multiN,spacing,scaling)

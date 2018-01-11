@@ -368,7 +368,7 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
         """smoother to go from momentum to velocity"""
         self.smoother_params = self.smoother.get_optimization_parameters()
         """smoother parameters to be optimized over if supported by smoother"""
-        self.v = self.smoother.smooth_vector_field_multiN(self.m)
+        self.v = self.smoother.smooth(self.m)
         """corresponding velocity field"""
 
         self.integrator = self.create_integrator()
@@ -448,7 +448,7 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
         :param I: initial condition for the image 
         :return: returns the image at the final time point (tTo)
         """
-        self.smoother.smooth_vector_field_multiN(self.m,self.v)
+        self.smoother.smooth(self.m,self.v)
         I1 = self.integrator.solve([I], self.tFrom, self.tTo)
         return I1[0]
 
@@ -692,7 +692,7 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
         :return: returns the regularization energy
         """
         m = self.m
-        v = self.smoother.smooth_vector_field_multiN(m)
+        v = self.smoother.smooth(m)
         return self.regularizer.compute_regularizer_multiN(v)
 
 class SVFMapNet(SVFNet):
@@ -1070,9 +1070,9 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
         """
         m = self.m
         if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth_vector_field_multiN(m)
+            v = self.develop_smoother.smooth(m)
         else:
-            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+            v = variables_from_forward_model['smoother'].smooth(m)
 
         reg = (v * m).sum() * self.spacing.prod()
         return reg
@@ -1103,7 +1103,7 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
         :param I: initial image
         :return: image at time tTo
         """
-        v = self.smoother.smooth_vector_field_multiN(self.m)
+        v = self.smoother.smooth(self.m)
         self.integrator.set_pars(v)  # to use this as external parameter
         I1 = self.integrator.solve([I], self.tFrom, self.tTo)
         return I1[0]
@@ -1135,9 +1135,9 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
         m = self.m
 
         if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth_vector_field_multiN(m)
+            v = self.develop_smoother.smooth(m)
         else:
-            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+            v = variables_from_forward_model['smoother'].smooth(m)
         reg = (v * m).sum() * self.spacing.prod()
         return reg
 
@@ -1204,9 +1204,9 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         m = self.m
 
         if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth_vector_field_multiN(m)
+            v = self.develop_smoother.smooth(m)
         else:
-            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+            v = variables_from_forward_model['smoother'].smooth(m)
 
         reg = (v * m).sum() * self.spacing.prod()
         return reg
@@ -1238,7 +1238,7 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         :param I_source: not used
         :return: image at time tTo
         """
-        v = self.smoother.smooth_vector_field_multiN(self.m)
+        v = self.smoother.smooth(self.m)
         self.integrator.set_pars(v)  # to use this as external parameter
         phi1 = self.integrator.solve([phi], self.tFrom, self.tTo)
         return phi1[0]
@@ -1270,9 +1270,9 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
         m = self.m
 
         if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth_vector_field_multiN(m)
+            v = self.develop_smoother.smooth(m)
         else:
-            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+            v = variables_from_forward_model['smoother'].smooth(m)
 
         reg = (v * m).sum() * self.spacing.prod()
         return reg
@@ -1397,7 +1397,7 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
         :return: image at time tTo
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I, self.sz, self.spacing)
-        v = self.smoother.smooth_vector_field_multiN(m)
+        v = self.smoother.smooth(m)
         self.integrator.set_pars(v)  # to use this as external parameter
         I1 = self.integrator.solve([I], self.tFrom, self.tTo)
         return I1[0]
@@ -1429,9 +1429,9 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
 
         if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth_vector_field_multiN(m)
+            v = self.develop_smoother.smooth(m)
         else:
-            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+            v = variables_from_forward_model['smoother'].smooth(m)
 
         reg = (v * m).sum() * self.spacing.prod()
         return reg
@@ -1491,9 +1491,9 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
 
         if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth_vector_field_multiN(m)
+            v = self.develop_smoother.smooth(m)
         else:
-            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+            v = variables_from_forward_model['smoother'].smooth(m)
 
         reg = (v * m).sum() * self.spacing.prod()
         return reg
@@ -1555,9 +1555,9 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
         if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth_vector_field_multiN(m)
+            v = self.develop_smoother.smooth(m)
         else:
-            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+            v = variables_from_forward_model['smoother'].smooth(m)
 
         reg = (v * m).sum() * self.spacing.prod()
         return reg
@@ -1589,7 +1589,7 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         :return: image at time tTo
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I_source, self.sz, self.spacing)
-        v = self.smoother.smooth_vector_field_multiN(m)
+        v = self.smoother.smooth(m)
         self.integrator.set_pars(v)  # to use this as external parameter
         phi1 = self.integrator.solve([phi], self.tFrom, self.tTo)
         return phi1[0]
@@ -1621,9 +1621,9 @@ class SVFScalarMomentumMapLoss(RegistrationMapLoss):
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
         if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth_vector_field_multiN(m)
+            v = self.develop_smoother.smooth(m)
         else:
-            v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
+            v = variables_from_forward_model['smoother'].smooth(m)
 
         reg = (v * m).sum() * self.spacing.prod()
         return reg

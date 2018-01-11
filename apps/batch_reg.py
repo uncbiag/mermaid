@@ -184,8 +184,8 @@ def do_registration():
                 params['image_smoothing'] = par_algconf['algconf']['image_smoothing']
                 cparams = params['image_smoothing']
                 s = SF.SmootherFactory(sz, spacing).create_smoother(cparams)
-                ISource = s.smooth_scalar_field(ISource)
-                ITarget = s.smooth_scalar_field(ITarget)
+                ISource = s.smooth(ISource)
+                ITarget = s.smooth(ITarget)
 
             if params['model']['registration_model']['forward_model']['smoother']['type'] == 'adaptiveNet':
                 params['model']['registration_model']['forward_model']['smoother']['input'] = [ISource, ITarget]

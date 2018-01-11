@@ -55,74 +55,40 @@ class RHSLibrary(object):
         Advects a batch of images which can be multi-channel. Expected image format here, is 
         BxCxXxYxZ, where B is the number of images (batch size), C, the number of channels
         per image and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)
-        if the channel size is 1, then a fast version will be used, which batch can be calculate in one loop
-        otherwise the traditional loop batch and loop channel way will be used
+
         
         :math:`-\\nabla I^Tv`
 
         
-        :param I: Image batch
-        :param v: Velocity fields (this will be one velocity field per image)
-        :return: Returns the RHS of the advection equations involved
+        :param I: Image batch BxCIxXxYxZ
+        :param v: Velocity fields (this will be one velocity field per image) BxCxXxYxZ
+        :return: Returns the RHS of the advection equations involved BxCxXxYxZ
         '''
         sz = I.size()
         rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
-        if sz[1]==1:  #  when only has one channel use fast version
-            self._rhs_advect_oneC_image(I,v,rhs_ret)
-        else:
-            for nrI in range(sz[0]):  # loop over all the images
-                rhs_ret[nrI, ...] = self._rhs_advect_image_multiC(I[nrI, ...], v[nrI, ...])
+
+        for nc in range(sz[1]):  # loop over all the images
+            rhs_ret[:, nc, ...]= self._rhs_advect_image_multiN(I[:,nc:nc+1, ...], v )
         return rhs_ret
 
-    def _rhs_advect_image_multiC(self,I,v):
-        """
-        Similar to *_rhs_advect_image_multiNC*, but only for one multi-channel image at at time.
 
-        :param I: Multi-channel image: CxXxYxZ
-        :param v: Same velocity field applied to each channel
-        :return: Returns the RHS of the advection equation
+
+
+    def _rhs_advect_image_multiN(self,I,v):
         """
-        sz = I.size()
-        rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
-        for nrC in range(sz[0]): # loop over all the channels, just advect them all the same
-            rhs_ret[nrC,...] = self._rhs_advect_image_singleC(I[None,nrC,...],v)  # additional None add here for compatiabilty
+        :param I: One-channel input image: Bx1xXxYxZ
+        :param v: velocity field BxCxXxYxZ
+        :return: Returns the RHS of the advection equation for one channel BxXxYxZ
+        """
+        if self.dim == 1:
+            rhs_ret = -self.fdt.dXc(I[:,0,...]) * v[:,0,...]
+        elif self.dim == 2:
+            rhs_ret = -self.fdt.dXc(I[:,0,...]) * v[:,0,...] -self.fdt.dYc(I[:,0,...])*v[:,1,...]
+        elif self.dim == 3:
+            rhs_ret = -self.fdt.dXc(I[:,0,...]) * v[:,0,...] -self.fdt.dYc(I[:,0,...])*v[:,1,...]-self.fdt.dZc(I[:,0,...])*v[:,2,...]
+        else:
+            raise ValueError('Only supported up to dimension 3')
         return rhs_ret
-
-    def _rhs_advect_image_singleC(self, I, v):
-        """
-        Similar to *_rhs_advect_image_multiC*, but only for one channel at a time.
-
-        :param I: One-channel input image: 1xXxYxZ, here 1 is refer to batch, for compatibility
-        :param v: velocity field
-        :return: Returns the RHS of the advection equation for one channel
-        ##############   additional None channel is for batch
-        """
-        if self.dim == 1:
-            return -self.fdt.dXc(I) * v[None,0, :]
-        elif self.dim == 2:
-            return -self.fdt.dXc(I) * v[None,0, :, :] - self.fdt.dYc(I) * v[None,1, :, :]
-        elif self.dim == 3:
-            return -self.fdt.dXc(I) * v[None,0, :, :, :] - self.fdt.dYc(I) * v[None,1, :, :, :] - self.fdt.dZc(I) * v[None,2, :, :, :]
-        else:
-            raise ValueError('Only supported up to dimension 3')
-
-
-    def _rhs_advect_oneC_image(self,I,v,rhs_ret):
-        """
-        a fast version for _rhs_advect_image_multiC,   batch will no longer to be calculated separately, one channel at a time.
-        
-        :param I: One-channel input image: batchxchxXxYxZ
-        :param v: velocity field
-        :return: Returns the RHS of the advection equation for one channel
-        """
-        if self.dim == 1:
-            rhs_ret[:] = -self.fdt.dXc(I[:,0,...]) * v[:,0,...]
-        elif self.dim == 2:
-            rhs_ret[:] = -self.fdt.dXc(I[:,0,...]) * v[:,0,...] -self.fdt.dYc(I[:,0,...])*v[:,1,...]
-        elif self.dim == 3:
-            rhs_ret[:] = -self.fdt.dXc(I[:,0,...]) * v[:,0,...] -self.fdt.dYc(I[:,0,...])*v[:,1,...]-self.fdt.dZc(I[:,0,...])*v[:,2,...]
-        else:
-            raise ValueError('Only supported up to dimension 3')
 
 
     def rhs_scalar_conservation_multiNC(self, I, v):
@@ -131,101 +97,65 @@ class RHSLibrary(object):
         BxCxXxYxZ, where B is the number of images (batch size), C, the number of channels
         per image and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)
 
-        if the channel size is 1, then a fast version will be used, which batch can be calculate in one loop
-        otherwise the traditional loop batch and loop channel way will be used
-
         :math:`-div(Iv)`
 
-        :param I: Image batch
-        :param v: Velocity fields (this will be one velocity field per image)
-        :return: Returns the RHS of the scalar conservation law equations involved
+        :param I: Image batch BxCIxXxYxZ
+        :param v: Velocity fields (this will be one velocity field per image) BxCxXxYxZ
+        :return: Returns the RHS of the scalar conservation law equations involved BxCxXxYxZ
         """
 
         sz = I.size()
         rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
-        # for nrI in range(sz[0]):  # loop over all the images
-        #     rhs_ret[nrI, ...] = self._rhs_scalar_conservation_multiC(I[nrI, ...], v[nrI, ...])
-        # return rhs_ret
-        if sz[1]==1:  # if one channel case, a fast version will be used
-            self._rhs_scalar_oneC_conservation(I, v, rhs_ret)
-        else:
-            for nrI in range(sz[0]):  # loop over all the images
-                rhs_ret[nrI, ...] = self._rhs_scalar_conservation_multiC(I[nrI, ...], v[nrI, ...])
+
+        for nc in range(sz[1]):  # loop over all the images
+            rhs_ret[:, nc, ...]=self._rhs_scalar_conservation_multiN(I[:, nc:nc + 1, ...], v)
         return rhs_ret
 
-    def _rhs_scalar_conservation_multiC(self,I,v):
-        """
-        Similar to *_rhs_scalar_conservation_multiNC*, but only for one multi-channel image at at time.
 
-        :param I: Multi-channel image: CxXxYxZ
-        :param v: Same velocity field applied to each channel
-        :return: Returns the RHS of the scalar-conservation law equation
+
+    def _rhs_scalar_conservation_multiN(self, I, v):
         """
-        sz = I.size()
-        rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
-        for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same
-            rhs_ret[nrC, ...] = self._rhs_scalar_conservation_singleC(I[None,nrC, ...], v)  # here None is added for compatiability
+        :param I: One-channel input image: Bx1xXxYxZ
+        :param v: velocity field  BxCxXxYxZ
+        :return: Returns the RHS of the scalar-conservation law equation for one channel BxXxYxZ
+        """
+        if self.dim==1:
+            rhs_ret = -self.fdt.dXc(I[:,0,...]*v[:,0,...])
+        elif self.dim==2:
+            rhs_ret = -self.fdt.dXc(I[:,0,...]*v[:,0,...]) -self.fdt.dYc(I[:,0,...]*v[:,1,...])
+        elif self.dim==3:
+            rhs_ret = -self.fdt.dXc(I[:,0,...]* v[:,0,...]) -self.fdt.dYc(I[:,0,...]*v[:,1,...])-self.fdt.dZc(I[:,0,...]*v[:,2,...])
+        else:
+            raise ValueError('Only supported up to dimension 3')
         return rhs_ret
 
-    def _rhs_scalar_conservation_singleC(self,I,v):
-        """
-        Similar to *_rhs_scalar_conservation_multiC*, but only for one channel at a time.
 
-        :param I: One-channel input image: 1xXxYxZ  here 1 refer to batch, for compatibility
-        :param v: velocity field
-        :return: Returns the RHS of the scalar-conservation law equation for one channel
-        """
-        if self.dim==1:
-            return -self.fdt.dXc(I*v[None,0,:])
-        elif self.dim==2:
-            return -self.fdt.dXc(I*v[None,0,:,:]) -self.fdt.dYc(I*v[None,1,:,:])
-        elif self.dim==3:
-            return -self.fdt.dXc(I* v[None,0,:,:,:]) -self.fdt.dYc(I*v[None,1,:,:,:])-self.fdt.dZc(I*v[None,2,:,:,:])
-        else:
-            raise ValueError('Only supported up to dimension 3')
-
-
-    def _rhs_scalar_oneC_conservation(self, I, v, rhs_ret):
-        """
-        a fast version for _rhs_scalar_conservation_multiC,   batch will no longer to be calculated sperately, one channel at a time.
-
-        :param I: One-channel input image: batchxchXxYxZ
-        :param v: velocity field
-        :return: Returns the RHS of the scalar-conservation law equation for one channel
-        """
-        if self.dim==1:
-            rhs_ret[:] = -self.fdt.dXc(I[:,0,...]*v[:,0,...])
-        elif self.dim==2:
-            rhs_ret[:] = -self.fdt.dXc(I[:,0,...]*v[:,0,...]) -self.fdt.dYc(I[:,0,...]*v[:,1,...])
-        elif self.dim==3:
-            rhs_ret[:] = -self.fdt.dXc(I[:,0,...]* v[:,0,...]) -self.fdt.dYc(I[:,0,...]*v[:,1,...])-self.fdt.dZc(I[:,0,...]*v[:,2,...])
-        else:
-            raise ValueError('Only supported up to dimension 3')
-
-
-    def rhs_advect_map_multiN(self, phi, v):
+    def rhs_advect_map_multiNC(self, phi, v):
         '''
         Advects a set of N maps (for N images). Expected format here, is 
         BxCxXxYxZ, where B is the number of images/maps (batch size), C, the number of channels
         per (here the spatial dimension for the map coordinate functions), 
         and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)
 
-        new fast version is implemented, where batch is no longer calculated separately
 
         :math:`-D\\phi v`
 
-        :param phi: map batch
-        :param v: Velocity fields (this will be one velocity field per map)
-        :return: Returns the RHS of the advection equations involved
+        :param phi: map batch BxCxXxYxZ
+        :param v: Velocity fields (this will be one velocity field per map) BxCxXxYxZ
+        :return: Returns the RHS of the advection equations involved BxCxXxYxZ
         '''
         sz = phi.size()
         rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
-        # for nrI in range(sz[0]):  # loop over all the images
-        #     rhs_ret[nrI, ...] = self._rhs_advect_map_singleN(phi[nrI, ...], v[nrI, ...])
-        self._rhs_advect_map_singleN(phi, v,rhs_ret)
+        self._rhs_advect_map_call(phi, v,rhs_ret)
         return rhs_ret
 
-    def _rhs_advect_map_singleN(self,phi,v,rhsphi):  ##########
+    def _rhs_advect_map_call(self,phi,v,rhsphi):
+        """
+
+         :param phi: map batch  BxCxXxYxZ
+        :param v: Velocity fields (this will be one velocity field per map)  BxCxXxYxZ
+        :return rhsphi: Returns the RHS of the advection equations involved  BxCxXxYxZ
+        """
 
         if self.use_neumann_BC_for_map:
             fdc = self.fdt # use zero Neumann boundary conditions
@@ -259,7 +189,7 @@ class RHSLibrary(object):
 
 
 
-    def rhs_epdiff_multiN(self, m, v):
+    def rhs_epdiff_multiNC(self, m, v):
         '''
         Computes the right hand side of the EPDiff equation for of N momenta (for N images). 
         Expected format here, is BxCxXxYxZ, where B is the number of momenta (batch size), C, 
@@ -270,18 +200,21 @@ class RHSLibrary(object):
 
         :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
 
-        :param m: momenta batch
-        :param v: Velocity fields (this will be one velocity field per momentum)
-        :return: Returns the RHS of the EPDiff equations involved
+        :param m: momenta batch BxCXxYxZ
+        :param v: Velocity fields (this will be one velocity field per momentum) BxCXxYxZ
+        :return: Returns the RHS of the EPDiff equations involved BxCXxYxZ
         '''
         sz = m.size()
         rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
-        # for nrI in range(sz[0]):  # loop over all the images
-        #     rhs_ret[nrI, ...] = self._rhs_epdiff_singleN(m[nrI, ...], v[nrI, ...])
-        self._rhs_epdiff_singleN(m, v, rhs_ret)
+        self._rhs_epdiff_call(m, v, rhs_ret)
         return rhs_ret
 
-    def _rhs_epdiff_singleN(self, m, v,rhsm):
+    def _rhs_epdiff_call(self, m, v,rhsm):
+        """
+        :param m: momenta batch  BxCxXxYxZ
+        :param v: Velocity fields (this will be one velocity field per momentum)  BxCxXxYxZ
+        :return rhsm: Returns the RHS of the EPDiff equations involved  BxCxXxYxZ
+        """
         if self.dim == 1:
             rhsm[:]= -self.fdt.dXc(m[:,0, :] * v[:,0, :]) - self.fdt.dXc(v[:,0, :]) * m[:,0, :]
         elif self.dim == 2:
@@ -324,49 +257,6 @@ class RHSLibrary(object):
         else:
             raise ValueError('Only supported up to dimension ')
 
-
-    # def _rhs_epdiff_singleN(self,m,v):
-    #     if self.dim==1:
-    #         return -self.fdt.dXc(m[:,0] * v[0,:]) - self.fdt.dXc(v[0,:]) * m[0,:]
-    #     elif self.dim==2:
-    #         rhsm = Variable(MyTensor( m.size() ).zero_(), requires_grad=False)
-    #          # (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)
-    #         rhsm[0,:, :] = (-self.fdt.dXc(m[0,:, :] * v[0,:, :])
-    #                          - self.fdt.dYc(m[0,:, :] * v[1,:, :])
-    #                          - self.fdt.dXc(v[0,:, :]) * m[0,:, :]
-    #                          - self.fdt.dXc(v[1,:, :]) * m[1,:, :])
-    #
-    #         rhsm[1,:, :] = (-self.fdt.dXc(m[1,:, :] * v[0,:, :])
-    #                          - self.fdt.dYc(m[1,:, :] * v[1,:, :])
-    #                          - self.fdt.dYc(v[0,:, :]) * m[0,:, :]
-    #                          - self.fdt.dYc(v[1,:, :]) * m[1,:, :])
-    #         return rhsm
-    #     elif self.dim==3:
-    #         rhsm = Variable(MyTensor( m.size() ).zero_(), requires_grad=False)
-    #         # (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)
-    #         rhsm[0,:, :, :] = (-self.fdt.dXc(m[0,:, :, :] * v[0,:, :, :])
-    #                             - self.fdt.dYc(m[0,:, :, :] * v[1,:, :, :])
-    #                             - self.fdt.dZc(m[0,:, :, :] * v[2,:, :, :])
-    #                             - self.fdt.dXc(v[0,:, :, :]) * m[0,:, :, :]
-    #                             - self.fdt.dXc(v[1,:, :, :]) * m[1,:, :, :]
-    #                             - self.fdt.dXc(v[2,:, :, :]) * m[2,:, :, :])
-    #
-    #         rhsm[1,:, :, :] = (-self.fdt.dXc(m[1,:, :, :] * v[0,:, :, :])
-    #                             - self.fdt.dYc(m[1,:, :, :] * v[1,:, :, :])
-    #                             - self.fdt.dZc(m[1,:, :, :] * v[2,:, :, :])
-    #                             - self.fdt.dYc(v[0,:, :, :]) * m[0,:, :, :]
-    #                             - self.fdt.dYc(v[1,:, :, :]) * m[1,:, :, :]
-    #                             - self.fdt.dYc(v[2,:, :, :]) * m[2,:, :, :])
-    #
-    #         rhsm[2,:, :, :] = (-self.fdt.dXc(m[2,:, :, :] * v[0,:, :, :])
-    #                             - self.fdt.dYc(m[2,:, :, :] * v[1,:, :, :])
-    #                             - self.fdt.dZc(m[2,:, :, :] * v[2,:, :, :])
-    #                             - self.fdt.dZc(v[0,:, :, :]) * m[0,:, :, :]
-    #                             - self.fdt.dZc(v[1,:, :, :]) * m[1,:, :, :]
-    #                             - self.fdt.dZc(v[2,:, :, :]) * m[2,:, :, :])
-    #         return rhsm
-    #     else:
-    #         raise ValueError('Only supported up to dimension 3')
 
 class ForwardModel(object):
     """
@@ -456,7 +346,7 @@ class AdvectMap(ForwardModel):
         :param pars: ignored (does not expect any additional inputs)
         :return: right hand side [phi]
         """
-        return [self.rhs.rhs_advect_map_multiN(x[0],u)]
+        return [self.rhs.rhs_advect_map_multiNC(x[0],u)]
 
 class AdvectImage(ForwardModel):
     """
@@ -520,9 +410,9 @@ class EPDiffImage(ForwardModel):
         # assume x[0] is m and x[1] is I for the state
         m = x[0]
         I = x[1]
-        v = self.smoother.smooth_vector_field_multiN(m)
+        v = self.smoother.smooth(m)
         # print('max(|v|) = ' + str( v.abs().max() ))
-        return [self.rhs.rhs_epdiff_multiN(m,v), self.rhs.rhs_advect_image_multiNC(I,v)]
+        return [self.rhs.rhs_epdiff_multiNC(m,v), self.rhs.rhs_advect_image_multiNC(I,v)]
 
 
 class EPDiffMap(ForwardModel):
@@ -570,12 +460,12 @@ class EPDiffMap(ForwardModel):
         m = x[0]
         phi = x[1]
         if not self.use_net:
-            v = self.smoother.smooth_vector_field_multiN(m)
+            v = self.smoother.smooth(m)
         else:
             v = self.smoother.adaptive_smooth(m, phi, using_map=True)
 
         # print('max(|v|) = ' + str( v.abs().max() ))
-        new_val= [self.rhs.rhs_epdiff_multiN(m,v),self.rhs.rhs_advect_map_multiN(phi,v)]
+        new_val= [self.rhs.rhs_epdiff_multiNC(m,v),self.rhs.rhs_advect_map_multiNC(phi,v)]
         #self.debugging([m, v, phi, new_val[0], new_val[1]], t)
         return new_val
 
@@ -629,7 +519,7 @@ class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
 
         # now compute the momentum
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, self.sz, self.spacing)
-        v = self.smoother.smooth_vector_field_multiN(m)
+        v = self.smoother.smooth(m)
 
         # advection for I, scalar-conservation law for lam
         return [self.rhs.rhs_scalar_conservation_multiNC(lam, v), self.rhs.rhs_advect_image_multiNC(I, v)]
@@ -674,7 +564,7 @@ class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
 
         # now compute the momentum
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, self.sz, self.spacing)
-        v = self.smoother.smooth_vector_field_multiN(m)
+        v = self.smoother.smooth(m)
 
         # advection for I, scalar-conservation law for lam
         return [self.rhs.rhs_scalar_conservation_multiNC(lam,v), self.rhs.rhs_advect_image_multiNC(I,v)]
@@ -726,8 +616,8 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
 
         # now compute the momentum
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, self.sz, self.spacing)
-        v = self.smoother.smooth_vector_field_multiN(m)
+        v = self.smoother.smooth(m)
 
         return [self.rhs.rhs_scalar_conservation_multiNC(lam,v),
                 self.rhs.rhs_advect_image_multiNC(I,v),
-                self.rhs.rhs_advect_map_multiN(phi,v)]
+                self.rhs.rhs_advect_map_multiNC(phi,v)]
