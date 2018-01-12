@@ -14,7 +14,7 @@ from pyreg.data_wrapper import AdaptVal
 import pyreg.fileio as fileio
 import pyreg.custom_optimizers as CO
 
-def invert_map(map):
+def invert_map(map,spacing):
     """
     Inverts the map and returns its inverse. Assumes standard map parameterization [-1,1]^d
     :param map: Input map to be inverted
@@ -24,7 +24,7 @@ def invert_map(map):
     map_t = AdaptVal(Variable(torch.from_numpy(map), requires_grad=False))
 
     # identity map
-    id = utils.identity_map_multiN(map_t.data.shape)
+    id = utils.identity_map_multiN(map_t.data.shape,spacing)
     id_t = AdaptVal(Variable(torch.from_numpy(id),requires_grad=False))
 
     # parameter to store the inverse map
@@ -38,7 +38,7 @@ def invert_map(map):
 
     def compute_loss():
         # warps map_t with inv_map, if it is the inverse should result in the identity map
-        wmap = utils.compute_warped_image_multiNC(map_t, invmap_t)
+        wmap = utils.compute_warped_image_multiNC(map_t, invmap_t, spacing)
         current_loss = ((wmap-id_t)**2).sum()
         return current_loss
 
@@ -77,7 +77,9 @@ if __name__ == "__main__":
     imap_filename = args.imap
 
     map, map_hdr = fileio.MapIO().read(map_filename)
-    imap = invert_map(map)
+    spacing = map_hdr['spacing']
+    #TODO: check that the spacing is correct here
+    imap = invert_map(map,spacing)
 
     # now write it out
     print( 'Writing inverted map to file: ' + imap_filename )

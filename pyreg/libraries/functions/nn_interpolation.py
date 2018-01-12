@@ -3,6 +3,7 @@ from cffi import FFI
 import torch
 from torch.autograd import Variable
 from pyreg.libraries._ext import my_lib_nn
+import map_scale_utils
 
 ffi = FFI()
 
@@ -21,9 +22,11 @@ def nn_interpolation_fn_sel(input1, input2, output, ndim, device_c, use_cuda=USE
         my_lib_nn.nearestNeighBCXYZ_updateOutput_ND(input1, input2, output, ndim)
 
 
-def get_nn_interpolation(input1, input2):
+def get_nn_interpolation(input1, input2, spacing):
     device_c = ffi.new("int *")
-    ndim = len(input1.size())-2
+
+    map_scaled = map_scale_utils.scale_map(input2,spacing)
+
     if ndim == 1:
         output = MyTensor(input1.size()[0], input1.size()[1], input2.size()[2]).zero_()
     elif ndim == 2:
@@ -37,5 +40,5 @@ def get_nn_interpolation(input1, input2):
         device_c[0] = torch.cuda.current_device()
     else:
         device_c[0] = -1
-    nn_interpolation_fn_sel(input1.data, input2.data, output, ndim, device_c)
+    nn_interpolation_fn_sel(input1.data, map_scaled.data, output, ndim, device_c)
     return AdaptVal(Variable(output))

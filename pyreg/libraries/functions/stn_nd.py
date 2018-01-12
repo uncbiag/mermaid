@@ -12,6 +12,9 @@ from pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
 if USE_CUDA:
     from pyreg.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
 from pyreg.libraries._ext import my_lib_nd
+
+import map_scale_utils
+
 ffi = FFI()
 
 
@@ -20,14 +23,15 @@ class STNFunction_ND_BCXYZ(Function):
    Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox).
    """
 
-    def __init__(self, ndim):
+    def __init__(self, spacing):
         """
         Constructor
 
         :param ndim: (int) spatial transformation of the transform
         """
         super(STNFunction_ND_BCXYZ, self).__init__()
-        self.ndim = ndim
+        self.spacing = spacing
+        self.ndim = len(spacing)
 
     def forward_stn(self, input1, input2, output, ndim, device_c, use_cuda=USE_CUDA):
         if use_cuda:
@@ -63,6 +67,9 @@ class STNFunction_ND_BCXYZ(Function):
         :param input2: spatial transform in BdimXYZ format
         :return: spatially transformed image in BCXYZ format
         """
+
+        assert(len(self.spacing)+2==len(input2.size()))
+
         self.input1 = STNVal(input1, ini=1)
         self.input2 = STNVal(input2, ini=1)
         self.device_c = ffi.new("int *")
@@ -81,7 +88,11 @@ class STNFunction_ND_BCXYZ(Function):
         else:
             self.device = -1
         self.device_c[0] = self.device
-        self.forward_stn(input1, input2, output, self.ndim, self.device_c)
+
+        # the spatial transformer code expects maps in the range of [-1,1]^d
+        # So first rescale the map (i.e., input2) and then account for this rescaling in the gradient
+
+        self.forward_stn(input1, map_scale_utils.scale_map(input2,self.spacing), output, self.ndim, self.device_c)
         # print(STNVal(output, ini=-1).sum())
         return STNVal(output, ini=-1)
 
@@ -97,8 +108,13 @@ class STNFunction_ND_BCXYZ(Function):
         grad_output = STNVal(grad_output, ini=1)
         # print grad_output.view(1, -1).sum()
         # print('backward decice %d' % self.device)
-        self.backward_stn(self.input1, self.input2, grad_input1, grad_input2, grad_output, self.ndim, self.device_c)
+
+        # also needs to scale the input map first
+        self.backward_stn(self.input1, map_scale_utils.scale_map(self.input2,self.spacing), grad_input1, grad_input2, grad_output, self.ndim, self.device_c)
         # print( STNVal(grad_input1, ini=-1).sum(), STNVal(grad_input2, ini=-1).sum())
+
+        map_scale_utils.scale_map_grad(grad_input2,self.spacing)
+
         return STNVal(grad_input1, ini=-1), STNVal(grad_input2, ini=-1)
 
 
@@ -170,41 +186,3 @@ class STNFunction_ND(Function):
                                                                    grad_output, self.device_c)
         return grad_input1, grad_input2
 
-
-# Old code starts here
-
-class STNFunction(Function):
-    """
-    Legacy 2D implementation. Ignore.
-    """
-
-    def forward(self, input1, input2):
-        self.input1 = input1
-        self.input2 = input2
-        self.device_c = ffi.new("int *")
-        output = torch.zeros(input1.size()[0], input2.size()[1], input2.size()[2], input1.size()[3])
-        # print('decice %d' % torch.cuda.current_device())
-        if input1.is_cuda:
-            self.device = torch.cuda.current_device()
-        else:
-            self.device = -1
-        self.device_c[0] = self.device
-        if not input1.is_cuda:
-            my_lib_nd.BilinearSamplerBHWD_updateOutput(input1, input2, output)
-        else:
-            output = output.cuda(self.device)
-            my_lib_nd.BilinearSamplerBHWD_updateOutput_cuda(input1, input2, output, self.device_c)
-        return output
-
-    def backward(self, grad_output):
-        if USE_CUDA:
-            grad_input1 = STNTensor(self.input1.size()).zero_()
-            grad_input2 = STNTensor(self.input2.size()).zero_()
-        # print('backward decice %d' % self.device)
-        if not USE_CUDA:
-            my_lib_nd.BilinearSamplerBHWD_updateGradInput(self.input1, self.input2, grad_input1, grad_input2,
-                                                          grad_output)
-        else:
-            my_lib_nd.BilinearSamplerBHWD_updateGradInput_cuda(self.input1, self.input2, grad_input1, grad_input2,
-                                                               grad_output, self.device_c)
-        return grad_input1, grad_input2

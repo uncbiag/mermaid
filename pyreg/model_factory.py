@@ -3,51 +3,111 @@ Package to quickly instantiate registration models by name.
 """
 
 import registration_networks as RN
-import smoother_factory as sf
+
+def _print_models(models):
+    print('\nKnown registration models are:')
+    print('------------------------------')
+    for key in models:
+        print('{model_name:>40s}: {model_description}'.format(model_name=key, model_description=models[key][3]))
+
+
+class AvailableModels(object):
+
+    def __init__(self):
+        # (model, loss, uses map, description)
+        self.models = {
+            'affine_map': (RN.AffineMapNet, RN.AffineMapLoss, True,
+                           'map-based affine registration'),
+            'diffusion_map': (RN.RegistrationNetDisplacement, RN.DiffusionMapLoss, True,
+                              'displacement-based diffusion registration'),
+            'curvature_map': (RN.RegistrationNetDisplacement, RN.CurvatureMapLoss, True,
+                              'displacement-based curvature registration'),
+            'total_variation_map': (RN.RegistrationNetDisplacement, RN.TotalVariationMapLoss, True,
+                                    'displacement-based total variation registration'),
+            'svf_map': (RN.SVFMapNet, RN.SVFMapLoss, True,
+                        'map-based stationary velocity field'),
+            'svf_image': (RN.SVFImageNet, RN.SVFImageLoss, False,
+                          'image-based stationary velocity field'),
+            'svf_scalar_momentum_image': (RN.SVFScalarMomentumImageNet, RN.SVFScalarMomentumImageLoss, False,
+                                          'image-based stationary velocity field using the scalar momentum'),
+            'svf_scalar_momentum_map': (RN.SVFScalarMomentumMapNet, RN.SVFScalarMomentumMapLoss, True,
+                                        'map-based stationary velocity field using the scalar momentum'),
+            'svf_vector_momentum_image': (RN.SVFVectorMomentumImageNet, RN.SVFVectorMomentumImageLoss, False,
+                                          'image-based stationary velocity field using the vector momentum'),
+            'svf_vector_momentum_map': (RN.SVFVectorMomentumMapNet, RN.SVFVectorMomentumMapLoss, True,
+                                        'map-based stationary velocity field using the vector momentum'),
+            'lddmm_shooting_map': (RN.LDDMMShootingVectorMomentumMapNet,
+                                   RN.LDDMMShootingVectorMomentumMapLoss, True,
+                                   'map-based shooting-based LDDMM using the vector momentum'),
+            'lddmm_shooting_image': (RN.LDDMMShootingVectorMomentumImageNet,
+                                     RN.LDDMMShootingVectorMomentumImageLoss, False,
+                                     'image-based shooting-based LDDMM using the vector momentum'),
+            'lddmm_shooting_scalar_momentum_map': (RN.LDDMMShootingScalarMomentumMapNet,
+                                                   RN.LDDMMShootingScalarMomentumMapLoss, True,
+                                                   'map-based shooting-based LDDMM using the scalar momentum'),
+            'lddmm_shooting_scalar_momentum_image': (RN.LDDMMShootingScalarMomentumImageNet,
+                                                     RN.LDDMMShootingScalarMomentumImageLoss, False,
+                                                     'image-based shooting-based LDDMM using the scalar momentum'),
+            'svf_quasi_momentum_image': (RN.SVFQuasiMomentumImageNet,
+                                         RN.SVFQuasiMomentumImageLoss, False,
+                                         'EXPERIMENTAL: Image-based SVF version which estimates velcocity based on a smoothed vetor field')
+        }
+        """dictionary defining all the models"""
+
+    def get_models(self):
+        """
+        Returns all available models as a dictionary which has as keys the model name and tuple entries of the form
+        (networkclass,lossclass,usesMap,explanation_string)
+        :return: the model dictionary
+        """
+        return self.models
+
+    def print_available_models(self):
+        """
+        Prints the models that are available and can be created with `create_registration_model`
+        """
+
+        _print_models(self.models)
+
+
 class ModelFactory(object):
     """
     Factory class to instantiate registration models.
     """
 
-    def __init__(self,sz,spacing):
+    def __init__(self,sz_sim,spacing_sim,sz_model,spacing_model):
         """
         Constructor.
-        
-        :param sz: image size, expectes BxCxXxYxZ format 
-        :param spacing: spatial spacing as array (as many entries as there are spatial dimensions)
+
+        :param sz_sim: image/map size to evaluate the similarity measure of the loss
+        :param spacing_sim: image/map spacing to evaluate the similarity measure of the loss
+        :param sz_model: sz of the model parameters (will only be different from sz_sim if computed at low res)
+        :param spacing_model: spacing of model parameters (will only be different from spacing_sim if computed at low res)
         """
-        self.sz = sz
-        """size of the image (BxCxXxYxZ) format"""
-        self.spacing = spacing
-        """spatial spacing"""
-        self.dim = len( spacing )
+
+        self.sz_sim = sz_sim
+        """size of the image (BxCxXxYxZ) format as used in the similarity measure part of the loss function"""
+        self.spacing_sim = spacing_sim
+        """spatial spacing as used in the similarity measure of the loss function"""
+        self.sz_model = sz_model
+        """size of the parameters (BxCxXxYxZ) as used in the model itself (and possibly in the loss function for regularization)"""
+        self.spacing_model = spacing_model
+        """spatial spacing as used in the model itself (and possibly in the loss function for regularization)"""
+        self.dim = len( spacing_model )
         """spatial dimension"""
+        self.models = AvailableModels().get_models()
 
-        self.models = {
-            'affine_map': (RN.AffineMapNet,RN.AffineMapLoss),
-            'diffusion_map': (RN.RegistrationNetDisplacement,RN.DiffusionMapLoss),
-            'curvature_map': (RN.RegistrationNetDisplacement,RN.CurvatureMapLoss),
-            'total_variation_map': (RN.RegistrationNetDisplacement,RN.TotalVariationMapLoss),
-            'svf_map': (RN.SVFMapNet,RN.SVFMapLoss),
-            'svf_image': (RN.SVFImageNet,RN.SVFImageLoss),
-            'svf_scalar_momentum_image': (RN.SVFScalarMomentumImageNet,RN.SVFScalarMomentumImageLoss),
-            'svf_scalar_momentum_map': (RN.SVFScalarMomentumMapNet,RN.SVFScalarMomentumMapLoss),
-            'svf_vector_momentum_image': (RN.SVFVectorMomentumImageNet, RN.SVFVectorMomentumImageLoss),
-            'svf_vector_momentum_map': (RN.SVFVectorMomentumMapNet, RN.SVFVectorMomentumMapLoss),
-            'lddmm_shooting_map': (RN.LDDMMShootingVectorMomentumMapNet,
-                                   RN.LDDMMShootingVectorMomentumMapLoss),
-            'lddmm_shooting_image': (RN.LDDMMShootingVectorMomentumImageNet,
-                                     RN.LDDMMShootingVectorMomentumImageLoss),
-            'lddmm_shooting_scalar_momentum_map': (RN.LDDMMShootingScalarMomentumMapNet,
-                                                   RN.LDDMMShootingScalarMomentumMapLoss),
-            'lddmm_shooting_scalar_momentum_image': (RN.LDDMMShootingScalarMomentumImageNet,
-                                                     RN.LDDMMShootingScalarMomentumImageLoss),
-            'svf_quasi_momentum_image': (RN.SVFQuasiMomentumImageNet,
-                                         RN.SVFQuasiMomentumImageLoss)
-        }
-        """dictionary defining all the models"""
+        assert( len(spacing_model)==len(spacing_sim) )
 
-    def add_model(self,modelName,networkClass,lossClass):
+    def get_models(self):
+        """
+        Returns all available models as a dictionary which has as keys the model name and tuple entries of the form
+        (networkclass,lossclass,usesMap,explanation_string)
+        :return: the model dictionary
+        """
+        return self.models
+
+    def add_model(self,modelName,networkClass,lossClass,useMap,modelDescription='custom model'):
         """
         Allows to quickly add a new model.
         
@@ -56,31 +116,14 @@ class ModelFactory(object):
         :param lossClass: loss class being used by ty the model
         """
         print('Registering new model ' + modelName )
-        self.models[modelName] = (networkClass,lossClass)
+        self.models[modelName] = (networkClass,lossClass,useMap,modelDescription)
 
     def print_available_models(self):
         """
         Prints the models that are available and can be created with `create_registration_model`
         """
 
-        print('\nKnown registration models are:')
-        print('   affine_map                           : map-based affine registration')
-        print('   diffusion_map                        : displacement-based diffusion registration')
-        print('   curvature_map                        : displacement-based curvature registration')
-        print('   total_variation_map                  : displacement-based total variation registration')
-        print('   svf_map                              : map-based stationary velocity field')
-        print('   svf_image                            : image-based stationary velocity field')
-        print('   svf_scalar_momentum_image            : image-based stationary velocity field using the scalar momentum')
-        print('   svf_scalar_momentum_map              : map-based stationary velocity field using the scalar momentum')
-        print('   svf_vector_momentum_image            : image-based stationary velocity field using the vector momentum')
-        print('   svf_vector_momentum_map              : map-based stationary velocity field using the vector momentum')
-        print('   lddmm_shooting_map                   : map-based shooting-based LDDMM using the vector momentum')
-        print('   lddmm_shooting_image                 : image-based shooting-based LDDMM using the vector momentum')
-        print('   lddmm_shooting_scalar_momentum_map   : map-based shooting-based LDDMM using the scalar momentum')
-        print('   lddmm_shooting_scalar_momentum_image : image-based shooting-based LDDMM using the scalar momentum')
-
-        print('\nAll registered models are:')
-        print(self.models)
+        _print_models(self.models)
 
     def create_registration_model(self, modelName, params):
         """
@@ -93,13 +136,11 @@ class ModelFactory(object):
 
         cparams = params[('registration_model',{},'specifies the registration model')]
         cparams['type']= (modelName,'Name of the registration model')
-        # self.smoother = sf.SmootherFactory(self.sz[2::], self.spacing).create_smoother(params['registration_model']['forward_model'])
-        # cparams['forward_model']['sm_ins'] = self.smoother
 
         if self.models.has_key(modelName):
             print('Using ' + modelName + ' model')
-            model = self.models[modelName][0](self.sz, self.spacing, cparams)
-            loss = self.models[modelName][1](list(model.parameters())[0], self.sz, self.spacing, cparams)
+            model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams)
+            loss = self.models[modelName][1](list(model.parameters())[0], self.sz_sim, self.spacing_sim, self.sz_model, self.spacing_model, cparams)
             return model, loss
         else:
             self.print_available_models()

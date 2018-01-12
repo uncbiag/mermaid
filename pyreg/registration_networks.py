@@ -458,23 +458,31 @@ class RegistrationLoss(nn.Module):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self,sz,spacing,params):
+    def __init__(self,sz_sim,spacing_sim,sz_model,spacing_model,params):
         """
-        Constructor
+        Constructor. We have two different spacings to be able to allow for low-res transformation
+        computations and high-res image similarity. This is only relevant for map-based approaches.
+        For image-based approaches these two values should be the same.
         
-        :param sz: image size 
-        :param spacing: image spacing
+        :param sz_sim: image/map size to evaluate the similarity measure of the loss
+        :param spacing_sim: image/map spacing to evaluate the similarity measure of the loss
+        :param sz_model: sz of the model parameters (will only be different from sz_sim if computed at low res)
+        :param spacing_model: spacing of model parameters (will only be different from spacing_sim if computed at low res)
         :param params: ParameterDict() object to hold and keep track of general parameters
         """
         super(RegistrationLoss, self).__init__()
-        self.spacing = spacing
-        """image spacing"""
-        self.sz = sz
-        """image size"""
+        self.spacing_sim = spacing_sim
+        """image/map spacing for the similarity measure part of the loss function"""
+        self.spacing_model = spacing_model
+        """spacing for any model parameters (typically for the regularization part of the loss function)"""
+        self.sz_sim = sz_sim
+        """image size for the similarity measure part of the loss function"""
+        self.sz_model = sz_model
+        """image size for the model parameters (typically for the regularization part of the loss function)"""
         self.params = params
         """ParameterDict() paramters"""
 
-        self.smFactory = SM.SimilarityMeasureFactory(self.spacing)
+        self.smFactory = SM.SimilarityMeasureFactory(self.spacing_sim)
         """factory to create similarity measures on the fly"""
         self.similarityMeasure = None
         """the similarity measure itself"""
@@ -520,8 +528,8 @@ class RegistrationImageLoss(RegistrationLoss):
     Specialization for image-based registration losses
     """
 
-    def __init__(self,sz,spacing,params):
-        super(RegistrationImageLoss, self).__init__(sz,spacing,params)
+    def __init__(self,sz_sim,spacing_sim,sz_model,spacing_model,params):
+        super(RegistrationImageLoss, self).__init__(sz_sim,spacing_sim,sz_model,spacing_model,params)
 
     def get_energy(self, I1_warped, I0_source, I1_target, variables_from_forward_model=None):
         """
@@ -555,8 +563,8 @@ class RegistrationMapLoss(RegistrationLoss):
     """
     Specialization for map-based registration losses
     """
-    def __init__(self, sz, spacing, params):
-        super(RegistrationMapLoss, self).__init__(sz, spacing, params)
+    def __init__(self, sz_sim, spacing_sim, sz_model, spacing_model, params):
+        super(RegistrationMapLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
         cparams = params[('loss', {}, 'settings for the loss function')]
         self.display_max_displacement = cparams[('display_max_displacement',False,'displays the current maximal displacement')]
         self.limit_displacement = cparams[('limit_displacement',False,'[True/False] if set to true limits the maximal displacement based on the max_displacement_setting')]
@@ -575,7 +583,7 @@ class RegistrationMapLoss(RegistrationLoss):
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :return: registration energy
         """
-        I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1)
+        I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1, self.spacing_sim)
         sim = self.compute_similarity_energy(I1_warped, I1_target, variables_from_forward_model)
         if lowres_I0 is not None:
             reg = self.compute_regularization_energy(lowres_I0, variables_from_forward_model)
@@ -621,22 +629,24 @@ class SVFImageLoss(RegistrationImageLoss):
     """
     Loss specialization for image-based SVF 
     """
-    def __init__(self,v,sz,spacing,params):
+    def __init__(self,v,sz_sim,spacing_sim,sz_model,spacing_model,params):
         """
         Constructor
         
-        :param v: velocity field parameter 
-        :param sz: size of image
-        :param spacing: spacing of image
+        :param v: velocity field parameter
+        :param sz_sim: image/map size to evaluate the similarity measure of the loss
+        :param spacing_sim: image/map spacing to evaluate the similarity measure of the loss
+        :param sz_model: sz of the model parameters (will only be different from sz_sim if computed at low res)
+        :param spacing_model: spacing of model parameters (will only be different from spacing_sim if computed at low res)
         :param params: general parameters via ParameterDict()
         """
-        super(SVFImageLoss, self).__init__(sz,spacing,params)
+        super(SVFImageLoss, self).__init__(sz_sim,spacing_sim,sz_model,spacing_model,params)
         self.v = v
         """veclocity field parameter"""
 
         cparams = params[('loss',{},'settings for the loss function')]
 
-        self.regularizer = (RF.RegularizerFactory(self.spacing).
+        self.regularizer = (RF.RegularizerFactory(self.spacing_model).
                             create_regularizer(cparams))
         """regularizer to compute the regularization energy"""
 
@@ -656,22 +666,24 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
     Loss function specialization for the image-based quasi-momentum SVF implementation.
     Essentially the same as for SVF but has to smooth the momentum field first to obtain the velocity field.
     """
-    def __init__(self,m,sz,spacing,params):
+    def __init__(self,m,sz_sim,spacing_sim,sz_model,spacing_model,params):
         """
         Constructor
         
-        :param m: momentum field 
-        :param sz: image size
-        :param spacing: image spacing
+        :param m: momentum field
+        :param sz_sim: image/map size to evaluate the similarity measure of the loss
+        :param spacing_sim: image/map spacing to evaluate the similarity measure of the loss
+        :param sz_model: sz of the model parameters (will only be different from sz_sim if computed at low res)
+        :param spacing_model: spacing of model parameters (will only be different from spacing_sim if computed at low res)
         :param params: ParameterDict() parameters
         """
-        super(SVFQuasiMomentumImageLoss, self).__init__(sz,spacing,params)
+        super(SVFQuasiMomentumImageLoss, self).__init__(sz_sim,spacing_sim,sz_model,spacing_model,params)
         self.m = m
         """vector momentum"""
 
         cparams = params[('loss',{},'settings for the loss function')]
 
-        self.regularizer = (RF.RegularizerFactory(self.spacing).
+        self.regularizer = (RF.RegularizerFactory(self.spacing_model).
                             create_regularizer(cparams))
         """regularizer to compute the regularization energy"""
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
@@ -680,7 +692,7 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
             cparams = self.params[('forward_model', {}, 'settings for the forward model')]
 
         #TODO: support smoother optimization here -> move smoother to model instead of loss function
-        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        self.smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
         """smoother to convert from momentum to velocity"""
 
     def compute_regularization_energy(self, I0_source, variables_from_forward_model=None):
@@ -728,14 +740,15 @@ class SVFMapLoss(RegistrationMapLoss):
     """
     Specialization of the loss function for SVF to a map-based solution
     """
-    def __init__(self,v,sz,spacing,params):
-        super(SVFMapLoss, self).__init__(sz,spacing,params)
+    def __init__(self,v,sz_sim,spacing_sim,sz_model,spacing_model,params):
+        super(SVFMapLoss, self).__init__(sz_sim,spacing_sim,sz_model,spacing_model,params)
         self.v = v
         """velocity field parameter"""
 
+
         cparams = params[('loss',{},'settings for the loss function')]
 
-        self.regularizer = (RF.RegularizerFactory(self.spacing).
+        self.regularizer = (RF.RegularizerFactory(self.spacing_model).
                             create_regularizer(cparams))
         """regularizer to compute the regularization energy"""
 
@@ -754,14 +767,14 @@ class DiffusionMapLoss(RegistrationMapLoss):
     Specialization of the loss function for displacement-based registration to diffusion registration
     """
 
-    def __init__(self, d, sz, spacing, params):
-        super(DiffusionMapLoss, self).__init__(sz, spacing, params)
+    def __init__(self, d, sz_sim, spacing_sim, sz_model, spacing_model, params):
+        super(DiffusionMapLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
         self.d = d
         """displacement field parameter"""
 
         cparams = params[('loss', {}, 'settings for the loss function')]
 
-        self.regularizer = (RF.RegularizerFactory(self.spacing).
+        self.regularizer = (RF.RegularizerFactory(self.spacing_model).
                             create_regularizer_by_name('diffusion',cparams))
         """regularizer to compute the regularization energy"""
 
@@ -780,14 +793,14 @@ class TotalVariationMapLoss(RegistrationMapLoss):
     Specialization of the loss function for displacement-based registration to diffusion registration
     """
 
-    def __init__(self, d, sz, spacing, params):
-        super(TotalVariationMapLoss, self).__init__(sz, spacing, params)
+    def __init__(self, d, sz_sim, spacing_sim, sz_model, spacing_model, params):
+        super(TotalVariationMapLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
         self.d = d
         """displacement field parameter"""
 
         cparams = params[('loss', {}, 'settings for the loss function')]
 
-        self.regularizer = (RF.RegularizerFactory(self.spacing).
+        self.regularizer = (RF.RegularizerFactory(self.spacing_model).
                             create_regularizer_by_name('totalVariation',cparams))
         """regularizer to compute the regularization energy"""
 
@@ -806,14 +819,14 @@ class CurvatureMapLoss(RegistrationMapLoss):
     Specialization of the loss function for displacement-based registration to diffusion registration
     """
 
-    def __init__(self, d, sz, spacing, params):
-        super(CurvatureMapLoss, self).__init__(sz, spacing, params)
+    def __init__(self, d, sz_sim, spacing_sim, sz_model, spacing_model, params):
+        super(CurvatureMapLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
         self.d = d
         """displacement field parameter"""
 
         cparams = params[('loss', {}, 'settings for the loss function')]
 
-        self.regularizer = (RF.RegularizerFactory(self.spacing).
+        self.regularizer = (RF.RegularizerFactory(self.spacing_model).
                             create_regularizer_by_name('curvature',cparams))
         """regularizer to compute the regularization energy"""
 
@@ -908,8 +921,8 @@ class AffineMapLoss(RegistrationMapLoss):
     Specialization of the loss function for a map-based affine transformation
     """
 
-    def __init__(self, Ab, sz, spacing, params):
-        super(AffineMapLoss, self).__init__(sz, spacing, params)
+    def __init__(self, Ab, sz_sim, spacing_sim, sz_model, spacing_model, params):
+        super(AffineMapLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
         self.Ab = Ab
         """affine parameters"""
 
@@ -1050,13 +1063,13 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
     """
     Specialization of the image loss to vector-momentum LDDMM
     """
-    def __init__(self,m,sz,spacing,params):
-        super(LDDMMShootingVectorMomentumImageLoss, self).__init__(sz,spacing,params)
+    def __init__(self,m,sz_sim,spacing_sim,sz_model,spacing_model,params):
+        super(LDDMMShootingVectorMomentumImageLoss, self).__init__(sz_sim,spacing_sim,sz_model,spacing_model,params)
         self.m = m
         """momentum"""
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
+            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::],self.spacing_model).create_smoother(cparams)
             """smoother to convert from momentum to velocity"""
         else:
             self.develop_smoother = None
@@ -1074,7 +1087,7 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
         else:
             v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
 
-        reg = (v * m).sum() * self.spacing.prod()
+        reg = (v * m).sum() * self.spacing_model.prod()
         return reg
 
 class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
@@ -1113,13 +1126,13 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
     Specialization of the loss to scalar-momentum LDDMM on images
     """
 
-    def __init__(self, m, sz, spacing, params):
-        super(SVFVectorMomentumImageLoss, self).__init__(sz, spacing, params)
+    def __init__(self, m, sz_sim, spacing_sim, sz_model, spacing_model, params):
+        super(SVFVectorMomentumImageLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
         self.m = m
         """vector momentum"""
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
             """smoother to go from momentum to velocity"""
         else:
             self.develop_smoother = None
@@ -1138,7 +1151,7 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
             v = self.develop_smoother.smooth_vector_field_multiN(m)
         else:
             v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
-        reg = (v * m).sum() * self.spacing.prod()
+        reg = (v * m).sum() * self.spacing_model.prod()
         return reg
 
 
@@ -1179,14 +1192,14 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
     image with the advected map.
     """
 
-    def __init__(self,m,sz,spacing,params):
-        super(LDDMMShootingVectorMomentumMapLoss, self).__init__(sz,spacing,params)
+    def __init__(self,m,sz_sim,spacing_sim,sz_model,spacing_model,params):
+        super(LDDMMShootingVectorMomentumMapLoss, self).__init__(sz_sim,spacing_sim,sz_model,spacing_model,params)
         self.m = m
         """vector momentum"""
 
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
             """smoother to obtain the velocity field from the momentum field"""
             self.use_net = True if cparams['smoother']['type'] == 'adaptiveNet' else False
         else:
@@ -1208,7 +1221,7 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         else:
             v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
 
-        reg = (v * m).sum() * self.spacing.prod()
+        reg = (v * m).sum() * self.spacing_model.prod()
         return reg
 
 class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
@@ -1248,13 +1261,13 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
     Specialization of the loss to scalar-momentum LDDMM on images
     """
 
-    def __init__(self, m, sz, spacing, params):
-        super(SVFVectorMomentumMapLoss, self).__init__(sz, spacing, params)
+    def __init__(self, m, sz_sim, spacing_sim, sz_model, spacing_model, params):
+        super(SVFVectorMomentumMapLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
         self.m = m
         """vector momentum"""
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
             """smoother to go from momentum to velocity"""
         else:
             self.develop_smoother = None
@@ -1274,7 +1287,7 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
         else:
             v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
 
-        reg = (v * m).sum() * self.spacing.prod()
+        reg = (v * m).sum() * self.spacing_model.prod()
         return reg
 
 class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
@@ -1407,13 +1420,13 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
     Specialization of the loss to scalar-momentum LDDMM on images
     """
 
-    def __init__(self, lam, sz, spacing, params):
-        super(SVFScalarMomentumImageLoss, self).__init__(sz, spacing, params)
+    def __init__(self, lam, sz_sim, spacing_sim, sz_model, spacing_model, params):
+        super(SVFScalarMomentumImageLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
         self.lam = lam
         """scalar momentum"""
         if params['similarity_measure'][('develop_mod_on', False, 'developing mode')]:
             cparams = params[('similarity_measure', {}, 'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
             """smoother to go from momentum to velocity"""
         else:
             self.develop_smoother = None
@@ -1426,14 +1439,14 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
         :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
-        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz_model, self.spacing_model)
 
         if self.develop_smoother is not None:
             v = self.develop_smoother.smooth_vector_field_multiN(m)
         else:
             v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
 
-        reg = (v * m).sum() * self.spacing.prod()
+        reg = (v * m).sum() * self.spacing_model.prod()
         return reg
 
 
@@ -1469,13 +1482,13 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
     """
     Specialization of the loss to scalar-momentum LDDMM on images
     """
-    def __init__(self,lam,sz,spacing,params):
-        super(LDDMMShootingScalarMomentumImageLoss, self).__init__(sz,spacing,params)
+    def __init__(self,lam,sz_sim,spacing_sim,sz_model,spacing_model,params):
+        super(LDDMMShootingScalarMomentumImageLoss, self).__init__(sz_sim,spacing_sim,sz_model,spacing_model,params)
         self.lam = lam
         """scalar momentum"""
         if params['similarity_measure'][('develop_mod_on', False, 'developing mode')]:
             cparams = params[('similarity_measure', {}, 'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
             """smoother to go from momentum to velocity"""
         else:
             self.develop_smoother = None
@@ -1488,14 +1501,14 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
         :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
-        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz_model, self.spacing_model)
 
         if self.develop_smoother is not None:
             v = self.develop_smoother.smooth_vector_field_multiN(m)
         else:
             v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
 
-        reg = (v * m).sum() * self.spacing.prod()
+        reg = (v * m).sum() * self.spacing_model.prod()
         return reg
 
 
@@ -1533,14 +1546,14 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
     """
     Specialization of the loss function to scalar-momentum LDDMM for maps. 
     """
-    def __init__(self,lam,sz,spacing,params):
-        super(LDDMMShootingScalarMomentumMapLoss, self).__init__(sz,spacing,params)
+    def __init__(self,lam,sz_sim,spacing_sim,sz_model,spacing_model,params):
+        super(LDDMMShootingScalarMomentumMapLoss, self).__init__(sz_sim,spacing_sim,sz_model,spacing_model,params)
         self.lam = lam
         """scalar momentum"""
 
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz[2::],self.spacing).create_smoother(cparams)
+            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::],self.spacing_model).create_smoother(cparams)
             """smoother to go from momentum to velocity for development configuration"""
         else:
             self.develop_smoother = None
@@ -1553,13 +1566,13 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
         :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
-        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz_model, self.spacing_model)
         if self.develop_smoother is not None:
             v = self.develop_smoother.smooth_vector_field_multiN(m)
         else:
             v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
 
-        reg = (v * m).sum() * self.spacing.prod()
+        reg = (v * m).sum() * self.spacing_model.prod()
         return reg
 
 class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
@@ -1599,14 +1612,14 @@ class SVFScalarMomentumMapLoss(RegistrationMapLoss):
     Specialization of the loss to scalar-momentum LDDMM on images
     """
 
-    def __init__(self, lam, sz, spacing, params):
-        super(SVFScalarMomentumMapLoss, self).__init__(sz, spacing, params)
+    def __init__(self, lam, sz_sim, spacing_sim, sz_model, spacing_model, params):
+        super(SVFScalarMomentumMapLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
         self.lam = lam
         """scalar momentum"""
 
         if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
             cparams = params[('similarity_measure',{},'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
             """smoother to go from momentum to velocity"""
         else:
             self.develop_smoother = None
@@ -1619,11 +1632,11 @@ class SVFScalarMomentumMapLoss(RegistrationMapLoss):
         :param variables_from_forward_model: (not used)
         :return: returns the regularization energy
         """
-        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz_model, self.spacing_model)
         if self.develop_smoother is not None:
             v = self.develop_smoother.smooth_vector_field_multiN(m)
         else:
             v = variables_from_forward_model['smoother'].smooth_vector_field_multiN(m)
 
-        reg = (v * m).sum() * self.spacing.prod()
+        reg = (v * m).sum() * self.spacing_model.prod()
         return reg

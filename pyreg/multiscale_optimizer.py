@@ -558,9 +558,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         super(SingleScaleRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params)
 
         if (self.mapLowResFactor is not None ):
-            self.mf = MF.ModelFactory(self.lowResSize, self.lowResSpacing)
+            # computes model at a lower resolution than the image similarity
+            self.mf = MF.ModelFactory(self.sz, self.spacing, self.lowResSize, self.lowResSpacing )
         else:
-            self.mf = MF.ModelFactory(self.sz, self.spacing)
+            # computes model and similarity at the same resolution
+            self.mf = MF.ModelFactory(self.sz, self.spacing, self.sz, self.spacing)
         """model factory which will be used to create the model and its loss function"""
 
         self.model = None
@@ -630,11 +632,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         if self.useMap:
             # create the identity map [-1,1]^d, since we will use a map-based implementation
-            id = utils.identity_map_multiN(self.sz)
+            id = utils.identity_map_multiN(self.sz,self.spacing)
             self.identityMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
             if self.mapLowResFactor is not None:
                 # create a lower resolution map for the computations
-                lowres_id = utils.identity_map_multiN(self.lowResSize)
+                lowres_id = utils.identity_map_multiN(self.lowResSize,self.lowResSpacing)
                 self.lowResIdentityMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=True))
 
     def add_similarity_measure(self, simName, simMeasure):
@@ -647,15 +649,17 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.criterion.add_similarity_measure(simName, simMeasure)
         self.params['model']['registration_model']['similarity_measure']['type'] = (simName, 'was customized; needs to be expplicitly instantiated, cannot be loaded')
 
-    def add_model(self, modelName, modelNetworkClass, modelLossClass):
+    def add_model(self, modelName, modelNetworkClass, modelLossClass, useMap, modelDescription='custom model'):
         """
         Adds a custom model and its loss function
 
         :param modelName: name of the model to be added (string)
         :param modelNetworkClass: registration model itself (class object that can be instantiated)
         :param modelLossClass: registration loss (class object that can be instantiated)
+        :param useMap: True/False: specifies if model uses a map or not
+        :param modelDescription: optional model description
         """
-        self.mf.add_model(modelName, modelNetworkClass, modelLossClass)
+        self.mf.add_model(modelName, modelNetworkClass, modelLossClass, useMap, modelDescription)
         self.params['model']['registration_model']['type'] = (modelName, 'was customized; needs to be explicitly instantiated, cannot be loaded')
 
     def set_model_parameters(self, p):
@@ -803,9 +807,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.useMap and not self.light_analysis_on and self.save_excel:
             if self.LSource is not None:
                 if iter % 4 == 0:
-                    LSource_warpped = utils.get_warped_label_map(self.LSource, Warped )
+                    LSource_warped = utils.get_warped_label_map(self.LSource, Warped, self.spacing )
                     LTarget = self.get_target_label()
-                    metric_results_dic = get_multi_metric(LSource_warpped, LTarget, eval_label_list=None, rm_bg=False)
+                    metric_results_dic = get_multi_metric(LSource_warped, LTarget, eval_label_list=None, rm_bg=False)
                     self.recorder.set_batch_based_env(self.get_pair_path(),self.get_batch_id())
                     info = {}
                     info['label_info'] = metric_results_dic['label_list']
@@ -831,7 +835,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             if iter % self.visualize_step == 0:
                 vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize()
                 if self.useMap:
-                    I1Warped = utils.compute_warped_image_multiNC(self.ISource, Warped)
+                    I1Warped = utils.compute_warped_image_multiNC(self.ISource, Warped, self.spacing)
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, Warped, visual_param)
                 else:
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, Warped, vizImage, vizName, visual_param)

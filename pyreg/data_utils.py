@@ -132,8 +132,6 @@ def intra_pair(path, dic_list, type, full_comb, mirrored=False):
     return pair_list
 
 
-
-
 def find_corr_map(pair_path_list, label_path):
     """
     get the label path from the image path, assume the file name is the same
@@ -182,10 +180,6 @@ def divide_data_set(root_path, pair_name_list, ratio):
     return saving_path_list
 
 
-
-
-
-
 def generate_pair_name(pair_path_list,sched='mixed'):
     """
     rename the filename for different dataset,
@@ -232,7 +226,6 @@ def check_same_size(img, standard):
     assert img.shape == standard, "img size must be the same"
 
 
-
 def normalize_img(image, sched='tp'):
     """
     normalize image,
@@ -252,13 +245,13 @@ def normalize_img(image, sched='tp'):
     elif sched == 't':
         image[:] = (image - np.min(image)) / (np.max(image) - np.min(image))
 
-
+#TODO: clean this up. There really should not be separate functions to read images here. This all needs to be in fileio
 
 def file_io_read_img(path, is_label, normalize_spacing=True, normalize_intensities=True, squeeze_image=True, adaptive_padding=4):
     normalize_intensities = False if is_label else normalize_intensities
-    im, hdr, spacing, normalized_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image,adaptive_padding)
-    if normalize_spacing:
-        spacing = normalized_spacing
+    im, hdr, spacing, squeezed_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image, normalize_spacing, adaptive_padding)
+    if squeeze_image:
+        spacing = squeezed_spacing
     else:
         spacing = spacing
     info = { 'spacing':spacing, 'img_size': im.shape}
@@ -278,9 +271,9 @@ def file_io_read_img_slice(path, slicing, axis, is_label, normalize_spacing=True
     :return:
     """
     normalize_intensities = False if is_label else normalize_intensities
-    im, hdr, spacing, normalized_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image,adaptive_padding)
-    if normalize_spacing:
-        spacing = normalized_spacing
+    im, hdr, spacing, squeezed_spacing = fileio.ImageIO().read(path, normalize_intensities, squeeze_image, normalize_spacing, adaptive_padding)
+    if squeeze_image:
+        spacing = squeezed_spacing
     else:
         spacing = spacing
 
@@ -299,8 +292,6 @@ def file_io_read_img_slice(path, slicing, axis, is_label, normalize_spacing=True
     return slice, info
 
 
-
-
 def save_sz_sp_to_json(info, output_path):
     """
     save img size and img spacing info into json
@@ -313,7 +304,6 @@ def save_sz_sp_to_json(info, output_path):
     par['info'][('img_sz',info['img_size'], 'size of image')]
     par['info'][('spacing',info['spacing'].tolist(), 'size of image')]
     par.write_JSON(os.path.join(output_path,'info.json'))
-
 
 
 def read_file(path, type='h5py'):
@@ -359,7 +349,6 @@ def write_file(path, dic, type='h5py'):
         f.close()
     else:
         raise ValueError('only h5py supported currently')
-
 
 
 def save_to_h5py(path, img_pair_list, info, img_pair_path_list, label_pair_list=None,verbose=True):

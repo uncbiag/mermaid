@@ -38,13 +38,11 @@ params['square_example_images']['len_s'] = szEx.min()/6
 params['square_example_images']['len_l'] = szEx.max()/4
 
 # create a default image size with two sample squares
-I0,I1= eg.CreateSquares(dim).create_image_pair(szEx,params)
+I0,I1,spacing= eg.CreateSquares(dim).create_image_pair(szEx,params)
 sz = np.array(I0.shape)
 
 assert( len(sz)==dim+2 )
 
-# spacing so that everything is in [0,1]^2 for now
-spacing = 1./(sz[2::]-1) # the first two dimensions are batch size and number of image channels
 print ('Spacing = ' + str( spacing ) )
 
 # create the source and target image as pyTorch variables
@@ -62,7 +60,7 @@ ISource = s.smooth_scalar_field(ISource)
 
 mus = np.zeros(dim)
 stds = gaussianStd * np.ones(dim)
-id = utils.identity_map(szEx)
+id = utils.identity_map(szEx,spacing)
 g = utils.compute_normalized_gaussian(id, mus, stds)
 
 FFilter,_ = ce.create_complex_fourier_filter(g, szEx)

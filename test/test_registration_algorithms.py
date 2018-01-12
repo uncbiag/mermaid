@@ -45,10 +45,9 @@ class Test_registration_algorithms(unittest.TestCase):
         dim = 2
 
         szEx = np.tile(example_img_len, dim)  # size of the desired images: (sz)^dim
-        I0, I1 = eg.CreateSquares(dim).create_image_pair(szEx,
+        I0, I1, spacing = eg.CreateSquares(dim).create_image_pair(szEx,
                                                          self.params)  # create a default image size with two sample squares
         sz = np.array(I0.shape)
-        self.spacing = 1. / (sz[2::] - 1)  # the first two dimensions are batch size and number of image channels
 
         # create the source and target image as pyTorch variables
         self.ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))

@@ -26,9 +26,8 @@ params['model']['registration_model']['type'] = 'svf_vector_momentum_map'
 example_img_len = 64
 dim = 2
 szEx = np.tile(example_img_len, dim)  # size of the desired images: (sz)^dim
-I0, I1 = eg.CreateSquares(dim).create_image_pair(szEx, params)  # create a default image size with two sample squares
+I0, I1,spacing = eg.CreateSquares(dim).create_image_pair(szEx, params)  # create a default image size with two sample squares
 sz = np.array(I0.shape)
-spacing = 1. / (sz[2::] - 1)  # the first two dimensions are batch size and number of image channels
 
 # create the source and target image as pyTorch variables
 ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
@@ -51,7 +50,6 @@ so.get_optimizer().set_visualization( True )
 so.get_optimizer().set_visualize_step( 3 )
 so.set_light_analysis_on(True)
 so.register()
-
 
 energy = so.get_energy()
 

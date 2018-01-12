@@ -457,7 +457,7 @@ class GaussianFourierFilterGenerator(object):
 
         self.mus = np.zeros(self.dim)
         # TODO: storing the identity map may be a little wasteful
-        self.id = utils.identity_map(self.sz)
+        self.id = utils.identity_map(self.sz,self.spacing)
 
         self.complex_gaussian_fourier_filters = [None] * self.nr_of_gaussians
         self.max_indices = [None]*self.nr_of_gaussians
@@ -944,7 +944,8 @@ def check_fourier_conv():
 
     mus = np.zeros(dim)
     stds = np.ones(dim)
-    id = utils.identity_map(sz)
+    spacing = np.ones(dim)
+    id = utils.identity_map(sz,spacing)
     g = 100 * utils.compute_normalized_gaussian(id, mus, stds)
     FFilter,_ = create_complex_fourier_filter(g, sz)
     input = AdaptVal(Variable(torch.randn([1, 1] + list(sz)), requires_grad=True))

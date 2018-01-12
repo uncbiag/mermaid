@@ -46,7 +46,7 @@ class CreateSquares(CreateExample):
         :param sz: Desired size, e.g., [5,10] 
         :param params: Parameter dictionary. Uses 'len_s' and 'len_l' to define the side-length of the small and 
             the large squares which will be generated 
-        :return: Returns two images of squares
+        :return: Returns two images of squares and the spacing (I0,I1,spacing)
         """
 
         I0 = np.zeros(sz, dtype='float32')
@@ -76,7 +76,10 @@ class CreateSquares(CreateExample):
         I0 = I0.reshape([1, 1] + list(I0.shape))
         I1 = I1.reshape([1, 1] + list(I1.shape))
 
-        return I0,I1
+        sz = np.array(I0.shape)
+        spacing = 1. / (sz[2::] - 1)  # the first two dimensions are batch size and number of image channels
+
+        return I0,I1,spacing
 
 class CreateRealExampleImages(CreateExample):
     """
@@ -96,9 +99,9 @@ class CreateRealExampleImages(CreateExample):
 
         # create small and large squares
         if self.dim==2:
-            I0,_,_,_ = fileio.ImageIO().read_to_nc_format(filename='../test_data/brain_slices/ws_slice.nrrd',intensity_normalize=True,squeeze_image=True)
-            I1,_,_,_ = fileio.ImageIO().read_to_nc_format(filename='../test_data/brain_slices/wt_slice.nrrd',intensity_normalize=True,squeeze_image=True)
+            I0,_,_,squeezed_spacing = fileio.ImageIO().read_to_nc_format(filename='../test_data/brain_slices/ws_slice.nrrd',intensity_normalize=True,squeeze_image=True)
+            I1,_,_,squeezed_spacing = fileio.ImageIO().read_to_nc_format(filename='../test_data/brain_slices/wt_slice.nrrd',intensity_normalize=True,squeeze_image=True)
         else:
             raise ValueError('Real examples only supported in dimension 2 at the moment.')
 
-        return I0,I1
+        return I0,I1,squeezed_spacing

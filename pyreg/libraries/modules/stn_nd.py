@@ -10,7 +10,7 @@ This is needed for the map-based registrations for example.
 #TODO
 
 from torch.nn.modules.module import Module
-from pyreg.libraries.functions.stn_nd import STNFunction_ND, STNFunction_ND_BCXYZ, STNFunction
+from pyreg.libraries.functions.stn_nd import STNFunction_ND, STNFunction_ND_BCXYZ
 
 class STN_ND(Module):
     """
@@ -36,11 +36,11 @@ class STN_ND_BCXYZ(Module):
     """
     Spatial transform code for nD spatial transoforms. Uses the BCXYZ image format.
     """
-    def __init__(self, dim):
+    def __init__(self, spacing):
         super(STN_ND_BCXYZ, self).__init__()
-        self.dim = dim
+        self.spacing = spacing
         """spatial dimension"""
-        self.f = STNFunction_ND_BCXYZ( self.dim )
+        self.f = STNFunction_ND_BCXYZ( self.spacing )
         """spatial transform function"""
     def forward(self, input1, input2):
         """
@@ -50,16 +50,4 @@ class STN_ND_BCXYZ(Module):
        :param input2: map in BdimXYZ format
        :return: returns the transformed image
        """
-        return self.f(input1, input2)
-
-# old code starts here
-
-class STN(Module):
-    """
-    Old legacy code for the standard 2D spatial transform. Ignore for now.
-    """
-    def __init__(self):
-        super(STN, self).__init__()
-        self.f = STNFunction()
-    def forward(self, input1, input2):
         return self.f(input1, input2)
