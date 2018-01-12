@@ -12,8 +12,8 @@ params = pars.ParameterDict()
 len = 64
 dim = 2
 szEx = np.tile( len, dim )         # size of the desired images: (sz)^dim
-I0,I1,spacing= EG.CreateSquares(dim).create_image_pair(szEx,params) # create a default image size with two sample squares
-#I0,I1,spacing = eg.CreateRealExampleImages(dim).create_image_pair() # create a default image size with two sample squares
+#I0,I1,spacing= EG.CreateSquares(dim).create_image_pair(szEx,params) # create a default image size with two sample squares
+I0,I1,spacing = EG.CreateRealExampleImages(dim).create_image_pair() # create a default image size with two sample squares
 
 """
 Known registration models are:
@@ -49,7 +49,9 @@ if try_all_models:
 else:
     # just try one of them, explicitly specified
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_map')
-    SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='diffusion_map')
+    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='diffusion_map')
+    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_map')
+    SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_map')
 
 
 

@@ -67,7 +67,7 @@ class RegisterImagePair(object):
         else:
             self.params = params
 
-        self.ISource = ISource = AdaptVal(Variable(torch.from_numpy(ISource.copy()), requires_grad=False))
+        self.ISource = AdaptVal(Variable(torch.from_numpy(ISource.copy()), requires_grad=False))
         self.ITarget = AdaptVal(Variable(torch.from_numpy(ITarget), requires_grad=False))
         self.spacing = spacing
 
@@ -79,6 +79,7 @@ class RegisterImagePair(object):
             self.params['model']['deformation']['use_map'] = self.available_models[model_name][2]
             self.params['model']['registration_model']['type'] = model_name
             #self.params['model']['deformation']['map_low_res_factor'] = 0.5
+            self.params['optimizer']['single_scale']['rel_ftol'] = 1e-10
             self.params['optimizer']['single_scale']['nr_of_iterations'] = 201
             #self.params['registration_model']['forward_model']['smoother']['type']='multiGaussian'
 

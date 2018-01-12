@@ -828,7 +828,7 @@ class SmootherFactory(object):
         """size of image"""
         self.dim = len( spacing )
         """dimension of image"""
-        self.default_smoother_type = 'gaussian'
+        self.default_smoother_type = 'multiGaussian'
         """default smoother used for smoothing"""
 
     def set_default_smoother_type_to_gaussian(self):

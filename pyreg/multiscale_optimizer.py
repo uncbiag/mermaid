@@ -838,7 +838,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     I1Warped = utils.compute_warped_image_multiNC(self.ISource, Warped, self.spacing)
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, Warped, visual_param)
                 else:
-                    vizReg.show_current_images(iter, self.ISource, self.ITarget, Warped, vizImage, vizName, visual_param)
+                    vizReg.show_current_images(iter, self.ISource, self.ITarget, Warped, vizImage, vizName, None, visual_param)
 
         return False
 
