@@ -64,7 +64,7 @@ def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visua
 
     if vizImage is not None:
         plt.subplot(sp_v)
-        plt.plot(utils.t2np(vizImage))
+        plt.plot(utils.lift_to_dimension(utils.t2np(vizImage),1))
         plt.title(vizName)
 
     if i==0 and visual_param['visualize']:
@@ -135,7 +135,7 @@ def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_p
 
     if vizImage is not None:
         plt.subplot(sp_v)
-        plt.imshow(utils.t2np(vizImage),cmap='gray')
+        plt.imshow(utils.lift_to_dimension(utils.t2np(vizImage),2),cmap='gray')
         plt.colorbar()
         plt.title(vizName)
 
@@ -211,7 +211,7 @@ def _show_current_images_2d_map(iS, iT, iW, iter, vizImage, vizName, phiWarped, 
 
     if vizImage is not None:
         plt.subplot(sp_v)
-        plt.imshow(utils.t2np(vizImage), cmap='gray')
+        plt.imshow(utils.lift_to_dimension(utils.t2np(vizImage),2), cmap='gray')
         plt.colorbar()
         plt.title(vizName)
 
@@ -270,9 +270,9 @@ def _show_current_images_3d(iS, iT, iW, iter, vizImage, vizName, phiWarped, visu
         ivwzc = viewers.ImageViewer3D_Sliced_Contour(ax[phiw_a][2], utils.t2np(iW), utils.t2np(phiWarped), 2, 'warped Z', True)
 
     if vizImage is not None:
-        ivvxc = viewers.ImageViewer3D_Sliced(ax[vizi_a][0], utils.t2np(vizImage), 0, vizName + ' X', True)
-        ivvyc = viewers.ImageViewer3D_Sliced(ax[vizi_a][1], utils.t2np(vizImage), 1, vizName + ' Y', True)
-        ivvzc = viewers.ImageViewer3D_Sliced(ax[vizi_a][2], utils.t2np(vizImage), 2, vizName + ' Z', True)
+        ivvxc = viewers.ImageViewer3D_Sliced(ax[vizi_a][0], utils.lift_to_dimension(utils.t2np(vizImage),3), 0, vizName + ' X', True)
+        ivvyc = viewers.ImageViewer3D_Sliced(ax[vizi_a][1], utils.lift_to_dimension(utils.t2np(vizImage),3), 1, vizName + ' Y', True)
+        ivvzc = viewers.ImageViewer3D_Sliced(ax[vizi_a][2], utils.lift_to_dimension(utils.t2np(vizImage),3), 2, vizName + ' Z', True)
 
     feh = viewers.FigureEventHandler(fig)
 

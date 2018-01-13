@@ -33,8 +33,7 @@ class RegisterImagePair(object):
         self.squeeze_image = True
         self.normalize_spacing = True
 
-        self.visualize = True
-        self.visualize_step = 5
+        self.opt = None
 
     def print_available_models(self):
         MF.AvailableModels().print_available_models()
@@ -42,7 +41,77 @@ class RegisterImagePair(object):
     def get_available_models(self):
         return MF.AvailableModels().get_models()
 
-    def register_images_from_files(self,source_filename,target_filename,model_name,params=None):
+    def get_energy(self):
+        """
+        Returns the current energy
+        :return: Returns a tuple (energy, similarity energy, regularization energy)
+        """
+        if self.opt is not None:
+            return self.opt.get_energy()
+        else:
+            return None
+
+    def get_warped_image(self):
+        """
+        Returns the warped image
+        :return: the warped image
+        """
+        if self.opt is not None:
+            return self.opt.get_warped_image()
+        else:
+            return None
+
+    def get_map(self):
+        """
+        Returns the deformation map
+        :return: deformation map
+        """
+        if self.opt is not None:
+            return self.opt.get_map()
+        else:
+            return None
+
+    def get_model_parameters(self):
+        """
+        Returns the parameters of the model
+
+        :return: model parameters
+        """
+        if self.opt is not None:
+            return self.opt.get_model_parameters()
+        else:
+            return None
+
+    def register_images_from_files(self,source_filename,target_filename,model_name,
+                                   nr_of_iterations=None,
+                                   similarity_measure_type=None,
+                                   similarity_measure_sigma=None,
+                                   map_low_res_factor=None,
+                                   rel_ftol=None,
+                                   smoother_type=None,
+                                   json_config_out_filename=None,
+                                   visualize_step=5,
+                                   use_multi_scale=False,
+                                   params=None):
+        """
+        Registers two images. Only ISource, ITarget, spacing, and model_name need to be specified.
+        Default values will be used for all of the values that are not explicitly specified.
+
+        :param source_filename: filename of the source image
+        :param target_filename: filename for the target image
+        :param model_name: name of the desired registration model [string]
+        :param nr_of_iterations: nr of iterations
+        :param similarity_measure_type: type of similarity measure ('ssd' or 'ncc')
+        :param similarity_measure_sigma: similarity measures are weighted by 1/sigma^2
+        :param map_low_res_factor: allows for parameterization of the registration at lower resolution than the image (0,1]
+        :param rel_ftol: relative function tolerance for optimizer
+        :param smoother_type: type of smoother (e.g., 'gaussian' or 'multiGaussian')
+        :param json_config_out_filename: output file name for the used configuration.
+        :param visualize_step: step at which the solution is visualized; if set to None, no visualizations will be created
+        :param use_multi_scale: if set to True a multi-scale solver will be used
+        :param params: parameter structure to pass settings or filename to load the settings from file.
+        :return: n/a
+        """
 
         ISource,hdr0,spacing0,normalized_spacing0 = \
             fileio.ImageIO().read_to_nc_format(source_filename,
@@ -59,13 +128,59 @@ class RegisterImagePair(object):
         assert (np.all(normalized_spacing0 == normalized_spacing1))
         spacing = normalized_spacing0
 
-        self.register(ISource,ITarget,spacing,model_name,params)
+        self.register(ISource,ITarget,spacing,model_name,
+                      nr_of_iterations=nr_of_iterations,
+                      similarity_measure_type=similarity_measure_type,
+                      similarity_measure_sigma=similarity_measure_sigma,
+                      map_low_res_factor=map_low_res_factor,
+                      rel_ftol=rel_ftol,
+                      smoother_type=smoother_type,
+                      json_config_out_filename=json_config_out_filename,
+                      visualize_step=visualize_step,
+                      use_multi_scale=use_multi_scale,
+                      params=params)
 
-    def register_images(self,ISource,ITarget,spacing,model_name,params=None):
+    def register_images(self,ISource,ITarget,spacing,model_name,
+                        nr_of_iterations=None,
+                        similarity_measure_type=None,
+                        similarity_measure_sigma=None,
+                        map_low_res_factor=None,
+                        rel_ftol=None,
+                        smoother_type=None,
+                        json_config_out_filename=None,
+                        visualize_step=5,
+                        use_multi_scale=False,
+                        params=None):
+        """
+        Registers two images. Only ISource, ITarget, spacing, and model_name need to be specified.
+        Default values will be used for all of the values that are not explicitly specified.
+
+        :param ISource: source image
+        :param ITarget: target image
+        :param spacing: image spacing [dx,dy,dz]
+        :param model_name: name of the desired registration model [string]
+        :param nr_of_iterations: nr of iterations
+        :param similarity_measure_type: type of similarity measure ('ssd' or 'ncc')
+        :param similarity_measure_sigma: similarity measures are weighted by 1/sigma^2
+        :param map_low_res_factor: allows for parameterization of the registration at lower resolution than the image (0,1]
+        :param rel_ftol: relative function tolerance for optimizer
+        :param smoother_type: type of smoother (e.g., 'gaussian' or 'multiGaussian')
+        :param json_config_out_filename: output file name for the used configuration.
+        :param visualize_step: step at which the solution is visualized; if set to None, no visualizations will be created
+        :param use_multi_scale: if set to True a multi-scale solver will be used
+        :param params: parameter structure to pass settings or filename to load the settings from file.
+        :return: n/a
+        """
+
         if params is None:
             self.params = pars.ParameterDict()
-        else:
+        elif type(params)==pars.ParameterDict:
             self.params = params
+        elif type(params)==str:
+            self.params = pars.ParameterDict()
+            self.params.load_JSON(params)
+        else:
+            raise ValueError('Unknown parameter format: ' + str( type(params)))
 
         self.ISource = AdaptVal(Variable(torch.from_numpy(ISource.copy()), requires_grad=False))
         self.ITarget = AdaptVal(Variable(torch.from_numpy(ITarget), requires_grad=False))
@@ -78,19 +193,38 @@ class RegisterImagePair(object):
             # this model exists so let's use it
             self.params['model']['deformation']['use_map'] = self.available_models[model_name][2]
             self.params['model']['registration_model']['type'] = model_name
-            #self.params['model']['deformation']['map_low_res_factor'] = 0.5
-            self.params['optimizer']['single_scale']['rel_ftol'] = 1e-10
-            self.params['optimizer']['single_scale']['nr_of_iterations'] = 201
-            #self.params['registration_model']['forward_model']['smoother']['type']='multiGaussian'
 
-            so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
-            so.get_optimizer().set_visualization(self.visualize)
-            so.get_optimizer().set_visualize_step(self.visualize_step)
-            so.set_light_analysis_on(True)
-            so.register()
+            if nr_of_iterations is not None:
+                self.params['optimizer']['single_scale']['nr_of_iterations'] = nr_of_iterations
 
-            #self.params.load_JSON('./json/svf_momentum_based_config.json')
-            self.params.write_JSON('test_simple_interface_' + model_name + '_settings_clean.json')
-            self.params.write_JSON_comments('test_simple_interface_' + model_name + '_settings_comments.json')
+            if similarity_measure_sigma is not None:
+                self.params['model']['registration_model']['similarity_measure']['sigma'] = similarity_measure_sigma
 
+            if similarity_measure_type is not None:
+                self.params['model']['registration_model']['similarity_measure']['type'] = similarity_measure_type
 
+            if map_low_res_factor is not None:
+                self.params['model']['deformation']['map_low_res_factor'] = map_low_res_factor
+
+            if rel_ftol is not None:
+                self.params['optimizer']['single_scale']['rel_ftol'] = rel_ftol
+
+            if smoother_type is not None:
+                self.params['registration_model']['forward_model']['smoother']['type'] = smoother_type
+
+            if use_multi_scale:
+                self.opt = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+            else:
+                self.opt = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+
+            if visualize_step is not None:
+                self.opt.get_optimizer().set_visualization(True)
+                self.opt.get_optimizer().set_visualize_step(visualize_step)
+            else:
+                self.opt.get_optimizer().set_visualization(False)
+
+            self.opt.set_light_analysis_on(True)
+            self.opt.register()
+
+            if json_config_out_filename is not None:
+                self.params.write_JSON(json_config_out_filename)

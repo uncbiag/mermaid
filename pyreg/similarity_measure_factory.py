@@ -24,6 +24,9 @@ class SimilarityMeasure(object):
         self.params = params
         """external parameters"""
 
+        self.sigma = params[('sigma', 0.1, '1/sigma^2 is the weight in front of the similarity measure')]
+        """1/sigma^2 is a balancing constant"""
+
     def compute_similarity_multiNC(self, I0, I1):
         """
         Compute the multi-image multi-channel image similarity between two images of format BxCxXxYzZ
@@ -57,13 +60,34 @@ class SimilarityMeasure(object):
         """
         Abstract method to compute the *single*-channel image similarity between two images of format XxYzZ.
         This is the only method that should be overwritten by a specific implemented similarity measure. 
-        The multi-channel variants then come for free. 
+        The multi-channel variants then come for free.
+
+        For proper implementation it is important that the similarity measure is muliplied by
+        1./(self.sigma ** 2)  and also by self.volumeElement if it is a volume integral
+        (and not a correlation measure for example)
 
         :param I0: first image 
         :param I1: second image
         :return: returns similarity measure
         """
         pass
+
+    def set_sigma(self, sigma):
+        """
+        Set balancing constant :math:`\\sigma`
+
+        :param sigma: balancing constant
+        """
+        self.sigma = sigma
+        self.params['sigma']=sigma
+
+    def get_sigma(self):
+        """
+        Get balancing constant
+
+        :return: balancing constant
+        """
+        return self.sigma
 
 
 class SSDSimilarity(SimilarityMeasure):
@@ -75,25 +99,6 @@ class SSDSimilarity(SimilarityMeasure):
 
     def __init__(self, spacing, params):
         super(SSDSimilarity,self).__init__(spacing,params)
-        self.sigma = params[('sigma', 0.1,
-                                        '1/sigma^2 is the weight in front of the similarity measure')]
-        """1/sigma^2 is a balancing constant"""
-
-    def set_sigma(self,sigma):
-        """
-        Set balancing constant :math:`\\sigma`
-        
-        :param sigma: balancing constant 
-        """
-        self.sigma = sigma
-
-    def get_sigma(self):
-        """
-        Get balancing constant
-        
-        :return: balancing constant 
-        """
-        return self.sigma
 
     def compute_similarity(self, I0, I1):
         """
@@ -116,25 +121,6 @@ class NCCSimilarity(SimilarityMeasure):
 
     def __init__(self, spacing, params):
         super(NCCSimilarity,self).__init__(spacing,params)
-        self.sigma = params[('sigma', 0.1,
-                                        '1/sigma^2 is the weight in front of the similarity measure')]
-        """1/sigma^2 is a balancing constant"""
-
-    def set_sigma(self,sigma):
-        """
-        Set balancing constant :math:`\\sigma`
-
-        :param sigma: balancing constant 
-        """
-        self.sigma = sigma
-
-    def get_sigma(self):
-        """
-        Get balancing constant
-
-        :return: balancing constant 
-        """
-        return self.sigma
 
     def compute_similarity(self, I0, I1):
         """
