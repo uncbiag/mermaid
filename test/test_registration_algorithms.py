@@ -45,8 +45,7 @@ class Test_registration_algorithms(unittest.TestCase):
         dim = 2
 
         szEx = np.tile(example_img_len, dim)  # size of the desired images: (sz)^dim
-        I0, I1, spacing = eg.CreateSquares(dim).create_image_pair(szEx,
-                                                         self.params)  # create a default image size with two sample squares
+        I0, I1, self.spacing = eg.CreateSquares(dim).create_image_pair(szEx,self.params)  # create a default image size with two sample squares
         sz = np.array(I0.shape)
 
         # create the source and target image as pyTorch variables
@@ -84,13 +83,13 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        # E=[ 2.49891615], similarityE=[ 0.78662372], regE=[ 1.71229231], relF=[ 0.00913821]
+        # E=[ 2.3217175], similarityE=[ 0.73642945], regE=[ 1.58528805], relF=[ 0.02184414]
 
         energy = so.get_energy()
 
-        npt.assert_almost_equal( energy[0], 2.49891615, decimal=2 )
-        npt.assert_almost_equal( energy[1], 0.78662372, decimal=2 )
-        npt.assert_almost_equal( energy[2], 1.71229231, decimal=2 )
+        npt.assert_almost_equal( energy[0], 2.3217175, decimal=2 )
+        npt.assert_almost_equal( energy[1], 0.73642945, decimal=2 )
+        npt.assert_almost_equal( energy[2], 1.58528805, decimal=2 )
 
 
     def test_lddmm_shooting_scalar_momentum_image_single_scale(self):
@@ -105,13 +104,12 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        # E=[ 0.02742532], similarityE=[ 0.02321979], regE=[ 0.00420553], relF=[ 0.00610944]
-
+        # E = [0.10526231], similarityE = [0.10136371], regE = [0.0038986], relF = [0.00578881]
         energy = so.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.02742532, decimal=4 )
-        npt.assert_almost_equal(energy[1], 0.02321979, decimal=4 )
-        npt.assert_almost_equal(energy[2], 0.00420553, decimal=4 )
+        npt.assert_almost_equal(energy[0], 0.10526231, decimal=4 )
+        npt.assert_almost_equal(energy[1], 0.10136371, decimal=4 )
+        npt.assert_almost_equal(energy[2], 0.0038986, decimal=4 )
 
     def test_lddmm_shooting_image_single_scale(self):
 
@@ -125,12 +123,12 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        # E=[ 0.01725787], similarityE=[ 0.01244521], regE=[ 0.00481266], relF=[ 0.]
+        # E = [0.02123317], similarityE = [0.01606764], regE = [0.00516553], relF = [0.00412761]
         energy = so.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.01725787, decimal=4 )
-        npt.assert_almost_equal(energy[1], 0.01244521, decimal=4 )
-        npt.assert_almost_equal(energy[2], 0.00481266, decimal=4 )
+        npt.assert_almost_equal(energy[0], 0.02123317, decimal=4 )
+        npt.assert_almost_equal(energy[1], 0.01606764, decimal=4 )
+        npt.assert_almost_equal(energy[2], 0.00516553, decimal=4 )
 
     def test_lddmm_shooting_scalar_momentum_image_multi_scale(self):
 
@@ -144,13 +142,12 @@ class Test_registration_algorithms(unittest.TestCase):
         mo.set_light_analysis_on(True)
         mo.register()
 
-        # E=[ 0.08246735], similarityE=[ 0.07836073], regE=[ 0.00410663], relF=[ 0.01147533]
-
+        # E = [0.11112733], similarityE = [0.10722754], regE = [0.00389979], relF = [0.01953959]
         energy = mo.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.08246735, decimal=4 )
-        npt.assert_almost_equal(energy[1], 0.07836073, decimal=4 )
-        npt.assert_almost_equal(energy[2], 0.00410663, decimal=4 )
+        npt.assert_almost_equal(energy[0], 0.11112733, decimal=4 )
+        npt.assert_almost_equal(energy[1], 0.10722754, decimal=4 )
+        npt.assert_almost_equal(energy[2], 0.00389979, decimal=4 )
 
     def test_lddmm_shooting_image_multi_scale(self):
 
@@ -164,13 +161,12 @@ class Test_registration_algorithms(unittest.TestCase):
         mo.set_light_analysis_on(True)
         mo.register()
 
-        # E=[ 0.01843772], similarityE=[ 0.01369324], regE=[ 0.00474448], relF=[ 0.00353257]
-
+        # E = [0.02945824], similarityE = [0.02432526], regE = [0.00513299], relF = [0.00153344]
         energy = mo.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.01843772, decimal=4 )
-        npt.assert_almost_equal(energy[1], 0.01369324, decimal=4 )
-        npt.assert_almost_equal(energy[2], 0.00474448, decimal=4 )
+        npt.assert_almost_equal(energy[0], 0.02945824, decimal=4 )
+        npt.assert_almost_equal(energy[1], 0.02432526, decimal=4 )
+        npt.assert_almost_equal(energy[2], 0.00513299, decimal=4 )
 
     def test_lddmm_shooting_scalar_momentum_map_multi_scale(self):
 
@@ -184,13 +180,12 @@ class Test_registration_algorithms(unittest.TestCase):
         mo.set_light_analysis_on(True)
         mo.register()
 
-        # E = [0.05379514], similarityE = [0.05005502], regE = [0.00374013], relF = [0.02199404]
-
+        # E = [0.31037834], similarityE = [0.30713284], regE = [0.0032455], relF = [0.02254277]
         energy = mo.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.05379514, decimal=4 )
-        npt.assert_almost_equal(energy[1], 0.05005502, decimal=4 )
-        npt.assert_almost_equal(energy[2], 0.00374013, decimal=4 )
+        npt.assert_almost_equal(energy[0], 0.31037834, decimal=4 )
+        npt.assert_almost_equal(energy[1], 0.30713284, decimal=4 )
+        npt.assert_almost_equal(energy[2], 0.0032455, decimal=4 )
 
 
     def test_lddmm_shooting_map_multi_scale(self):
@@ -205,13 +200,12 @@ class Test_registration_algorithms(unittest.TestCase):
         mo.set_light_analysis_on(True)
         mo.register()
 
-        # E=[ 0.02130384], similarityE=[ 0.01675734], regE=[ 0.0045465], relF=[ 0.00699624]
-
+        # E = [0.02877549], similarityE = [0.02381846], regE = [0.00495704], relF = [0.00946863]
         energy = mo.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.02130384, decimal=4 )
-        npt.assert_almost_equal(energy[1], 0.01675734, decimal=4 )
-        npt.assert_almost_equal(energy[2], 0.0045465, decimal=4 )
+        npt.assert_almost_equal(energy[0], 0.02877549, decimal=4 )
+        npt.assert_almost_equal(energy[1], 0.02381846, decimal=4 )
+        npt.assert_almost_equal(energy[2], 0.00495704, decimal=4 )
 
     def test_svf_map_single_scale(self):
 
@@ -225,12 +219,12 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        # E=[ 1.99103928], similarityE=[ 0.43856502], regE=[ 1.55247426], relF=[ 0.01893948]
+        # E = [18.60135269], similarityE = [10.62093163], regE = [7.98042107], relF = [0.2880429]
         energy = so.get_energy()
 
-        npt.assert_almost_equal( energy[0], 1.99103928, decimal=4 )
-        npt.assert_almost_equal( energy[1], 0.43856502, decimal=4 )
-        npt.assert_almost_equal( energy[2], 1.55247426, decimal=4 )
+        npt.assert_almost_equal( energy[0], 18.60135269, decimal=4 )
+        npt.assert_almost_equal( energy[1], 10.62093163, decimal=4 )
+        npt.assert_almost_equal( energy[2], 7.98042107, decimal=4 )
 
     def test_lddmm_shooting_scalar_momentum_map_single_scale(self):
 
@@ -244,13 +238,12 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        # E=[ 0.0579784], similarityE=[ 0.05422445], regE=[ 0.00375395], relF=[ 0.01241212]
-
+        # E = [0.27815577], similarityE = [0.27455819], regE = [0.00359759], relF = [0.00780544]
         energy = so.get_energy()
 
-        npt.assert_almost_equal( energy[0], 0.0579784, decimal=4 )
-        npt.assert_almost_equal( energy[1], 0.05422445, decimal=4 )
-        npt.assert_almost_equal( energy[2], 0.00375395, decimal=4 )
+        npt.assert_almost_equal( energy[0], 0.27815577, decimal=4 )
+        npt.assert_almost_equal( energy[1], 0.27455819, decimal=4 )
+        npt.assert_almost_equal( energy[2], 0.00359759, decimal=4 )
 
     def test_lddmm_shooting_map_single_scale(self):
 
@@ -264,12 +257,12 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        # E=[ 0.01588291], similarityE=[ 0.01131474], regE=[ 0.00456817], relF=[ 0.00034867]
+        # E = [0.03226972], similarityE = [0.02630465], regE = [0.00596507], relF = [0.01728182]
         energy = so.get_energy()
 
-        npt.assert_almost_equal( energy[0], 0.01588291, decimal=4 )
-        npt.assert_almost_equal( energy[1], 0.01131474, decimal=4 )
-        npt.assert_almost_equal( energy[2], 0.00456817, decimal=4 )
+        npt.assert_almost_equal( energy[0], 0.03226972, decimal=4 )
+        npt.assert_almost_equal( energy[1], 0.02630465, decimal=4 )
+        npt.assert_almost_equal( energy[2], 0.00596507, decimal=4 )
 
     def test_svf_scalar_momentum_image_single_scale(self):
 
@@ -286,12 +279,12 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        # E=[ 0.59089059], similarityE=[ 0.58405572], regE=[ 0.00683488], relF=[ 0.00551791]
+        # E=[ 0.39766905], similarityE=[ 0.38561717], regE=[ 0.01205187], relF=[ 0.0440598]
         energy = so.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.59089059, decimal=4)
-        npt.assert_almost_equal(energy[1], 0.58405572, decimal=4)
-        npt.assert_almost_equal(energy[2], 0.00683488, decimal=4)
+        npt.assert_almost_equal(energy[0], 0.39766905, decimal=4)
+        npt.assert_almost_equal(energy[1], 0.38561717, decimal=4)
+        npt.assert_almost_equal(energy[2], 0.01205187, decimal=4)
 
     def test_svf_scalar_momentum_map_single_scale(self):
         self.params = pars.ParameterDict()
@@ -307,12 +300,12 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        # E=[ 0.50193405], similarityE=[ 0.49500716], regE=[ 0.00692687], relF=[ 0.00335134]
+        # E=[ 0.44303086], similarityE=[ 0.42885712], regE=[ 0.01417374], relF=[ 0.01893919]
         energy = so.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.50193405, decimal = 4)
-        npt.assert_almost_equal(energy[1], 0.49500716, decimal = 4)
-        npt.assert_almost_equal(energy[2], 0.00692687, decimal = 4)
+        npt.assert_almost_equal(energy[0], 0.44303086, decimal = 4)
+        npt.assert_almost_equal(energy[1], 0.42885712, decimal = 4)
+        npt.assert_almost_equal(energy[2], 0.01417374, decimal = 4)
 
     def test_svf_vector_momentum_image_single_scale(self):
 
@@ -329,12 +322,12 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        #  E=[ 0.01570327], similarityE=[ 0.00999644], regE=[ 0.00570683], relF=[ 0.00794008]
+        # E = [0.04093754], similarityE = [0.03253355], regE = [0.00840399], relF = [0.00446913]
         energy = so.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.01570327, decimal = 4)
-        npt.assert_almost_equal(energy[1], 0.00999644, decimal = 4)
-        npt.assert_almost_equal(energy[2], 0.00570683, decimal = 4)
+        npt.assert_almost_equal(energy[0], 0.04093754, decimal = 4)
+        npt.assert_almost_equal(energy[1], 0.03253355, decimal = 4)
+        npt.assert_almost_equal(energy[2], 0.00840399, decimal = 4)
 
     def test_svf_vector_momentum_map_single_scale(self):
         self.params = pars.ParameterDict()
@@ -350,12 +343,12 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        # E=[ 0.01703692], similarityE=[ 0.01153301], regE=[ 0.00550391], relF=[ 0.0029047]
+        # E = [0.11191304], similarityE = [0.10329356], regE = [0.00861948], relF = [0.0246245]
         energy = so.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.01703692, decimal = 4)
-        npt.assert_almost_equal(energy[1], 0.01153301, decimal = 4)
-        npt.assert_almost_equal(energy[2], 0.00550391, decimal = 4)
+        npt.assert_almost_equal(energy[0], 0.11191304, decimal = 4)
+        npt.assert_almost_equal(energy[1], 0.10329356, decimal = 4)
+        npt.assert_almost_equal(energy[2], 0.00861948, decimal = 4)
 
 
 def run_test_by_name( testName ):
