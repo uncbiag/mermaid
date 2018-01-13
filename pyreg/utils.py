@@ -287,26 +287,11 @@ def compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, sz, spacing):
     m = create_ND_vector_field_variable_multiN(sz[2::], nrOfI)  # attention that the second dimension here is image dim, not nrOfC
     nrOfC = sz[1]
     for c in range(nrOfC): # loop over all the channels and add the results
-        m = m + compute_vector_momentum_from_scalar_momentum_singleC(lam[:,c, ...], I[:,c, ...], nrOfI, sz[2::], spacing)
+        m = m + compute_vector_momentum_from_scalar_momentum_multiN(lam[:,c, ...], I[:,c, ...], nrOfI, sz[2::], spacing)
     return m
 
-def compute_vector_momentum_from_scalar_momentum_multiC(lam, I, sz, spacing):
-    """
-    Computes the vector momentum from the scalar momentum: :math:`m=\\lambda\\nabla I`
 
-    :param lam: scalar momentum, CxXxYxZ
-    :param I: image, CxXxYxZ
-    :param sz: size of image
-    :param spacing: spacing of image
-    :return: returns the vector momentum
-    """
-    nrOfC = sz[0]
-    m = create_ND_vector_field_variable(sz[1::])
-    for c in range(nrOfC): # loop over all the channels and add the results
-        m = m + compute_vector_momentum_from_scalar_momentum_singleC(lam[c, ...], I[c, ...], sz[1::], spacing)
-    return m
-
-def compute_vector_momentum_from_scalar_momentum_singleC(lam, I, nrOfI, sz, spacing):
+def compute_vector_momentum_from_scalar_momentum_multiN(lam, I, nrOfI, sz, spacing):
     """
     Computes the vector momentum from the scalar momentum: :math:`m=\\lambda\\nabla I`
 

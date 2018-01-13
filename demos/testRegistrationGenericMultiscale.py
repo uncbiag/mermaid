@@ -72,8 +72,8 @@ if ds.smooth_images:
     # smooth both a little bit
     cparams = params['image_smoothing']
     s = SF.SmootherFactory( sz[2::], spacing ).create_smoother(cparams)
-    ISource = s.smooth_scalar_field(ISource)
-    ITarget = s.smooth_scalar_field(ITarget)
+    ISource = s.smooth(ISource)
+    ITarget = s.smooth(ITarget)
 
 mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,ds.use_map,ds.map_low_res_factor,params)
 

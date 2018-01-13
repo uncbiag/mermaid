@@ -61,8 +61,8 @@ class Test_registration_algorithms(unittest.TestCase):
 
         cparams = self.params['image_smoothing']
         s = SF.SmootherFactory(sz[2::], self.spacing).create_smoother(cparams)
-        self.ISource = s.smooth_scalar_field(self.ISource)
-        self.ITarget = s.smooth_scalar_field(self.ITarget)
+        self.ISource = s.smooth(self.ISource)
+        self.ITarget = s.smooth(self.ITarget)
 
     def setUp(self):
         pass

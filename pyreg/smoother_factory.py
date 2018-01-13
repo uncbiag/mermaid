@@ -50,115 +50,25 @@ class Smoother(object):
         return ''
 
     @abstractmethod
-    def smooth_scalar_field(self, I, Iout=None):
+    def apply_smooth(self, I, Iout=None):
         """
         Abstract method to smooth a scalar field. Only this method should be overwritten in derived classes.
 
-        :param I: input image to smooth 
+        :param I: input image to smooth  BxCxXxYxZ
         :param Iout: if not None then result is returned in this variable
-        :return: should return the a smoothed scalar field, image dimension XxYxZ
+        :return: should return the a smoothed scalar field, image dimension BxCXxYxZ
         """
         pass
 
-    @abstractmethod
-    def inverse_smooth_scalar_field(self, I, Iout=None):
-        """
-        Experimental abstract method (NOT PROPERLY TESTED) to apply "inverse"-smoothing to a scalar field.
 
-        :param I: input image to inverse smooth 
-        :param Iout: if not None then result is returned in this variable
-        :return: should return the inverse-smoothed scalar field, image dimension XxYxZ
-        """
-        pass
 
-    def smooth_scalar_field_multiNC(self, I, Iout=None):
+    def smooth(self, v, vout=None):
         """
-        Smoothes a scalar field of dimension BxCxXxYxZ (i.e, can smooth a batch and multi-channel images)
-        
-        :param I: input image to smooth 
-        :param Iout: if not None then result is returned in this variable
-        :return: smoothed image
-        """
-        sz = I.size()
-        if Iout is not None:
-            Is = Iout
-        else:
-            Is = Variable(MyTensor(sz).zero_(), requires_grad=False)
+        Smoothes a vector field of dimension BxCxXxYxZ,
 
-        for nrI in range(sz[0]):  # loop over all the images
-            Is[nrI, ...] = self.smooth_scalar_field_multiC(I[nrI, ...])
-        return Is
-
-    def smooth_scalar_field_multiC(self, I, Iout=None):
-        """
-        Smoothes a scalar field of dimension CxXxYxZ (i.e, can smooth multi-channel images)
-
-        :param I: input image to smooth 
-        :param Iout: if not None then result is returned in this variable
-        :return: smoothed image
-        """
-        sz = I.size()
-        if Iout is not None:
-            Is = Iout
-        else:
-            Is = Variable(MyTensor(sz).zero_(), requires_grad=False)
-
-        for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same
-            Is[nrC, ...] = self.smooth_scalar_field(I[nrC, ...])
-        return Is
-
-    def inverse_smooth_vector_field_multiN(self, v, vout=None):
-        """
-        Inverse-smoothes (EXPERIMENTAL, NOT PROPERLY TESTED) a vector field of dimension NxdimxXxYxZ
-        
-        :param v: vector field to smooth
+        :param v: vector field to smooth BxCxXxYxZ
         :param vout: if not None then result is returned in this variable
-        :return: smoothed vector field
-        """
-        sz = v.size()
-        if vout is not None:
-            ISv = vout
-        else:
-            ISv = Variable(MyTensor(v.size()).zero_())
-
-        for nrI in range(sz[0]): # loop over all images
-            ISv[nrI,...] = self.inverse_smooth_vector_field(v[nrI, ...])
-        return ISv
-
-    def inverse_smooth_vector_field(self, v, vout=None):
-        """
-        Inverse-smoothes (EXPERIMENTAL, NOT PROPERLY TESTED) a vector field of dimension dimxXxYxZ
-
-        :param v: vector field to smooth
-        :param vout: if not None then result is returned in this variable
-        :return: smoothed vector field
-        """
-
-        if self.dim==1:
-            if vout is None:
-                return self.inverse_smooth_scalar_field(v) # if one dimensional, default to scalar-field smoothing
-            else:
-                return self.inverse_smooth_scalar_field(v,vout) # if one dimensional, default to scalar-field smoothing
-        else:
-            if vout is not None:
-                ISv = vout
-            else:
-                ISv = Variable(MyTensor(v.size()).zero_())
-
-            # smooth every dimension individually
-            for d in range(0, self.dim):
-                ISv[d,...] = self.inverse_smooth_scalar_field(v[d, ...])
-            return ISv
-
-    def smooth_vector_field_multiN(self, v, vout=None):
-        """
-        Smoothes a vector field of dimension NxdimxXxYxZ
-
-        a new version, where channels are separately calcualted during filtering time, so channel loop is not needed
-
-        :param v: vector field to smooth
-        :param vout: if not None then result is returned in this variable
-        :return: smoothed vector field
+        :return: smoothed vector field BxCxXxYxZ
         """
         sz = v.size()
         if vout is not None:
@@ -166,38 +76,9 @@ class Smoother(object):
         else:
             Sv = Variable(MyTensor(v.size()).zero_())
 
-        # if USE_CUDA:
-        Sv[:] = self.smooth_scalar_field(v)    # here must use :, very important !!!!
-        # else:
-        #     for nrI in range(sz[0]): #loop over all the images
-        #         Sv[nrI,...] = self.smooth_vector_field(v[nrI, ...])
-
+        Sv[:] = self.apply_smooth(v)    # here must use :, very important !!!!
         return Sv
 
-    def smooth_vector_field(self, v, vout=None):
-        """
-        Smoothes a vector field of dimension dimxXxYxZ
-
-        :param v: vector field to smooth
-        :param vout: if not None then result is returned in this variable
-        :return: smoothed vector field
-        """
-
-        if self.dim==1:
-            if vout is None:
-                return self.smooth_scalar_field(v) # if one dimensional, default to scalar-field smoothing
-            else:
-                return self.smooth_scalar_field(v,vout) # if one dimensional, default to scalar-field smoothing
-        else:
-            if vout is not None:
-                Sv = vout
-            else:
-                Sv = Variable(MyTensor(v.size()).zero_())
-
-            #smooth every dimension individually
-            for d in range(0, self.dim):
-                Sv[d,...] = self.smooth_scalar_field(v[d, ...])
-            return Sv
 
 class DiffusionSmoother(Smoother):
     """
@@ -212,8 +93,8 @@ class DiffusionSmoother(Smoother):
     def set_iter(self,iter):
         """
         Set the number of iterations for the diffusion smoother
-        
-        :param iter: number of iterations 
+
+        :param iter: number of iterations
         :return: returns the number of iterations
         """
         self.iter = iter
@@ -222,16 +103,16 @@ class DiffusionSmoother(Smoother):
     def get_iter(self):
         """
         Returns the set number of iterations
-        
+
         :return: number of iterations
         """
         return self.iter
 
-    def smooth_scalar_field(self, v, vout=None):
+    def apply_smooth(self, v, vout=None):
         """
         Smoothes a scalar field of dimension XxYxZ
-        
-        :param v: input image 
+
+        :param v: input image
         :param vout: if not None returns the result in this variable
         :return: smoothed image
         """
@@ -249,13 +130,11 @@ class DiffusionSmoother(Smoother):
                 Sv[:,c] = Sv[:,c] + 0.5/(2**self.dim)*self.fdt.lap(Sv[:,c])*self.spacing.min()**2 # multiply with smallest h^2 to assure stability
         return Sv
 
-    def inverse_smooth_scalar_field(self, v, vout=None):
-        raise ValueError('Sorry: Inversion of smoothing only supported for Fourier-based filters at the moment')
 
 class GaussianSmoother(Smoother):
     """
     Gaussian smoothing in the spatial domain (hence, SLOW in high dimensions on the CPU at least).
-    
+
     .. todo::
         Clean up the two implementations (spatial and Fourier of the Gaussian smoothers).
         In particular, assure that all computions are done in physical coordinates. For now these are just in [-1,1]^d
@@ -277,8 +156,8 @@ class GaussianSpatialSmoother(GaussianSmoother):
     def set_k_sz_h(self,k_sz_h):
         """
         Set the size of half the smoothing kernel
-        
-        :param k_sz_h: size of half the kernel as array 
+
+        :param k_sz_h: size of half the kernel as array
         """
         self.k_sz_h = k_sz_h
         self.params['k_sz_h'] = self.k_sz_h
@@ -286,8 +165,8 @@ class GaussianSpatialSmoother(GaussianSmoother):
     def get_k_sz_h(self):
         """
         Returns the size of half the smoothing kernel
-        
-        :return: return half the smoothing kernel size 
+
+        :return: return half the smoothing kernel size
         """
         return self.k_sz_h
 
@@ -355,10 +234,10 @@ class GaussianSpatialSmoother(GaussianSmoother):
         else:
             raise ValueError('Can only perform padding in dimensions 1-3')
 
-    def smooth_scalar_field(self, v, vout=None):
+    def apply_smooth(self, v, vout=None):
         """
         Smooth the scalar field using Gaussian smoothing in the spatial domain
-        
+
         :param v: image to smooth
         :param vout: if not None returns the result in this variable
         :return: smoothed image
@@ -370,11 +249,6 @@ class GaussianSpatialSmoother(GaussianSmoother):
         # just doing a Gaussian smoothing
         return self._filter_input_with_padding(v, vout)
 
-    def inverse_smooth_scalar_field(self, v, vout=None):
-        """
-        Not yet implemented 
-        """
-        raise ValueError('Sorry: Inversion of smoothing only supported for Fourier-based filters at the moment')
 
 
 class GaussianFourierSmoother(GaussianSmoother):
@@ -398,7 +272,7 @@ class GaussianFourierSmoother(GaussianSmoother):
         """
         pass
 
-    def smooth_scalar_field(self, v, vout=None):
+    def apply_smooth(self, v, vout=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
@@ -417,24 +291,6 @@ class GaussianFourierSmoother(GaussianSmoother):
         else:
             return ce.fourier_convolution(v, self.FFilter)
 
-    def inverse_smooth_scalar_field(self, v, vout=None):
-        """
-        Inverse-smooth the scalar field using Gaussian smoothing in the Fourier domain
-        (with the inverse of the Fourier transform of the Gaussian; EXPERIMENTAL, requires regularization
-        to avoid divisions by zero. DO NOT USE AT THE MOMENT.)
-
-        :param v: image to inverse-smooth
-        :param vout: if not None returns the result in this variable
-        :return: inverse-smoothed image
-        """
-
-        if self.FFilter is None:
-            self._create_filter()
-        if vout is not None:
-            vout = ce.inverse_fourier_convolution(v, self.FFilter)
-            return vout
-        else:
-            return ce.inverse_fourier_convolution(v, self.FFilter)
 
 
 class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
@@ -478,7 +334,7 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         """
         Set the standard deviation of the Gaussian filter
 
-        :param gstd: standard deviation 
+        :param gstd: standard deviation
         """
         self.params['gaussian_std'] = gstd
         self._set_gaussian_std_optimizer_params(gstd)
@@ -487,12 +343,12 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         """
         Return the standard deviation of the Gaussian filter
 
-        :return: standard deviation of Gaussian filter 
+        :return: standard deviation of Gaussian filter
         """
         gaussianStd = self._get_gaussian_std_from_optimizer_params()
         return gaussianStd
 
-    def smooth_scalar_field(self, v, vout=None):
+    def apply_smooth(self, v, vout=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
@@ -508,18 +364,6 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         else:
             return ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std())
 
-    def inverse_smooth_scalar_field(self, v, vout=None):
-        """
-        Inverse-smooth the scalar field using Gaussian smoothing in the Fourier domain
-        (with the inverse of the Fourier transform of the Gaussian; EXPERIMENTAL, requires regularization
-        to avoid divisions by zero. DO NOT USE AT THE MOMENT.)
-
-        :param v: image to inverse-smooth
-        :param vout: if not None returns the result in this variable
-        :return: inverse-smoothed image
-        """
-
-        raise ValueError("Not yet implemented")
 
     def _create_optimization_vector_parameters(self):
         self.optimizer_params = utils.create_vector_parameter(1)
@@ -551,9 +395,9 @@ class SingleGaussianFourierSmoother(GaussianFourierSmoother):
 
     def set_gaussian_std(self,gstd):
         """
-        Set the standard deviation of the Gaussian filter
-        
-        :param gstd: standard deviation 
+         Set the standard deviation of the Gaussian filter
+
+        :param gstd: standard deviation
         """
         self.gaussianStd = gstd
         self.params['gaussian_std'] = self.gaussianStd
@@ -561,8 +405,8 @@ class SingleGaussianFourierSmoother(GaussianFourierSmoother):
     def get_gaussian_std(self):
         """
         Return the standard deviation of the Gaussian filter
-        
-        :return: standard deviation of Gaussian filter 
+
+        :return: standard deviation of Gaussian filter
         """
         return self.gaussianStd
 
@@ -721,7 +565,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         gaussianStds = self._get_gaussian_stds_from_optimizer_params()
         return gaussianStds
 
-    def smooth_scalar_field(self, v, vout=None):
+    def apply_smooth(self, v, vout=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
@@ -737,18 +581,6 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         else:
             return ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_stds(),self.get_gaussian_weights())
 
-    def inverse_smooth_scalar_field(self, v, vout=None):
-        """
-        Inverse-smooth the scalar field using Gaussian smoothing in the Fourier domain
-        (with the inverse of the Fourier transform of the Gaussian; EXPERIMENTAL, requires regularization
-        to avoid divisions by zero. DO NOT USE AT THE MOMENT.)
-
-        :param v: image to inverse-smooth
-        :param vout: if not None returns the result in this variable
-        :return: inverse-smoothed image
-        """
-
-        raise ValueError("Not yet implemented")
 
     def _create_optimization_vector_parameters(self):
         self.optimizer_params = utils.create_vector_parameter(2 * self.nr_of_gaussians)
@@ -799,21 +631,9 @@ class AdaptiveSmoother(Smoother):
         return v
 
 
-    def smooth_scalar_field(self, v, vout=None):
+    def apply_smooth(self, v, vout=None):
         pass
 
-    def inverse_smooth_scalar_field(self, v, vout=None):
-        """
-        Inverse-smooth the scalar field using Gaussian smoothing in the Fourier domain
-        (with the inverse of the Fourier transform of the Gaussian; EXPERIMENTAL, requires regularization
-        to avoid divisions by zero. DO NOT USE AT THE MOMENT.)
-
-        :param v: image to inverse-smooth
-        :param vout: if not None returns the result in this variable
-        :return: inverse-smoothed image
-        """
-
-        raise ValueError("inverse smooth scalar field is not implemented")
 
 
 class SmootherFactory(object):
