@@ -40,6 +40,25 @@ def remove_infs_from_variable(v):
         raise ValueError('Unknown data type: ' + str( type(v.data)))
 
 
+def lift_to_dimension(A,dim):
+    """
+    Creates a view of A of dimension dim (by adding dummy dimensions if necessary).
+    Assumes a numpy array as input
+
+    :param A: numby array
+    :param dim: desired dimension of view
+    :return: returns view of A of appropriate dimension
+    """
+
+    current_dim = len(A.shape)
+    if current_dim>dim:
+        raise ValueError('Can only add dimensions, but not remove them')
+
+    if current_dim==dim:
+        return A
+    else:
+        return A.reshape([1]*(dim-current_dim)+list(A.shape))
+
 def get_dim_of_affine_transform(Ab):
     """
     Returns the number of dimensions corresponding to an affine transformation  of the form y=Ax+b 
@@ -205,38 +224,39 @@ def computeWarpedImage_3d(I0, phi):
     return I1_warped[0, :, :, :, 0]
 '''
 
-def _compute_warped_image_multiNC_1d(I0, phi):
+def _compute_warped_image_multiNC_1d(I0, phi, spacing):
 
-    stn = STN_ND_BCXYZ(1)
+    stn = STN_ND_BCXYZ(spacing)
     I1_warped = stn(I0, phi)
     return I1_warped
 
-def _compute_warped_image_multiNC_2d(I0, phi):
-    stn = STN_ND_BCXYZ(2)
+def _compute_warped_image_multiNC_2d(I0, phi, spacing):
+    stn = STN_ND_BCXYZ(spacing)
     I1_warped = stn(I0, phi)
     return I1_warped
 
-def _compute_warped_image_multiNC_3d(I0, phi):
-    stn = STN_ND_BCXYZ(3)
+def _compute_warped_image_multiNC_3d(I0, phi, spacing):
+    stn = STN_ND_BCXYZ(spacing)
     I1_warped = stn(I0, phi)
     return I1_warped
 
 
-def compute_warped_image_multiNC(I0, phi):
+def compute_warped_image_multiNC(I0, phi, spacing):
     """
     Warps image.
     
     :param I0: image to warp, image size BxCxXxYxZ
-    :param phi: map for the warping, size BxdimxXxYxZ 
+    :param phi: map for the warping, size BxdimxXxYxZ
+    :param spacing: image spacing [dx,dy,dz]
     :return: returns the warped image of size BxCxXxYxZ
     """
     dim = I0.dim()-2
     if dim == 1:
-        return _compute_warped_image_multiNC_1d(I0, phi)
+        return _compute_warped_image_multiNC_1d(I0, phi, spacing)
     elif dim == 2:
-        return _compute_warped_image_multiNC_2d(I0, phi)
+        return _compute_warped_image_multiNC_2d(I0, phi, spacing)
     elif dim == 3:
-        return _compute_warped_image_multiNC_3d(I0, phi)
+        return _compute_warped_image_multiNC_3d(I0, phi, spacing)
     else:
         raise ValueError('Images can only be warped in dimensions 1 to 3')
 
@@ -357,7 +377,7 @@ def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
     csz = np.array([nrOfI,nrOfC]+list(csz))
     return Parameter(AdaptVal(torch.zeros(csz.tolist())))
 
-def identity_map_multiN(sz):
+def identity_map_multiN(sz,spacing):
     """
     Create an identity map
     
@@ -377,14 +397,11 @@ def identity_map_multiN(sz):
         raise ValueError('Only dimensions 1-3 are currently supported for the identity map')
 
     for n in range(nrOfI):
-        id[n,...] = identity_map(sz[2::])
+        id[n,...] = identity_map(sz[2::],spacing)
 
     return id
 
-# TODO: The map is by convention from [-1,1] and disregards spacing
-# This is a code inconsistency!!
-
-def identity_map(sz):
+def identity_map(sz,spacing):
     """
     Returns an identity map.
     
@@ -401,14 +418,16 @@ def identity_map(sz):
     else:
         raise ValueError('Only dimensions 1-3 are currently supported for the identity map')
 
-    # now get it into range [-1,1]^d
+    # now get it into range [0,(sz-1)*spacing]^d
     id = np.array( id.astype('float32') )
     if dim==1:
         id = id.reshape(1,sz[0]) # add a dummy first index
 
     for d in range(dim):
-        id[d]*=2./(sz[d]-1)
-        id[d]-=1
+        id[d]*=spacing[d]
+
+        #id[d]*=2./(sz[d]-1)
+        #id[d]-=1.
 
     # and now store it in a dim+1 array
     if dim==1:
@@ -430,9 +449,9 @@ def identity_map(sz):
 
 
 
-def get_warped_label_map(label_map, phi, sched='nn'):
+def get_warped_label_map(label_map, phi, spacing, sched='nn'):
     if sched == 'nn':
-        warped_label_map = get_nn_interpolation(label_map, phi)
+        warped_label_map = get_nn_interpolation(label_map, phi, spacing)
         # check if here should be add assert
         assert abs(torch.sum(warped_label_map.data -warped_label_map.data.round()))< 0.1, "nn interpolation is not precise"
     else:
@@ -478,7 +497,10 @@ def space_normal(tensors, std=0.1):
             sz = tensors[n][c].size()
             mus = np.zeros(dim)
             stds = std * np.ones(dim)
-            id =identity_map(sz)
+            print('WARNING: What should the spacing be here? Needed for new identity map code')
+            raise ValueError('Double check the spacing here before running this code')
+            spacing = np.ones(dim)
+            id =identity_map(sz,spacing)
             g = compute_normalized_gaussian(id, mus, stds)
             tensors[n,c] = torch.from_numpy(g)
 

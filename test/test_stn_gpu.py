@@ -50,12 +50,14 @@ class Test_stn_1d(unittest.TestCase):
         self.device = device
         self.device_c = device_c
         self.inputImage = torch.randn(nframes, channels, width)
-        self.inputGrids = (torch.rand(nframes, 1, grid_width) * 2 - 1)
+        self.inputGrids = (torch.rand(nframes, 1, grid_width))
         self.output = torch.rand(nframes, channels, grid_width)
         self.inputImage_cuda = self.inputImage.cuda(device)
         self.inputGrids_cuda = self.inputGrids.cuda(device)
         self.output_cuda = self.output.cuda(device)
-        self.stn = STNFunction_ND_BCXYZ(1)
+
+        spacing = np.array([1./(grid_width-1.)])
+        self.stn = STNFunction_ND_BCXYZ(spacing)
 
     def tearDown(self):
         pass
@@ -98,12 +100,14 @@ class Test_stn_2d(unittest.TestCase):
         self.device = device
         self.device_c = device_c
         self.inputImage = torch.randn(nframes, channels, width, height)
-        self.inputGrids = (torch.rand(nframes, 2, grid_width, grid_height) * 2 - 1)
+        self.inputGrids = (torch.rand(nframes, 2, grid_width, grid_height))
         self.output = torch.rand(nframes, channels, grid_width, grid_height)
         self.inputImage_cuda = self.inputImage.cuda(device)
         self.inputGrids_cuda = self.inputGrids.cuda(device)
         self.output_cuda = self.output.cuda(device)
-        self.stn = STNFunction_ND_BCXYZ(2)
+
+        spacing = np.array([1./(grid_width-1.),1./(grid_height-1.)])
+        self.stn = STNFunction_ND_BCXYZ(spacing)
 
     def tearDown(self):
         pass
@@ -148,12 +152,14 @@ class Test_stn_3d(unittest.TestCase):
         self.device = device
         self.device_c = device_c
         self.inputImage = torch.randn(nframes, channels, width, height, depth)
-        self.inputGrids = (torch.rand(nframes, 3, grid_width, grid_height, grid_depth) * 2 - 1)
+        self.inputGrids = (torch.rand(nframes, 3, grid_width, grid_height, grid_depth))
         self.output = torch.rand(nframes, channels, grid_width, grid_height, grid_depth)
         self.inputImage_cuda = self.inputImage.cuda(device)
         self.inputGrids_cuda = self.inputGrids.cuda(device)
         self.output_cuda = self.output.cuda(device)
-        self.stn = STNFunction_ND_BCXYZ(3)
+
+        spacing = np.array([1./(grid_width-1.),1./(grid_height-1.),1./(grid_depth-1.)])
+        self.stn = STNFunction_ND_BCXYZ(spacing)
 
     def tearDown(self):
         pass

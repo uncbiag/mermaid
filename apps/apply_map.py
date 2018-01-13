@@ -23,11 +23,14 @@ def read_image_and_map_and_apply_map(image_filename,map_filename):
     map,map_hdr = fileio.MapIO().read(map_filename)
     im,hdr,_,_ = fileio.ImageIO().read_to_map_compatible_format(image_filename,map)
 
+    spacing = hdr['spacing']
+    #TODO: check that the spacing is compatible with the map
+
     if (im is not None) and (map is not None):
         # make pytorch arrays for subsequent processing
         im_t = AdaptVal(Variable(torch.from_numpy(im), requires_grad=False))
         map_t = AdaptVal(Variable(torch.from_numpy(map), requires_grad=False))
-        im_warped = utils.t2np( utils.compute_warped_image_multiNC(im_t,map_t) )
+        im_warped = utils.t2np( utils.compute_warped_image_multiNC(im_t,map_t,spacing) )
 
         return im_warped,hdr
     else:

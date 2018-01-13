@@ -150,6 +150,37 @@ class ImageIO(FileIO):
         """squeezes the image when reading; e.g., dimension 1x256x256 becomes 256x256"""
         self.adaptive_padding = -1
         """ padding the img to favorable size default img.shape%adaptive_padding = 0"""
+        self.normalize_spacing = True
+        """normalized spacing so that the aspect ratio remains and the largest extent is in [0,1]"""
+
+    def turn_normalize_spacing_on(self):
+        """
+        Turns the normalized spacing (to interval [0,1]) on.
+        :return: n/a
+        """
+        self.normalize_spacing = True
+
+    def turn_normalize_spacing_off(self):
+        """
+        Turns the normalized spacing (to interval [0,1]) off.
+        :return: n/a
+        """
+        self.normalize_spacing = False
+
+    def set_normalize_spacing(self, normalize_spacing):
+        """
+        Sets if spacing should be normalized [0,1] or not.
+        :param norm_spacing: True/False
+        :return: n/a
+        """
+        self.normalize_spacing = normalize_spacing
+
+    def get_normalize_spacing(self):
+        """
+        Returns the setting if spacing should be normalized [0,1] or not.
+        :return: n/a
+        """
+        return self.normalize_spacing
 
     def turn_intensity_normalization_on(self):
         """
@@ -162,6 +193,7 @@ class ImageIO(FileIO):
         Turns on intensity normalization off when loading an image
         """
         self.intensity_normalize_image = False
+
 
     def set_intensity_normalization(self, int_norm):
         """
@@ -219,6 +251,32 @@ class ImageIO(FileIO):
         """
         return self.squeeze_image
 
+    def _normalize_spacing(self,spacing,sz):
+        """
+        Normalizes spacing.
+        :param spacing: Vector with spacing info, in XxYxZ format
+        :param sz: size vector in XxYxZ format
+        :return: vector with normalized spacings in XxYxZ format
+        """
+        dim = len(spacing)
+        # first determine the largest extent
+        current_largest_extent = -1
+        extent = np.zeros_like(spacing)
+        for d in range(dim):
+            current_extent = spacing[d]*(sz[d]-1)
+            extent[d] = current_extent
+            if current_extent>current_largest_extent:
+                current_largest_extent = current_extent
+
+        scalingFactor = 1./current_largest_extent
+        normalized_spacing = spacing*scalingFactor
+
+        normalized_extent = extent*scalingFactor
+
+        print('Normalize spacing: ' + str(spacing) + ' -> ' + str(normalized_spacing))
+        print('Normalize spacing, extent: ' + str(extent) + ' -> ' + str(normalized_extent))
+
+        return normalized_spacing
 
     def _compute_squeezed_spacing(self,spacing0, dim0, sz0, dimSqueezed):
         """
@@ -331,18 +389,22 @@ class ImageIO(FileIO):
         new_img = np.lib.pad(im, padding_loc, 'edge')
         return new_img
 
-    def read(self, filename, intensity_normalize=False, squeeze_image=False, adaptive_padding=-1, verbose=False):
+    def read(self, filename, intensity_normalize=False, squeeze_image=False, normalize_spacing=True, adaptive_padding=-1, verbose=False):
         """
         Reads the image assuming it is a single channel 
+
         :param filename: filename to be read
         :param intensity_normalize: uses image intensity normalization
         :param squeeze_image: squeezes image first (e.g, from 1x128x128 to 128x128)
+        :param normalize_spacing: normalizes spacing so largest extent is in [0,1]
         :return: Will return the read file, its header information, the spacing, and the normalized spacing \
-         (as a tuple: im,hdr,spacing,normalized_spacing)
+         (as a tuple: im,hdr,spacing,squeezed_spacing)
         """
         self.set_intensity_normalization(intensity_normalize)
         self.set_squeeze_image(squeeze_image)
         self.set_adaptive_padding(adaptive_padding)
+        self.set_normalize_spacing(normalize_spacing)
+
         if verbose:
             print('Reading image: ' + filename)
 
@@ -369,7 +431,7 @@ class ImageIO(FileIO):
             print('Using guessed spacing of ' + str(spacing))
 
         spacing = hdr['spacing']
-        normalized_spacing = spacing # will be changed if image is squeezed
+        squeezed_spacing = spacing # will be changed if image is squeezed
 
         if self.squeeze_image==True:
             if verbose:
@@ -385,9 +447,9 @@ class ImageIO(FileIO):
             squeezed_spacing = self._compute_squeezed_spacing(spacing,dim,sz,dimSqueezed)
             if verbose:
                 print( 'squeezed_spacing = ' + str(squeezed_spacing))
-            normalized_spacing = squeezed_spacing / (np.array(sz_squeezed) - 1)
+            squeezed_spacing = squeezed_spacing / (np.array(sz_squeezed) - 1)
             if verbose:
-                print('Normalized spacing = ' + str(normalized_spacing))
+                print('Normalized spacing = ' + str(squeezed_spacing))
 
         if adaptive_padding>0:
             im = self._do_adaptive_padding(im)
@@ -397,24 +459,32 @@ class ImageIO(FileIO):
         else:
             print('WARNING: Image was NOT intensity normalized when loading.')
 
-        return im,hdr,spacing,normalized_spacing
+        if self.normalize_spacing:
+            print('INFO: Normalizing the spacing to [0,1] in the largest dimension. (Turn normalize_spacing off if this is not desired.)')
+            spacing = self._normalize_spacing(spacing,sz)
+            squeezed_spacing = self._normalize_spacing(squeezed_spacing,sz_squeezed)
+            hdr['spacing'] = spacing
 
-    def read_batch_to_nc_format(self,filenames,intensity_normalize=False,squeeze_image=False ):
+        return im,hdr,spacing,squeezed_spacing
+
+    def read_batch_to_nc_format(self,filenames,intensity_normalize=False,squeeze_image=False, normalize_spacing=True ):
         """
         Wrapper around read_to_nc_format which allows to read a whole batch of images at once (as specified
         in filenames) and returns the image in format NxCxXxYxZ. An individual image is assumed to have a single intensity channel.
+
         :param filenames: list of filenames to be read or expression with wildcard
         :param intensity_normalize: if set to True uses image intensity normalization
         :param squeeze_image: squeezed individual image first (e.g, from 1x128x128 to 128x128)
+        :param normalize_spacing: normalizes the spacing so the largest extent is [0,1]
         :return Will return the read files, their header information, their spacing, and their normalized spacing \
-         (as a tuple: im,hdr,spacing,normalized_spacing). The assumption is that all files have the same
+         (as a tuple: im,hdr,spacing,squeezed_spacing). The assumption is that all files have the same
          header and spacing. So only one is returned for the entire batch.
         """
 
         ims = None
         hdr = None
         spacing = None
-        normalized_spacing = None
+        squeezed_spacing = None
 
         if type(filenames)!=list:
             # this is a glob expression
@@ -427,7 +497,10 @@ class ImageIO(FileIO):
                 raise ValueError( 'File: ' + filename + ' does not exist.')
             if counter==0:
                 # simply load the file (this will determine the headers size and dimension)
-                im,hdr,spacing,normalized_spacing = self.read_to_nc_format(filename,intensity_normalize=intensity_normalize,squeeze_image=squeeze_image)
+                im,hdr,spacing,squeezed_spacing = self.read_to_nc_format(filename,
+                                                                         intensity_normalize=intensity_normalize,
+                                                                         squeeze_image=squeeze_image,
+                                                                         normalize_spacing=normalize_spacing)
                 sz = list(im.shape)
                 sz[0] = nr_of_files
                 print('Size:')
@@ -435,38 +508,47 @@ class ImageIO(FileIO):
                 ims = np.zeros(sz,dtype=im.dtype)
                 ims[0,...] = im
             else:
-                im, _, _, _ = self.read_to_nc_format(filename,intensity_normalize=intensity_normalize,squeeze_image=squeeze_image)
+                im, _, _, _ = self.read_to_nc_format(filename,
+                                                     intensity_normalize=intensity_normalize,
+                                                     squeeze_image=squeeze_image,
+                                                     normalize_spacing=normalize_spacing)
                 ims[counter,...] = im
 
-        return ims, hdr, spacing, normalized_spacing
+        return ims, hdr, spacing, squeezed_spacing
 
-    def read_to_nc_format(self,filename,intensity_normalize=False,squeeze_image=False ):
+    def read_to_nc_format(self,filename,intensity_normalize=False,squeeze_image=False,normalize_spacing=True ):
         """
         Reads the image assuming it is single channel and of XxYxZ format and convert it to NxCxXxYxC format 
+
         :param filename: filename to be read
         :param intensity_normalize: if set to True uses image intensity normalization
         :param squeeze_image: squeezes image first (e.g, from 1x128x128 to 128x128)
+        :param normalize_spacing: normalizes the spacing to [0,1] in largest dimension
         :return: Will return the read file, its header information, the spacing, and the normalized spacing \
-         (as a tuple: im,hdr,spacing,normalized_spacing)
+         (as a tuple: im,hdr,spacing,squeezed_spacing)
         """
-        im,hdr,spacing,normalized_spacing = self.read(filename,intensity_normalize,squeeze_image)
+        im,hdr,spacing,squeezed_spacing = self.read(filename,intensity_normalize,squeeze_image,normalize_spacing)
         im = self._transform_image_to_NC_image_format(im)
-        return im,hdr,spacing,normalized_spacing
+        return im,hdr,spacing,squeezed_spacing
 
-    def read_to_map_compatible_format(self,filename,map,intensity_normalize=False,squeeze_image=False):
+    def read_to_map_compatible_format(self,filename,map,intensity_normalize=False,squeeze_image=False,normalize_spacing=True):
         """
         Reads the image and makes sure it is compatible with the map. If it is not it tries to fix the format.
+
         :param filename: filename to be read
         :param map: map which is used to determine the format
+        :param intensity_normalize: if set to True uses image intensity normalization
+        :param squeeze_image: squeezes image first (e.g, from 1x128x128 to 128x128)
+        :param normalize_spacing: normalizes the spacing to [0,1] in largest dimension
         :return: Will return the read file, its header information, the spacing, and the normalized spacing \
-         (as a tuple: im,hdr,spacing,normalized_spacing)
+         (as a tuple: im,hdr,spacing,squeezed_spacing)
         """
 
         if map is None:
             print('Map needs to be specified. Currently set to None. Aborting.')
             return None,None,None,None
 
-        im,hdr,spacing,normalized_spacing = self.read(filename,intensity_normalize,squeeze_image)
+        im,hdr,spacing,squeezed_spacing = self.read(filename,intensity_normalize,squeeze_image,normalize_spacing)
         if not self._map_is_compatible_with_image(im, map):
             im_fixed = self._try_fixing_image_dimension(im, map)
 
@@ -481,7 +563,7 @@ class ImageIO(FileIO):
             else:
                 im = im_fixed
 
-        return im,hdr,spacing,normalized_spacing
+        return im,hdr,spacing,squeezed_spacing
 
     def write_batch_to_individual_files(self,filenames,data,hdr=None):
         """

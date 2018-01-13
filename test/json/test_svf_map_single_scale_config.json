@@ -2,7 +2,7 @@
     "image_smoothing": {
         "smooth_images": true, 
         "smoother": {
-            "gaussian_std": 0.05, 
+            "gaussian_std": 0.025, 
             "type": "gaussian"
         }
     }, 
@@ -26,7 +26,7 @@
                 }
             }, 
             "similarity_measure": {
-                "sigma": 0.1, 
+                "sigma": 0.02, 
                 "type": "ssd"
             }, 
             "type": "svf_map"
@@ -35,7 +35,7 @@
     "optimizer": {
         "name": "lbfgs_ls", 
         "single_scale": {
-            "nr_of_iterations": 40, 
+            "nr_of_iterations": 20, 
             "rel_ftol": 0.0001
         }
     }, 

@@ -192,7 +192,7 @@ class GaussianSpatialSmoother(GaussianSmoother):
     def _create_smoothing_kernel(self, k_sz):
         mus = np.zeros(self.dim)
         stds = np.ones(self.dim)
-        id = utils.identity_map(k_sz)
+        id = utils.identity_map(k_sz,self.spacing)
         g = utils.compute_normalized_gaussian(id, mus, stds)
 
         return g
@@ -388,7 +388,7 @@ class SingleGaussianFourierSmoother(GaussianFourierSmoother):
 
         mus = np.zeros(self.dim)
         stds = self.gaussianStd*np.ones(self.dim)
-        id = utils.identity_map(self.sz)
+        id = utils.identity_map(self.sz,self.spacing)
         g = utils.compute_normalized_gaussian(id, mus, stds)
 
         self.FFilter,_ = ce.create_complex_fourier_filter(g, self.sz)
@@ -439,7 +439,7 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
     def _create_filter(self):
 
         mus = np.zeros(self.dim)
-        id = utils.identity_map(self.sz)
+        id = utils.identity_map(self.sz,self.spacing)
 
         assert len(self.multi_gaussian_stds)>0
         assert len(self.multi_gaussian_weights)>0
@@ -624,7 +624,7 @@ class AdaptiveSmoother(Smoother):
         :return:
         """
         if using_map:
-            I = utils.compute_warped_image_multiNC(self.moving, phi)
+            I = utils.compute_warped_image_multiNC(self.moving, phi, self.spacing)
         else:
             I = None
         v = self.smoother(m, I.detach())
@@ -648,7 +648,7 @@ class SmootherFactory(object):
         """size of image"""
         self.dim = len( spacing )
         """dimension of image"""
-        self.default_smoother_type = 'gaussian'
+        self.default_smoother_type = 'multiGaussian'
         """default smoother used for smoothing"""
 
     def set_default_smoother_type_to_gaussian(self):

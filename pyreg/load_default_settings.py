@@ -1,7 +1,7 @@
 import pyreg.config_parser as cp
 from pyreg.config_parser import nr_of_threads
 
-# read the baseconf config alway from file (the same is true for the compute_settings)
+# read the baseconf config always from file (the same is true for the compute_settings)
 par_baseconf = cp.get_baseconf_settings(cp.get_default_baseconf_settings_filenames()[0])['baseconf']
 
 if par_baseconf['load_default_settings_from_default_setting_files']:

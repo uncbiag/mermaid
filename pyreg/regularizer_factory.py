@@ -159,6 +159,25 @@ class TotalVariationRegularizer(Regularizer):
         """
         super(TotalVariationRegularizer, self).__init__(spacing, params)
 
+        self.pnorm = params[('pnorm', 2, 'p-norm type: 2 is Euclidean')]
+
+    def set_pnorm(self, pnorm):
+        """
+        Sets the norm type
+
+        :param pnorm: norm type
+        """
+        self.pnorm = pnorm
+        self.params['pnorm']  = pnorm
+
+    def get_pnorm(self):
+        """
+        Gets the norm type
+
+        :return: Returns the norm type
+        """
+        return self.pnorm
+
     def _compute_regularizer(self, d):
         # just do the standard component-wise Euclidean norm of the gradient
 
@@ -175,24 +194,34 @@ class TotalVariationRegularizer(Regularizer):
     # now compute the norm
 
     def _compute_regularizer_1d(self, d):
-        return ((self.fdt.dXc(d[None, 0, :])[0]**2)**0.5).sum() * self.volumeElement
+
+        # need to use torch.abs here to make sure the proper subgradient is computed at zero
+        v0 = torch.abs(self.fdt.dXc(d[None, 0, :])[0])
+
+        return (v0).sum() * self.volumeElement
 
     def _compute_regularizer_2d(self, d):
-        return ( ((self.fdt.dXc(d[None, 0, :, :])[0] ** 2) +
-                 (self.fdt.dYc(d[None, 0, :, :])[0] ** 2))**0.5 +
-                 ((self.fdt.dXc(d[None, 1, :, :])[0] ** 2) +
-                 (self.fdt.dYc(d[None, 1, :, :])[0] ** 2))**0.5).sum() * self.volumeElement
+
+        # need to use torch.norm here to make sure the proper subgradient is computed at zero
+        v0 = torch.norm(torch.stack((self.fdt.dXc(d[None, 0, :, :])[0],self.fdt.dYc(d[None, 0, :, :])[0])),self.pnorm,0)
+        v1 = torch.norm(torch.stack((self.fdt.dXc(d[None, 1, :, :])[0],self.fdt.dYc(d[None, 1, :, :])[0])),self.pnorm,0)
+
+        return (v0+v1).sum()*self.volumeElement
 
     def _compute_regularizer_3d(self, d):
-        return ( ((self.fdt.dXc(d[None, 0, :, :, :])[0] ** 2) +
-                 (self.fdt.dYc(d[None, 0, :, :, :])[0] ** 2) +
-                 (self.fdt.dZc(d[None, 0, :, :, :])[0] ** 2))**0.5 +
-                 ((self.fdt.dXc(d[None, 1, :, :, :])[0] ** 2) +
-                 (self.fdt.dYc(d[None, 1, :, :, :])[0] ** 2) +
-                 (self.fdt.dZc(d[None, 1, :, :, :])[0] ** 2))**0.5 +
-                 ((self.fdt.dXc(d[None, 2, :, :, :])[0] ** 2) +
-                 (self.fdt.dYc(d[None, 2, :, :, :])[0] ** 2) +
-                 (self.fdt.dZc(d[None, 2, :, :, :])[0] ** 2))**0.5 ).sum() * self.volumeElement
+
+        # need to use torch.norm here to make sure the proper subgradient is computed at zero
+        v0 = torch.norm(torch.stack((self.fdt.dXc(d[None, 0, :, :, :])[0],
+                                     self.fdt.dYc(d[None, 0, :, :, :])[0],
+                                     self.fdt.dZc(d[None, 0, :, :, :])[0])), self.pnorm, 0)
+        v1 = torch.norm(torch.stack((self.fdt.dXc(d[None, 1, :, :, :])[0],
+                                     self.fdt.dYc(d[None, 1, :, :, :])[0],
+                                     self.fdt.dZc(d[None, 1, :, :, :])[0])), self.pnorm, 0)
+        v2 = torch.norm(torch.stack((self.fdt.dXc(d[None, 2, :, :, :])[0],
+                                     self.fdt.dYc(d[None, 2, :, :, :])[0],
+                                     self.fdt.dZc(d[None, 2, :, :, :])[0])), self.pnorm, 0)
+
+        return (v0+v1+v2).sum()*self.volumeElement
 
 
 class HelmholtzRegularizer(Regularizer):
@@ -222,6 +251,7 @@ class HelmholtzRegularizer(Regularizer):
         :param alpha: penalty  
         """
         self.alpha = alpha
+        self.params['alpha'] = alpha
 
     def get_alpha(self):
         """
@@ -238,6 +268,7 @@ class HelmholtzRegularizer(Regularizer):
         :param gamma: penalty 
         """
         self.gamma = gamma
+        self.params['gamma'] = gamma
 
     def get_gamma(self):
         """

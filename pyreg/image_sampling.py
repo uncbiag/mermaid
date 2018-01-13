@@ -115,11 +115,11 @@ class ResampleImage(object):
             print(desiredSizeNC)
             raise('For upsampling sizes need to increase')
 
-        idDes = AdaptVal(Variable(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC))))
         newspacing = spacing*(sz[2::].astype('float')/desiredSizeNC[2::].astype('float'))
+        idDes = AdaptVal(Variable(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC,newspacing))))
 
         # now use this map for resampling
-        IZ = utils.compute_warped_image_multiNC(I, idDes)
+        IZ = utils.compute_warped_image_multiNC(I, idDes, newspacing)
         newSz = IZ.size()[-1 - dim + 1::]
 
         smoother = SF.DiffusionSmoother(newSz, newspacing, self.params)
@@ -150,11 +150,11 @@ class ResampleImage(object):
         smoother = SF.DiffusionSmoother(sz, spacing, self.params)
         smoothedImage_multiNC = smoother.smooth(I)
 
-        idDes = AdaptVal(Variable(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC))))
         newspacing = spacing*(sz[2::].astype('float')/desiredSizeNC[2::].astype('float'))
+        idDes = AdaptVal(Variable(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC,newspacing))))
 
         # now use this map for resampling
-        ID = utils.compute_warped_image_multiNC(smoothedImage_multiNC, idDes)
+        ID = utils.compute_warped_image_multiNC(smoothedImage_multiNC, idDes, newspacing)
 
         return ID,newspacing
 

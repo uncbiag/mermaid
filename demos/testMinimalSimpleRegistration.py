@@ -26,11 +26,8 @@ if ds.load_settings_from_file:
     params.load_JSON(settingFile)
 
 szEx = np.tile( ds.example_img_len, ds.dim )         # size of the desired images: (sz)^dim
-#I0,I1= eg.CreateSquares(ds.dim).create_image_pair(szEx,params) # create a default image size with two sample squares
-I0,I1= eg.CreateRealExampleImages(ds.dim).create_image_pair() # create a default image size with two sample squares
-
-sz = np.array(I0.shape)
-spacing = 1./(sz[2::]-1) # the first two dimensions are batch size and number of image channels
+I0,I1,spacing= eg.CreateSquares(ds.dim).create_image_pair(szEx,params) # create a default image size with two sample squares
+#I0,I1,spacing = eg.CreateRealExampleImages(ds.dim).create_image_pair() # create a default image size with two sample squares
 
 # create the source and target image as pyTorch variables
 ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
