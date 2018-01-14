@@ -67,13 +67,16 @@ def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visua
         plt.plot(utils.lift_to_dimension(utils.t2np(vizImage),1))
         plt.title(vizName)
 
-    if i==0 and visual_param['visualize']:
+    if visual_param is not None:
+        if i==0 and visual_param['visualize']:
+            plt.show()
+        if visual_param['save_fig']:
+            file_name = visual_param['pair_path'][i]
+            join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
+            plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
+            plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
+    else:
         plt.show()
-    if visual_param['save_fig']:
-        file_name = visual_param['pair_path'][i]
-        join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
-        plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
-        plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
 
 
 def checkerboard_2d(I0,I1,nrOfTiles=8):
@@ -139,13 +142,16 @@ def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_p
         plt.colorbar()
         plt.title(vizName)
 
-    if i==0 and visual_param['visualize']:
+    if visual_param is not None:
+        if i==0 and visual_param['visualize']:
+            plt.show()
+        if visual_param['save_fig']:
+            file_name = visual_param['pair_path'][i]
+            join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
+            plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
+            plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
+    else:
         plt.show()
-    if visual_param['save_fig']:
-        file_name = visual_param['pair_path'][i]
-        join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
-        plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
-        plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
 
 def _show_current_images_2d_map(iS, iT, iW, iter, vizImage, vizName, phiWarped, visual_param=None, i=0):
 
@@ -215,14 +221,17 @@ def _show_current_images_2d_map(iS, iT, iW, iter, vizImage, vizName, phiWarped, 
         plt.colorbar()
         plt.title(vizName)
 
-    if i==0 and visual_param['visualize']:
+    if visual_param is not None:
+        if i==0 and visual_param['visualize']:
+            plt.show()
+        if visual_param['save_fig']:
+            file_name = visual_param['pair_path'][i]
+            join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
+            plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
+            plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
+            plt.clf()
+    else:
         plt.show()
-    if visual_param['save_fig']:
-        file_name = visual_param['pair_path'][i]
-        join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
-        plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
-        plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
-        plt.clf()
 
 
 def _show_current_images_2d(iS, iT, iW, iter, vizImage, vizName, phiWarped, visual_param=None, i=0):
@@ -318,14 +327,16 @@ def _show_current_images_3d(iS, iT, iW, iter, vizImage, vizName, phiWarped, visu
         feh.synchronize([ax[0][1], ax[1][1], ax[2][1]])
         feh.synchronize([ax[0][2], ax[1][2], ax[2][2]])
 
-
-    if i==0 and visual_param['visualize']:
+    if visual_param is not None:
+        if i==0 and visual_param['visualize']:
+            plt.show()
+        if visual_param['save_fig']:
+            file_name = visual_param['pair_path'][i]
+            join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
+            plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
+            plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
+    else:
         plt.show()
-    if visual_param['save_fig']:
-        file_name = visual_param['pair_path'][i]
-        join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
-        plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
-        plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
 
 
 def show_current_images(iter, iS, iT, iW, vizImages=None, vizName=None, phiWarped=None, visual_param=None):
@@ -351,9 +362,12 @@ def show_current_images(iter, iS, iT, iW, vizImages=None, vizName=None, phiWarpe
 
     dim = iS.ndimension()-2
 
-    if visual_param['save_fig'] == True:
-        save_fig_num = min(visual_param['save_fig_num'], len(visual_param['pair_path']))
-        print("num {} of pair would be saved in {}".format(save_fig_num,visual_param['save_fig_path']))
+    if visual_param is not None:
+        if visual_param['save_fig'] == True:
+            save_fig_num = min(visual_param['save_fig_num'], len(visual_param['pair_path']))
+            print("num {} of pair would be saved in {}".format(save_fig_num,visual_param['save_fig_path']))
+        else:
+            save_fig_num = 1
     else:
         save_fig_num = 1
 
@@ -362,7 +376,11 @@ def show_current_images(iter, iS, iT, iW, vizImages=None, vizName=None, phiWarpe
         iSF = iS[i,0,...]
         iTF = iT[i,0,...]
         iWF = iW[i,0,...]
-        vizImage = vizImages[i,...]
+
+        if vizImages is not None:
+            vizImage = vizImages[i,...]
+        else:
+            vizImage = None
 
         if phiWarped is not None:
             pwF = phiWarped[i,...]
