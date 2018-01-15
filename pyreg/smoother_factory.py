@@ -192,8 +192,8 @@ class GaussianSpatialSmoother(GaussianSmoother):
     def _create_smoothing_kernel(self, k_sz):
         mus = np.zeros(self.dim)
         stds = np.ones(self.dim)
-        id = utils.identity_map(k_sz,self.spacing)
-        g = utils.compute_normalized_gaussian(id, mus, stds)
+        centered_id = utils.centered_identity_map(k_sz,self.spacing)
+        g = utils.compute_normalized_gaussian(centered_id, mus, stds)
 
         return g
 
@@ -388,8 +388,8 @@ class SingleGaussianFourierSmoother(GaussianFourierSmoother):
 
         mus = np.zeros(self.dim)
         stds = self.gaussianStd*np.ones(self.dim)
-        id = utils.identity_map(self.sz,self.spacing)
-        g = utils.compute_normalized_gaussian(id, mus, stds)
+        centered_id = utils.centered_identity_map(self.sz,self.spacing)
+        g = utils.compute_normalized_gaussian(centered_id, mus, stds)
 
         self.FFilter,_ = ce.create_complex_fourier_filter(g, self.sz)
 
@@ -439,7 +439,7 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
     def _create_filter(self):
 
         mus = np.zeros(self.dim)
-        id = utils.identity_map(self.sz,self.spacing)
+        centered_id = utils.centered_identity_map(self.sz,self.spacing)
 
         assert len(self.multi_gaussian_stds)>0
         assert len(self.multi_gaussian_weights)>0
@@ -448,7 +448,7 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
 
         for nr in range(nr_of_gaussians):
             stds = self.multi_gaussian_stds[nr] * np.ones(self.dim)
-            g = self.multi_gaussian_weights[nr] * utils.compute_normalized_gaussian(id, mus, stds)
+            g = self.multi_gaussian_weights[nr] * utils.compute_normalized_gaussian(centered_id, mus, stds)
 
             if nr==0:
                 self.FFilter,_ = ce.create_complex_fourier_filter(g, self.sz)

@@ -377,6 +377,32 @@ def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
     csz = np.array([nrOfI,nrOfC]+list(csz))
     return Parameter(AdaptVal(torch.zeros(csz.tolist())))
 
+
+def centered_identity_map_multiN(sz, spacing):
+    """
+    Create a centered identity map (shifted so it is centered around 0)
+
+    :param sz: size of an image in BxCxXxYxZ format
+    :return: returns the identity map
+    """
+    dim = len(sz) - 2
+    nrOfI = sz[0]
+
+    if dim == 1:
+        id = np.zeros([nrOfI, 1, sz[2]], dtype='float32')
+    elif dim == 2:
+        id = np.zeros([nrOfI, 2, sz[2], sz[3]], dtype='float32')
+    elif dim == 3:
+        id = np.zeros([nrOfI, 3, sz[2], sz[3], sz[4]], dtype='float32')
+    else:
+        raise ValueError('Only dimensions 1-3 are currently supported for the identity map')
+
+    for n in range(nrOfI):
+        id[n, ...] = centered_identity_map(sz[2::], spacing)
+
+    return id
+
+
 def identity_map_multiN(sz,spacing):
     """
     Create an identity map
@@ -400,6 +426,52 @@ def identity_map_multiN(sz,spacing):
         id[n,...] = identity_map(sz[2::],spacing)
 
     return id
+
+
+def centered_identity_map(sz, spacing):
+    """
+    Returns a centered identity map (with 0 in the middle)
+
+    :param sz: just the spatial dimensions, i.e., XxYxZ
+    :return: returns the identity map of dimension dimxXxYxZ
+    """
+    dim = len(sz)
+    if dim == 1:
+        id = np.mgrid[0:sz[0]]
+    elif dim == 2:
+        id = np.mgrid[0:sz[0], 0:sz[1]]
+    elif dim == 3:
+        id = np.mgrid[0:sz[0], 0:sz[1], 0:sz[2]]
+    else:
+        raise ValueError('Only dimensions 1-3 are currently supported for the identity map')
+
+    # now get it into range [0,(sz-1)*spacing]^d
+    id = np.array(id.astype('float32'))
+    if dim == 1:
+        id = id.reshape(1, sz[0])  # add a dummy first index
+
+    for d in range(dim):
+        id[d] *= spacing[d]
+        id[d] -= 0.5*spacing[d]*sz[d]
+
+    # and now store it in a dim+1 array
+    if dim == 1:
+        idnp = np.zeros([1, sz[0]], dtype='float32')
+        idnp[0, :] = id[0]
+    elif dim == 2:
+        idnp = np.zeros([2, sz[0], sz[1]], dtype='float32')
+        idnp[0, :, :] = id[0]
+        idnp[1, :, :] = id[1]
+    elif dim == 3:
+        idnp = np.zeros([3, sz[0], sz[1], sz[2]], dtype='float32')
+        idnp[0, :, :, :] = id[0]
+        idnp[1, :, :, :] = id[1]
+        idnp[2, :, :, :] = id[2]
+    else:
+        raise ValueError('Only dimensions 1-3 are currently supported for the centered identity map')
+
+    return idnp
+
 
 def identity_map(sz,spacing):
     """
@@ -500,8 +572,8 @@ def space_normal(tensors, std=0.1):
             print('WARNING: What should the spacing be here? Needed for new identity map code')
             raise ValueError('Double check the spacing here before running this code')
             spacing = np.ones(dim)
-            id =identity_map(sz,spacing)
-            g = compute_normalized_gaussian(id, mus, stds)
+            centered_id = centered_identity_map(sz,spacing)
+            g = compute_normalized_gaussian(centered_id, mus, stds)
             tensors[n,c] = torch.from_numpy(g)
 
 

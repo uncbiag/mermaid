@@ -60,8 +60,8 @@ ISource = s.smooth_scalar_field(ISource)
 
 mus = np.zeros(dim)
 stds = gaussianStd * np.ones(dim)
-id = utils.identity_map(szEx,spacing)
-g = utils.compute_normalized_gaussian(id, mus, stds)
+centered_id = utils.centered_identity_map(szEx,spacing)
+g = utils.compute_normalized_gaussian(centered_id, mus, stds)
 
 FFilter,_ = ce.create_complex_fourier_filter(g, szEx)
 fc1 = ce.FourierConvolution(FFilter)

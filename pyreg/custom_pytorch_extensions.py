@@ -457,7 +457,7 @@ class GaussianFourierFilterGenerator(object):
 
         self.mus = np.zeros(self.dim)
         # TODO: storing the identity map may be a little wasteful
-        self.id = utils.identity_map(self.sz,self.spacing)
+        self.centered_id = utils.centered_identity_map(self.sz,self.spacing)
 
         self.complex_gaussian_fourier_filters = [None] * self.nr_of_gaussians
         self.max_indices = [None]*self.nr_of_gaussians
@@ -475,7 +475,7 @@ class GaussianFourierFilterGenerator(object):
     def _compute_complex_gaussian_fourier_filter(self,sigma):
 
         stds = sigma * np.ones(self.dim)
-        gaussian_spatial_filter = utils.compute_normalized_gaussian(self.id, self.mus, stds)
+        gaussian_spatial_filter = utils.compute_normalized_gaussian(self.centered_id, self.mus, stds)
         complex_gaussian_fourier_filter,max_index = create_complex_fourier_filter(gaussian_spatial_filter,self.sz,True)
         return complex_gaussian_fourier_filter,max_index
 
@@ -486,8 +486,8 @@ class GaussianFourierFilterGenerator(object):
 
         # TODO: maybe compute this jointly with the gaussian filter itself to avoid computing the spatial filter twice
         stds = sigma * np.ones(self.dim)
-        gaussian_spatial_filter = utils.compute_normalized_gaussian(self.id, self.mus, stds)
-        gaussian_spatial_xsqr_filter = gaussian_spatial_filter*(self.id**2).sum(axis=0)
+        gaussian_spatial_filter = utils.compute_normalized_gaussian(self.centered_id, self.mus, stds)
+        gaussian_spatial_xsqr_filter = gaussian_spatial_filter*(self.centered_id**2).sum(axis=0)
 
         complex_gaussian_fourier_xsqr_filter,max_index = create_complex_fourier_filter(gaussian_spatial_xsqr_filter,self.sz,True,max_index)
         return complex_gaussian_fourier_xsqr_filter,max_index
@@ -945,8 +945,8 @@ def check_fourier_conv():
     mus = np.zeros(dim)
     stds = np.ones(dim)
     spacing = np.ones(dim)
-    id = utils.identity_map(sz,spacing)
-    g = 100 * utils.compute_normalized_gaussian(id, mus, stds)
+    centered_id = utils.centered_identity_map(sz,spacing)
+    g = 100 * utils.compute_normalized_gaussian(centered_id, mus, stds)
     FFilter,_ = create_complex_fourier_filter(g, sz)
     input = AdaptVal(Variable(torch.randn([1, 1] + list(sz)), requires_grad=True))
     test = gradcheck(FourierConvolution(FFilter), input, eps=1e-6, atol=1e-4)
