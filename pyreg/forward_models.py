@@ -72,8 +72,6 @@ class RHSLibrary(object):
         return rhs_ret
 
 
-
-
     def _rhs_advect_image_multiN(self,I,v):
         """
         :param I: One-channel input image: Bx1xXxYxZ
@@ -292,7 +290,7 @@ class ForwardModel(object):
         """torch finite difference support"""
 
     @abstractmethod
-    def f(self,t,x,u,pars):
+    def f(self,t,x,u,pars,variables_from_optimizer=None):
         """
         Function to be integrated
         
@@ -300,16 +298,18 @@ class ForwardModel(object):
         :param x: state
         :param u: input
         :param pars: optional parameters
+        :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: the function value, should return a list (to support easy concatenations of states)
         """
         pass
 
-    def u(self,t,pars):
+    def u(self,t,pars,variables_from_optimizer=None):
         """
         External input
         
         :param t: time
         :param pars: parameters
+        :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: the external input
         """
         return []
@@ -324,17 +324,18 @@ class AdvectMap(ForwardModel):
     def __init__(self, sz, spacing, params=None):
         super(AdvectMap,self).__init__(sz,spacing,params)
 
-    def u(self,t, pars):
+    def u(self,t, pars, variables_from_optimizer=None):
         """
         External input, to hold the velocity field
         
         :param t: time (ignored; not time-dependent) 
         :param pars: assumes an n-D velocity field is passed as the only input argument
+        :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: Simply returns this velocity field
         """
         return pars
 
-    def f(self,t, x, u, pars):
+    def f(self,t, x, u, pars, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of transport equation: 
         
@@ -344,6 +345,7 @@ class AdvectMap(ForwardModel):
         :param x: state, here the map, \Phi, itself (assumes 3D-5D array; [nrI,0,:,:] x-coors; [nrI,1,:,:] y-coors; ...
         :param u: external input, will be the velocity field here
         :param pars: ignored (does not expect any additional inputs)
+        :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: right hand side [phi]
         """
         return [self.rhs.rhs_advect_map_multiNC(x[0],u)]
@@ -358,17 +360,18 @@ class AdvectImage(ForwardModel):
         super(AdvectImage, self).__init__(sz, spacing,params)
 
 
-    def u(self,t, pars):
+    def u(self,t, pars, variables_from_optimizer=None):
         """
         External input, to hold the velocity field
         
         :param t: time (ignored; not time-dependent) 
         :param pars: assumes an n-D velocity field is passed as the only input argument
+        :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: Simply returns this velocity field
         """
         return pars
 
-    def f(self,t, x, u, pars):
+    def f(self,t, x, u, pars, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of transport equation: :math:`-\\nabla I^T v`
         
@@ -376,6 +379,7 @@ class AdvectImage(ForwardModel):
         :param x: state, here the image, I, itself (supports multiple images and channels)
         :param u: external input, will be the velocity field here
         :param pars: ignored (does not expect any additional inputs)
+        :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: right hand side [I]
         """
         return [self.rhs.rhs_advect_image_multiNC(x[0],u)]
@@ -394,7 +398,7 @@ class EPDiffImage(ForwardModel):
         super(EPDiffImage, self).__init__(sz, spacing,params)
         self.smoother = smoother
 
-    def f(self,t, x, u, pars):
+    def f(self,t, x, u, pars, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of the EPDiff equation: 
         :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
@@ -405,12 +409,13 @@ class EPDiffImage(ForwardModel):
         :param x: state, here the vector momentum, m, and the image, I
         :param u: ignored, no external input
         :param pars: ignored (does not expect any additional inputs)
+        :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: right hand side [m,I]
         """
         # assume x[0] is m and x[1] is I for the state
         m = x[0]
         I = x[1]
-        v = self.smoother.smooth(m)
+        v = self.smoother.smooth(m,None,[I,False],variables_from_optimizer)
         # print('max(|v|) = ' + str( v.abs().max() ))
         return [self.rhs.rhs_epdiff_multiNC(m,v), self.rhs.rhs_advect_image_multiNC(I,v)]
 
@@ -442,7 +447,7 @@ class EPDiffMap(ForwardModel):
             print("flag new_phi: {},".format(x[4]))
             raise ValueError, "nan error"
 
-    def f(self,t, x, u, pars):
+    def f(self,t, x, u, pars, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of the EPDiff equation:
         :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm'
@@ -453,6 +458,7 @@ class EPDiffMap(ForwardModel):
         :param x: state, here the image, vector momentum, m, and the map, :math:`\\phi`
         :param u: ignored, no external input
         :param pars: ignored (does not expect any additional inputs)
+        :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: right hand side [m,phi]
         """
 
@@ -460,7 +466,7 @@ class EPDiffMap(ForwardModel):
         m = x[0]
         phi = x[1]
         if not self.use_net:
-            v = self.smoother.smooth(m)
+            v = self.smoother.smooth(m,None,[phi,True],variables_from_optimizer)
         else:
             v = self.smoother.adaptive_smooth(m, phi, using_map=True)
 
@@ -497,7 +503,7 @@ class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
     def __init__(self, sz, spacing, smoother, params=None):
         super(EPDiffScalarMomentumImage, self).__init__(sz, spacing, smoother, params)
 
-    def f(self, t, x, u, pars):
+    def f(self, t, x, u, pars, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of the EPDiff equation:
 
@@ -511,6 +517,7 @@ class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
         :param x: state, here the scalar momentum, lam, and the image, I, itself
         :param u: no external input
         :param pars: ignored (does not expect any additional inputs)
+        :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: right hand side [lam,I]
         """
         # assume x[0] is \lambda and x[1] is I for the state
@@ -519,55 +526,11 @@ class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
 
         # now compute the momentum
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, self.sz, self.spacing)
-        v = self.smoother.smooth(m)
+        v = self.smoother.smooth(m,None,[I,False],variables_from_optimizer)
 
         # advection for I, scalar-conservation law for lam
         return [self.rhs.rhs_scalar_conservation_multiNC(lam, v), self.rhs.rhs_advect_image_multiNC(I, v)]
 
-
-class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
-    """
-    Forward model for the scalar momentum EPdiff equation. State is the scalar momentum, lam, and the image I
-    :math:`(m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
-    
-    :math:`v=Km`
-    
-    :math:'m=\\lambda\\nabla I`
-    
-    :math:`I_t+\\nabla I^Tv=0`
-    
-    :math:`\\lambda_t + div(\\lambda v)=0`
-    """
-
-    def __init__(self, sz, spacing, smoother, params=None):
-        super(EPDiffScalarMomentumImage, self).__init__(sz, spacing, smoother, params)
-
-    def f(self,t, x, u, pars):
-        """
-        Function to be integrated, i.e., right hand side of the EPDiff equation:
-        
-        :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
-        
-        :math:`-\\nabla I^Tv`
-        
-        :math: `-div(\\lambda v)`
-        
-        :param t: time (ignored; not time-dependent) 
-        :param x: state, here the scalar momentum, lam, and the image, I, itself
-        :param u: no external input
-        :param pars: ignored (does not expect any additional inputs)
-        :return: right hand side [lam,I]
-        """
-        # assume x[0] is \lambda and x[1] is I for the state
-        lam = x[0]
-        I = x[1]
-
-        # now compute the momentum
-        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, self.sz, self.spacing)
-        v = self.smoother.smooth(m)
-
-        # advection for I, scalar-conservation law for lam
-        return [self.rhs.rhs_scalar_conservation_multiNC(lam,v), self.rhs.rhs_advect_image_multiNC(I,v)]
 
 
 class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
@@ -590,7 +553,7 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
         super(EPDiffScalarMomentumMap, self).__init__(sz,spacing, smoother, params)
 
 
-    def f(self,t, x, u, pars):
+    def f(self,t, x, u, pars, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of the EPDiff equation:
         
@@ -606,6 +569,7 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
         :param x: state, here the scalar momentum, lam, the image, I, and the transform, :math:`\\phi`
         :param u: ignored, no external input
         :param pars: ignored (does not expect any additional inputs)
+        :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: right hand side [lam,I,phi]
         """
 
@@ -616,7 +580,7 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
 
         # now compute the momentum
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, self.sz, self.spacing)
-        v = self.smoother.smooth(m)
+        v = self.smoother.smooth(m,None,[phi,True],variables_from_optimizer)
 
         return [self.rhs.rhs_scalar_conservation_multiNC(lam,v),
                 self.rhs.rhs_advect_image_multiNC(I,v),
