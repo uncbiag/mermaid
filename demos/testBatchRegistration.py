@@ -9,6 +9,7 @@ import numpy as np
 import pyreg.example_generation as eg
 import pyreg.module_parameters as pars
 import pyreg.multiscale_optimizer as MO
+import pyreg.simple_interface as si
 
 import pyreg.load_default_settings as ds
 
@@ -37,28 +38,36 @@ def get_image_range(im_from,im_to):
     return f
 
 # load a bunch of images as source
-I0,_,_,_ = im_io.read_batch_to_nc_format(get_image_range(0,20))
+I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(get_image_range(0,10))
 sz = np.array(I0.shape)
 # and a bunch of images as target images
-I1,_,_,_ = im_io.read_batch_to_nc_format(get_image_range(20,40))
+I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(10,20))
 
-# do [0,1] spacing
-spacing = 1./(sz[2::]-1) # the first two dimensions are batch size and number of image channels
+assert( np.all(spacing0==spacing1) )
 
-# create the source and target image as pyTorch variables
-ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
-ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
+si.RegisterImagePair().register_images(I0,I1,spacing0,
+                                       model_name='lddmm_shooting_map',
+                                       nr_of_iterations=100,
+                                       visualize_step=5,
+                                       map_low_res_factor=0.5,
+                                       json_config_out_filename='testBatch.json',
+                                       params='testBatch.json')
 
-params['model']['deformation']['map_low_res_factor'] = 0.5
-params['model']['registration_model']['type'] = 'lddmm_shooting_scalar_momentum_map'
-params['optimizer']['single_scale']['nr_of_iterations'] = 101
-so = MO.SimpleSingleScaleRegistration(ISource,ITarget,spacing,params)
-so.get_optimizer().set_visualization( ds.visualize )
-#so.get_optimizer().set_visualize_step( ds.visualize_step )
-so.get_optimizer().set_visualize_step( 20 )
-so.set_light_analysis_on(True)
-so.register()
+## create the source and target image as pyTorch variables
+#ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
+#ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
 
-params.write_JSON( 'testBatchSimpleRegistration_' + model_name + '_settings_clean.json')
-params.write_JSON_comments( 'testBatchSimpleRegistration_' + model_name + '_settings_comments.json')
+
+#params['model']['deformation']['map_low_res_factor'] = 0.5
+#params['model']['registration_model']['type'] = 'lddmm_shooting_scalar_momentum_map'
+#params['optimizer']['single_scale']['nr_of_iterations'] = 101
+#so = MO.SimpleSingleScaleRegistration(ISource,ITarget,spacing0,params)
+#so.get_optimizer().set_visualization( ds.visualize )
+##so.get_optimizer().set_visualize_step( ds.visualize_step )
+#so.get_optimizer().set_visualize_step( 20 )
+#so.set_light_analysis_on(True)
+#so.register()
+#
+#params.write_JSON( 'testBatchSimpleRegistration_' + model_name + '_settings_clean.json')
+#params.write_JSON_comments( 'testBatchSimpleRegistration_' + model_name + '_settings_comments.json')
 

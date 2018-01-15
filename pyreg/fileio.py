@@ -432,12 +432,13 @@ class ImageIO(FileIO):
 
         spacing = hdr['spacing']
         squeezed_spacing = spacing # will be changed if image is squeezed
+        sz = im.shape
+        sz_squeezed = sz
 
         if self.squeeze_image==True:
             if verbose:
                 print('Squeezing image')
             dim = len(im.shape)
-            sz = im.shape
             im = im.squeeze()
             dimSqueezed = len(im.shape)
             sz_squeezed = im.shape

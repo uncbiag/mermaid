@@ -381,7 +381,7 @@ class SingleGaussianFourierSmoother(GaussianFourierSmoother):
         super(SingleGaussianFourierSmoother,self).__init__(sz,spacing,params)
         self.gaussianStd = params[('gaussian_std', 0.15 ,'std for the Gaussian' )]
         """standard deviation of Gaussian"""
-        self.gaussianStd_min = params[('gaussian_std_min', 0.00001 ,'minimal allowed std for the Gaussian' )]
+        self.gaussianStd_min = params[('gaussian_std_min', 0.01 ,'minimal allowed std for the Gaussian' )]
         """minimal allowed standard deviation during optimization"""
 
     def _create_filter(self):
@@ -472,7 +472,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         """standard deviations of Gaussians"""
         self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', default_multi_gaussian_weights.tolist(), 'weights for the multiple Gaussians')])
         """weights for the Gaussians"""
-        self.gaussianStd_min = params[('gaussian_std_min', 0.00001, 'minimal allowed std for the Gaussians')]
+        self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussians')]
         """minimal allowed standard deviation during optimization"""
         self.optimize_over_smoother_parameters = params[('optimize_over_smoother_parameters', False, 'if set to true the smoother will be optimized')]
         """determines if we should optimize over the smoother parameters"""
