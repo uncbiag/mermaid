@@ -584,6 +584,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.rec_phiWarped = None
         self.rec_IWarped = None
         self.last_energy = None
+        self.rel_f = None
         self.rec_custom_optimizer_output_string = ''
         """the evaluation information"""
 
@@ -607,7 +608,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :return: deformation map
         """
         return self.rec_phiWarped
-
 
 
     def set_n_scale(self, n_scale):
@@ -729,20 +729,28 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.optimizer_instance.zero_grad()
         # 1) Forward pass: Compute predicted y by passing x to the model
         # 2) Compute loss
+
+        # first define variables that will be passed to the model and the criterion (for further use)
+        opt_variables = {'iter': self.iter_count}
+
         if self.useMap:
             if self.mapLowResFactor is not None:
-                rec_tmp = self.model(self.lowResIdentityMap, self.lowResISource)
+                rec_tmp = self.model(self.lowResIdentityMap, self.lowResISource, opt_variables )
                 # now upsample to correct resolution
                 desiredSz = self.identityMap.size()[2::]
                 self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
             else:
-                self.rec_phiWarped = self.model(self.identityMap, self.ISource)
+                self.rec_phiWarped = self.model(self.identityMap, self.ISource, opt_variables )
 
             loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource,
-                                  self.model.get_variables_to_transfer_to_loss_function())
+                                  self.model.get_variables_to_transfer_to_loss_function(),
+                                  opt_variables )
         else:
-            self.rec_IWarped = self.model(self.ISource)
-            loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget, self.model.get_variables_to_transfer_to_loss_function())
+            self.rec_IWarped = self.model(self.ISource, opt_variables )
+            loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget,
+                                  self.model.get_variables_to_transfer_to_loss_function(),
+                                  opt_variables )
+
         loss.backward()
         #torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
 
@@ -776,18 +784,18 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.last_energy is not None:
 
             # relative function toleranc: |f(xi)-f(xi+1)|/(1+|f(xi)|)
-            rel_f = abs(self.last_energy - cur_energy) / (1 + abs(cur_energy))
+            self.rel_f = abs(self.last_energy - cur_energy) / (1 + abs(cur_energy))
 
             print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF={relF} {cos}'
                   .format(iter=self.iter_count,
                           energy=cur_energy,
                           similarityE=utils.t2np(similarityEnergy.float()),
                           regE=utils.t2np(regEnergy.float()),
-                          relF=rel_f,
+                          relF=self.rel_f,
                           cos=custom_optimizer_output_string))
 
             # check if relative convergence tolerance is reached
-            if rel_f < self.rel_ftol:
+            if self.rel_f < self.rel_ftol:
                 print('Reached relative function tolerance of = ' + str(self.rel_ftol))
                 return True
 

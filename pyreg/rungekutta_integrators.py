@@ -40,7 +40,7 @@ class RKIntegrator(object):
             """parameters for the integrator"""
 
         if u is None:
-            self.u = lambda t,pars: []
+            self.u = lambda t,pars,vo: []
         else:
             self.u = u
             """input for integration"""
@@ -64,13 +64,14 @@ class RKIntegrator(object):
         """
         return self.nrOfTimeSteps
 
-    def solve(self,x,fromT,toT):
+    def solve(self,x,fromT,toT,variables_from_optimizer=None):
         """
         Solves the differential equation.
         
         :param x: initial condition for state of the equation
         :param fromT: time to start integration from 
         :param toT: time to end integration
+        :param variables_from_optimizer: allows passing variables from the optimizer (for example an iteration count)
         :return: Returns state, x, at time toT
         """
         # arguments need to be list so we can pass multiple variables at the same time
@@ -82,7 +83,7 @@ class RKIntegrator(object):
         for i in range(0, self.nrOfTimeSteps):
             #print('RKIter = ' + str( iter ) )
             #iter+=1
-            x = self.solve_one_step(x, currentT, dt)
+            x = self.solve_one_step(x, currentT, dt, variables_from_optimizer)
             currentT += dt
         #print( x )
         return x
@@ -99,7 +100,7 @@ class RKIntegrator(object):
         return [a+b for a,b in zip(x,y)]
 
     @abstractmethod
-    def solve_one_step(self, x, t, dt):
+    def solve_one_step(self, x, t, dt, variables_from_optimizer=None):
         """
         Abstract method to be implemented by the different Runge-Kutta methods to advance one step. 
         Both x and the output of f are expected to be lists 
@@ -107,6 +108,7 @@ class RKIntegrator(object):
         :param x: initial state 
         :param t: initial time
         :param dt: time increment
+        :param variables_from_optimizer: allows passing variables from the optimizer (for example an iteration count)
         :return: returns the state at t+dt 
         """
         pass
@@ -116,17 +118,18 @@ class EulerForward(RKIntegrator):
     Euler-forward integration
     """
 
-    def solve_one_step(self, x, t, dt):
+    def solve_one_step(self, x, t, dt, vo=None):
         """
         One step for Euler-forward
         
         :param x: state at time t
         :param t: initial time
         :param dt: time increment
+        :param vo: variables from optimizer
         :return: state at x+dt
         """
         #xp1 = [a+b*dt for a,b in zip(x,self.f(t,x,self.u(t)))]
-        xp1 = self._xpyts(x, self.f(t, x, self.u(t, self.pars), self.pars), dt)
+        xp1 = self._xpyts(x, self.f(t, x, self.u(t, self.pars, vo), self.pars, vo), dt)
         return xp1
 
 class RK4(RKIntegrator):
@@ -141,22 +144,23 @@ class RK4(RKIntegrator):
             print("flag phi: {}, location k{}".format(x[1],k))
             raise ValueError, "nan error"
 
-    def solve_one_step(self, x, t, dt):
+    def solve_one_step(self, x, t, dt, vo=None):
         """
         One step for Runge-Kutta 4
         
         :param x: state at time t
         :param t: initial time
         :param dt: time increment
+        :param vo: variables from optimizer
         :return: state at x+dt
         """
-        k1 = self._xts(self.f(t, x, self.u(t, self.pars), self.pars), dt)
+        k1 = self._xts(self.f(t, x, self.u(t, self.pars, vo), self.pars, vo), dt)
         #self.debugging(k1,t,1)
-        k2 = self._xts(self.f(t + 0.5 * dt, self._xpyts(x, k1, 0.5), self.u(t + 0.5 * dt, self.pars), self.pars), dt)
+        k2 = self._xts(self.f(t + 0.5 * dt, self._xpyts(x, k1, 0.5), self.u(t + 0.5 * dt, self.pars, vo), self.pars, vo), dt)
         #self.debugging(k2, t, 2)
-        k3 = self._xts(self.f(t + 0.5 * dt, self._xpyts(x, k2, 0.5), self.u(t + 0.5 * dt, self.pars), self.pars), dt)
+        k3 = self._xts(self.f(t + 0.5 * dt, self._xpyts(x, k2, 0.5), self.u(t + 0.5 * dt, self.pars, vo), self.pars, vo), dt)
         #self.debugging(k3, t, 3)
-        k4 = self._xts(self.f(t + dt, self._xpy(x, k3), self.u(t + dt, self.pars), self.pars), dt)
+        k4 = self._xts(self.f(t + dt, self._xpy(x, k3), self.u(t + dt, self.pars, vo), self.pars, vo), dt)
         #self.debugging(k4, t, 4)
 
         # now iterate over all the elements of the list describing state x

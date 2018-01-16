@@ -655,10 +655,11 @@ class FourierSingleGaussianConvolution(FourierGaussianConvolution):
     Also allows to differentiate through the Gaussian standard deviation.
     """
 
-    def __init__(self, gaussian_fourier_filter_generator):
+    def __init__(self, gaussian_fourier_filter_generator, compute_std_gradient):
         """
         Constructor for the Fouier-based convolution
         :param sigma: standard deviation for the filter
+        :param compute_std_gradient: if True computes the gradient with respect to the std, otherwise set to 0
         """
         # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
         super(FourierSingleGaussianConvolution, self).__init__(gaussian_fourier_filter_generator)
@@ -670,6 +671,8 @@ class FourierSingleGaussianConvolution(FourierGaussianConvolution):
 
         self.input = None
         self.sigma = None
+
+        self.compute_std_gradient = compute_std_gradient
 
     def forward(self, input, sigma):
         """
@@ -730,17 +733,20 @@ class FourierSingleGaussianConvolution(FourierGaussianConvolution):
                 grad_input = self._compute_input_gradient_CPU(grad_output,self.complex_fourier_filter)
 
         # now compute the gradient with respect to the standard deviation of the filter
-        if self.needs_input_grad[1]:
-            if USE_CUDA:
-                grad_sigma = self._compute_sigma_gradient_CUDA(self.input,self.sigma,grad_output,self.complex_fourier_filter,self.complex_fourier_xsqr_filter)
-            else:
-                grad_sigma = self._compute_sigma_gradient_CPU(self.input,self.sigma,grad_output,self.complex_fourier_filter,self.complex_fourier_xsqr_filter)
+        if self.compute_std_gradient:
+            if self.needs_input_grad[1]:
+                if USE_CUDA:
+                    grad_sigma = self._compute_sigma_gradient_CUDA(self.input,self.sigma,grad_output,self.complex_fourier_filter,self.complex_fourier_xsqr_filter)
+                else:
+                    grad_sigma = self._compute_sigma_gradient_CPU(self.input,self.sigma,grad_output,self.complex_fourier_filter,self.complex_fourier_xsqr_filter)
+        else:
+            grad_sigma = torch.zeros_like(self.sigma)
 
         # now return the computed gradients
         return grad_input, grad_sigma
 
 
-def fourier_single_gaussian_convolution(input, gaussian_fourier_filter_generator,sigma):
+def fourier_single_gaussian_convolution(input, gaussian_fourier_filter_generator,sigma,compute_std_gradient):
     """
     Convenience function for Fourier-based Gaussian convolutions. Make sure to use this one (instead of directly
     using the class FourierGaussianConvolution). This will assure that each call generates its own instance
@@ -748,14 +754,15 @@ def fourier_single_gaussian_convolution(input, gaussian_fourier_filter_generator
 
     :param input: Input image
     :param gaussian_fourier_filter_generator: generator which will create Gaussian Fourier filter (and caches them)
-    :param sigma: standard deviation for the Gaussian filter 
+    :param sigma: standard deviation for the Gaussian filter
+    :param compute_std_gradient: if set to True computes the gradient otherwise sets it to 0
     :return: 
     """
     # First braces create a Function object. Any arguments given here
     # will be passed to __init__. Second braces will invoke the __call__
     # operator, that will then use forward() to compute the result and
     # return it.
-    return FourierSingleGaussianConvolution(gaussian_fourier_filter_generator)(input,sigma)
+    return FourierSingleGaussianConvolution(gaussian_fourier_filter_generator,compute_std_gradient)(input,sigma)
 
 
 class FourierMultiGaussianConvolution(FourierGaussianConvolution):
@@ -764,10 +771,12 @@ class FourierMultiGaussianConvolution(FourierGaussianConvolution):
     Also allows to differentiate through the Gaussian standard deviation.
     """
 
-    def __init__(self, gaussian_fourier_filter_generator):
+    def __init__(self, gaussian_fourier_filter_generator,compute_weight_and_std_gradients):
         """
         Constructor for the Fouier-based convolution
-        :param sigma: standard deviation for the filter
+
+        :param gaussian_fourier_filter_generator: class instance that creates and caches the Gaussian filters
+        :param compute_weight_and_std_gradients: if set to True the gradients for weights and std are computed, otherwise they are filled w/ zero
         """
         # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
         super(FourierMultiGaussianConvolution, self).__init__(gaussian_fourier_filter_generator)
@@ -781,6 +790,8 @@ class FourierMultiGaussianConvolution(FourierGaussianConvolution):
         self.input = None
         self.weights = None
         self.sigmas = None
+
+        self.compute_weight_and_std_gradients = compute_weight_and_std_gradients
 
     def forward(self, input, sigmas, weights):
         """
@@ -891,21 +902,27 @@ class FourierMultiGaussianConvolution(FourierGaussianConvolution):
 
         # now compute the gradient with respect to the standard deviation of the filter
         if self.needs_input_grad[1]:
-            if USE_CUDA:
-                grad_sigmas = self._compute_sigmas_gradient_CUDA_multi_gaussian(self.input,self.sigmas,grad_output,self.complex_fourier_filters,self.complex_fourier_xsqr_filters)
+            if self.compute_weight_and_std_gradients:
+                if USE_CUDA:
+                    grad_sigmas = self._compute_sigmas_gradient_CUDA_multi_gaussian(self.input,self.sigmas,grad_output,self.complex_fourier_filters,self.complex_fourier_xsqr_filters)
+                else:
+                    grad_sigmas = self._compute_sigmas_gradient_CPU_multi_gaussian(self.input,self.sigmas,grad_output,self.complex_fourier_filters,self.complex_fourier_xsqr_filters)
             else:
-                grad_sigmas = self._compute_sigmas_gradient_CPU_multi_gaussian(self.input,self.sigmas,grad_output,self.complex_fourier_filters,self.complex_fourier_xsqr_filters)
+                grad_sigmas = torch.zeros_like(self.sigmas)
 
         if self.needs_input_grad[2]:
-            if USE_CUDA:
-                grad_weights = self._compute_weights_gradient_CUDA_multi_gaussian(self.input,self.weights,grad_output,self.complex_fourier_filters)
+            if self.compute_weight_and_std_gradients:
+                if USE_CUDA:
+                    grad_weights = self._compute_weights_gradient_CUDA_multi_gaussian(self.input,self.weights,grad_output,self.complex_fourier_filters)
+                else:
+                    grad_weights = self._compute_weights_gradient_CPU_multi_gaussian(self.input,self.weights,grad_output,self.complex_fourier_filters)
             else:
-                grad_weights = self._compute_weights_gradient_CPU_multi_gaussian(self.input,self.weights,grad_output,self.complex_fourier_filters)
+                grad_weights = torch.zeros_like(self.weights)
 
         # now return the computed gradients
         return grad_input, grad_sigmas, grad_weights
 
-def fourier_multi_gaussian_convolution(input, gaussian_fourier_filter_generator,sigma,weights):
+def fourier_multi_gaussian_convolution(input, gaussian_fourier_filter_generator,sigma,weights,compute_weight_and_std_gradients=True):
     """
     Convenience function for Fourier-based multi Gaussian convolutions. Make sure to use this one (instead of directly
     using the class FourierGaussianConvolution). This will assure that each call generates its own instance
@@ -915,13 +932,14 @@ def fourier_multi_gaussian_convolution(input, gaussian_fourier_filter_generator,
     :param gaussian_fourier_filter_generator: generator which will create Gaussian Fourier filter (and caches them)
     :param sigma: standard deviations for the Gaussian filter (need to be positive)
     :param weights: weights for the multi-Gaussian kernel (need to sum up to one and need to be positive)
+    :param compute_weight_and_std_gradients: if set to True then gradients for weight and standard deviation are computed, otherwise they are replaced w/ zero
     :return: 
     """
     # First braces create a Function object. Any arguments given here
     # will be passed to __init__. Second braces will invoke the __call__
     # operator, that will then use forward() to compute the result and
     # return it.
-    return FourierMultiGaussianConvolution(gaussian_fourier_filter_generator)(input,sigma,weights)
+    return FourierMultiGaussianConvolution(gaussian_fourier_filter_generator,compute_weight_and_std_gradients)(input,sigma,weights)
 
 
 def check_fourier_conv():

@@ -33,6 +33,19 @@ class Smoother(object):
         self.params = params
         """ParameterDict() parameter object holding various configuration options"""
         self.optimizer_params = None
+        """parameters that will be exposed to the optimizer"""
+        self.ISource = None
+        """For smoothers that make use of the map, stores the source image to which the map can be applied"""
+
+    def set_source_image(self,ISource):
+        """
+        Sets the source image. Useful for smoothers that have as an input the map and need to compute a warped source image.
+
+        :param ISource: source image
+        :return: n/a
+        """
+
+        self.ISource = ISource
 
     def get_optimization_parameters(self):
         """
@@ -50,24 +63,30 @@ class Smoother(object):
         return ''
 
     @abstractmethod
-    def apply_smooth(self, I, Iout=None):
+    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
         """
-        Abstract method to smooth a scalar field. Only this method should be overwritten in derived classes.
+        Abstract method to smooth a vector field. Only this method should be overwritten in derived classes.
 
-        :param I: input image to smooth  BxCxXxYxZ
-        :param Iout: if not None then result is returned in this variable
+        :param v: input field to smooth  BxCxXxYxZ
+        :param vout: if not None then result is returned in this variable
+        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
+                Can be used to design image-dependent smoothers; typically not used.
+        :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: should return the a smoothed scalar field, image dimension BxCXxYxZ
         """
         pass
 
 
 
-    def smooth(self, v, vout=None):
+    def smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
         """
         Smoothes a vector field of dimension BxCxXxYxZ,
 
         :param v: vector field to smooth BxCxXxYxZ
         :param vout: if not None then result is returned in this variable
+        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
+                Can be used to design image-dependent smoothers; typically not used.
+        :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed vector field BxCxXxYxZ
         """
         sz = v.size()
@@ -76,7 +95,7 @@ class Smoother(object):
         else:
             Sv = Variable(MyTensor(v.size()).zero_())
 
-        Sv[:] = self.apply_smooth(v)    # here must use :, very important !!!!
+        Sv[:] = self.apply_smooth(v,vout,I_or_phi,variables_from_optimizer)    # here must use :, very important !!!!
         return Sv
 
 
@@ -108,12 +127,15 @@ class DiffusionSmoother(Smoother):
         """
         return self.iter
 
-    def apply_smooth(self, v, vout=None):
+    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
         """
         Smoothes a scalar field of dimension XxYxZ
 
         :param v: input image
         :param vout: if not None returns the result in this variable
+        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
+                Can be used to design image-dependent smoothers; typically not used.
+        :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
 
@@ -234,12 +256,15 @@ class GaussianSpatialSmoother(GaussianSmoother):
         else:
             raise ValueError('Can only perform padding in dimensions 1-3')
 
-    def apply_smooth(self, v, vout=None):
+    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
         """
         Smooth the scalar field using Gaussian smoothing in the spatial domain
 
         :param v: image to smooth
         :param vout: if not None returns the result in this variable
+        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
+                Can be used to design image-dependent smoothers; typically not used.
+        :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
 
@@ -272,12 +297,15 @@ class GaussianFourierSmoother(GaussianSmoother):
         """
         pass
 
-    def apply_smooth(self, v, vout=None):
+    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
         :param v: image to smooth
         :param vout: if not None returns the result in this variable
+        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
+                Can be used to design image-dependent smoothers; typically not used.
+        :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
 
@@ -303,10 +331,12 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         super(AdaptiveSingleGaussianFourierSmoother, self).__init__(sz, spacing, params)
         self.gaussianStd = np.array(params[('gaussian_std', [0.15], 'std for the Gaussian')])
         """standard deviation of Gaussian"""
-        self.gaussianStd_min = params[('gaussian_std_min', 0.00001, 'minimal allowed std for the Gaussian')]
+        self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussian')]
         """minimal allowed standard deviation during optimization"""
         self.optimize_over_smoother_parameters = params[('optimize_over_smoother_parameters', False, 'if set to true the smoother will be optimized')]
         """determines if we should optimize over the smoother parameters"""
+        self.start_optimize_over_smoother_parameters_at_iteration = \
+            params[('start_optimize_over_smoother_parameters_at_iteration', 0, 'Does not optimize the parameters before this iteration')]
 
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz,spacing)
 
@@ -348,21 +378,32 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         gaussianStd = self._get_gaussian_std_from_optimizer_params()
         return gaussianStd
 
-    def apply_smooth(self, v, vout=None):
+    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
         :param v: image to smooth
         :param vout: if not None returns the result in this variable
+        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
+                Can be used to design image-dependent smoothers; typically not used.
+        :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
 
+        if not self.optimize_over_smoother_parameters or (variables_from_optimizer is None):
+            compute_std_gradient = False
+        else:
+            if self.start_optimize_over_smoother_parameters_at_iteration <= variables_from_optimizer['iter']:
+                compute_std_gradient = True
+            else:
+                compute_std_gradient = False
+
         # just doing a Gaussian smoothing
         if vout is not None:
-            vout = ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std())
+            vout = ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std(),compute_std_gradient)
             return vout
         else:
-            return ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std())
+            return ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std(),compute_std_gradient)
 
 
     def _create_optimization_vector_parameters(self):
@@ -476,6 +517,8 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         """minimal allowed standard deviation during optimization"""
         self.optimize_over_smoother_parameters = params[('optimize_over_smoother_parameters', False, 'if set to true the smoother will be optimized')]
         """determines if we should optimize over the smoother parameters"""
+        self.start_optimize_over_smoother_parameters_at_iteration = \
+            params[('start_optimize_over_smoother_parameters_at_iteration', 0, 'Does not optimize the parameters before this iteration')]
 
         assert len(self.multi_gaussian_weights) == len(self.multi_gaussian_stds)
 
@@ -565,21 +608,35 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         gaussianStds = self._get_gaussian_stds_from_optimizer_params()
         return gaussianStds
 
-    def apply_smooth(self, v, vout=None):
+    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
         :param v: image to smooth
         :param vout: if not None returns the result in this variable
+        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
+                Can be used to design image-dependent smoothers; typically not used.
+        :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
 
-        # just doing a Gaussian smoothing
+        # just do a multi-Gaussian smoothing
+
+        if not self.optimize_over_smoother_parameters or (variables_from_optimizer is None):
+            compute_weight_and_std_gradients = False
+        else:
+           if self.start_optimize_over_smoother_parameters_at_iteration<=variables_from_optimizer['iter']:
+               compute_weight_and_std_gradients = True
+           else:
+               compute_weight_and_std_gradients = False
+
         if vout is not None:
-            vout = ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_stds(),self.get_gaussian_weights())
+            vout = ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,
+                                                         self.get_gaussian_stds(),self.get_gaussian_weights(),compute_weight_and_std_gradients)
             return vout
         else:
-            return ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_stds(),self.get_gaussian_weights())
+            return ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,
+                                                         self.get_gaussian_stds(),self.get_gaussian_weights(),compute_weight_and_std_gradients)
 
 
     def _create_optimization_vector_parameters(self):
@@ -617,6 +674,7 @@ class AdaptiveSmoother(Smoother):
 
     def adaptive_smooth(self, m, phi, using_map=True):
         """
+        EXPERIMENTAL: DO NOT YET USE! #todo: fix this
 
         :param m:
         :param phi:
@@ -631,7 +689,7 @@ class AdaptiveSmoother(Smoother):
         return v
 
 
-    def apply_smooth(self, v, vout=None):
+    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
         pass
 
 

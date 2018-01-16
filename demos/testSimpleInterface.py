@@ -53,7 +53,7 @@ else:
     # just try one of them, explicitly specified
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='total_variation_map')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_vector_momentum_map')
-    SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_vector_momentum_image')
+    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_vector_momentum_image')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='affine_map')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',map_low_res_factor=0.15,visualize_step=5,nr_of_iterations=50)
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='curvature_map',rel_ftol=1e-12, similarity_measure_sigma=0.005,nr_of_iterations=100)
@@ -62,7 +62,7 @@ else:
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_image')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_map')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_scalar_momentum_image')
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_quasi_momentum_image')
+    SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_quasi_momentum_image')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_image')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_map')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_map')
