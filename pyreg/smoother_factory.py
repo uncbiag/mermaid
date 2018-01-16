@@ -331,10 +331,12 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         super(AdaptiveSingleGaussianFourierSmoother, self).__init__(sz, spacing, params)
         self.gaussianStd = np.array(params[('gaussian_std', [0.15], 'std for the Gaussian')])
         """standard deviation of Gaussian"""
-        self.gaussianStd_min = params[('gaussian_std_min', 0.00001, 'minimal allowed std for the Gaussian')]
+        self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussian')]
         """minimal allowed standard deviation during optimization"""
         self.optimize_over_smoother_parameters = params[('optimize_over_smoother_parameters', False, 'if set to true the smoother will be optimized')]
         """determines if we should optimize over the smoother parameters"""
+        self.start_optimize_over_smoother_parameters_at_iteration = \
+            params[('start_optimize_over_smoother_parameters_at_iteration', 0, 'Does not optimize the parameters before this iteration')]
 
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz,spacing)
 
@@ -388,12 +390,20 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         :return: smoothed image
         """
 
+        if not self.optimize_over_smoother_parameters or (variables_from_optimizer is None):
+            compute_std_gradient = False
+        else:
+            if self.start_optimize_over_smoother_parameters_at_iteration <= variables_from_optimizer['iter']:
+                compute_std_gradient = True
+            else:
+                compute_std_gradient = False
+
         # just doing a Gaussian smoothing
         if vout is not None:
-            vout = ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std())
+            vout = ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std(),compute_std_gradient)
             return vout
         else:
-            return ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std())
+            return ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std(),compute_std_gradient)
 
 
     def _create_optimization_vector_parameters(self):
@@ -507,6 +517,8 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         """minimal allowed standard deviation during optimization"""
         self.optimize_over_smoother_parameters = params[('optimize_over_smoother_parameters', False, 'if set to true the smoother will be optimized')]
         """determines if we should optimize over the smoother parameters"""
+        self.start_optimize_over_smoother_parameters_at_iteration = \
+            params[('start_optimize_over_smoother_parameters_at_iteration', 0, 'Does not optimize the parameters before this iteration')]
 
         assert len(self.multi_gaussian_weights) == len(self.multi_gaussian_stds)
 
@@ -608,12 +620,23 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         :return: smoothed image
         """
 
-        # just doing a Gaussian smoothing
+        # just do a multi-Gaussian smoothing
+
+        if not self.optimize_over_smoother_parameters or (variables_from_optimizer is None):
+            compute_weight_and_std_gradients = False
+        else:
+           if self.start_optimize_over_smoother_parameters_at_iteration<=variables_from_optimizer['iter']:
+               compute_weight_and_std_gradients = True
+           else:
+               compute_weight_and_std_gradients = False
+
         if vout is not None:
-            vout = ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_stds(),self.get_gaussian_weights())
+            vout = ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,
+                                                         self.get_gaussian_stds(),self.get_gaussian_weights(),compute_weight_and_std_gradients)
             return vout
         else:
-            return ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_stds(),self.get_gaussian_weights())
+            return ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,
+                                                         self.get_gaussian_stds(),self.get_gaussian_weights(),compute_weight_and_std_gradients)
 
 
     def _create_optimization_vector_parameters(self):

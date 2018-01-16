@@ -38,20 +38,24 @@ def get_image_range(im_from,im_to):
     return f
 
 # load a bunch of images as source
-I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(get_image_range(0,10))
+I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(get_image_range(0,5))
 sz = np.array(I0.shape)
 # and a bunch of images as target images
-I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(10,20))
+I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(5,10))
 
 assert( np.all(spacing0==spacing1) )
 
 si.RegisterImagePair().register_images(I0,I1,spacing0,
-                                       model_name='lddmm_shooting_map',
+                                       model_name='svf_scalar_momentum_map',
                                        nr_of_iterations=100,
                                        visualize_step=5,
                                        map_low_res_factor=0.5,
+                                       rel_ftol=1e-10,
                                        json_config_out_filename='testBatch.json',
                                        params='testBatch.json')
+
+# svf_scalar_momentum_map
+#                                       model_name='lddmm_shooting_map',
 
 ## create the source and target image as pyTorch variables
 #ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
