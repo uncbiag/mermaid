@@ -55,14 +55,21 @@ else:
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_vector_momentum_map')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_vector_momentum_image')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='affine_map')
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',map_low_res_factor=0.15,visualize_step=5,nr_of_iterations=50)
+    SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
+                                           smoother_type='adaptive_multiGaussian',
+                                           optimize_over_smoother_parameters=True,
+                                           map_low_res_factor=1.0,
+                                           visualize_step=10,
+                                           nr_of_iterations=200,
+                                           rel_ftol=1e-8,
+                                           similarity_measure_sigma=0.01)
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='curvature_map',rel_ftol=1e-12, similarity_measure_sigma=0.005,nr_of_iterations=100)
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_image')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='diffusion_map')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_image')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_map')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_scalar_momentum_image')
-    SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_quasi_momentum_image')
+    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_quasi_momentum_image',nr_of_iterations=100)
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_image')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_map')
     #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_map')
