@@ -89,6 +89,7 @@ class RegisterImagePair(object):
                                    map_low_res_factor=None,
                                    rel_ftol=None,
                                    smoother_type=None,
+                                   optimize_over_smoother_parameters=None,
                                    json_config_out_filename=None,
                                    visualize_step=5,
                                    use_multi_scale=False,
@@ -106,6 +107,7 @@ class RegisterImagePair(object):
         :param map_low_res_factor: allows for parameterization of the registration at lower resolution than the image (0,1]
         :param rel_ftol: relative function tolerance for optimizer
         :param smoother_type: type of smoother (e.g., 'gaussian' or 'multiGaussian')
+        :param optimize_over_smoother_parameters: for adaptive smoothers, weights/parameters will be optimized over if set to True
         :param json_config_out_filename: output file name for the used configuration.
         :param visualize_step: step at which the solution is visualized; if set to None, no visualizations will be created
         :param use_multi_scale: if set to True a multi-scale solver will be used
@@ -128,13 +130,14 @@ class RegisterImagePair(object):
         assert (np.all(normalized_spacing0 == normalized_spacing1))
         spacing = normalized_spacing0
 
-        self.register(ISource,ITarget,spacing,model_name,
+        self.register_images(ISource,ITarget,spacing,model_name,
                       nr_of_iterations=nr_of_iterations,
                       similarity_measure_type=similarity_measure_type,
                       similarity_measure_sigma=similarity_measure_sigma,
                       map_low_res_factor=map_low_res_factor,
                       rel_ftol=rel_ftol,
                       smoother_type=smoother_type,
+                      optimize_over_smoother_parameters=optimize_over_smoother_parameters,
                       json_config_out_filename=json_config_out_filename,
                       visualize_step=visualize_step,
                       use_multi_scale=use_multi_scale,
@@ -147,6 +150,7 @@ class RegisterImagePair(object):
                         map_low_res_factor=None,
                         rel_ftol=None,
                         smoother_type=None,
+                        optimize_over_smoother_parameters=None,
                         json_config_out_filename=None,
                         visualize_step=5,
                         use_multi_scale=False,
@@ -165,6 +169,7 @@ class RegisterImagePair(object):
         :param map_low_res_factor: allows for parameterization of the registration at lower resolution than the image (0,1]
         :param rel_ftol: relative function tolerance for optimizer
         :param smoother_type: type of smoother (e.g., 'gaussian' or 'multiGaussian')
+        :param optimize_over_smoother_parameters: for adaptive smoothers, weights/parameters will be optimized over if set to True
         :param json_config_out_filename: output file name for the used configuration.
         :param visualize_step: step at which the solution is visualized; if set to None, no visualizations will be created
         :param use_multi_scale: if set to True a multi-scale solver will be used
@@ -210,7 +215,10 @@ class RegisterImagePair(object):
                 self.params['optimizer']['single_scale']['rel_ftol'] = rel_ftol
 
             if smoother_type is not None:
-                self.params['registration_model']['forward_model']['smoother']['type'] = smoother_type
+                self.params['model']['registration_model']['forward_model']['smoother']['type'] = smoother_type
+
+            if optimize_over_smoother_parameters is not None:
+                self.params['model']['registration_model']['forward_model']['smoother']['optimize_over_smoother_parameters'] = optimize_over_smoother_parameters
 
             if use_multi_scale:
                 self.opt = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)

@@ -942,6 +942,165 @@ def fourier_multi_gaussian_convolution(input, gaussian_fourier_filter_generator,
     return FourierMultiGaussianConvolution(gaussian_fourier_filter_generator,compute_weight_and_std_gradients)(input,sigma,weights)
 
 
+class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
+    """
+    pyTorch function to compute a set of Gaussian convolutions (as in the multi-Gaussian) in the Fourier domain: f = g*h.
+    Also allows to differentiate through the standard deviations. THe output is not a smoothed field, but the
+    set of all of them. This can then be fed into a subsequent neural network for further processing.
+    """
+
+    def __init__(self, gaussian_fourier_filter_generator,compute_std_gradients):
+        """
+        Constructor for the Fouier-based convolution
+
+        :param gaussian_fourier_filter_generator: class instance that creates and caches the Gaussian filters
+        :param compute_std_gradients: if set to True the gradients for the stds are computed, otherwise they are filled w/ zero
+        """
+        # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
+        super(FourierSetOfGaussianConvolutions, self).__init__(gaussian_fourier_filter_generator)
+
+        self.gaussian_fourier_filter_generator = gaussian_fourier_filter_generator
+        self.nr_of_gaussians = gaussian_fourier_filter_generator.get_number_of_gaussians()
+
+        self.complex_fourier_filters = [None]*self.nr_of_gaussians
+        self.complex_fourier_xsqr_filters = [None]*self.nr_of_gaussians
+
+        self.input = None
+        self.sigmas = None
+
+        self.compute_std_gradients = compute_std_gradients
+
+    def forward(self, input, sigmas):
+        """
+        Performs the Fourier-based filtering
+        the 3d cpu fft is not implemented in fftn, to avoid fusing with batch and channel, here 3d is calculated in loop
+        1d 2d cpu works well because fft and fft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
+
+        in gpu implementation, the rfft is used for efficiency, which means the filter should be symmetric
+        :param input: Image
+        :return: Filtered-image
+        """
+
+        self.input = input
+        self.sigmas = sigmas
+        self.weights = weights
+
+        assert(len(self.sigmas)==self.nr_of_gaussians)
+
+        self.complex_fourier_filters = self.gaussian_fourier_filter_generator.get_gaussian_filters(self.sigmas)
+        self.complex_fourier_xsqr_filters = self.gaussian_fourier_filter_generator.get_gaussian_xsqr_filters(self.sigmas)
+
+        # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
+        # filter_imag =0, then get  ac + bci
+
+        sz = input.size()
+        new_sz = [len(self.nr_of_gaussians)] + list(sz)
+
+        ret = AdaptVal(torch.FloatTensor(*new_sz))
+
+        for i in range(self.nr_of_gaussians):
+            if USE_CUDA:
+                ret[i,...] = self._compute_convolution_CUDA(input,self.complex_fourier_filters[i])
+            else:
+                ret[i,...] = self._compute_convolution_CPU(input,self.complex_fourier_filters[i])
+
+        return ret
+
+    def _compute_input_gradient_CUDA_multi_gaussian(self,grad_output,complex_fourier_filters):
+        grad_input = torch.zeros_like(self.input)
+        for i in range(self.nr_of_gaussians):
+            grad_input += self._compute_input_gradient_CUDA(grad_output[i,...], complex_fourier_filters[i])
+        return grad_input
+
+    def _compute_input_gradient_CPU_multi_gaussian(self,grad_output,complex_fourier_filters):
+        grad_input = torch.zeros_like(self.input)
+        for i in range(self.nr_of_gaussians):
+            grad_input += self._compute_input_gradient_CPU(grad_output[i,...],complex_fourier_filters[i])
+        return grad_input
+
+    def _compute_sigmas_gradient_CUDA_multi_gaussian(self,input,sigmas,grad_output,complex_fourier_filters,complex_fourier_xsqr_filters):
+        grad_sigmas = torch.zeros_like(sigmas)
+        for i in range(self.nr_of_gaussians):
+            grad_sigmas[i] = self._compute_sigma_gradient_CUDA(input,sigmas[i],grad_output[i,...],
+                                                                                complex_fourier_filters[i],
+                                                                                complex_fourier_xsqr_filters[i])
+        return grad_sigmas
+
+    def _compute_sigmas_gradient_CPU_multi_gaussian(self,input,sigmas,grad_output,complex_fourier_filters,complex_fourier_xsqr_filters):
+        grad_sigmas = torch.zeros_like(sigmas)
+        for i in range(self.nr_of_gaussians):
+            grad_sigmas[i] = self._compute_sigma_gradient_CPU(input,sigmas[i],grad_output[i,...],
+                                                                                complex_fourier_filters[i],
+                                                                                complex_fourier_xsqr_filters[i])
+        return grad_sigmas
+
+    # This function has only a single output, so it gets only one gradient
+    def backward(self, grad_output):
+        """
+        Computes the gradient
+        the 3d cpu ifft is not implemented in ifftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
+        1d 2d cpu works well because ifft and ifft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
+
+        in gpu implementation, the irfft is used for efficiency, which means the filter should be symmetric
+        :param grad_output: Gradient output of previous layer
+        :return: Gradient including the Fourier-based convolution
+        """
+
+        # Initialize all gradients w.r.t. inputs to
+        # None. Thanks to the fact that additional trailing Nones are
+        # ignored, the return statement is simple even when the function has
+        # optional inputs.
+
+        grad_input = grad_sigmas = None
+
+        # These needs_input_grad checks are optional and there only to
+        # improve efficiency. If you want to make your code simpler, you can
+        # skip them. Returning gradients for inputs that don't require it is
+        # not an error.
+
+        # first compute the gradient with respect to the input
+        if self.needs_input_grad[0]:
+            # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
+            # input_imag =0, then get  ac + bci
+            if USE_CUDA:
+                grad_input = self._compute_input_gradient_CUDA_multi_gaussian(grad_output,self.complex_fourier_filters)
+            else:
+                grad_input = self._compute_input_gradient_CPU_multi_gaussian(grad_output,self.complex_fourier_filters)
+
+        # now compute the gradient with respect to the standard deviation of the filter
+        if self.needs_input_grad[1]:
+            if self.compute_std_gradients:
+                if USE_CUDA:
+                    grad_sigmas = self._compute_sigmas_gradient_CUDA_multi_gaussian(self.input,self.sigmas,grad_output,self.complex_fourier_filters,self.complex_fourier_xsqr_filters)
+                else:
+                    grad_sigmas = self._compute_sigmas_gradient_CPU_multi_gaussian(self.input,self.sigmas,grad_output,self.complex_fourier_filters,self.complex_fourier_xsqr_filters)
+            else:
+                grad_sigmas = torch.zeros_like(self.sigmas)
+
+
+        # now return the computed gradients
+        return grad_input, grad_sigmas
+
+def fourier_set_of_gaussian_convolutions(input, gaussian_fourier_filter_generator,sigma,compute_std_gradients=True):
+    """
+    Convenience function for Fourier-based multi Gaussian convolutions. Make sure to use this one (instead of directly
+    using the class FourierGaussianConvolution). This will assure that each call generates its own instance
+    and hence autograd will work properly
+
+    :param input: Input image
+    :param gaussian_fourier_filter_generator: generator which will create Gaussian Fourier filter (and caches them)
+    :param sigma: standard deviations for the Gaussian filter (need to be positive)
+    :param weights: weights for the multi-Gaussian kernel (need to sum up to one and need to be positive)
+    :param compute_weight_and_std_gradients: if set to True then gradients for weight and standard deviation are computed, otherwise they are replaced w/ zero
+    :return:
+    """
+    # First braces create a Function object. Any arguments given here
+    # will be passed to __init__. Second braces will invoke the __call__
+    # operator, that will then use forward() to compute the result and
+    # return it.
+    return FourierSetOfGaussianConvolutions(gaussian_fourier_filter_generator,compute_std_gradients)(input,sigma)
+
+
 def check_fourier_conv():
     """
     Convenience function to check the gradient. Fails, as pytorch's check appears to have difficulty

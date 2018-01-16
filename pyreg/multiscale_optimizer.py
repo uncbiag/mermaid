@@ -390,6 +390,7 @@ class ImageRegistrationOptimizer(Optimizer):
         :return:
         """
         self.save_fig_path = save_fig_path
+
     def set_recorder(self, recorder):
         self.recorder = recorder
 
