@@ -44,6 +44,18 @@ class SimpleRegistration(object):
         self.optimizer = None
         self.light_analysis_on = None
 
+    def get_history(self):
+        """
+        Returns the optimization history as a dictionary. Keeps track of energies, iterations counts, and additonal custom measures.
+
+        :return: history dictionary
+        """
+
+        if self.optimizer is not None:
+            return self.optimizer.get_history()
+        else:
+            return None
+
     @abstractmethod
     def register(self):
         """
@@ -98,6 +110,7 @@ class SimpleRegistration(object):
     def set_light_analysis_on(self, light_analysis_on):
         self.light_analysis_on = light_analysis_on
 
+
 class SimpleSingleScaleRegistration(SimpleRegistration):
     """
     Simple single scale registration
@@ -113,7 +126,6 @@ class SimpleSingleScaleRegistration(SimpleRegistration):
         """
         self.optimizer.set_light_analysis_on(self.light_analysis_on)
         self.optimizer.register(self.ISource,self.ITarget)
-
 
 
 class SimpleMultiScaleRegistration(SimpleRegistration):
@@ -191,6 +203,29 @@ class Optimizer(object):
         self.params['model']['deformation']['map_low_res_factor'] = (mapLowResFactor, 'Set to a value in (0,1) if a map-based solution should be computed at a lower internal resolution (image matching is still at full resolution')
 
         self.rel_ftol = self.params['optimizer']['single_scale'][('rel_ftol',self.rel_ftol,'relative termination tolerance for optimizer')]
+
+        self.history = dict()
+
+    def get_history(self):
+        """
+        Returns the optimization history as a dictionary. Keeps track of energies, iterations counts, and additonal custom measures.
+
+        :return: history dictionary
+        """
+        return self.history
+
+    def _add_to_history(self,key,value):
+        """
+        Adds an element to the optimizer history
+
+        :param key: history key
+        :param value: value that is associated with it
+        :return: n/a
+        """
+        if not self.history.has_key(key):
+            self.history[key]=[value]
+        else:
+            self.history[key].append(value)
 
     def set_last_successful_step_size_taken(self,lr):
         """
@@ -588,6 +623,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.rel_f = None
         self.rec_custom_optimizer_output_string = ''
         """the evaluation information"""
+        self.rec_custom_optimizer_output_values = None
 
     def get_energy(self):
         """
@@ -756,6 +792,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         #torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
 
         self.rec_custom_optimizer_output_string = self.model.get_custom_optimizer_output_string()
+        self.rec_custom_optimizer_output_values = self.model.get_custom_optimizer_output_values()
 
         if self.useMap:
 
@@ -769,7 +806,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         return loss
 
-    def analysis(self, energy, similarityEnergy, regEnergy, Warped, custom_optimizer_output_string = ''):
+    def analysis(self, energy, similarityEnergy, regEnergy, Warped, custom_optimizer_output_string = '', custom_optimizer_output_values=None):
         """
         print out the and visualize the result
         :param energy:
@@ -782,10 +819,20 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         cur_energy = utils.t2np(energy.float())
         # energy analysis
 
+        self._add_to_history('iter',self.iter_count)
+        self._add_to_history('energy',cur_energy[0])
+        self._add_to_history('similarity_energy',utils.t2np(similarityEnergy.float())[0])
+        self._add_to_history('regularization_energy',utils.t2np(regEnergy.float())[0])
+
+        if custom_optimizer_output_values is not None:
+            for key in custom_optimizer_output_values:
+                self._add_to_history(key,custom_optimizer_output_values[key])
+
         if self.last_energy is not None:
 
             # relative function toleranc: |f(xi)-f(xi+1)|/(1+|f(xi)|)
             self.rel_f = abs(self.last_energy - cur_energy) / (1 + abs(cur_energy))
+            self._add_to_history('relF',self.rel_f[0])
 
             print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF={relF} {cos}'
                   .format(iter=self.iter_count,
@@ -801,6 +848,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 return True
 
         else:
+            self._add_to_history('relF',None)
             print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF=n/a {cos}'
                   .format(iter=self.iter_count,
                           energy=cur_energy,
@@ -939,9 +987,15 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 self.last_successful_step_size_taken = self.optimizer_instance.last_step_size_taken()
 
             if self.useMap:
-                tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_phiWarped, self.rec_custom_optimizer_output_string)
+                tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy,
+                                                  self.rec_regEnergy, self.rec_phiWarped,
+                                                  self.rec_custom_optimizer_output_string,
+                                                  self.rec_custom_optimizer_output_values)
             else:
-                tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy, self.rec_IWarped, self.rec_custom_optimizer_output_string)
+                tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy,
+                                                  self.rec_regEnergy, self.rec_IWarped,
+                                                  self.rec_custom_optimizer_output_string,
+                                                  self.rec_custom_optimizer_output_values)
             if tolerance_reached:
                 break
             self.iter_count = iter+1
@@ -1201,6 +1255,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.ssOpt.set_visualization(self.get_visualization())
             self.ssOpt.set_visualize_step(self.get_visualize_step())
             self.ssOpt.set_light_analysis_on(self.light_analysis_on)
+
             if not self.light_analysis_on:
                 self.ssOpt.set_expr_name(self.get_expr_name())
                 self.ssOpt.set_save_fig(self.get_save_fig())
@@ -1213,8 +1268,6 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 self.ssOpt.set_source_label(self.get_source_label())
                 self.ssOpt.set_target_label(self.get_target_label())
                 self.ssOpt.set_batch_id(self.get_batch_id())
-
-
 
 
             self.ssOpt.set_source_image(ISourceC)
@@ -1246,6 +1299,10 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             print('Optimizing for at most ' + str(currentNrOfIteratons) + ' iterations')
             self.ssOpt._set_number_of_iterations_from_multi_scale(currentNrOfIteratons)
             self.ssOpt.optimize()
+
+            self._add_to_history('scale_nr',currentScaleNumber)
+            self._add_to_history('scale_factor',currentScaleFactor)
+            self._add_to_history('ss_history',self.ssOpt.get_history())
 
             lastSuccessfulStepSizeTaken = self.ssOpt.get_last_successful_step_size_taken()
 

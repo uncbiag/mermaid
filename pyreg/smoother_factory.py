@@ -62,6 +62,16 @@ class Smoother(object):
         """
         return ''
 
+    def get_custom_optimizer_output_values(self):
+        """
+        Returns a customized dictionary with additional values describing a smoother's setting.
+        Will become part of the optimization history.
+        Useful to overwrite if optimizing over smoother parameters.
+
+        :return: string
+        """
+        return None
+
     @abstractmethod
     def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
         """
@@ -345,6 +355,9 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
     def get_custom_optimizer_output_string(self):
         return ", smooth(std)= " + np.array_str(self.get_gaussian_std()[0].data.numpy(),precision=3)
 
+    def get_custom_optimizer_values(self):
+        return {'smoother_std': self.get_gaussian_std()[0].data.numpy().copy()}
+
     def get_optimization_parameters(self):
         if self.optimize_over_smoother_parameters:
             return self.optimizer_params
@@ -537,6 +550,9 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
     def get_custom_optimizer_output_string(self):
         return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.numpy(),precision=3) + \
                ", smooth(weights)= " + np.array_str(self.get_gaussian_weights().data.numpy(),precision=3)
+
+    def get_custom_optimizer_output_values(self):
+        return {'smoother_stds': self.get_gaussian_stds().data.numpy().copy(), 'smoother_weights': self.get_gaussian_weights().data.numpy().copy()}
 
     def get_optimization_parameters(self):
         if self.optimize_over_smoother_parameters:

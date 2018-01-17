@@ -67,8 +67,6 @@ class XlsxRecorder(object):
             writer.close()
 
 
-
-
     def set_batch_based_env(self,name_list,batch_id):
         # need to be set before each saving operation
         self.name_list = name_list
