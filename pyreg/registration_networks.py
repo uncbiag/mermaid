@@ -73,9 +73,19 @@ class RegistrationNet(nn.Module):
     def get_custom_optimizer_output_string(self):
         """
         Can be overwritten by a method to allow for additional optimizer output (on top of the energy values)
+
         :return: 
         """
         return ''
+
+    def get_custom_optimizer_output_values(self):
+        """
+        Can be overwritten by a method to allow for additional optimizer history output
+        (should in most cases go hand-in-hand with the string returned by get_custom_optimizer_output_string()
+
+        :return:
+        """
+        return None
 
     @abstractmethod
     def create_registration_parameters(self):
@@ -378,6 +388,9 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
 
     def get_custom_optimizer_output_string(self):
         return self.smoother.get_custom_optimizer_output_string()
+
+    def get_custom_optimizer_output_values(self):
+        return self.smoother.get_custom_optimizer_output_values()
 
     def create_registration_parameters(self):
         """
@@ -979,6 +992,9 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
     def get_custom_optimizer_output_string(self):
         return self.smoother.get_custom_optimizer_output_string()
 
+    def get_custom_optimizer_output_values(self):
+        return self.smoother.get_custom_optimizer_output_values()
+
     def get_variables_to_transfer_to_loss_function(self):
         d = dict()
         d['smoother'] = self.smoother
@@ -1343,6 +1359,9 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
 
     def get_custom_optimizer_output_string(self):
         return self.smoother.get_custom_optimizer_output_string()
+
+    def get_custom_optimizer_output_values(self):
+        return self.smoother.get_custom_optimizer_output_values()
 
     def get_variables_to_transfer_to_loss_function(self):
         d = dict()

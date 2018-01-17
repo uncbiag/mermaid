@@ -41,6 +41,18 @@ class RegisterImagePair(object):
     def get_available_models(self):
         return MF.AvailableModels().get_models()
 
+    def get_history(self):
+        """
+        Gets the optimizer history.
+
+        :return: dictionary containing the optimizer history.
+        """
+
+        if self.opt is not None:
+            return self.opt.get_history()
+        else:
+            return None
+
     def get_energy(self):
         """
         Returns the current energy

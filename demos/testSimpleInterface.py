@@ -1,6 +1,7 @@
 import set_pyreg_paths
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 import pyreg.simple_interface as SI
 import pyreg.example_generation as EG
@@ -41,41 +42,48 @@ Known registration models are:
 """
 
 # print possible model names
-SI.RegisterImagePair().print_available_models()
-all_models = SI.RegisterImagePair().get_available_models()
+si = SI.RegisterImagePair()
+
+si.print_available_models()
+all_models = si.get_available_models()
 
 if try_all_models:
     # try all the models
     for model_name in all_models:
         print('Registering with model: ' + model_name )
-        SI.RegisterImagePair().register_images(I0, I1, spacing, model_name=model_name)
+        si.register_images(I0, I1, spacing, model_name=model_name)
 else:
     # just try one of them, explicitly specified
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='total_variation_map')
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_vector_momentum_map')
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_vector_momentum_image')
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='affine_map')
-    SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
+    #si.register_images(I0, I1, spacing, model_name='total_variation_map')
+    #si.register_images(I0, I1, spacing, model_name='svf_vector_momentum_map')
+    #si.register_images(I0, I1, spacing, model_name='svf_vector_momentum_image')
+    #si.register_images(I0, I1, spacing, model_name='affine_map')
+    si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
                                            smoother_type='adaptive_multiGaussian',
                                            optimize_over_smoother_parameters=True,
                                            map_low_res_factor=1.0,
                                            visualize_step=10,
-                                           nr_of_iterations=200,
+                                           nr_of_iterations=10,
                                            rel_ftol=1e-8,
                                            similarity_measure_sigma=0.01)
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='curvature_map',rel_ftol=1e-12, similarity_measure_sigma=0.005,nr_of_iterations=100)
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_image')
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='diffusion_map')
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_image')
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_map')
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_scalar_momentum_image')
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='svf_quasi_momentum_image',nr_of_iterations=100)
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_image')
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_map')
-    #SI.RegisterImagePair().register_images(I0, I1, spacing, model_name='lddmm_shooting_map')
+    #si.register_images(I0, I1, spacing, model_name='curvature_map',rel_ftol=1e-12, similarity_measure_sigma=0.005,nr_of_iterations=100)
+    #si.register_images(I0, I1, spacing, model_name='lddmm_shooting_image')
+    #si.register_images(I0, I1, spacing, model_name='diffusion_map')
+    #si.register_images(I0, I1, spacing, model_name='svf_image')
+    #si.register_images(I0, I1, spacing, model_name='svf_map')
+    #si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_image')
+    #si.register_images(I0, I1, spacing, model_name='svf_quasi_momentum_image',nr_of_iterations=100)
+    #si.register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_image')
+    #si.register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_map')
+    #si.register_images(I0, I1, spacing, model_name='lddmm_shooting_map')
 
+    h = si.get_history()
 
-
+    e_p, = plt.plot(h['energy'], label='energy')
+    s_p, = plt.plot(h['similarity_energy'], label='similarity_energy')
+    r_p, = plt.plot(h['regularization_energy'], label='regularization_energy')
+    plt.legend(handles=[e_p,s_p,r_p])
+    plt.show()
 
 
 
