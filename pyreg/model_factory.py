@@ -3,6 +3,14 @@ Package to quickly instantiate registration models by name.
 """
 
 import registration_networks as RN
+import pyreg.utils as utils
+import pyreg.image_sampling as IS
+from pyreg.data_wrapper import AdaptVal
+
+import torch
+from torch.autograd import Variable
+import numpy as np
+
 
 def _print_models(models):
     print('\nKnown registration models are:')
@@ -68,6 +76,59 @@ class AvailableModels(object):
         """
 
         _print_models(self.models)
+
+
+# todo: make sure this works; streamline parameters as we can get sz_sim from I0 and maybe sz_model from the model_parameters
+def run_model(model_name, model_parameters, I0, sz_sim,spacing_sim,sz_model,spacing_model, params):
+    """
+    Runs the model forward
+
+    :param model_name: name of the model
+    :param model_parameters: parameters of the model (as gotten by model.get_model_parameters() )
+    :param I0: source image
+    :param sz_sim: size of similarity image (same as size of I0)
+    :param spacing_sim: spacing of I0
+    :param sz_model: size of the parameterization
+    :param spacing_model: spacing of the parameteriation
+    :param params: additonal parameters
+    :return: either the map to warp the source image (for a map-based model) or the warped source image
+    """
+
+    available_models = AvailableModels().get_models()
+    
+    if not available_models.has_key(model_name):
+        _print_models(available_models)
+        raise ValueError('Registration model: ' + model_name + ' not known')
+    else:
+        model, loss = ModelFactory(sz_sim, spacing_sim, sz_model, spacing_model).create_registration_model(model_name, params)
+        model.set_registration_parameters(model_parameters, sz_model, spacing_model)
+
+        sampler = IS.ResampleImage()
+
+        uses_map = available_models[model_name][2]
+
+        if uses_map:
+            id = utils.identity_map_multiN(sz_sim, spacing_sim)
+            identityMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
+
+            if not np.all(spacing_sim==spacing_model):
+                lowres_id = utils.identity_map_multiN(sz_model, spacing_model)
+                lowResIdentityMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=False))
+                lowResISource,_ = sampler.downsample_image_to_size(I0, spacing_sim, sz_model)
+
+                rec_tmp = model(lowResIdentityMap, lowResISource)
+                # now upsample to correct resolution
+                phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing_model, spacing_sim)
+
+            else:
+                phiWarped = model(identityMap, I0 )
+
+            return phiWarped
+
+        else: # does not use map
+            IWarped = model(I0)
+
+            return IWarped
 
 
 class ModelFactory(object):

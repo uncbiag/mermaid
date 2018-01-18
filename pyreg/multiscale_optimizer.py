@@ -455,6 +455,7 @@ class ImageRegistrationOptimizer(Optimizer):
         :return:
         """
         self.save_fig_num = save_fig_num
+
     def get_save_fig_num(self):
         """
         set the num of the fig to save
@@ -487,7 +488,6 @@ class ImageRegistrationOptimizer(Optimizer):
         return self.pair_path
 
 
-
     def register(self,ISource,ITarget):
         """
         Registers the source to the target image
@@ -515,6 +515,7 @@ class ImageRegistrationOptimizer(Optimizer):
         :return:
         """
         self.LSource = LSource
+
     def set_target_label(self, LTarget):
         """
         :param LTarget:
@@ -674,7 +675,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.mapLowResFactor is not None:
                 # create a lower resolution map for the computations
                 lowres_id = utils.identity_map_multiN(self.lowResSize,self.lowResSpacing)
-                self.lowResIdentityMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=True))
+                self.lowResIdentityMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=False))
 
     def add_similarity_measure(self, simName, simMeasure):
         """
