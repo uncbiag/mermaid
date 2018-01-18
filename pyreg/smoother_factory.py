@@ -12,6 +12,7 @@ from data_wrapper import USE_CUDA, MyTensor, AdaptVal
 import finite_differences as fd
 import utils
 import custom_pytorch_extensions as ce
+import module_parameters as pars
 
 class Smoother(object):
     """
@@ -32,7 +33,7 @@ class Smoother(object):
         """dimension"""
         self.params = params
         """ParameterDict() parameter object holding various configuration options"""
-        self.optimizer_params = None
+        self.multi_gaussian_optimizer_params = None
         """parameters that will be exposed to the optimizer"""
         self.ISource = None
         """For smoothers that make use of the map, stores the source image to which the map can be applied"""
@@ -511,14 +512,13 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
                 self.FFilter += cFilter
 
 
-class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
+class ParameterizedMultiGaussianFourierSmoother(GaussianSmoother):
     """
-    Performs Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
-    than spatial Gaussian smoothing on the CPU in large dimensions.
+    Base class for adaptive smoothers making use of multiple Gaussians
     """
 
     def __init__(self, sz, spacing, params):
-        super(AdaptiveMultiGaussianFourierSmoother, self).__init__(sz, spacing, params)
+        super(ParameterizedMultiGaussianFourierSmoother, self).__init__(sz, spacing, params)
 
         self.multi_gaussian_stds = np.array(params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')])
         default_multi_gaussian_weights = self.multi_gaussian_stds
@@ -545,7 +545,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
 
         self.nr_of_gaussians = len(self.multi_gaussian_stds)
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz,spacing,self.nr_of_gaussians)
-        self.optimizer_params = self._create_optimization_vector_parameters()
+        self.multi_gaussian_optimizer_params = self._create_multi_gaussian_optimization_vector_parameters()
 
     def get_custom_optimizer_output_string(self):
         return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.numpy(),precision=3) + \
@@ -554,32 +554,26 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
     def get_custom_optimizer_output_values(self):
         return {'smoother_stds': self.get_gaussian_stds().data.numpy().copy(), 'smoother_weights': self.get_gaussian_weights().data.numpy().copy()}
 
-    def get_optimization_parameters(self):
-        if self.optimize_over_smoother_parameters:
-            return self.optimizer_params
-        else:
-            return None
-
     def _project_parameter_vector_if_necessary(self):
         # all standard deviations need to be positive and the weights need to be non-negative
         for i in range(self.nr_of_gaussians):
-            if self.optimizer_params.data[i] <= self.gaussianStd_min:
-                self.optimizer_params.data[i] = self.gaussianStd_min
-            if self.optimizer_params.data[i + self.nr_of_gaussians] < 0:
-                self.optimizer_params.data[i + self.nr_of_gaussians] = 0
+            if self.multi_gaussian_optimizer_params.data[i] <= self.gaussianStd_min:
+                self.multi_gaussian_optimizer_params.data[i] = self.gaussianStd_min
+            if self.multi_gaussian_optimizer_params.data[i + self.nr_of_gaussians] < 0:
+                self.multi_gaussian_optimizer_params.data[i + self.nr_of_gaussians] = 0
 
         # now make sure the weights sum up to one and if not project them back
-        weight_sum = self.optimizer_params.data[self.nr_of_gaussians:].sum()
+        weight_sum = self.multi_gaussian_optimizer_params.data[self.nr_of_gaussians:].sum()
         if weight_sum != 1.:
-            self.optimizer_params.data[self.nr_of_gaussians:] += (1. - weight_sum) / self.nr_of_gaussians
+            self.multi_gaussian_optimizer_params.data[self.nr_of_gaussians:] += (1. - weight_sum) / self.nr_of_gaussians
 
     def _get_gaussian_weights_from_optimizer_params(self):
         # project if needed
         self._project_parameter_vector_if_necessary()
-        return self.optimizer_params[self.nr_of_gaussians:]
+        return self.multi_gaussian_optimizer_params[self.nr_of_gaussians:]
 
     def _set_gaussian_weights_optimizer_params(self,gweights):
-        self.optimizer_params.data[self.nr_of_gaussians:]=gweights
+        self.multi_gaussian_optimizer_params.data[self.nr_of_gaussians:]=gweights
 
     def set_gaussian_weights(self, gweights):
         """
@@ -601,10 +595,10 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
     def _get_gaussian_stds_from_optimizer_params(self):
         # project if needed
         self._project_parameter_vector_if_necessary()
-        return self.optimizer_params[0:self.nr_of_gaussians]
+        return self.multi_gaussian_optimizer_params[0:self.nr_of_gaussians]
 
     def _set_gaussian_stds_optimizer_params(self,g_stds):
-        self.optimizer_params.data[0:self.nr_of_gaussians]=g_stds
+        self.multi_gaussian_optimizer_params.data[0:self.nr_of_gaussians]=g_stds
 
     def set_gaussian_stds(self, gstds):
         """
@@ -623,6 +617,30 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         """
         gaussianStds = self._get_gaussian_stds_from_optimizer_params()
         return gaussianStds
+
+    def _create_multi_gaussian_optimization_vector_parameters(self):
+        self.multi_gaussian_optimizer_params = utils.create_vector_parameter(2 * self.nr_of_gaussians)
+        for i in range(self.nr_of_gaussians):
+            self.multi_gaussian_optimizer_params.data[i] = self.multi_gaussian_stds[i]
+            self.multi_gaussian_optimizer_params.data[i + self.nr_of_gaussians] = self.multi_gaussian_weights[i]
+        return self.multi_gaussian_optimizer_params
+
+# CONTINUE HERE. ALSO TEST THAT THE ADAPTIVE MULTI-GAUSSIAN SMOOTHER STILL WORKS
+
+# todo: clean this class up. Only this one optimizes directly over the weights, but not the learned version
+class AdaptiveMultiGaussianFourierSmoother(ParameterizedMultiGaussianFourierSmoother):
+    """
+    Adaptive multi-Gaussian Fourier smoother. Allows optimization over weights and standard deviations
+    """
+
+    def __init__(self, sz, spacing, params):
+        super(AdaptiveMultiGaussianFourierSmoother, self).__init__(sz, spacing, params)
+
+    def get_optimization_parameters(self):
+        if self.optimize_over_smoother_parameters:
+            return self.multi_gaussian_optimizer_params
+        else:
+            return None
 
     def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
         """
@@ -655,12 +673,59 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
                                                          self.get_gaussian_stds(),self.get_gaussian_weights(),compute_weight_and_std_gradients)
 
 
-    def _create_optimization_vector_parameters(self):
-        self.optimizer_params = utils.create_vector_parameter(2 * self.nr_of_gaussians)
-        for i in range(self.nr_of_gaussians):
-            self.optimizer_params.data[i] = self.multi_gaussian_stds[i]
-            self.optimizer_params.data[i + self.nr_of_gaussians] = self.multi_gaussian_weights[i]
-        return self.optimizer_params
+
+class LearnedMultiGaussianCombinationFourierSmoother(ParameterizedMultiGaussianFourierSmoother):
+    """
+    Adaptive multi-Gaussian Fourier smoother. Allows optimization over weights and standard deviations
+    """
+
+    def __init__(self, sz, spacing, params):
+        super(LearnedMultiGaussianCombinationFourierSmoother, self).__init__(sz, spacing, params)
+
+    def get_optimization_parameters(self):
+        if self.optimize_over_smoother_parameters:
+            return self.multi_gaussian_optimizer_params
+        else:
+            return None
+
+    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
+        """
+        Smooth the scalar field using Gaussian smoothing in the Fourier domain
+
+        :param v: image to smooth
+        :param vout: if not None returns the result in this variable
+        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
+                Can be used to design image-dependent smoothers; typically not used.
+        :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
+        :return: smoothed image
+        """
+
+        # just do a multi-Gaussian smoothing
+
+        if not self.optimize_over_smoother_parameters or (variables_from_optimizer is None):
+            compute_std_gradients = False
+        else:
+           if self.start_optimize_over_smoother_parameters_at_iteration<=variables_from_optimizer['iter']:
+               compute_std_gradients = True
+           else:
+               compute_std_gradients = False
+
+        # collection of smoothed vector fields
+        vcollection = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
+                                                       self.get_gaussian_stds(), compute_std_gradients)
+
+        # todo: now we need a small neural net that can summarize this
+        # todo: this needs to be such that in the end there are a combination of weight fields that sum up
+        # todo: to one to create a new value, to make sure this is a proper smoothing
+
+        raise ValueError('Not yet implemented')
+
+        if vout is not None:
+            vout = 0 # todo: change
+            return vout
+        else:
+            return 0 # todo: change
+
 
 
 class AdaptiveSmoother(Smoother):
@@ -709,6 +774,43 @@ class AdaptiveSmoother(Smoother):
         pass
 
 
+def _print_smoothers(smoothers):
+    print('\nKnown smoothers are:')
+    print('------------------------------')
+    for key in smoothers:
+        print('{smoother_name:>40s}: {smoother_description}'.format(smoother_name=key, smoother_description=smoothers[key][1]))
+
+
+class AvailableSmoothers(object):
+
+    def __init__(self):
+        # (smoother, description)
+        self.smoothers = {
+            'diffusion': (DiffusionSmoother,'smoothing via iterative solution of the diffusion equation'),
+            'gaussian': (SingleGaussianFourierSmoother, 'Gaussian smoothing in the Fourier domain'),
+            'adaptive_gaussian': (AdaptiveSingleGaussianFourierSmoother, 'Gaussian smoothing in the Fourier domain w/ optimization over std'),
+            'multiGaussian': (MultiGaussianFourierSmoother, 'Multi Gaussian smoothing in the Fourier domain'),
+            'adaptive_multiGaussian': (AdaptiveMultiGaussianFourierSmoother, 'Adaptive multi Gaussian smoothing in the Fourier domain w/ optimization over weights and stds'),
+            'learned_multiGaussianCombination': (LearnedMultiGaussianCombinationFourierSmoother, 'Experimental learned smoother'),
+            'gaussianSpatial': (GaussianSpatialSmoother, 'Gaussian smoothing in the spatial domain'),
+            'adaptiveNet': (AdaptiveSmoother,'Epxerimental learned smoother')
+        }
+        """dictionary defining all the smoothers"""
+
+    def get_smoothers(self):
+        """
+        Returns all available smoothers as a dictionary which has as keys the smoother name and tuple entries of the form
+        (smootherclass,explanation_string)
+        :return: the model dictionary
+        """
+        return self.smoothers
+
+    def print_available_smoothers(self):
+        """
+        Prints the smoothers that are available and can be created with `create_smoother`
+        """
+
+        _print_smoothers(self.smoothers)
 
 class SmootherFactory(object):
     """
@@ -724,6 +826,22 @@ class SmootherFactory(object):
         """dimension of image"""
         self.default_smoother_type = 'multiGaussian'
         """default smoother used for smoothing"""
+        self.smoothers = AvailableSmoothers().get_smoothers()
+
+    def get_smoothers(self):
+        """
+        Returns all available smoothers as a dictionary which has as keys the smoother name and tuple entries of the form
+        (smootherclass,,explanation_string)
+        :return: the smoother dictionary
+        """
+        return self.smoothers
+
+    def print_available_smoothers(self):
+        """
+        Prints the smoothers that are available and can be created with `create_smoother`
+        """
+
+        _print_smoothers(self.smoothers)
 
     def set_default_smoother_type_to_gaussian(self):
         """
@@ -743,7 +861,22 @@ class SmootherFactory(object):
         """
         self.default_smoother_type = 'gaussianSpatial'
 
-    def create_smoother(self, params):
+    def create_smoother_by_name(self, smoother_name, params=None):
+        """
+        Creates a smoother by specifying the smoother name (convenience function).
+
+        :param smoother_name: (string) specifies the smoother name
+        :param params: ParamterDict() object to hold paramters which should be passed on
+        :return:
+        """
+
+        if params is None:
+            params = pars.ParameterDict()
+
+        params['smoother']['type'] = smoother_name
+        return self.create_smoother(params)
+
+    def create_smoother(self, params ):
         """
         Create the desired smoother
         :param params: ParamterDict() object to hold paramters which should be passed on
@@ -753,19 +886,9 @@ class SmootherFactory(object):
         cparams = params[('smoother',{})]
         smootherType = cparams[('type', self.default_smoother_type,
                                           'type of smoother (diffusion|gaussian|adaptive_gaussian|multiGaussian|adaptive_multiGaussian|gaussianSpatial|adaptiveNet)' )]
-        if smootherType=='diffusion':
-            return DiffusionSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='gaussian':
-            return SingleGaussianFourierSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='adaptive_gaussian':
-            return AdaptiveSingleGaussianFourierSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='multiGaussian':
-            return MultiGaussianFourierSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='adaptive_multiGaussian':
-            return AdaptiveMultiGaussianFourierSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='gaussianSpatial':
-            return GaussianSpatialSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='adaptiveNet':
-            return AdaptiveSmoother(self.sz, self.spacing, cparams)
+
+        if self.smoothers.has_key(smootherType):
+            return self.smoothers[smootherType][0](self.sz,self.spacing,cparams)
         else:
-            raise ValueError( 'Smoother: ' + smootherType + ' not known')
+            self.print_available_smoothers()
+            raise ValueError('Smoother: ' + smootherType + ' not known')
