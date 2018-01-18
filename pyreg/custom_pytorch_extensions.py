@@ -983,7 +983,6 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
 
         self.input = input
         self.sigmas = sigmas
-        self.weights = weights
 
         assert(len(self.sigmas)==self.nr_of_gaussians)
 
@@ -994,7 +993,7 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
         # filter_imag =0, then get  ac + bci
 
         sz = input.size()
-        new_sz = [len(self.nr_of_gaussians)] + list(sz)
+        new_sz = [self.nr_of_gaussians] + list(sz)
 
         ret = AdaptVal(torch.FloatTensor(*new_sz))
 
