@@ -12,6 +12,7 @@ from data_wrapper import USE_CUDA, MyTensor, AdaptVal
 import finite_differences as fd
 import utils
 import custom_pytorch_extensions as ce
+import module_parameters as pars
 
 class Smoother(object):
     """
@@ -773,6 +774,43 @@ class AdaptiveSmoother(Smoother):
         pass
 
 
+def _print_smoothers(smoothers):
+    print('\nKnown smoothers are:')
+    print('------------------------------')
+    for key in smoothers:
+        print('{smoother_name:>40s}: {smoother_description}'.format(smoother_name=key, smoother_description=smoothers[key][1]))
+
+
+class AvailableSmoothers(object):
+
+    def __init__(self):
+        # (smoother, description)
+        self.smoothers = {
+            'diffusion': (DiffusionSmoother,'smoothing via iterative solution of the diffusion equation'),
+            'gaussian': (SingleGaussianFourierSmoother, 'Gaussian smoothing in the Fourier domain'),
+            'adaptive_gaussian': (AdaptiveSingleGaussianFourierSmoother, 'Gaussian smoothing in the Fourier domain w/ optimization over std'),
+            'multiGaussian': (MultiGaussianFourierSmoother, 'Multi Gaussian smoothing in the Fourier domain'),
+            'adaptive_multiGaussian': (AdaptiveMultiGaussianFourierSmoother, 'Adaptive multi Gaussian smoothing in the Fourier domain w/ optimization over weights and stds'),
+            'learned_multiGaussianCombination': (LearnedMultiGaussianCombinationFourierSmoother, 'Experimental learned smoother'),
+            'gaussianSpatial': (GaussianSpatialSmoother, 'Gaussian smoothing in the spatial domain'),
+            'adaptiveNet': (AdaptiveSmoother,'Epxerimental learned smoother')
+        }
+        """dictionary defining all the smoothers"""
+
+    def get_smoothers(self):
+        """
+        Returns all available smoothers as a dictionary which has as keys the smoother name and tuple entries of the form
+        (smootherclass,explanation_string)
+        :return: the model dictionary
+        """
+        return self.smoothers
+
+    def print_available_smoothers(self):
+        """
+        Prints the smoothers that are available and can be created with `create_smoother`
+        """
+
+        _print_smoothers(self.smoothers)
 
 class SmootherFactory(object):
     """
@@ -788,6 +826,22 @@ class SmootherFactory(object):
         """dimension of image"""
         self.default_smoother_type = 'multiGaussian'
         """default smoother used for smoothing"""
+        self.smoothers = AvailableSmoothers().get_smoothers()
+
+    def get_smoothers(self):
+        """
+        Returns all available smoothers as a dictionary which has as keys the smoother name and tuple entries of the form
+        (smootherclass,,explanation_string)
+        :return: the smoother dictionary
+        """
+        return self.smoothers
+
+    def print_available_smoothers(self):
+        """
+        Prints the smoothers that are available and can be created with `create_smoother`
+        """
+
+        _print_smoothers(self.smoothers)
 
     def set_default_smoother_type_to_gaussian(self):
         """
@@ -807,7 +861,22 @@ class SmootherFactory(object):
         """
         self.default_smoother_type = 'gaussianSpatial'
 
-    def create_smoother(self, params):
+    def create_smoother_by_name(self, smoother_name, params=None):
+        """
+        Creates a smoother by specifying the smoother name (convenience function).
+
+        :param smoother_name: (string) specifies the smoother name
+        :param params: ParamterDict() object to hold paramters which should be passed on
+        :return:
+        """
+
+        if params is None:
+            params = pars.ParameterDict()
+
+        params['smoother']['type'] = smoother_name
+        return self.create_smoother(params)
+
+    def create_smoother(self, params ):
         """
         Create the desired smoother
         :param params: ParamterDict() object to hold paramters which should be passed on
@@ -817,21 +886,9 @@ class SmootherFactory(object):
         cparams = params[('smoother',{})]
         smootherType = cparams[('type', self.default_smoother_type,
                                           'type of smoother (diffusion|gaussian|adaptive_gaussian|multiGaussian|adaptive_multiGaussian|gaussianSpatial|adaptiveNet)' )]
-        if smootherType=='diffusion':
-            return DiffusionSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='gaussian':
-            return SingleGaussianFourierSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='adaptive_gaussian':
-            return AdaptiveSingleGaussianFourierSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='multiGaussian':
-            return MultiGaussianFourierSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='adaptive_multiGaussian':
-            return AdaptiveMultiGaussianFourierSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='learned_multiGaussianCombination':
-            return LearnedMultiGaussianCombinationFourierSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='gaussianSpatial':
-            return GaussianSpatialSmoother(self.sz,self.spacing,cparams)
-        elif smootherType=='adaptiveNet':
-            return AdaptiveSmoother(self.sz, self.spacing, cparams)
+
+        if self.smoothers.has_key(smootherType):
+            return self.smoothers[smootherType][0](self.sz,self.spacing,cparams)
         else:
-            raise ValueError( 'Smoother: ' + smootherType + ' not known')
+            self.print_available_smoothers()
+            raise ValueError('Smoother: ' + smootherType + ' not known')

@@ -95,7 +95,9 @@ def run_model(model_name, model_parameters, I0, sz_sim,spacing_sim,sz_model,spac
     """
 
     available_models = AvailableModels().get_models()
-    
+
+    raise ValueError('Not tested yet. Check that this works first before using it. Feel free to comment out and try at your own risk.')
+
     if not available_models.has_key(model_name):
         _print_models(available_models)
         raise ValueError('Registration model: ' + model_name + ' not known')
