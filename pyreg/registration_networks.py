@@ -378,8 +378,8 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
-        self.smoother_params = self.smoother.get_optimization_parameters()
-        """smoother parameters to be optimized over if supported by smoother"""
+        self.smoother.associate_parameters_with_module(self)
+        """registers the smoother parameters so that they are optimized over if applicable"""
         self.v = torch.zeros_like(self.m)
         """corresponding velocity field"""
 
@@ -980,8 +980,8 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother"""
-        self.smoother_params = self.smoother.get_optimization_parameters()
-        """smoother parameters to be optimized over if supported by smoother"""
+        self.smoother.associate_parameters_with_module(self)
+        """registers the smoother parameters so that they are optimized over if applicable"""
 
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':
             self.add_module('mod_smoother', self.smoother.smoother)
@@ -1349,8 +1349,8 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother"""
-        self.smoother_params = self.smoother.get_optimization_parameters()
-        """smoother parameters to be optimized over if supported by smoother"""
+        self.smoother.associate_parameters_with_module(self)
+        """registers the smoother parameters so that they are optimized over if applicable"""
 
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':
             self.add_module('mod_smoother', self.smoother.smoother)
