@@ -1,6 +1,6 @@
 {
     "compute": {
-        "CUDA_ON": true, 
+        "CUDA_ON": false,
         "MATPLOTLIB_AGG": false, 
         "USE_FLOAT16": false, 
         "nr_of_threads": 8

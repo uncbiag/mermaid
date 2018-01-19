@@ -48,7 +48,7 @@ assert( np.all(spacing0==spacing1) )
 si.RegisterImagePair().register_images(I0,I1,spacing0,
                                        model_name='svf_scalar_momentum_map',
                                        nr_of_iterations=50,
-                                       visualize_step=5,
+                                       visualize_step=1,
                                        map_low_res_factor=0.5,
                                        rel_ftol=1e-10,
                                        json_config_out_filename='testBatch.json',

@@ -94,25 +94,25 @@ class RegistrationNet(nn.Module):
         """
         pass
 
-    @abstractmethod
     def get_registration_parameters(self):
         """
         Abstract method to return the registration parameters
         
         :return: returns the registration parameters 
         """
-        pass
+        return self.state_dict()
 
-    @abstractmethod
-    def set_registration_parameters(self, p, sz, spacing):
+    def set_registration_parameters(self, sd, sz, spacing):
         """
         Abstract method to set the registration parameters externally. This can for example be useful when the optimizer should be initialized at a specific value
         
-        :param p: parameter to be set 
+        :param sd: model state dictionary
         :param sz: size of the image the parameter corresponds to 
         :param spacing: spacing of the image the parameter corresponds to 
         """
-        pass
+        self.load_state_dict(sd)
+        self.sz = sz
+        self.spacing = spacing
 
     def downsample_registration_parameters(self, desiredSz):
         """
@@ -170,29 +170,6 @@ class RegistrationNetDisplacement(RegistrationNet):
         """
         return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
-
-    def get_registration_parameters(self):
-        """
-        Returns the displacement field parameter
-    
-        :return: dispalcement field parameter 
-        """
-        return self.d
-
-
-    def set_registration_parameters(self, p, sz, spacing):
-        """
-        Sets the displacement field registration parameter
-    
-        :param p: displacement field 
-        :param sz: size of the corresponding image
-        :param spacing: spacing of the corresponding image
-        """
-        self.d.data = p.data
-        self.sz = sz
-        self.spacing = spacing
-
-
     def get_parameter_image_and_name_to_visualize(self):
         """
         Returns the displacement field parameter magnitude image and a name
@@ -209,11 +186,14 @@ class RegistrationNetDisplacement(RegistrationNet):
         Upsamples the displacement field to a desired size
     
         :param desiredSz: desired size of the upsampled displacement field 
-        :return: returns a tuple (upsampled_image,upsampled_spacing)
+        :return: returns a tuple (upsampled_state,upsampled_spacing)
         """
         sampler = IS.ResampleImage()
-        dUpsampled, upsampled_spacing = sampler.upsample_image_to_size(self.d, self.spacing, desiredSz)
-        return dUpsampled, upsampled_spacing
+        ustate = self.state_dict().copy()
+        upsampled_d, upsampled_spacing = sampler.upsample_image_to_size(self.d, self.spacing, desiredSz)
+        ustate['d'] = upsampled_d.data
+
+        return ustate, upsampled_spacing
 
 
     def downsample_registration_parameters(self, desiredSz):
@@ -221,11 +201,12 @@ class RegistrationNetDisplacement(RegistrationNet):
         Downsamples the displacemebt field to a desired size
     
         :param desiredSz: desired size of the downsampled displacement field 
-        :return: returns a tuple (downsampled_image,downsampled_spacing)
+        :return: returns a tuple (downsampled_state,downsampled_spacing)
         """
         sampler = IS.ResampleImage()
-        dDownsampled, downsampled_spacing = sampler.downsample_image_to_size(self.d, self.spacing, desiredSz)
-        return dDownsampled, downsampled_spacing
+        dstate = self.state_dict().copy()
+        dstate['d'], downsampled_spacing = sampler.downsample_image_to_size(self.d, self.spacing, desiredSz)
+        return dstate, downsampled_spacing
 
     def forward(self, phi, I0_source, variables_from_optimizer=None):
         """
@@ -286,26 +267,6 @@ class SVFNet(RegistrationNetTimeIntegration):
         """
         return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
-    def get_registration_parameters(self):
-        """
-        Returns the velocity field parameter
-        
-        :return: velocity field parameter 
-        """
-        return self.v
-
-    def set_registration_parameters(self, p, sz, spacing):
-        """
-        Sets the velocity field registration parameter
-        
-        :param p: velocity field 
-        :param sz: size of the corresponding image
-        :param spacing: spacing of the corresponding image
-        """
-        self.v.data = p.data
-        self.sz = sz
-        self.spacing = spacing
-
     def get_parameter_image_and_name_to_visualize(self):
         """
         Returns the velocity field parameter magnitude image and a name
@@ -321,11 +282,14 @@ class SVFNet(RegistrationNetTimeIntegration):
         Upsamples the velocity field to a desired size
         
         :param desiredSz: desired size of the upsampled velocity field 
-        :return: returns a tuple (upsampled_image,upsampled_spacing)
+        :return: returns a tuple (upsampled_state,upsampled_spacing)
         """
         sampler = IS.ResampleImage()
-        vUpsampled,upsampled_spacing=sampler.upsample_image_to_size(self.v,self.spacing,desiredSz)
-        return vUpsampled,upsampled_spacing
+        ustate = self.state_dict().copy()
+        upsampled_v,upsampled_spacing=sampler.upsample_image_to_size(self.v,self.spacing,desiredSz)
+        ustate['v'] = upsampled_v.data
+
+        return ustate,upsampled_spacing
 
     def downsample_registration_parameters(self, desiredSz):
         """
@@ -335,8 +299,9 @@ class SVFNet(RegistrationNetTimeIntegration):
         :return: returns a tuple (downsampled_image,downsampled_spacing)
         """
         sampler = IS.ResampleImage()
-        vDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz)
-        return vDownsampled,downsampled_spacing
+        dstate = self.state_dict().copy()
+        dstate['v'],downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz)
+        return dstate,downsampled_spacing
 
 class SVFImageNet(SVFNet):
     """
@@ -378,8 +343,8 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
-        self.smoother_params = self.smoother.get_optimization_parameters()
-        """smoother parameters to be optimized over if supported by smoother"""
+        self.smoother.associate_parameters_with_module(self)
+        """registers the smoother parameters so that they are optimized over if applicable"""
         self.v = torch.zeros_like(self.m)
         """corresponding velocity field"""
 
@@ -400,26 +365,6 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
         """
         return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
-    def get_registration_parameters(self):
-        """
-        Returns the registration parameters (the momentum field)
-        
-        :return: momentum field 
-        """
-        return self.m
-
-    def set_registration_parameters(self, p, sz, spacing):
-        """
-        Sets the registration parameters (the momentum field)
-        
-        :param p: momentum field 
-        :param sz: corresponding image size
-        :param spacing: corresponding image spacing
-        """
-        self.m.data = p.data
-        self.sz = sz
-        self.spacing = spacing
-
     def get_parameter_image_and_name_to_visualize(self):
         """
         Returns the momentum magnitude image and :math:`|m|` as the image caption
@@ -432,13 +377,17 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
 
     def upsample_registration_parameters(self, desiredSz):
         sampler = IS.ResampleImage()
-        mUpsampled,upsampled_spacing=sampler.upsample_image_to_size(self.m,self.spacing,desiredSz)
-        return mUpsampled,upsampled_spacing
+        ustate = self.state_dict().copy()
+        upsampled_m,upsampled_spacing=sampler.upsample_image_to_size(self.m,self.spacing,desiredSz)
+        ustate['m'] = upsampled_m.data
+
+        return ustate,upsampled_spacing
 
     def downsample_registration_parameters(self, desiredSz):
         sampler = IS.ResampleImage()
-        mDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz)
-        return mDownsampled,downsampled_spacing
+        dstate = self.state_dict().copy()
+        dstate['m'],downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz)
+        return dstate,downsampled_spacing
 
 class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
     """
@@ -884,26 +833,6 @@ class AffineMapNet(RegistrationNet):
         utils.set_affine_transform_to_identity_multiN(pars.data)
         return pars
 
-    def get_registration_parameters(self):
-        """
-        Returns the affine parameters as a vector
-
-        :return: affine parameter vector 
-        """
-        return self.Ab
-
-    def set_registration_parameters(self, p, sz, spacing):
-        """
-        Sets the affine parameters
-
-        :param p: affine parameter vector 
-        :param sz: size of the corresponding image
-        :param spacing: spacing of the corresponding image
-        """
-        self.Ab.data = p.data
-        self.sz = sz
-        self.spacing = spacing
-
     def get_parameter_image_and_name_to_visualize(self):
         """
         Returns the velocity field parameter magnitude image and a name
@@ -919,20 +848,23 @@ class AffineMapNet(RegistrationNet):
         Upsamples the afffine parameters to a desired size (ie., just returns them)
 
         :param desiredSz: desired size of the upsampled image
-        :return: returns a tuple (upsampled_pars,upsampled_spacing)
+        :return: returns a tuple (upsampled_state,upsampled_spacing)
         """
+        ustate = self.state_dict().copy() # stays the same
         upsampled_spacing = self.spacing*(self.sz[2::].astype('float')/desiredSz[2::].astype('float'))
-        return self.Ab, upsampled_spacing
+
+        return ustate, upsampled_spacing
 
     def downsample_registration_parameters(self, desiredSz):
         """
         Downsamples the affine parameters to a desired size (ie., just returns them)
 
         :param desiredSz: desired size of the downsampled image 
-        :return: returns a tuple (downsampled_pars,downsampled_spacing)
+        :return: returns a tuple (downsampled_state,downsampled_spacing)
         """
+        dstate = self.state_dict().copy() # stays the same
         downsampled_spacing = self.spacing*(self.sz[2::].astype('float')/desiredSz[2::].astype('float'))
-        return self.Ab, downsampled_spacing
+        return dstate, downsampled_spacing
 
     def forward(self, phi, I0_source, variables_from_optimizer=None):
         """
@@ -980,8 +912,8 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother"""
-        self.smoother_params = self.smoother.get_optimization_parameters()
-        """smoother parameters to be optimized over if supported by smoother"""
+        self.smoother.associate_parameters_with_module(self)
+        """registers the smoother parameters so that they are optimized over if applicable"""
 
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':
             self.add_module('mod_smoother', self.smoother.smoother)
@@ -1008,26 +940,6 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         """
         return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
-    def get_registration_parameters(self):
-        """
-        Returns the vector momentum parameter
-        
-        :return: vector momentum 
-        """
-        return self.m
-
-    def set_registration_parameters(self, p, sz, spacing):
-        """
-        Sets the vector momentum registration parameter
-        
-        :param p: vector momentum 
-        :param sz: size of image
-        :param spacing: spacing of image
-        """
-        self.m.data = p.data
-        self.sz = sz
-        self.spacing = spacing
-
     def get_parameter_image_and_name_to_visualize(self):
         """
         Creates a magnitude image for the momentum and returns it with name :math:`|m|`
@@ -1043,26 +955,29 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         Upsamples the vector-momentum parameter
         
         :param desiredSz: desired size of the upsampled momentum 
-        :return: Returns tuple (upsampled_momentum,upsampled_spacing)
+        :return: Returns tuple (upsampled_state,upsampled_spacing)
         """
 
+        ustate = self.state_dict().copy()
         sampler = IS.ResampleImage()
-        mUpsampled, upsampled_spacing = sampler.upsample_image_to_size(self.m, self.spacing, desiredSz)
+        upsampled_m, upsampled_spacing = sampler.upsample_image_to_size(self.m, self.spacing, desiredSz)
+        ustate['m'] = upsampled_m.data
 
-        return mUpsampled,upsampled_spacing
+        return ustate,upsampled_spacing
 
     def downsample_registration_parameters(self, desiredSz):
         """
         Downsamples the vector-momentum parameter
 
         :param desiredSz: desired size of the downsampled momentum 
-        :return: Returns tuple (downsampled_momentum,downsampled_spacing)
+        :return: Returns tuple (downsampled_state,downsampled_spacing)
         """
 
+        dstate = self.state_dict().copy()
         sampler = IS.ResampleImage()
-        mDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz)
+        dstate['m'],downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz)
 
-        return mDownsampled, downsampled_spacing
+        return dstate, downsampled_spacing
 
 class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
     """
@@ -1349,11 +1264,12 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother"""
-        self.smoother_params = self.smoother.get_optimization_parameters()
-        """smoother parameters to be optimized over if supported by smoother"""
+        self.smoother.associate_parameters_with_module(self)
+        """registers the smoother parameters so that they are optimized over if applicable"""
 
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':
             self.add_module('mod_smoother', self.smoother.smoother)
+
         self.integrator = self.create_integrator()
         """integrator to integrate EPDiff and associated equations (for image or map)"""
 
@@ -1376,26 +1292,6 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
         """
         return utils.create_ND_scalar_field_parameter_multiNC(self.sz[2::], self.nrOfImages, self.nrOfChannels)
 
-    def get_registration_parameters(self):
-        """
-        Returns the scalar momentum registration parameter
-        
-        :return: scalar momentum 
-        """
-        return self.lam
-
-    def set_registration_parameters(self, p, sz, spacing):
-        """
-        Sets the scalar momentum registration parameter
-        
-        :param p: scalar momentum 
-        :param sz: image size
-        :param spacing: image spacing 
-        """
-        self.lam.data = p.data
-        self.sz = sz
-        self.spacing = spacing
-
     def get_parameter_image_and_name_to_visualize(self):
         """
         Returns an image of the scalar momentum (magnitude over all channels) and 'lambda' as name
@@ -1411,26 +1307,29 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
         Upsample the scalar momentum
         
         :param desiredSz: desired size to be upsampled to, e.g., [100,50,40] 
-        :return: returns a tuple (upsampled_scalar_momentum,upsampled_spacing)
+        :return: returns a tuple (upsampled_state,upsampled_spacing)
         """
 
+        ustate = self.state_dict().copy()
         sampler = IS.ResampleImage()
-        lamUpsampled, upsampled_spacing = sampler.upsample_image_to_size(self.lam, self.spacing, desiredSz)
+        upsampled_lam, upsampled_spacing = sampler.upsample_image_to_size(self.lam, self.spacing, desiredSz)
+        ustate['lam'] = upsampled_lam.data
 
-        return lamUpsampled,upsampled_spacing
+        return ustate,upsampled_spacing
 
     def downsample_registration_parameters(self, desiredSz):
         """
         Downsample the scalar momentum
 
         :param desiredSz: desired size to be downsampled to, e.g., [40,20,10] 
-        :return: returns a tuple (downsampled_scalar_momentum,downsampled_spacing)
+        :return: returns a tuple (downsampled_state,downsampled_spacing)
         """
 
+        dstate = self.state_dict().copy()
         sampler = IS.ResampleImage()
-        lamDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.lam,self.spacing,desiredSz)
+        dstate['lam'],downsampled_spacing=sampler.downsample_image_to_size(self.lam,self.spacing,desiredSz)
 
-        return lamDownsampled, downsampled_spacing
+        return dstate, downsampled_spacing
 
 
 class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):

@@ -7,12 +7,15 @@ from abc import ABCMeta, abstractmethod
 import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
+import torch.nn as nn
 import numpy as np
 from data_wrapper import USE_CUDA, MyTensor, AdaptVal
+
 import finite_differences as fd
 import utils
 import custom_pytorch_extensions as ce
 import module_parameters as pars
+import deep_smoothers
 
 class Smoother(object):
     """
@@ -37,6 +40,9 @@ class Smoother(object):
         """parameters that will be exposed to the optimizer"""
         self.ISource = None
         """For smoothers that make use of the map, stores the source image to which the map can be applied"""
+
+    def associate_parameters_with_module(self,module):
+        pass
 
     def set_source_image(self,ISource):
         """
@@ -325,7 +331,7 @@ class GaussianFourierSmoother(GaussianSmoother):
         if self.FFilter is None:
             self._create_filter()
         if vout is not None:
-            vout = ce.fourier_convolution(v, self.FFilter)
+            vout[:] = ce.fourier_convolution(v, self.FFilter)
             return vout
         else:
             return ce.fourier_convolution(v, self.FFilter)
@@ -352,6 +358,9 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz,spacing)
 
         self.optimizer_params = self._create_optimization_vector_parameters()
+
+    def associate_parameters_with_module(self,module):
+        module.register_parameter('multi_gaussian_std_and_weights',self.optimizer_params)
 
     def get_custom_optimizer_output_string(self):
         return ", smooth(std)= " + np.array_str(self.get_gaussian_std()[0].data.numpy(),precision=3)
@@ -414,7 +423,7 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
 
         # just doing a Gaussian smoothing
         if vout is not None:
-            vout = ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std(),compute_std_gradient)
+            vout[:] = ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std(),compute_std_gradient)
             return vout
         else:
             return ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std(),compute_std_gradient)
@@ -512,13 +521,13 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
                 self.FFilter += cFilter
 
 
-class ParameterizedMultiGaussianFourierSmoother(GaussianSmoother):
+class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
     """
-    Base class for adaptive smoothers making use of multiple Gaussians
+    Adaptive multi-Gaussian smoother which allows optimizing over weights and standard deviations
     """
 
     def __init__(self, sz, spacing, params):
-        super(ParameterizedMultiGaussianFourierSmoother, self).__init__(sz, spacing, params)
+        super(AdaptiveMultiGaussianFourierSmoother, self).__init__(sz, spacing, params)
 
         self.multi_gaussian_stds = np.array(params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')])
         default_multi_gaussian_weights = self.multi_gaussian_stds
@@ -546,6 +555,9 @@ class ParameterizedMultiGaussianFourierSmoother(GaussianSmoother):
         self.nr_of_gaussians = len(self.multi_gaussian_stds)
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz,spacing,self.nr_of_gaussians)
         self.multi_gaussian_optimizer_params = self._create_multi_gaussian_optimization_vector_parameters()
+
+    def associate_parameters_with_module(self,module):
+        module.register_parameter('multi_gaussian_std_and_weights',self.multi_gaussian_optimizer_params)
 
     def get_custom_optimizer_output_string(self):
         return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.numpy(),precision=3) + \
@@ -625,17 +637,6 @@ class ParameterizedMultiGaussianFourierSmoother(GaussianSmoother):
             self.multi_gaussian_optimizer_params.data[i + self.nr_of_gaussians] = self.multi_gaussian_weights[i]
         return self.multi_gaussian_optimizer_params
 
-# CONTINUE HERE. ALSO TEST THAT THE ADAPTIVE MULTI-GAUSSIAN SMOOTHER STILL WORKS
-
-# todo: clean this class up. Only this one optimizes directly over the weights, but not the learned version
-class AdaptiveMultiGaussianFourierSmoother(ParameterizedMultiGaussianFourierSmoother):
-    """
-    Adaptive multi-Gaussian Fourier smoother. Allows optimization over weights and standard deviations
-    """
-
-    def __init__(self, sz, spacing, params):
-        super(AdaptiveMultiGaussianFourierSmoother, self).__init__(sz, spacing, params)
-
     def get_optimization_parameters(self):
         if self.optimize_over_smoother_parameters:
             return self.multi_gaussian_optimizer_params
@@ -665,7 +666,7 @@ class AdaptiveMultiGaussianFourierSmoother(ParameterizedMultiGaussianFourierSmoo
                compute_weight_and_std_gradients = False
 
         if vout is not None:
-            vout = ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,
+            vout[:] = ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,
                                                          self.get_gaussian_stds(),self.get_gaussian_weights(),compute_weight_and_std_gradients)
             return vout
         else:
@@ -673,8 +674,7 @@ class AdaptiveMultiGaussianFourierSmoother(ParameterizedMultiGaussianFourierSmoo
                                                          self.get_gaussian_stds(),self.get_gaussian_weights(),compute_weight_and_std_gradients)
 
 
-
-class LearnedMultiGaussianCombinationFourierSmoother(ParameterizedMultiGaussianFourierSmoother):
+class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
     """
     Adaptive multi-Gaussian Fourier smoother. Allows optimization over weights and standard deviations
     """
@@ -682,9 +682,84 @@ class LearnedMultiGaussianCombinationFourierSmoother(ParameterizedMultiGaussianF
     def __init__(self, sz, spacing, params):
         super(LearnedMultiGaussianCombinationFourierSmoother, self).__init__(sz, spacing, params)
 
+        self.multi_gaussian_stds = np.array(
+            params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')])
+        default_multi_gaussian_weights = self.multi_gaussian_stds
+        default_multi_gaussian_weights /= default_multi_gaussian_weights.sum()
+        """standard deviations of Gaussians"""
+        self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussians')]
+        """minimal allowed standard deviation during optimization"""
+        self.optimize_over_smoother_parameters = params[
+            ('optimize_over_smoother_parameters', False, 'if set to true the smoother will be optimized')]
+        """determines if we should optimize over the smoother parameters"""
+        self.start_optimize_over_smoother_parameters_at_iteration = \
+            params[('start_optimize_over_smoother_parameters_at_iteration', 0,
+                    'Does not optimize the parameters before this iteration')]
+
+        self.nr_of_gaussians = len(self.multi_gaussian_stds)
+        self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, self.nr_of_gaussians)
+
+        self.ws = deep_smoothers.WeightedSmoothingModel(self.nr_of_gaussians)
+        """learned mini-network to predict multi-Gaussian smoothing weights"""
+        self.multi_gaussian_std_optimizer_params = self._create_multi_gaussian_std_optimization_vector_parameters()
+
+    def associate_parameters_with_module(self,module):
+        module.register_parameter('multi_gaussian_std_and_weights',self.multi_gaussian_std_optimizer_params)
+        module.add_module('weighted_smoothing_net',self.ws)
+
+    def get_custom_optimizer_output_string(self):
+        return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.numpy(), precision=3)
+
+    def get_custom_optimizer_output_values(self):
+        return {'smoother_stds': self.get_gaussian_stds().data.numpy().copy()}
+
+    def _project_parameter_vector_if_necessary(self):
+        # all standard deviations need to be positive and the weights need to be non-negative
+        for i in range(self.nr_of_gaussians):
+            if self.multi_gaussian_std_optimizer_params.data[i] <= self.gaussianStd_min:
+                self.multi_gaussian_std_optimizer_params.data[i] = self.gaussianStd_min
+
+    def _get_gaussian_stds_from_optimizer_params(self):
+        # project if needed
+        self._project_parameter_vector_if_necessary()
+        return self.multi_gaussian_std_optimizer_params[0:self.nr_of_gaussians]
+
+    def _set_gaussian_stds_optimizer_params(self, g_stds):
+        self.multi_gaussian_std_optimizer_params.data[0:self.nr_of_gaussians] = g_stds
+
+    def set_gaussian_stds(self, gstds):
+        """
+        Set the standard deviation of the Gaussian filter
+
+        :param gstd: standard deviation
+        """
+        self.params['multi_gaussian_stds'] = gstds
+        self._set_gaussian_std_optimizer_params(gstds)
+
+    def get_gaussian_stds(self):
+        """
+        Return the standard deviations of the Gaussian filters
+
+        :return: standard deviation of Gaussian filter
+        """
+        gaussianStds = self._get_gaussian_stds_from_optimizer_params()
+        return gaussianStds
+
+    def _create_multi_gaussian_std_optimization_vector_parameters(self):
+        self.multi_gaussian_std_optimizer_params = utils.create_vector_parameter(self.nr_of_gaussians)
+        for i in range(self.nr_of_gaussians):
+            self.multi_gaussian_std_optimizer_params.data[i] = self.multi_gaussian_stds[i]
+        return self.multi_gaussian_std_optimizer_params
+
     def get_optimization_parameters(self):
         if self.optimize_over_smoother_parameters:
-            return self.multi_gaussian_optimizer_params
+            return self.multi_gaussian_std_optimizer_params
+        else:
+            return None
+
+    def get_optimization_parameters(self):
+        if self.optimize_over_smoother_parameters:
+            return self.multi_gaussian_std_optimizer_params
         else:
             return None
 
@@ -700,8 +775,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(ParameterizedMultiGaussianF
         :return: smoothed image
         """
 
-        # just do a multi-Gaussian smoothing
-
         if not self.optimize_over_smoother_parameters or (variables_from_optimizer is None):
             compute_std_gradients = False
         else:
@@ -714,17 +787,26 @@ class LearnedMultiGaussianCombinationFourierSmoother(ParameterizedMultiGaussianF
         vcollection = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
                                                        self.get_gaussian_stds(), compute_std_gradients)
 
-        # todo: now we need a small neural net that can summarize this
-        # todo: this needs to be such that in the end there are a combination of weight fields that sum up
-        # todo: to one to create a new value, to make sure this is a proper smoothing
+        # we now use a small neural net to learn the weighting
 
-        raise ValueError('Not yet implemented')
+        # needs an image as its input
+        is_map = I_or_phi[1]
+        if is_map:
+            # todo: for a map input we simply create the input image by applying the map
+            raise ValueError('Only implemented for image input at the moment')
+        else:
+            I = I_or_phi[0]
+
+        # apply the network selecting the smoothing from the set of smoothed results (vcollection) and
+        # the input image, which may provide some guidance on where to smooth
+
+        smoothed_v = self.ws(vcollection, I)
 
         if vout is not None:
-            vout = 0 # todo: change
+            vout[:] = smoothed_v
             return vout
         else:
-            return 0 # todo: change
+            return smoothed_v
 
 
 
