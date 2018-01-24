@@ -378,61 +378,68 @@ def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
     return Parameter(AdaptVal(torch.zeros(csz.tolist())))
 
 
-def centered_identity_map_multiN(sz, spacing):
+def centered_identity_map_multiN(sz, spacing, dtype='float32'):
     """
     Create a centered identity map (shifted so it is centered around 0)
 
     :param sz: size of an image in BxCxXxYxZ format
+    :param spacing: list with spacing information [sx,sy,sz]
+    :param dtype: numpy data-type ('float32', 'float64', ...)
     :return: returns the identity map
     """
     dim = len(sz) - 2
     nrOfI = sz[0]
 
     if dim == 1:
-        id = np.zeros([nrOfI, 1, sz[2]], dtype='float32')
+        id = np.zeros([nrOfI, 1, sz[2]], dtype=dtype)
     elif dim == 2:
-        id = np.zeros([nrOfI, 2, sz[2], sz[3]], dtype='float32')
+        id = np.zeros([nrOfI, 2, sz[2], sz[3]], dtype=dtype)
     elif dim == 3:
-        id = np.zeros([nrOfI, 3, sz[2], sz[3], sz[4]], dtype='float32')
+        id = np.zeros([nrOfI, 3, sz[2], sz[3], sz[4]], dtype=dtype)
     else:
         raise ValueError('Only dimensions 1-3 are currently supported for the identity map')
 
     for n in range(nrOfI):
-        id[n, ...] = centered_identity_map(sz[2::], spacing)
+        id[n, ...] = centered_identity_map(sz[2::], spacing,dtype=dtype)
 
     return id
 
 
-def identity_map_multiN(sz,spacing):
+def identity_map_multiN(sz,spacing,dtype='float32'):
     """
     Create an identity map
     
     :param sz: size of an image in BxCxXxYxZ format
+    :param spacing: list with spacing information [sx,sy,sz]
+    :param dtype: numpy data-type ('float32', 'float64', ...)
     :return: returns the identity map
     """
     dim = len(sz)-2
     nrOfI = sz[0]
 
     if dim == 1:
-        id = np.zeros([nrOfI,1,sz[2]],dtype='float32')
+        id = np.zeros([nrOfI,1,sz[2]],dtype=dtype)
     elif dim == 2:
-        id = np.zeros([nrOfI,2,sz[2],sz[3]],dtype='float32')
+        id = np.zeros([nrOfI,2,sz[2],sz[3]],dtype=dtype)
     elif dim == 3:
-        id = np.zeros([nrOfI,3,sz[2],sz[3],sz[4]],dtype='float32')
+        id = np.zeros([nrOfI,3,sz[2],sz[3],sz[4]],dtype=dtype)
     else:
         raise ValueError('Only dimensions 1-3 are currently supported for the identity map')
 
     for n in range(nrOfI):
-        id[n,...] = identity_map(sz[2::],spacing)
+        id[n,...] = identity_map(sz[2::],spacing,dtype=dtype)
 
     return id
 
 
-def centered_identity_map(sz, spacing):
+def centered_identity_map(sz, spacing, dtype='float32'):
     """
-    Returns a centered identity map (with 0 in the middle)
+    Returns a centered identity map (with 0 in the middle) if the sz is odd
+    Otherwise shifts everything by 0.5*spacing
 
     :param sz: just the spatial dimensions, i.e., XxYxZ
+    :param spacing: list with spacing information [sx,sy,sz]
+    :param dtype: numpy data-type ('float32', 'float64', ...)
     :return: returns the identity map of dimension dimxXxYxZ
     """
     dim = len(sz)
@@ -446,24 +453,29 @@ def centered_identity_map(sz, spacing):
         raise ValueError('Only dimensions 1-3 are currently supported for the identity map')
 
     # now get it into range [0,(sz-1)*spacing]^d
-    id = np.array(id.astype('float32'))
+    id = np.array(id.astype(dtype))
     if dim == 1:
         id = id.reshape(1, sz[0])  # add a dummy first index
 
     for d in range(dim):
         id[d] *= spacing[d]
-        id[d] -= 0.5*spacing[d]*sz[d]
+        if sz[d]%2==0:
+            #even
+            id[d] -= spacing[d]*(sz[d]//2)
+        else:
+            #odd
+            id[d] -= spacing[d]*((sz[d]+1)//2)
 
     # and now store it in a dim+1 array
     if dim == 1:
-        idnp = np.zeros([1, sz[0]], dtype='float32')
+        idnp = np.zeros([1, sz[0]], dtype=dtype)
         idnp[0, :] = id[0]
     elif dim == 2:
-        idnp = np.zeros([2, sz[0], sz[1]], dtype='float32')
+        idnp = np.zeros([2, sz[0], sz[1]], dtype=dtype)
         idnp[0, :, :] = id[0]
         idnp[1, :, :] = id[1]
     elif dim == 3:
-        idnp = np.zeros([3, sz[0], sz[1], sz[2]], dtype='float32')
+        idnp = np.zeros([3, sz[0], sz[1], sz[2]], dtype=dtype)
         idnp[0, :, :, :] = id[0]
         idnp[1, :, :, :] = id[1]
         idnp[2, :, :, :] = id[2]
@@ -473,11 +485,13 @@ def centered_identity_map(sz, spacing):
     return idnp
 
 
-def identity_map(sz,spacing):
+def identity_map(sz,spacing,dtype='float32'):
     """
     Returns an identity map.
     
     :param sz: just the spatial dimensions, i.e., XxYxZ
+    :param spacing: list with spacing information [sx,sy,sz]
+    :param dtype: numpy data-type ('float32', 'float64', ...)
     :return: returns the identity map of dimension dimxXxYxZ
     """
     dim = len(sz)
@@ -491,7 +505,7 @@ def identity_map(sz,spacing):
         raise ValueError('Only dimensions 1-3 are currently supported for the identity map')
 
     # now get it into range [0,(sz-1)*spacing]^d
-    id = np.array( id.astype('float32') )
+    id = np.array( id.astype(dtype) )
     if dim==1:
         id = id.reshape(1,sz[0]) # add a dummy first index
 
@@ -503,14 +517,14 @@ def identity_map(sz,spacing):
 
     # and now store it in a dim+1 array
     if dim==1:
-        idnp = np.zeros([1, sz[0]], dtype='float32')
+        idnp = np.zeros([1, sz[0]], dtype=dtype)
         idnp[0,:] = id[0]
     elif dim==2:
-        idnp = np.zeros([2, sz[0], sz[1]], dtype='float32')
+        idnp = np.zeros([2, sz[0], sz[1]], dtype=dtype)
         idnp[0,:, :] = id[0]
         idnp[1,:, :] = id[1]
     elif dim==3:
-        idnp = np.zeros([3,sz[0], sz[1], sz[2]], dtype='float32')
+        idnp = np.zeros([3,sz[0], sz[1], sz[2]], dtype=dtype)
         idnp[0,:, :, :] = id[0]
         idnp[1,:, :, :] = id[1]
         idnp[2,:, :, :] = id[2]

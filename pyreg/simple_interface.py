@@ -7,6 +7,7 @@ import module_parameters as pars
 import model_factory as MF
 import fileio
 import numpy as np
+import utils
 
 import torch
 from torch.autograd import Variable
@@ -69,9 +70,12 @@ class RegisterImagePair(object):
         :return: the warped image
         """
         if self.opt is not None:
-            return self.opt.get_warped_image()
-        else:
-            return None
+            if self.useMap:
+                cmap = self.opt.get_map()
+                # and now warp it
+                return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing)
+            else:
+                return self.opt.get_warped_image()
 
     def get_map(self):
         """
@@ -208,7 +212,8 @@ class RegisterImagePair(object):
             MF.AvailableModels().print_available_models()
         else:
             # this model exists so let's use it
-            self.params['model']['deformation']['use_map'] = self.available_models[model_name][2]
+            self.useMap = self.available_models[model_name][2]
+            self.params['model']['deformation']['use_map'] = self.useMap
             self.params['model']['registration_model']['type'] = model_name
 
             if nr_of_iterations is not None:
