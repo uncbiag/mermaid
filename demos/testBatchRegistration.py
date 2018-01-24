@@ -46,7 +46,7 @@ I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(5,10))
 assert( np.all(spacing0==spacing1) )
 
 si.RegisterImagePair().register_images(I0,I1,spacing0,
-                                       model_name='model_name='svf_scalar_momentum_map',
+                                       model_name='svf_scalar_momentum_map',
                                        nr_of_iterations=50,
                                        visualize_step=5,
                                        map_low_res_factor=0.5,

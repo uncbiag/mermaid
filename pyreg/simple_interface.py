@@ -36,6 +36,15 @@ class RegisterImagePair(object):
 
         self.opt = None
 
+    def get_params(self):
+        """
+        Gets configuration parameters
+
+        :return: ParameterDict instance holding the algorithm parameters
+        """
+
+        return self.params
+
     def print_available_models(self):
         MF.AvailableModels().print_available_models()
 
