@@ -46,32 +46,10 @@ I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(5,10))
 assert( np.all(spacing0==spacing1) )
 
 si.RegisterImagePair().register_images(I0,I1,spacing0,
-                                       model_name='svf_scalar_momentum_map',
+                                       model_name='model_name='svf_scalar_momentum_map',
                                        nr_of_iterations=50,
-                                       visualize_step=1,
+                                       visualize_step=5,
                                        map_low_res_factor=0.5,
                                        rel_ftol=1e-10,
                                        json_config_out_filename='testBatch.json',
                                        params='testBatch.json')
-
-# svf_scalar_momentum_map
-#                                       model_name='lddmm_shooting_map',
-
-## create the source and target image as pyTorch variables
-#ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
-#ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
-
-
-#params['model']['deformation']['map_low_res_factor'] = 0.5
-#params['model']['registration_model']['type'] = 'lddmm_shooting_scalar_momentum_map'
-#params['optimizer']['single_scale']['nr_of_iterations'] = 101
-#so = MO.SimpleSingleScaleRegistration(ISource,ITarget,spacing0,params)
-#so.get_optimizer().set_visualization( ds.visualize )
-##so.get_optimizer().set_visualize_step( ds.visualize_step )
-#so.get_optimizer().set_visualize_step( 20 )
-#so.set_light_analysis_on(True)
-#so.register()
-#
-#params.write_JSON( 'testBatchSimpleRegistration_' + model_name + '_settings_clean.json')
-#params.write_JSON_comments( 'testBatchSimpleRegistration_' + model_name + '_settings_comments.json')
-

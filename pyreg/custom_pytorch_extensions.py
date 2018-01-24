@@ -18,6 +18,76 @@ if USE_CUDA:
 
 import utils
 
+def _symmetrize_filter_center_at_zero_1D(filter):
+    sz = filter.shape
+    if sz[0] % 2 == 0:
+        # symmetrize if it is even
+        filter[1:sz[0] // 2] = filter[sz[0]:sz[0] // 2:-1]
+    else:
+        # symmetrize if it is odd
+        filter[1:sz[0] // 2 + 1] = filter[sz[0]:sz[0] // 2:-1]
+
+def _symmetrize_filter_center_at_zero_2D(filter):
+    sz = filter.shape
+    if sz[0] % 2 == 0:
+        # symmetrize if it is even
+        filter[1:sz[0] // 2,:] = filter[sz[0]:sz[0] // 2:-1,:]
+    else:
+        # symmetrize if it is odd
+        filter[1:sz[0] // 2 + 1,:] = filter[sz[0]:sz[0] // 2:-1,:]
+
+    if sz[1] % 2 == 0:
+        # symmetrize if it is even
+        filter[:,1:sz[1] // 2] = filter[:,sz[1]:sz[1] // 2:-1]
+    else:
+        # symmetrize if it is odd
+        filter[:,1:sz[1] // 2 + 1] = filter[:,sz[1]:sz[1] // 2:-1]
+
+def _symmetrize_filter_center_at_zero_3D(filter):
+    sz = filter.shape
+    if sz[0] % 2 == 0:
+        # symmetrize if it is even
+        filter[1:sz[0] // 2,:,:] = filter[sz[0]:sz[0] // 2:-1,:,:]
+    else:
+        # symmetrize if it is odd
+        filter[1:sz[0] // 2 + 1,:,:] = filter[sz[0]:sz[0] // 2:-1,:,:]
+
+    if sz[1] % 2 == 0:
+        # symmetrize if it is even
+        filter[:,1:sz[1] // 2,:] = filter[:,sz[1]:sz[1] // 2:-1,:]
+    else:
+        # symmetrize if it is odd
+        filter[:,1:sz[1] // 2 + 1,:] = filter[:,sz[1]:sz[1] // 2:-1,:]
+
+    if sz[2] % 2 == 0:
+        # symmetrize if it is even
+        filter[:,:,1:sz[2] // 2] = filter[:,:,sz[2]:sz[2] // 2:-1]
+    else:
+        # symmetrize if it is odd
+        filter[:,:,1:sz[2] // 2 + 1] = filter[:,:,sz[2]:sz[2] // 2:-1]
+
+def symmetrize_filter_center_at_zero(filter,renormalize=False):
+    """
+    Symmetrizes filter. The assumption is that the filter is already in the format for input to an FFT.
+    I.e., that it has been transformed so that the center of the pixel is at zero.
+
+    :param filter: Input filter (in spatial domain). Will be symmetrized (i.e., will change its value)
+    :param renormalize: (bool) if true will normalize so that the sum is one
+    :return: n/a (returns via call by reference)
+    """
+    sz = filter.shape
+    dim = len(sz)
+    if dim==1:
+        _symmetrize_filter_center_at_zero_1D(filter)
+    elif dim==2:
+        _symmetrize_filter_center_at_zero_2D(filter)
+    elif dim==3:
+        _symmetrize_filter_center_at_zero_3D(filter)
+    else:
+        raise ValueError('Only implemented for dimensions 1,2, and 3 so far')
+
+    if renormalize:
+        filter = filter / filter.sum()
 
 def are_indices_close(loc):
     """
@@ -39,7 +109,7 @@ def are_indices_close(loc):
     return True
 
 
-def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True, maxIndex=None):
+def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True, maxIndex=None, renormalize=False):
     """
     Creates a filter in the Fourier domain given a spatial array defining the filter
     
@@ -49,6 +119,7 @@ def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True, m
         in the spatial domain to be symmetric
     :param maxIndex: specifies the index of the maximum which will be used to enforceMaxSymmetry. If it is not
         defined, the maximum is simply computed
+    :param renormalize: (bool) if true, the filter is renormalized to sum to one (useful for Gaussians for example)
     :return: Returns the complex coefficients for the filter in the Fourier domain and the maxIndex 
     """
     # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
@@ -67,17 +138,18 @@ def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True, m
         spatial_filter_max_at_zero = np.roll(spatial_filter, -np.array(maxIndex),
                                              range(len(spatial_filter.shape)))
 
+        symmetrize_filter_center_at_zero(spatial_filter_max_at_zero,renormalize=renormalize)
+
         # we assume this is symmetric and hence take the absolute value
         # as the FT of a symmetric kernel has to be real
         if USE_CUDA:
             f_filter =  create_cuda_filter(spatial_filter_max_at_zero, sz)
-            abs_filter = torch.sqrt(f_filter[0]**2 + f_filter[1]**2)
-            abs_filter = abs_filter
+            ret_filter = f_filter[0] # only the real part
         else:
             f_filter = create_numpy_filter(spatial_filter_max_at_zero, sz)
-            abs_filter = np.absolute(f_filter)
+            ret_filter = f_filter.real
 
-        return abs_filter,maxIndex
+        return ret_filter,maxIndex
     else:
         if USE_CUDA:
             return create_cuda_filter(spatial_filter),maxIndex
@@ -102,6 +174,7 @@ def create_cuda_filter(spatial_filter, sz):
 def create_numpy_filter(spatial_filter, sz):
     return np.fft.fftn(spatial_filter, s=sz)
 
+# todo: maybe check if we can use rfft's here for better performance
 def sel_fftn(dim):
     """
     sel the gpu and cpu version of the fft
@@ -864,7 +937,7 @@ class FourierMultiGaussianConvolution(FourierGaussianConvolution):
     def _compute_weights_gradient_CPU_multi_gaussian(self,input,weights,grad_output,complex_fourier_filters):
         grad_weights = torch.zeros_like(weights)
         for i in range(self.nr_of_gaussians):
-            grad_weights[i] = (grad_output * self._compute_convolution_CPU(input, self.complex_fourier_filters[i])).sum()
+            grad_weights[i] = (grad_output * self._compute_convolution_CPU(input, complex_fourier_filters[i])).sum()
         return grad_weights
 
     # This function has only a single output, so it gets only one gradient
@@ -920,6 +993,13 @@ class FourierMultiGaussianConvolution(FourierGaussianConvolution):
                 grad_weights = torch.zeros_like(self.weights)
 
         # now return the computed gradients
+
+        #print('gsigmas: min=' + str(grad_sigmas.min()) + '; max=' + str(grad_sigmas.max()))
+        #print('gweight: min=' + str(grad_weights.min()) + '; max=' + str(grad_weights.max()))
+        #print( 'gsigmas = ' + str( grad_sigmas))
+        #print( 'gweight = ' + str( grad_weights))
+
+
         return grad_input, grad_sigmas, grad_weights
 
 def fourier_multi_gaussian_convolution(input, gaussian_fourier_filter_generator,sigma,weights,compute_weight_and_std_gradients=True):
