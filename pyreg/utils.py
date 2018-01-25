@@ -45,7 +45,7 @@ def lift_to_dimension(A,dim):
     Creates a view of A of dimension dim (by adding dummy dimensions if necessary).
     Assumes a numpy array as input
 
-    :param A: numby array
+    :param A: numpy array
     :param dim: desired dimension of view
     :return: returns view of A of appropriate dimension
     """

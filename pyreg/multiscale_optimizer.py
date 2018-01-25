@@ -891,7 +891,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 visual_param['save_fig'] = False
 
             if iter % self.visualize_step == 0:
-                vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize()
+                if self.useMap and self.mapLowResFactor is not None:
+                    vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.lowResISource)
+                else:
+                    vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.ISource)
                 if self.useMap:
                     I1Warped = utils.compute_warped_image_multiNC(self.ISource, Warped, self.spacing)
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, Warped, visual_param)
@@ -924,10 +927,15 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     desired_lr = self.last_successful_step_size_taken
                 else:
                     desired_lr = 1.0
+                max_iter = self.params['optimizer']['lbfgs'][('max_iter',1,'maximum number of iterations')]
+                max_eval = self.params['optimizer']['lbfgs'][('max_eval',5,'maximum number of evaluation')]
+                history_size = self.params['optimizer']['lbfgs'][('history_size',5,'Size of the optimizer history')]
+                line_search_fn = self.params['optimizer']['lbfgs'][('line_search_fn','backtracking','Type of line search function')]
+
                 opt_instance = CO.LBFGS_LS(self.model.parameters(),
-                                           lr=desired_lr, max_iter=1, max_eval=5,
+                                           lr=desired_lr, max_iter=max_iter, max_eval=max_eval,
                                            tolerance_grad=self.rel_ftol * 10, tolerance_change=self.rel_ftol,
-                                           history_size=5, line_search_fn='backtracking')
+                                           history_size=history_size, line_search_fn=line_search_fn)
                 return opt_instance
             elif self.optimizer_name == 'sgd':
                 if self.last_successful_step_size_taken is not None:

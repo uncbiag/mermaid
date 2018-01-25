@@ -132,11 +132,14 @@ class RegistrationNet(nn.Module):
         """
         raise NotImplementedError
 
-    def get_parameter_image_and_name_to_visualize(self):
+#todo: maybe make in these cases the initial image explicitly part of the parameterization
+#todo: this would then also allow for optimization over it
+    def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
         Convenience function to specify an image that should be visualized including its caption. 
         This will typically be related to the parameter of a model. This method should be overwritten by a derived class
-         
+
+        :param ISource: (optional) source image as this is part of the initial condition for some parameterizations
         :return: should return a tuple (image,desired_caption)
         """
         # not defined yet
@@ -170,7 +173,7 @@ class RegistrationNetDisplacement(RegistrationNet):
         """
         return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
-    def get_parameter_image_and_name_to_visualize(self):
+    def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
         Returns the displacement field parameter magnitude image and a name
     
@@ -267,7 +270,7 @@ class SVFNet(RegistrationNetTimeIntegration):
         """
         return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
-    def get_parameter_image_and_name_to_visualize(self):
+    def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
         Returns the velocity field parameter magnitude image and a name
         
@@ -365,7 +368,7 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
         """
         return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
-    def get_parameter_image_and_name_to_visualize(self):
+    def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
         Returns the momentum magnitude image and :math:`|m|` as the image caption
         
@@ -833,7 +836,7 @@ class AffineMapNet(RegistrationNet):
         utils.set_affine_transform_to_identity_multiN(pars.data)
         return pars
 
-    def get_parameter_image_and_name_to_visualize(self):
+    def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
         Returns the velocity field parameter magnitude image and a name
 
@@ -940,7 +943,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         """
         return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
-    def get_parameter_image_and_name_to_visualize(self):
+    def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
         Creates a magnitude image for the momentum and returns it with name :math:`|m|`
         
@@ -1292,14 +1295,19 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
         """
         return utils.create_ND_scalar_field_parameter_multiNC(self.sz[2::], self.nrOfImages, self.nrOfChannels)
 
-    def get_parameter_image_and_name_to_visualize(self):
+    def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
         Returns an image of the scalar momentum (magnitude over all channels) and 'lambda' as name
         
         :return: Returns tuple (lamda_magnitude,lambda_name) 
         """
-        name = 'lambda'
-        par_image = ((self.lam[:,...]**2).sum(1))**0.5 # assume BxCxXxYxZ format
+        #name = 'lambda'
+        #par_image = ((self.lam[:,...]**2).sum(1))**0.5 # assume BxCxXxYxZ format
+
+        name = '|m(lambda,I0)|'
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, ISource, self.sz, self.spacing)
+        par_image = ((m[:,...]**2).sum(1))**0.5 # assume BxCxXxYxZ format
+
         return par_image,name
 
     def upsample_registration_parameters(self, desiredSz):

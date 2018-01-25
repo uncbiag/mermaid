@@ -24,6 +24,8 @@ I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(20,40))
 
 assert( np.all(spacing0==spacing1) )
 
+torch.set_num_threads(8)
+
 reg = si.RegisterImagePair()
 
 reg.register_images(I0,I1,spacing0,
@@ -36,6 +38,13 @@ reg.register_images(I0,I1,spacing0,
                         params='testInitial.json')
 
 pars = reg.get_model_parameters()
-#torch.save(pars,'testInitialPars.pt')
 
-print('Hello')
+vars_to_save = dict()
+vars_to_save['registration_pars'] = pars
+vars_to_save['I0'] = I0
+vars_to_save['I1'] = I1
+vars_to_save['sz'] = sz
+vars_to_save['spacing'] = spacing0
+vars_to_save['params'] = reg.get_params()
+
+torch.save(vars_to_save,'testInitialPars.pt')

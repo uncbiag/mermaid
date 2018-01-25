@@ -484,7 +484,7 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
     def __init__(self, sz, spacing, params):
         super(MultiGaussianFourierSmoother, self).__init__(sz, spacing, params)
         self.multi_gaussian_stds = np.array( params[('multi_gaussian_stds', [0.05,0.1,0.15,0.2,0.25], 'std deviations for the Gaussians')] )
-        default_multi_gaussian_weights = self.multi_gaussian_stds
+        default_multi_gaussian_weights = self.multi_gaussian_stds.copy()
         default_multi_gaussian_weights /= default_multi_gaussian_weights.sum()
         """standard deviations of Gaussians"""
         self.multi_gaussian_weights = np.array( params[('multi_gaussian_weights', default_multi_gaussian_weights.tolist(), 'weights for the multiple Gaussians')] )
@@ -530,7 +530,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         super(AdaptiveMultiGaussianFourierSmoother, self).__init__(sz, spacing, params)
 
         self.multi_gaussian_stds = np.array(params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')])
-        default_multi_gaussian_weights = self.multi_gaussian_stds
+        default_multi_gaussian_weights = self.multi_gaussian_stds.copy()
         default_multi_gaussian_weights /= default_multi_gaussian_weights.sum()
         """standard deviations of Gaussians"""
         self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', default_multi_gaussian_weights.tolist(), 'weights for the multiple Gaussians')])
@@ -684,8 +684,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         self.multi_gaussian_stds = np.array(
             params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')])
-        default_multi_gaussian_weights = self.multi_gaussian_stds
-        default_multi_gaussian_weights /= default_multi_gaussian_weights.sum()
         """standard deviations of Gaussians"""
         self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussians')]
         """minimal allowed standard deviation during optimization"""
@@ -696,12 +694,17 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             params[('start_optimize_over_smoother_parameters_at_iteration', 0,
                     'Does not optimize the parameters before this iteration')]
 
+        self.default_multi_gaussian_weights = self.multi_gaussian_stds.copy()
+        self.default_multi_gaussian_weights /= self.default_multi_gaussian_weights.sum()
+
         self.nr_of_gaussians = len(self.multi_gaussian_stds)
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, self.nr_of_gaussians)
 
-        self.ws = deep_smoothers.WeightedSmoothingModel(self.nr_of_gaussians)
-        """learned mini-network to predict multi-Gaussian smoothing weights"""
         self.multi_gaussian_std_optimizer_params = self._create_multi_gaussian_std_optimization_vector_parameters()
+
+        self.ws = deep_smoothers.WeightedSmoothingModel(self.nr_of_gaussians,self.default_multi_gaussian_weights)
+        """learned mini-network to predict multi-Gaussian smoothing weights"""
+
 
     def associate_parameters_with_module(self,module):
         module.register_parameter('multi_gaussian_std_and_weights',self.multi_gaussian_std_optimizer_params)
@@ -790,6 +793,9 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         # we now use a small neural net to learn the weighting
 
         # needs an image as its input
+        if I_or_phi is None:
+            raise ValueError('Smoother requires an image as an input')
+
         is_map = I_or_phi[1]
         if is_map:
             # todo: for a map input we simply create the input image by applying the map

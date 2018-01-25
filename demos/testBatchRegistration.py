@@ -38,18 +38,34 @@ def get_image_range(im_from,im_to):
     return f
 
 # load a bunch of images as source
-I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(get_image_range(0,5))
+I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(get_image_range(0,15))
 sz = np.array(I0.shape)
 # and a bunch of images as target images
-I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(5,10))
+I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(15,30))
 
 assert( np.all(spacing0==spacing1) )
 
-si.RegisterImagePair().register_images(I0,I1,spacing0,
-                                       model_name='model_name='svf_scalar_momentum_map',
-                                       nr_of_iterations=50,
-                                       visualize_step=5,
-                                       map_low_res_factor=0.5,
-                                       rel_ftol=1e-10,
-                                       json_config_out_filename='testBatch.json',
-                                       params='testBatch.json')
+reg = si.RegisterImagePair()
+
+reg.register_images(I0,I1,spacing0,
+                    model_name='svf_scalar_momentum_map',
+                    nr_of_iterations=50,
+                    visualize_step=5,
+                    map_low_res_factor=0.5,
+                    rel_ftol=1e-10,
+                    json_config_out_filename='testBatch.json',
+                    params='testBatch.json')
+
+pars = reg.get_model_parameters()
+
+vars_to_save = dict()
+vars_to_save['registration_pars'] = pars
+vars_to_save['I0'] = I0
+vars_to_save['I1'] = I1
+vars_to_save['sz'] = sz
+vars_to_save['spacing'] = spacing0
+vars_to_save['params'] = reg.get_params()
+
+torch.save(vars_to_save,'testBatchPars.pt')
+
+
