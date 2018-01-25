@@ -2,9 +2,14 @@ import set_pyreg_paths
 import pyreg.smoother_factory as SF
 
 import torch
+from torch.autograd import Variable
+
+import matplotlib.pyplot as plt
+
 import pyreg.simple_interface as si
 import pyreg.fileio as FIO
 import pyreg.utils as utils
+import pyreg.image_sampling as IS
 
 im_io = FIO.ImageIO()
 
@@ -15,42 +20,44 @@ def get_image_range(im_from,im_to):
         f.append( current_filename )
     return f
 
-source_images = get_image_range(0,20)
-target_images = get_image_range(20,40)
+I0_filenames = get_image_range(0,20)
+I1_filenames = get_image_range(20,40)
 
-# load a bunch of images as source
-I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(get_image_range(0,20))
-sz = np.array(I0.shape)
-# and a bunch of images as target images
-I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(20,40))
+results_filename = 'testInitialPars.pt'
+read_results_from_file = False
 
-assert( np.all(spacing0==spacing1) )
+d = torch.load(results_filename)
 
-#reg = si.RegisterImagePair()
-#
-#reg.register_images(I0,I1,spacing0,
-#                        model_name='svf_scalar_momentum_map',
-#                        nr_of_iterations=100,
-#                        visualize_step=5,
-#                        map_low_res_factor=0.5,
-#                        rel_ftol=1e-10,
-#                        json_config_out_filename='testInitial.json',
-#                        params='testInitial.json')
-
-pars = reg.get_model_parameters()
-#torch.save(pars,'testInitialPars.pt')
-
-
-d = torch.load('testInitialPars.pt')
-
-I0 = d['I0']
-I1 = d['I1']
-lam = d['registration_pars']['lam']
+I0 = Variable( torch.from_numpy(d['I0']), requires_grad=False)
+I1 = Variable( torch.from_numpy(d['I1']), requires_grad=False)
+lam = Variable( d['registration_pars']['lam'], requires_grad=False)
 sz = d['sz']
+lowResSize = lam.size()
 spacing = d['spacing']
 
-smoother = SF.SmootherFactory(sz,spacing).create_smoother_by_name('adaptive_multiGaussian')
+lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacing, lowResSize[2:])
 
+smoother = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('adaptive_multiGaussian')
 
-m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam,I0,sz,spacing)
+m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam,lowResI0,lowResSize,lowResSpacing)
 v = smoother.smooth(m)
+
+nr_of_images = sz[0]
+for n in range(nr_of_images):
+
+    plt.subplot(2,2,1)
+    plt.imshow(m[n,0,...].data.numpy())
+
+    plt.subplot(2,2,2)
+    plt.imshow(m[n,1,...].data.numpy())
+
+    plt.subplot(2, 2, 3)
+    plt.imshow(v[n, 0, ...].data.numpy())
+
+    plt.subplot(2, 2, 4)
+    plt.imshow(v[n, 1, ...].data.numpy())
+
+    plt.title( str(n) )
+
+    plt.show()
+

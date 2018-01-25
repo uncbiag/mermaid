@@ -48,5 +48,3 @@ vars_to_save['spacing'] = spacing0
 vars_to_save['params'] = reg.get_params()
 
 torch.save(vars_to_save,'testInitialPars.pt')
-
-print('Hello')
