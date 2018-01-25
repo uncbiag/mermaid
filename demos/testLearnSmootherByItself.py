@@ -25,6 +25,7 @@ I1_filenames = get_image_range(20,40)
 
 results_filename = 'testInitialPars.pt'
 read_results_from_file = False
+visualize_smooth_vector_fields = True
 
 d = torch.load(results_filename)
 
@@ -37,27 +38,37 @@ spacing = d['spacing']
 
 lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacing, lowResSize[2:])
 
-smoother = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('adaptive_multiGaussian')
-
+smoother_not_learned = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('adaptive_multiGaussian')
+smoother = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('learned_multiGaussianCombination')
 m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam,lowResI0,lowResSize,lowResSpacing)
-v = smoother.smooth(m)
+#v = smoother.smooth(m)
+v = smoother.smooth(m,None,[lowResI0,False])
+v_nl = smoother_not_learned.smooth(m)
 
-nr_of_images = sz[0]
-for n in range(nr_of_images):
+if visualize_smooth_vector_fields:
 
-    plt.subplot(2,2,1)
-    plt.imshow(m[n,0,...].data.numpy())
+    nr_of_images = sz[0]
+    for n in range(nr_of_images):
 
-    plt.subplot(2,2,2)
-    plt.imshow(m[n,1,...].data.numpy())
+        plt.subplot(3,2,1)
+        plt.imshow(m[n,0,...].data.numpy())
 
-    plt.subplot(2, 2, 3)
-    plt.imshow(v[n, 0, ...].data.numpy())
+        plt.subplot(3,2,2)
+        plt.imshow(m[n,1,...].data.numpy())
 
-    plt.subplot(2, 2, 4)
-    plt.imshow(v[n, 1, ...].data.numpy())
+        plt.subplot(3, 2, 3)
+        plt.imshow(v[n, 0, ...].data.numpy())
 
-    plt.title( str(n) )
+        plt.subplot(3, 2, 4)
+        plt.imshow(v[n, 1, ...].data.numpy())
 
-    plt.show()
+        plt.subplot(3, 2, 5)
+        plt.imshow(v_nl[n, 0, ...].data.numpy())
+
+        plt.subplot(3, 2, 6)
+        plt.imshow(v_nl[n, 1, ...].data.numpy())
+
+        plt.title( str(n) )
+
+        plt.show()
 
