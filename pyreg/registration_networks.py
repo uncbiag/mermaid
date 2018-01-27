@@ -465,19 +465,21 @@ class RegistrationLoss(nn.Module):
         """
         self.smFactory.add_similarity_measure(simName,simMeasure)
 
-    def compute_similarity_energy(self, I1_warped, I1_target, variables_from_forward_model=None, variables_from_optimizer=None):
+    def compute_similarity_energy(self, I1_warped, I1_target, I0_source=None, phi=None, variables_from_forward_model=None, variables_from_optimizer=None):
         """
         Computing the image matching energy based on the selected similarity measure
         
         :param I1_warped: warped image at time tTo 
-        :param I1_target: target image to register to 
+        :param I1_target: target image to register to
+        :param I0_source: source image at time 0 (typically not used)
+        :param phi: map to warp I0_source to target space (typically not used)
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the value for image similarity energy
         """
         if self.similarityMeasure is None:
             self.similarityMeasure = self.smFactory.create_similarity_measure(self.params)
-        sim = self.similarityMeasure.compute_similarity_multiNC(I1_warped, I1_target)
+        sim = self.similarityMeasure.compute_similarity_multiNC(I1_warped, I1_target, I0_source, phi)
         return sim
 
     @abstractmethod
@@ -512,7 +514,7 @@ class RegistrationImageLoss(RegistrationLoss):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: return the energy value
         """
-        sim = self.compute_similarity_energy(I1_warped, I1_target, variables_from_forward_model, variables_from_optimizer)
+        sim = self.compute_similarity_energy(I1_warped, I1_target, I0_source, None, variables_from_forward_model, variables_from_optimizer)
         reg = self.compute_regularization_energy(I0_source, variables_from_forward_model, variables_from_optimizer)
         energy = sim + reg
         return energy, sim, reg
@@ -557,7 +559,7 @@ class RegistrationMapLoss(RegistrationLoss):
         :return: registration energy
         """
         I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1, self.spacing_sim)
-        sim = self.compute_similarity_energy(I1_warped, I1_target, variables_from_forward_model, variables_from_optimizer)
+        sim = self.compute_similarity_energy(I1_warped, I1_target, I0_source, phi1, variables_from_forward_model, variables_from_optimizer)
         if lowres_I0 is not None:
             reg = self.compute_regularization_energy(lowres_I0, variables_from_forward_model, variables_from_optimizer)
         else:

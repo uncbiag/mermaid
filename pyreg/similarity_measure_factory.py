@@ -27,36 +27,63 @@ class SimilarityMeasure(object):
         self.sigma = params[('sigma', 0.1, '1/sigma^2 is the weight in front of the similarity measure')]
         """1/sigma^2 is a balancing constant"""
 
-    def compute_similarity_multiNC(self, I0, I1):
+    def compute_similarity_multiNC(self, I0, I1, I0Source=None, phi=None):
         """
         Compute the multi-image multi-channel image similarity between two images of format BxCxXxYzZ
         
-        :param I0: first image 
-        :param I1: second image
+        :param I0: first image (the warped source image)
+        :param I1: second image (target image)
+        :param I0Source: source image (will typically not be used)
+        :param phi: map in the target image to warp the source image (will typically not be used)
         :return: returns similarity measure
         """
         sz = I0.size()
         sim = Variable(torch.zeros(1), requires_grad=False).type_as(I0)
-        for nrI in range(sz[0]):  # loop over all the images
-            sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...])
+
+        if I0Source is None and phi is None:
+            for nrI in range(sz[0]):  # loop over all the images
+                sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], None, None )
+
+        elif I0Source is not None and phi is None:
+            for nrI in range(sz[0]):  # loop over all the images
+                sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], I0Source[nrI,...], None)
+
+        elif I0Source is None and phi is not None:
+            for nrI in range(sz[0]):  # loop over all the images
+                sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], None, phi[nrI,...])
+
+        else:
+            for nrI in range(sz[0]):  # loop over all the images
+                sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], I0Source[nrI,...], phi[nrI,...])
+
         return sim
 
-    def compute_similarity_multiC(self, I0, I1):
+
+    def compute_similarity_multiC(self, I0, I1, I0Source=None, phi=None):
         """
         Compute the multi-channel image similarity between two images of format CxXxYzZ
 
-        :param I0: first image 
-        :param I1: second image
+        :param I0: first image (the warped source image)
+        :param I1: second image (target image)
+        :param I0Source: source image (will typically not be used)
+        :param phi: map in the target image to warp the source image (will typically not be used)
         :return: returns similarity measure
         """
         sz = I0.size()
         sim = Variable(torch.zeros(1), requires_grad=False).type_as(I0)
-        for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same
-            sim = sim + self.compute_similarity(I0[nrC, ...], I1[nrC, ...])
+
+        if I0Source is None:
+            for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same; if available map is the same for all channels
+                sim = sim + self.compute_similarity(I0[nrC, ...], I1[nrC, ...], None, phi)
+
+        else:
+            for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same; if available map is the same for all channels
+                sim = sim + self.compute_similarity(I0[nrC, ...], I1[nrC, ...],I0Source[nrC, ...],phi)
+
         return sim
 
     @abstractmethod
-    def compute_similarity(self, I0, I1):
+    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
         """
         Abstract method to compute the *single*-channel image similarity between two images of format XxYzZ.
         This is the only method that should be overwritten by a specific implemented similarity measure. 
@@ -66,8 +93,10 @@ class SimilarityMeasure(object):
         1./(self.sigma ** 2)  and also by self.volumeElement if it is a volume integral
         (and not a correlation measure for example)
 
-        :param I0: first image 
-        :param I1: second image
+        :param I0: first image (the warped source image)
+        :param I1: second image (target image)
+        :param I0Source: source image (will typically not be used)
+        :param phi: map in the target image to warp the source image (will typically not be used)
         :return: returns similarity measure
         """
         pass
@@ -100,18 +129,57 @@ class SSDSimilarity(SimilarityMeasure):
     def __init__(self, spacing, params):
         super(SSDSimilarity,self).__init__(spacing,params)
 
-    def compute_similarity(self, I0, I1):
+    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
         """
         Computes the SSD measure between two images
         
         :param I0: first image 
         :param I1: second image
-        :return: SSD
+        :param I0Source: not used
+        :param phi: not used
+        :return: SSD/sigma^2
         """
 
         # TODO: This is to avoid a current pytorch bug 0.3.0 which cannot properly deal with infinity or NaN
         return AdaptVal((utils.remove_infs_from_variable((I0- I1) ** 2)).sum() / (self.sigma ** 2) * self.volumeElement)
         #return AdaptVal(((I0 - I1) ** 2).sum() / (self.sigma ** 2) * self.volumeElement)
+
+
+class OptimalMassTransportSimilarity(SimilarityMeasure):
+    """
+    Similarity measure based on optimal mass transport.
+
+    """
+
+    def __init__(self, spacing, params):
+        super(OptimalMassTransportSimilarity, self).__init__(spacing, params)
+
+    def compute_similarity(self, I0, I1, I0Source, phi):
+        """
+        Computes the SSD measure between two images
+
+        :param I0: first image (not used)
+        :param I1: second image (target image)
+        :param I0Source: source image (not warped)
+        :param phi: map to warp the source image to the target
+        :return: OMTSimilarity/sigma^2
+        """
+
+        # todo: using the map here is not very efficient. It is much more efficient to apply the map
+        # todo: to an entire batch of images.
+
+        # FX: put your OMT code here; this is just a placeholder for now which is simple SSD (but using the source image and the map)
+        if phi is None:
+            raise ValueError('OptimalMassTransportSimiliary can only be computed for map-based models.')
+
+        #todo: just compute SSD for now, change this to OMT
+
+        # warp the source image (would be more efficient if we process a batch of images at once;
+        # but okay for now and no overhead if you only use one image pair at a time)
+        I1_warped = utils.compute_warped_image(I0Source, phi, self.spacing)
+
+        return AdaptVal((utils.remove_infs_from_variable((I1_warped - I1) ** 2)).sum() / (self.sigma ** 2) * self.volumeElement)
+
 
 class NCCSimilarity(SimilarityMeasure):
     """
@@ -122,19 +190,21 @@ class NCCSimilarity(SimilarityMeasure):
     def __init__(self, spacing, params):
         super(NCCSimilarity,self).__init__(spacing,params)
 
-    def compute_similarity(self, I0, I1):
+    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
         """
        Computes the NCC-based image similarity measure between two images
 
        :param I0: first image 
        :param I1: second image
+       :param I0Source: not used
+       :param phi: not used
        :return: (1-NCC^2)/sigma^2
        """
 
         # TODO: may require a safeguard against infinity
-        ncc = ((cI0-cI0.mean().expand_as(cI0))*(cI1-cI1.mean().expand_as(cI1))).mean()/(cI0.std()*cI1.std())
+        ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
         # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
-        return (1-ncc**2) / (self.sigma ** 2)
+        return AdaptVal((1-ncc**2) / (self.sigma ** 2))
 
 
 class SimilarityMeasureFactory(object):
@@ -152,7 +222,8 @@ class SimilarityMeasureFactory(object):
 
         self.simMeasures = {
             'ssd': SSDSimilarity,
-            'ncc': NCCSimilarity
+            'ncc': NCCSimilarity,
+            'omt': OptimalMassTransportSimilarity
         }
         """currently implemented similiarity measures"""
 
@@ -177,6 +248,12 @@ class SimilarityMeasureFactory(object):
         Set the default similarity measure to SSD
         """
         self.similarity_measure_default_type = 'ssd'
+
+    def set_similarity_measure_default_type_to_omt(self):
+        """
+        Set the default similarity measure to OMT (optimal mass transport)
+        """
+        self.similarity_measure_default_type = 'omt'
 
     def set_similarity_measure_default_type_to_ncc(self):
         """
