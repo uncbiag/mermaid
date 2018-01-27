@@ -241,6 +241,21 @@ def _compute_warped_image_multiNC_3d(I0, phi, spacing):
     return I1_warped
 
 
+def compute_warped_image(I0,phi,spacing):
+    """
+    Warps image.
+
+    :param I0: image to warp, image size XxYxZ
+    :param phi: map for the warping, size dimxXxYxZ
+    :param spacing: image spacing [dx,dy,dz]
+    :return: returns the warped image of size XxYxZ
+    """
+
+    # implements this by creating a different view (effectively adding dimensions)
+    Iw = compute_warped_image_multiNC(I0.view(torch.Size([1, 1]+ list(I0.size()))),
+                                        phi.view(torch.Size([1]+ list(phi.size()))),spacing)
+    return Iw.view(I0.size())
+
 def compute_warped_image_multiNC(I0, phi, spacing):
     """
     Warps image.

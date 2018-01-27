@@ -12,7 +12,7 @@ Similarity measures are derived from :class:`SimilarityMeasure`. To create a new
 .. code::
 
    class MySSD(SimilarityMeasure):
-       def compute_similarity(self,I0,I1):
+       def compute_similarity(self,I0,I1,I0Source=None,phi=None):
            sigma = 0.1
            return ((I0 - I1) ** 2).sum() / (sigma**2) * self.volumeElement
 

@@ -10,7 +10,7 @@ import pyreg.module_parameters as pars
 # keep track of general parameters
 params = pars.ParameterDict()
 
-use_synthetic_test_case = False
+use_synthetic_test_case = True
 dim = 2
 try_all_models = False
 
@@ -71,11 +71,16 @@ else:
     #si.register_images(I0, I1, spacing, model_name='diffusion_map')
     #si.register_images(I0, I1, spacing, model_name='svf_image')
     #si.register_images(I0, I1, spacing, model_name='svf_map')
-    #si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_image')
+    si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_image')
     #si.register_images(I0, I1, spacing, model_name='svf_quasi_momentum_image',nr_of_iterations=100)
-    si.register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_image',nr_of_iterations=10,use_multi_scale=True)
+    #si.register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_image',nr_of_iterations=10,use_multi_scale=False)
     #si.register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_map')
     #si.register_images(I0, I1, spacing, model_name='lddmm_shooting_map')
+
+    #si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
+    #                    visualize_step=5,
+    #                    nr_of_iterations=20,
+    #                    similarity_measure_type='omt')
 
     h = si.get_history()
 
