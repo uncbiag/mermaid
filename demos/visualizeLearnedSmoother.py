@@ -27,7 +27,10 @@ def visualize_filter(filter,title=None):
 
     plt.show()
 
-d = torch.load('testBatchPars.pt')
+#d = torch.load('testBatchPars.pt')
+#d = torch.load('testBatchParsMoreIterations.pt')
+#d = torch.load('testBatchParsNewSmoother.pt')
+d = torch.load('testBatchParsNewSmootherMoreImages.pt')
 
 visualize_filters = False
 
@@ -40,39 +43,62 @@ if visualize_filters:
     visualize_filter(w1,'w1')
     visualize_filter(w2,'w2')
 
-import collections
-
-def get_state_dict_for_module(state_dict,module_name):
-
-    res_dict = collections.OrderedDict()
-    for k in state_dict.keys():
-        if k.startswith(module_name + '.'):
-            adapted_key = k[len(module_name)+1:]
-            res_dict[adapted_key] = state_dict[k]
-    return res_dict
 
 I0 = Variable( torch.from_numpy(d['I0']), requires_grad=False)
 I1 = Variable( torch.from_numpy(d['I1']), requires_grad=False)
+Iw = d['Iw']
+phi = d['phi']
 lam = Variable( d['registration_pars']['lam'], requires_grad=False)
 sz = d['sz']
 lowResSize = lam.size()
 spacing = d['spacing']
 
+stds = d['registration_pars']['multi_gaussian_stds']
+
 lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacing, lowResSize[2:])
 
-smoother = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('learned_multiGaussianCombination')
+# smoother needs to be in the same state as before, so we need to set the parameters correctly
+
+import pyreg.module_parameters as pars
+
+params = pars.ParameterDict()
+params.load_JSON('testBatchNewSmoother.json')
+smoother_params = params['model']['registration_model']['forward_model']
+
+smoother = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('learned_multiGaussianCombination',smoother_params)
+smoother.set_state_dict(d['registration_pars'])
+smoother.set_debug_retain_computed_local_weights(True)
+
 smoother_not_learned = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('adaptive_multiGaussian')
 
 m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam,lowResI0,lowResSize,lowResSpacing)
 
 v = smoother.smooth(m,None,[lowResI0,False])
+
+local_weights = smoother.get_debug_computed_local_weights()
+default_multi_gaussian_weights = smoother.get_default_multi_gaussian_weights()
+
 v_nl = smoother_not_learned.smooth(m)
 
-visualize_smooth_vector_fields = True
+visualize_smooth_vector_fields = False
+visualize_weights = True
+nr_of_gaussians = len(stds)
+
+def compute_overall_std(weights,stds,d_w):
+    szw = weights.size()
+    ret = torch.zeros(szw[1:])
+
+    for i,s in enumerate(stds):
+        ret += (weights[i,...]+d_w[i])*(s**2)
+
+    # now we have the variances, so take the sqrt
+    return torch.sqrt(ret)
+
+#nr_of_images = sz[0]
+nr_of_images = 30 # only show a few of them
 
 if visualize_smooth_vector_fields:
 
-    nr_of_images = sz[0]
     for n in range(nr_of_images):
 
         plt.subplot(3,2,1)
@@ -92,6 +118,142 @@ if visualize_smooth_vector_fields:
 
         plt.subplot(3, 2, 6)
         plt.imshow(v_nl[n, 1, ...].data.numpy())
+
+        plt.title( str(n) )
+
+        plt.show()
+
+import numpy as np
+
+print_figures = True
+
+if visualize_weights:
+
+    for n in range(nr_of_images):
+        os = compute_overall_std(local_weights[:, n, ...], stds, default_multi_gaussian_weights)
+
+        plt.clf()
+
+        plt.subplot(2,3,1)
+        plt.imshow(I0[n,0,...].data.numpy(),cmap='gray')
+        plt.title('source')
+
+        plt.subplot(2, 3, 2)
+        plt.imshow(I1[n, 0, ...].data.numpy(), cmap='gray')
+        plt.title('target')
+
+        plt.subplot(2, 3, 3)
+        plt.imshow(Iw[n, 0, ...].data.numpy(), cmap='gray')
+        plt.title('warped')
+
+        plt.subplot(2, 3, 4)
+        plt.imshow(Iw[n, 0, ...].data.numpy(), cmap='gray')
+        plt.contour(phi[n,0,...].data.numpy(),np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+        plt.contour(phi[n,1,...].data.numpy(),np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+        plt.title('warped+grid')
+
+        plt.subplot(2,3,5)
+        plt.imshow(lam[n,0,...].data.numpy(),cmap='gray')
+        plt.title('lambda')
+
+        plt.subplot(2,3,6)
+        plt.imshow(os,cmap='gray')
+        plt.title('std')
+
+        plt.suptitle('Registration: ' + str(n))
+
+        if print_figures:
+            plt.savefig('{:0>3d}'.format(n) + '_regresult.pdf')
+        else:
+            plt.show()
+
+        plt.clf()
+
+        for g in range(nr_of_gaussians):
+            plt.subplot(2, 3, g + 1)
+            plt.imshow((local_weights[g, n, ...] + default_multi_gaussian_weights[g]).numpy())
+            plt.title("{:.2f}".format(stds[g]))
+            plt.colorbar()
+
+        plt.subplot(2, 3, 6)
+        os = compute_overall_std(local_weights[:, n, ...], stds, default_multi_gaussian_weights)
+
+        plt.imshow(os)
+        plt.colorbar()
+        plt.suptitle('Registration: ' + str(n))
+
+        if print_figures:
+            plt.savefig('{:0>3d}'.format(n) + '_weights.pdf')
+        else:
+            plt.show()
+
+if False:
+    for n in range(nr_of_images):
+        plt.subplot(2,2,1)
+        plt.imshow(I0[n,0,...].data.numpy())
+        plt.colorbar()
+
+        plt.subplot(2, 2, 2)
+        plt.imshow(I1[n, 0, ...].data.numpy())
+
+        plt.subplot(2, 2, 3)
+        os = compute_overall_std(local_weights[:, n, ...], stds, default_multi_gaussian_weights)
+        plt.imshow(os)
+        plt.colorbar()
+
+       # plt.subplot(2, 2, 4)
+        #os = compute_overall_std(local_weights[:, n, 1, ...], stds, default_multi_gaussian_weights)
+        #plt.imshow(os)
+        #plt.colorbar()
+
+        plt.show()
+
+if False:
+    for n in range(nr_of_images):
+
+        for g in range(nr_of_gaussians):
+            plt.subplot(2,3,g+1)
+            plt.imshow((local_weights[g,n,...]+default_multi_gaussian_weights[g]).numpy())
+            plt.title("{:.2f}".format(stds[g]))
+            plt.colorbar()
+
+        plt.subplot(2,3,6)
+        os = compute_overall_std(local_weights[:,n,...],stds,default_multi_gaussian_weights)
+
+        plt.imshow(os)
+        plt.colorbar()
+
+        plt.show()
+
+
+if False:
+
+    for n in range(nr_of_images):
+
+        for g in range(nr_of_gaussians):
+            plt.subplot(2,nr_of_gaussians+1,g+1)
+            #plt.imshow((local_weights[g,n,0,...]+default_multi_gaussian_weights[g]).numpy())
+            plt.imshow((local_weights[g,n,...]+default_multi_gaussian_weights[g]).numpy())
+
+
+        plt.subplot(2,nr_of_gaussians+1,nr_of_gaussians+1)
+        #os = compute_overall_std(local_weights[:,n,0,...],stds,default_multi_gaussian_weights)
+        os = compute_overall_std(local_weights[:,n,...],stds,default_multi_gaussian_weights)
+
+        plt.imshow(os)
+        plt.colorbar()
+
+        for g in range(nr_of_gaussians):
+            plt.subplot(2,nr_of_gaussians+1,nr_of_gaussians+1+1+g)
+            #plt.imshow((local_weights[g,n,1,...]+default_multi_gaussian_weights[g]).numpy())
+            plt.imshow((local_weights[g,n,...]+default_multi_gaussian_weights[g]).numpy())
+
+
+        plt.subplot(2, nr_of_gaussians + 1, 2*nr_of_gaussians + 2)
+        #os = compute_overall_std(local_weights[:, n, 1, ...], stds,default_multi_gaussian_weights)
+        os = compute_overall_std(local_weights[:, n,  ...], stds,default_multi_gaussian_weights)
+        plt.imshow(os)
+        plt.colorbar()
 
         plt.title( str(n) )
 
