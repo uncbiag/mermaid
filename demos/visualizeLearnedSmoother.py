@@ -84,12 +84,12 @@ visualize_smooth_vector_fields = False
 visualize_weights = True
 nr_of_gaussians = len(stds)
 
-def compute_overall_std(weights,stds,d_w):
+def compute_overall_std(weights,stds):
     szw = weights.size()
     ret = torch.zeros(szw[1:])
 
     for i,s in enumerate(stds):
-        ret += (weights[i,...]+d_w[i])*(s**2)
+        ret += (weights[i,...])*(s**2)
 
     # now we have the variances, so take the sqrt
     return torch.sqrt(ret)
@@ -130,7 +130,7 @@ print_figures = True
 if visualize_weights:
 
     for n in range(nr_of_images):
-        os = compute_overall_std(local_weights[:, n, ...], stds, default_multi_gaussian_weights)
+        os = compute_overall_std(local_weights[:, n, ...], stds )
 
         plt.clf()
 
@@ -171,12 +171,12 @@ if visualize_weights:
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 3, g + 1)
-            plt.imshow((local_weights[g, n, ...] + default_multi_gaussian_weights[g]).numpy())
+            plt.imshow((local_weights[g, n, ...]).numpy())
             plt.title("{:.2f}".format(stds[g]))
             plt.colorbar()
 
         plt.subplot(2, 3, 6)
-        os = compute_overall_std(local_weights[:, n, ...], stds, default_multi_gaussian_weights)
+        os = compute_overall_std(local_weights[:, n, ...], stds )
 
         plt.imshow(os)
         plt.colorbar()
@@ -186,80 +186,5 @@ if visualize_weights:
             plt.savefig('{:0>3d}'.format(n) + '_weights.pdf')
         else:
             plt.show()
-
-if False:
-    for n in range(nr_of_images):
-        plt.subplot(2,2,1)
-        plt.imshow(I0[n,0,...].data.numpy())
-        plt.colorbar()
-
-        plt.subplot(2, 2, 2)
-        plt.imshow(I1[n, 0, ...].data.numpy())
-
-        plt.subplot(2, 2, 3)
-        os = compute_overall_std(local_weights[:, n, ...], stds, default_multi_gaussian_weights)
-        plt.imshow(os)
-        plt.colorbar()
-
-       # plt.subplot(2, 2, 4)
-        #os = compute_overall_std(local_weights[:, n, 1, ...], stds, default_multi_gaussian_weights)
-        #plt.imshow(os)
-        #plt.colorbar()
-
-        plt.show()
-
-if False:
-    for n in range(nr_of_images):
-
-        for g in range(nr_of_gaussians):
-            plt.subplot(2,3,g+1)
-            plt.imshow((local_weights[g,n,...]+default_multi_gaussian_weights[g]).numpy())
-            plt.title("{:.2f}".format(stds[g]))
-            plt.colorbar()
-
-        plt.subplot(2,3,6)
-        os = compute_overall_std(local_weights[:,n,...],stds,default_multi_gaussian_weights)
-
-        plt.imshow(os)
-        plt.colorbar()
-
-        plt.show()
-
-
-if False:
-
-    for n in range(nr_of_images):
-
-        for g in range(nr_of_gaussians):
-            plt.subplot(2,nr_of_gaussians+1,g+1)
-            #plt.imshow((local_weights[g,n,0,...]+default_multi_gaussian_weights[g]).numpy())
-            plt.imshow((local_weights[g,n,...]+default_multi_gaussian_weights[g]).numpy())
-
-
-        plt.subplot(2,nr_of_gaussians+1,nr_of_gaussians+1)
-        #os = compute_overall_std(local_weights[:,n,0,...],stds,default_multi_gaussian_weights)
-        os = compute_overall_std(local_weights[:,n,...],stds,default_multi_gaussian_weights)
-
-        plt.imshow(os)
-        plt.colorbar()
-
-        for g in range(nr_of_gaussians):
-            plt.subplot(2,nr_of_gaussians+1,nr_of_gaussians+1+1+g)
-            #plt.imshow((local_weights[g,n,1,...]+default_multi_gaussian_weights[g]).numpy())
-            plt.imshow((local_weights[g,n,...]+default_multi_gaussian_weights[g]).numpy())
-
-
-        plt.subplot(2, nr_of_gaussians + 1, 2*nr_of_gaussians + 2)
-        #os = compute_overall_std(local_weights[:, n, 1, ...], stds,default_multi_gaussian_weights)
-        os = compute_overall_std(local_weights[:, n,  ...], stds,default_multi_gaussian_weights)
-        plt.imshow(os)
-        plt.colorbar()
-
-        plt.title( str(n) )
-
-        plt.show()
-
-
-
 
 
