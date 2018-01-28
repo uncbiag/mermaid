@@ -17,6 +17,17 @@ import custom_pytorch_extensions as ce
 import module_parameters as pars
 import deep_smoothers
 
+import collections
+
+def get_state_dict_for_module(state_dict,module_name):
+
+    res_dict = collections.OrderedDict()
+    for k in state_dict.keys():
+        if k.startswith(module_name + '.'):
+            adapted_key = k[len(module_name)+1:]
+            res_dict[adapted_key] = state_dict[k]
+    return res_dict
+
 class Smoother(object):
     """
     Abstract base class defining the general smoother interface.
@@ -43,6 +54,28 @@ class Smoother(object):
 
     def associate_parameters_with_module(self,module):
         pass
+
+
+    def set_state_dict(self,state_dict):
+        """
+        If the smoother contains a torch state-dict, this function allows setting it externally (to initialize as needed).
+        This is typically not needed as it will be set via a registration model for example, but can be useful
+        for external testing of the smoother. This is also different from smoother parameters and only
+        affects parameters that may be optimized over.
+
+        :param state_dict: OrderedDict containing the state information
+        :return: n/a
+        """
+        pass
+
+    def get_state_dict(self):
+        """
+        If the smoother contains a torch state-dict, this function returns it
+
+        :return: state dict as an OrderedDict
+        """
+        raise ValueError('Not yet implemented')
+        return None
 
     def set_source_image(self,ISource):
         """
@@ -702,12 +735,24 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         self.multi_gaussian_std_optimizer_params = self._create_multi_gaussian_std_optimization_vector_parameters()
 
-        self.ws = deep_smoothers.WeightedSmoothingModel(self.nr_of_gaussians,self.default_multi_gaussian_weights)
+        #self.ws = deep_smoothers.WeightedSmoothingModel(self.nr_of_gaussians,self.default_multi_gaussian_weights)
+        self.ws = deep_smoothers.ConsistentWeightedSmoothingModel(self.nr_of_gaussians,self.default_multi_gaussian_weights)
         """learned mini-network to predict multi-Gaussian smoothing weights"""
 
+        self.debug_retain_computed_local_weights = False
+        self.debug_computed_local_weights = None
+
+    def get_default_multi_gaussian_weights(self):
+        return self.default_multi_gaussian_weights
+
+    def get_debug_computed_local_weights(self):
+        return self.debug_computed_local_weights
+
+    def set_debug_retain_computed_local_weights(self,val):
+        self.debug_retain_computed_local_weights = True
 
     def associate_parameters_with_module(self,module):
-        module.register_parameter('multi_gaussian_std_and_weights',self.multi_gaussian_std_optimizer_params)
+        module.register_parameter('multi_gaussian_stds',self.multi_gaussian_std_optimizer_params)
         module.add_module('weighted_smoothing_net',self.ws)
 
     def get_custom_optimizer_output_string(self):
@@ -715,6 +760,15 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
     def get_custom_optimizer_output_values(self):
         return {'smoother_stds': self.get_gaussian_stds().data.numpy().copy()}
+
+    def set_state_dict(self,state_dict):
+        self.multi_gaussian_std_optimizer_params.data[:] = state_dict['multi_gaussian_stds']
+        # first check if the learned smoother has already been initialized
+        if len(self.ws.state_dict())==0:
+            # has not been initialized, we need to initialize it before we can load the dictionary
+            nr_of_image_channels = state_dict['weighted_smoothing_net.conv1.weight'].size()[1] - self.nr_of_gaussians*self.dim
+            self.ws._init(nr_of_image_channels,self.dim)
+        self.ws.load_state_dict(get_state_dict_for_module(state_dict,'weighted_smoothing_net'))
 
     def _project_parameter_vector_if_necessary(self):
         # all standard deviations need to be positive and the weights need to be non-negative
@@ -806,7 +860,11 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         # apply the network selecting the smoothing from the set of smoothed results (vcollection) and
         # the input image, which may provide some guidance on where to smooth
 
-        smoothed_v = self.ws(vcollection, I)
+        if self.debug_retain_computed_local_weights:
+            smoothed_v = self.ws(vcollection, I,self.debug_retain_computed_local_weights)
+            self.debug_computed_local_weights = self.ws.get_computed_weights()
+        else:
+            smoothed_v = self.ws(vcollection, I)
 
         if vout is not None:
             vout[:] = smoothed_v

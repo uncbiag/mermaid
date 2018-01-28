@@ -30,8 +30,10 @@ vcollection = ce.fourier_set_of_gaussian_convolutions(m, gaussian_fourier_filter
                                                       Variable(torch.from_numpy(gaussian_stds)), compute_std_gradients)
 
 I = I_or_phi[0]
-ws = DS.WeightedSmoothingModel(nr_of_gaussians)
-smoothed_v = ws(vcollection,I)
+
+#ws = DS.WeightedSmoothingModel(nr_of_gaussians)
+ws = DS.ConsistentWeightedSmoothingModel(nr_of_gaussians,gaussian_weights)
+smoothed_v = ws(vcollection,I,retain_weights=True)
 
 plt.subplot(7,2,1)
 plt.imshow(m[0,0,...].data.numpy())
