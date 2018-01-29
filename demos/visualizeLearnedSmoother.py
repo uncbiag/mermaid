@@ -32,7 +32,8 @@ def visualize_filter(filter,title=None):
 #d = torch.load('testBatchParsNewSmoother.pt')
 #d = torch.load('testBatchParsNewSmootherMoreImages.pt')
 #d = torch.load('testBatchGlobalWeightOpt.pt')
-d = torch.load('testBatchGlobalWeightRegularizedOpt.pt')
+#d = torch.load('testBatchGlobalWeightRegularizedOpt.pt')
+d = torch.load('testBatchGlobalWeightRegularizedOpt_with_lNCC.pt')
 
 visualize_filters = False
 
