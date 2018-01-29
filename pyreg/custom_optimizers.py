@@ -110,7 +110,9 @@ class LBFGS_LS(Optimizer):
 
         # evaluate initial f(x) and df/dx
         orig_loss = closure()
+
         loss = orig_loss.data[0]
+
         current_evals = 1
         state['func_evals'] += 1
 
@@ -333,6 +335,7 @@ class LBFGS_LS(Optimizer):
         while nr_of_backtracking_attempts<max_backtracking:
             self._set_param_incremental(alpha_k, d)
             phi_k = closure().data[0]
+
             self._set_param(original_param_data_list)
             if phi_k <= phi_0 + rho * alpha_k * phi_0_prime:
                 #print('Found acceptable step')

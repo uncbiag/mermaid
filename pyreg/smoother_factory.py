@@ -56,6 +56,14 @@ class Smoother(object):
         pass
 
 
+    def get_penalty(self):
+        """
+        Can be overwritten by a smoother to return a custom penalty which will be added to the
+        optimization cost. For example to put penalities on smoother paramters that are being optimized over.
+        :return: scalar value; penalty for smoother
+        """
+        return 0
+
     def set_state_dict(self,state_dict):
         """
         If the smoother contains a torch state-dict, this function allows setting it externally (to initialize as needed).
@@ -720,30 +728,55 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         """standard deviations of Gaussians"""
         self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussians')]
         """minimal allowed standard deviation during optimization"""
-        self.optimize_over_smoother_parameters = params[
-            ('optimize_over_smoother_parameters', False, 'if set to true the smoother will be optimized')]
-        """determines if we should optimize over the smoother parameters"""
+
+        self.default_weight_penalty = params[('default_weight_penalty', 1.0, 'factor by which the deviation from the dafault weights is penalized')]
+        """penalty factor for deviation from default weights"""
+
+        self.network_penalty = params[('network_penalty', 1.0, 'factor by which the L2 norm of network weights is penalized')]
+        """penalty factor for L2 norm of network weights"""
+
+        self.encourage_spatial_weight_consistency = params[('encourage_spatial_weight_consistency',True,'If True tries adds an averaging term in the network to make weights spatially consistent')]
+        """If set to true predicted weights are first spatially averaged before normalization in network"""
+
+        self.optimize_over_smoother_stds = params[('optimize_over_smoother_stds', False, 'if set to true the smoother will optimize over standard deviations')]
+        """determines if we should optimize over the smoother standard deviations"""
+
+        self.optimize_over_smoother_weights = params[(
+        'optimize_over_smoother_weights', False, 'if set to true the smoother will optimize over the *global* weights')]
+        """determines if we should optimize over the smoother global weights"""
+
         self.start_optimize_over_smoother_parameters_at_iteration = \
             params[('start_optimize_over_smoother_parameters_at_iteration', 0,
                     'Does not optimize the parameters before this iteration')]
+        """at what iteration the optimization over weights or stds should start"""
 
-        self.default_multi_gaussian_weights = self.multi_gaussian_stds.copy()
+        # todo: maybe make this more generic; there is an explicit float here
+        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(self.multi_gaussian_stds.copy()).float(),requires_grad=False))
         self.default_multi_gaussian_weights /= self.default_multi_gaussian_weights.sum()
 
-        self.nr_of_gaussians = len(self.multi_gaussian_stds)
-        self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, self.nr_of_gaussians)
+        self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', self.default_multi_gaussian_weights.data.numpy().tolist(), 'weights for the multiple Gaussians')])
+        """global weights for the Gaussians"""
+        self.gaussianWeight_min = params[('gaussian_weight_min', 0.0001, 'minimal allowed weight for the Gaussians')]
+        """minimal allowed weight during optimization"""
 
-        self.multi_gaussian_std_optimizer_params = self._create_multi_gaussian_std_optimization_vector_parameters()
+        self.nr_of_gaussians = len(self.multi_gaussian_stds)
+        """number of Gaussians"""
+
+        self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, self.nr_of_gaussians)
+        """creates the smoohted vector fields"""
+
+        self.multi_gaussian_stds_optimizer_params = self._create_multi_gaussian_stds_optimization_vector_parameters()
+        self.multi_gaussian_weights_optimizer_params = self._create_multi_gaussian_weights_optimization_vector_parameters()
 
         #self.ws = deep_smoothers.WeightedSmoothingModel(self.nr_of_gaussians,self.default_multi_gaussian_weights)
-        self.ws = deep_smoothers.ConsistentWeightedSmoothingModel(self.nr_of_gaussians,self.default_multi_gaussian_weights)
+        self.ws = deep_smoothers.ConsistentWeightedSmoothingModel(self.nr_of_gaussians)
         """learned mini-network to predict multi-Gaussian smoothing weights"""
 
         self.debug_retain_computed_local_weights = False
         self.debug_computed_local_weights = None
 
     def get_default_multi_gaussian_weights(self):
-        return self.default_multi_gaussian_weights
+        return self.multi_gaussian_weights_optimizer_params
 
     def get_debug_computed_local_weights(self):
         return self.debug_computed_local_weights
@@ -752,17 +785,21 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.debug_retain_computed_local_weights = True
 
     def associate_parameters_with_module(self,module):
-        module.register_parameter('multi_gaussian_stds',self.multi_gaussian_std_optimizer_params)
+        module.register_parameter('multi_gaussian_stds',self.multi_gaussian_stds_optimizer_params)
+        module.register_parameter('multi_gaussian_weights', self.multi_gaussian_weights_optimizer_params)
         module.add_module('weighted_smoothing_net',self.ws)
 
     def get_custom_optimizer_output_string(self):
-        return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.numpy(), precision=3)
+        return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.numpy(), precision=3)+ \
+               ", smooth(weights)= " + np.array_str(self.get_gaussian_weights().data.numpy(),precision=3) + \
+               ", smooth(penalty)= " + np.array_str(self.get_penalty().data.numpy(),precision=3)
 
     def get_custom_optimizer_output_values(self):
-        return {'smoother_stds': self.get_gaussian_stds().data.numpy().copy()}
+        return {'smoother_stds': self.get_gaussian_stds().data.numpy().copy(), 'smoother_weights': self.get_gaussian_weights().data.numpy().copy()}
 
     def set_state_dict(self,state_dict):
-        self.multi_gaussian_std_optimizer_params.data[:] = state_dict['multi_gaussian_stds']
+        self.multi_gaussian_stds_optimizer_params.data[:] = state_dict['multi_gaussian_stds']
+        self.multi_gaussian_weights_optimizer_params.data[:] = state_dict['multi_gaussian_weights']
         # first check if the learned smoother has already been initialized
         if len(self.ws.state_dict())==0:
             # has not been initialized, we need to initialize it before we can load the dictionary
@@ -773,16 +810,50 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
     def _project_parameter_vector_if_necessary(self):
         # all standard deviations need to be positive and the weights need to be non-negative
         for i in range(self.nr_of_gaussians):
-            if self.multi_gaussian_std_optimizer_params.data[i] <= self.gaussianStd_min:
-                self.multi_gaussian_std_optimizer_params.data[i] = self.gaussianStd_min
+            if self.multi_gaussian_stds_optimizer_params.data[i] <= self.gaussianStd_min:
+                self.multi_gaussian_stds_optimizer_params.data[i] = self.gaussianStd_min
+
+            if self.multi_gaussian_weights_optimizer_params.data[i] < self.gaussianWeight_min:
+                self.multi_gaussian_weights_optimizer_params.data[i] = self.gaussianWeight_min
+
+        # todo: change this normalization for the adaptive multi-Gaussian smoother
+        # now make sure the weights sum up to one and if not project them back
+        weight_sum = self.multi_gaussian_weights_optimizer_params.data.sum()
+        if weight_sum != 1.:
+            self.multi_gaussian_weights_optimizer_params.data /= weight_sum
+
+    def _get_gaussian_weights_from_optimizer_params(self):
+        # project if needed
+        self._project_parameter_vector_if_necessary()
+        return self.multi_gaussian_weights_optimizer_params
+
+    def _set_gaussian_weights_optimizer_params(self,gweights):
+        self.multi_gaussian_weights_optimizer_params.data[:]=gweights
+
+    def set_gaussian_weights(self, gweights):
+        """
+        Sets the weights for the multi-Gaussian smoother
+        :param gweights: vector of weights
+        :return: n/a
+        """
+        self.params['multi_gaussian_weights'] = gweights
+        self._set_gaussian_weights_optimizer_params(gweights)
+
+    def get_gaussian_weights(self):
+        """
+        Returns the weights for the multi-Gaussian smoother
+        :return: vector of weights
+        """
+        gaussianWeights = self._get_gaussian_weights_from_optimizer_params()
+        return gaussianWeights
 
     def _get_gaussian_stds_from_optimizer_params(self):
         # project if needed
         self._project_parameter_vector_if_necessary()
-        return self.multi_gaussian_std_optimizer_params[0:self.nr_of_gaussians]
+        return self.multi_gaussian_stds_optimizer_params
 
     def _set_gaussian_stds_optimizer_params(self, g_stds):
-        self.multi_gaussian_std_optimizer_params.data[0:self.nr_of_gaussians] = g_stds
+        self.multi_gaussian_stds_optimizer_params.data[:] = g_stds
 
     def set_gaussian_stds(self, gstds):
         """
@@ -802,23 +873,30 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         gaussianStds = self._get_gaussian_stds_from_optimizer_params()
         return gaussianStds
 
-    def _create_multi_gaussian_std_optimization_vector_parameters(self):
-        self.multi_gaussian_std_optimizer_params = utils.create_vector_parameter(self.nr_of_gaussians)
+    def _create_multi_gaussian_stds_optimization_vector_parameters(self):
+        self.multi_gaussian_stds_optimizer_params = utils.create_vector_parameter(self.nr_of_gaussians)
         for i in range(self.nr_of_gaussians):
-            self.multi_gaussian_std_optimizer_params.data[i] = self.multi_gaussian_stds[i]
-        return self.multi_gaussian_std_optimizer_params
+            self.multi_gaussian_stds_optimizer_params.data[i] = self.multi_gaussian_stds[i]
+        return self.multi_gaussian_stds_optimizer_params
 
-    def get_optimization_parameters(self):
-        if self.optimize_over_smoother_parameters:
-            return self.multi_gaussian_std_optimizer_params
-        else:
-            return None
+    def _create_multi_gaussian_weights_optimization_vector_parameters(self):
+        self.multi_gaussian_weights_optimizer_params = utils.create_vector_parameter(self.nr_of_gaussians)
+        for i in range(self.nr_of_gaussians):
+            self.multi_gaussian_weights_optimizer_params.data[i] = self.multi_gaussian_weights[i]
+        return self.multi_gaussian_weights_optimizer_params
 
-    def get_optimization_parameters(self):
-        if self.optimize_over_smoother_parameters:
-            return self.multi_gaussian_std_optimizer_params
-        else:
-            return None
+    def get_penalty(self):
+        # puts an squared two-norm penalty on the weights as deviations from the baseline
+        # also adds a penalty for the network parameters
+
+        penalty = Variable(MyTensor(1).zero_(),requires_grad=False)
+        if self.optimize_over_smoother_weights:
+            penalty += self.default_weight_penalty*((self.multi_gaussian_weights_optimizer_params-self.default_multi_gaussian_weights)**2).sum()
+
+        for p in self.ws.parameters():
+            penalty += self.network_penalty*(p**2).sum()
+
+        return penalty
 
     def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
         """
@@ -832,13 +910,13 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         :return: smoothed image
         """
 
-        if not self.optimize_over_smoother_parameters or (variables_from_optimizer is None):
-            compute_std_gradients = False
-        else:
-           if self.start_optimize_over_smoother_parameters_at_iteration<=variables_from_optimizer['iter']:
-               compute_std_gradients = True
-           else:
-               compute_std_gradients = False
+        compute_std_gradients = self.optimize_over_smoother_stds
+        compute_weight_gradients = self.optimize_over_smoother_weights
+
+        if variables_from_optimizer is not None:
+            if self.start_optimize_over_smoother_parameters_at_iteration > variables_from_optimizer['iter']:
+                compute_std_gradients = False
+                compute_weight_gradients = False
 
         # collection of smoothed vector fields
         vcollection = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
@@ -861,10 +939,10 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         # the input image, which may provide some guidance on where to smooth
 
         if self.debug_retain_computed_local_weights:
-            smoothed_v = self.ws(vcollection, I,self.debug_retain_computed_local_weights)
+            smoothed_v = self.ws(vcollection, I, self.get_gaussian_weights(), self.encourage_spatial_weight_consistency, self.debug_retain_computed_local_weights)
             self.debug_computed_local_weights = self.ws.get_computed_weights()
         else:
-            smoothed_v = self.ws(vcollection, I)
+            smoothed_v = self.ws(vcollection, I, self.get_gaussian_weights(), self.encourage_spatial_weight_consistency)
 
         if vout is not None:
             vout[:] = smoothed_v

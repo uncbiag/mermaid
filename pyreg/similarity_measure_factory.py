@@ -56,7 +56,7 @@ class SimilarityMeasure(object):
             for nrI in range(sz[0]):  # loop over all the images
                 sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], I0Source[nrI,...], phi[nrI,...])
 
-        return sim
+        return sim/sz[0] # needs to be normalized based on batch size
 
 
     def compute_similarity_multiC(self, I0, I1, I0Source=None, phi=None):
@@ -80,7 +80,7 @@ class SimilarityMeasure(object):
             for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same; if available map is the same for all channels
                 sim = sim + self.compute_similarity(I0[nrC, ...], I1[nrC, ...],I0Source[nrC, ...],phi)
 
-        return sim
+        return sim/sz[0] # needs to be normalized based on the number of channels
 
     @abstractmethod
     def compute_similarity(self, I0, I1, I0Source=None, phi=None):
@@ -204,8 +204,162 @@ class NCCSimilarity(SimilarityMeasure):
         # TODO: may require a safeguard against infinity
         ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
         # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
-        return AdaptVal((1-ncc**2) / (self.sigma ** 2))
+        return AdaptVal((1.0-ncc**2) / (self.sigma ** 2))
 
+class LocalizedNCCSimilarity(SimilarityMeasure):
+    """
+    Computes a normalized-cross correlation based similarity measure between two images.
+    :math:`sim = (1-ncc^2)/(\\sigma^2)`
+    """
+
+    def __init__(self, spacing, params):
+        super(LocalizedNCCSimilarity,self).__init__(spacing,params)
+        #todo: maybe add some form of Gaussian weighing and tie it to the real image dimensions
+        self.cube_radius = params[('cube_radius', 3, 'cube will be (2*radius)^d (in voxels) for local NCC computation')]
+        """half the side length of the cube over which lNCC is computed"""
+
+        # todo: maybe come up with a way to restrict the initial steps of the optimizer
+        print('WARNING: LNCC seems to be very sensitive to the weighting')
+        print('WARNING: Make sure sigma is large for now')
+        print('WARNING: LNCC is experimental at this stage')
+        print('WARNING: A possible solution may be modifying the optimizer to avoid very large steps')
+        print('WARNING: Otherwise, setting the max displacement is a current workaround')
+
+    def _get_shifted_1d(self, I, x):
+        ret = torch.zeros_like(I)
+        sz = ret.size()
+
+        if x >= 0:
+            ret[0:sz[0] - x] = I[x:]
+        else: # x < 0
+            ret[-x:] = I[0:sz[0] + x]
+
+        return ret
+
+    def _get_shifted_2d(self,I,x,y):
+        ret = torch.zeros_like(I)
+        sz = ret.size()
+
+        if x>=0 and y>=0:
+            ret[0:sz[0]-x,0:sz[1]-y]=I[x:,y:]
+        elif x<0 and y>=0:
+            ret[-x:,0:sz[1]-y]=I[0:sz[0]+x,y:]
+        elif x>=0 and y<0:
+            ret[0:sz[0]-x,-y:] = I[x:, 0:sz[1]+y]
+        else: # x<0 and y<0
+            ret[-x:,-y:]= I[0:sz[0]+x,0:sz[1]+y]
+
+        return ret
+
+    def _get_shifted_3d(self, I, x, y, z):
+        ret = torch.zeros_like(I)
+        sz = ret.size()
+
+        if x >= 0 and y >= 0 and z>=0:
+            ret[0:sz[0] - x, 0:sz[1] - y,0:sz[2]-z] = I[x:, y:, z:]
+        elif x < 0 and y >= 0 and z>=0:
+            ret[-x:, 0:sz[1] - y,0:sz[2]-z] = I[0:sz[0] + x, y:, z:]
+        elif x >= 0 and y < 0 and z>=0:
+            ret[0:sz[0] - x, -y:,0:sz[2]-z] = I[x:, 0:sz[1] + y, z:]
+        elif x<0 and y<0 and z>=0:
+            ret[-x:, -y:,0:sz[2]-z] = I[0:sz[0] + x, 0:sz[1] + y, z:]
+        elif x >= 0 and y >= 0 and z<0:
+            ret[0:sz[0] - x, 0:sz[1] - y, -z:] = I[x:, y:, 0:sz[2]+z]
+        elif x < 0 and y >= 0 and z<0:
+            ret[-x:, 0:sz[1] - y, -z:] = I[0:sz[0] + x, y:, 0:sz[2]+z]
+        elif x >= 0 and y < 0 and z<0:
+            ret[0:sz[0] - x, -y:, -z:] = I[x:, 0:sz[1] + y, 0:sz[2]+z]
+        else: # x < 0 and y < 0 and z < 0:
+            ret[-x:, -y:, -z:] = I[0:sz[0] + x, 0:sz[1] + y, 0:sz[2]+z]
+
+        return ret
+
+    def _compute_local_squared_cross_correlation(self,I0,I1):
+
+        ones = torch.ones_like(I0)
+
+        sumOnes = torch.zeros_like(I0)
+        sumI0 = torch.zeros_like(I0)
+        sumI1 = torch.zeros_like(I0)
+        sumI0I1 = torch.zeros_like(I0)
+        sumI0I0 = torch.zeros_like(I0)
+        sumI1I1 = torch.zeros_like(I0)
+
+        I0I0 = I0*I0
+        I1I1 = I1*I1
+        I0I1 = I0*I1
+
+        if self.dim==1:
+            for x in range(-self.cube_radius,self.cube_radius+1):
+                sumOnes += self._get_shifted_1d(ones, x)
+                sumI0 += self._get_shifted_1d(I0, x)
+                sumI1 += self._get_shifted_1d(I1, x)
+                sumI0I1 += self._get_shifted_1d(I0I1, x)
+                sumI0I0 += self._get_shifted_1d(I0I0, x)
+                sumI1I1 += self._get_shifted_1d(I1I1, x)
+
+        elif self.dim==2:
+            for x in range(-self.cube_radius,self.cube_radius+1):
+                for y in range(-self.cube_radius,self.cube_radius+1):
+                    sumOnes += self._get_shifted_2d(ones,x,y)
+                    sumI0 += self._get_shifted_2d(I0,x,y)
+                    sumI1 += self._get_shifted_2d(I1,x,y)
+                    sumI0I1 += self._get_shifted_2d(I0I1,x,y)
+                    sumI0I0 += self._get_shifted_2d(I0I0,x,y)
+                    sumI1I1 += self._get_shifted_2d(I1I1,x,y)
+
+        elif self.dim==3:
+            for x in range(-self.cube_radius, self.cube_radius + 1):
+                for y in range(-self.cube_radius, self.cube_radius + 1):
+                    for z in range(-self.cube_radius, self.cube_radius + 1):
+                        sumOnes += self._get_shifted_3d(ones, x, y, z)
+                        sumI0 += self._get_shifted_3d(I0, x, y, z)
+                        sumI1 += self._get_shifted_3d(I1, x, y, z)
+                        sumI0I1 += self._get_shifted_3d(I0I1, x, y, z)
+                        sumI0I0 += self._get_shifted_3d(I0I0, x, y, z)
+                        sumI1I1 += self._get_shifted_3d(I1I1, x, y, z)
+
+        else:
+            raise ValueError('Only supported in dimensions 1, 2, and 3')
+
+        # 1/n\sum_i (I0-mean(I0))(I1-mean(I1)) = 1/n \sum_i (I0I1 -I0 mean(I1) - mean(I0)I1 + mean(I0)mean(I1) )
+        # ... = ( 1/n \sum_i I0 I1 ) -  mean(I0)mean(I1)
+
+        # \sigma_0 = 1/n \sum_i (I0-mean(I0))^2 = 1/n \sum_i I0^2 - 2I0 mean(I0) + mean(I0)^2
+        # ... = (1/n \sum_i I0^2 ) - mean(I0)^2
+
+        meanI0 = sumI0/sumOnes
+        meanI1 = sumI1/sumOnes
+        nom = sumI0I1/sumOnes - meanI0*meanI1
+        sig0Sqr = (sumI0I0/sumOnes - meanI0**2)
+        sig1Sqr = (sumI1I1/sumOnes - meanI1**2)
+
+        # todo: maybe find a little less hacky solution to deal with division by zero
+        # we are returning the square here, because it is squared later anyway
+        # and taking the sub-gradient for the square root at zero is not well defined
+        eps = 1e-6 # to avoid division by zero
+        lnccSqr = (nom*nom+eps)/(sig0Sqr*sig1Sqr+eps)
+
+        return lnccSqr
+
+    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
+        """
+       Computes the NCC-based image similarity measure between two images
+
+       :param I0: first image
+       :param I1: second image
+       :param I0Source: not used
+       :param phi: not used
+       :return: (1-NCC^2)/sigma^2
+       """
+
+        # TODO: may require a safeguard against infinity
+        lnccSqr = self._compute_local_squared_cross_correlation(I0,I1)
+        # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
+
+        sim_measure = AdaptVal((1.0-lnccSqr).sum() / (I0.numel()*self.sigma ** 2))
+        #print( 'sim_measure = ' + str( sim_measure.data.numpy()))
+        return sim_measure
 
 class SimilarityMeasureFactory(object):
     """
@@ -223,6 +377,7 @@ class SimilarityMeasureFactory(object):
         self.simMeasures = {
             'ssd': SSDSimilarity,
             'ncc': NCCSimilarity,
+            'lncc': LocalizedNCCSimilarity,
             'omt': OptimalMassTransportSimilarity
         }
         """currently implemented similiarity measures"""
@@ -260,6 +415,12 @@ class SimilarityMeasureFactory(object):
         Set the default similarity measure to NCC
         """
         self.similarity_measure_default_type = 'ncc'
+
+    def set_similarity_measure_default_type_to_lncc(self):
+        """
+        Set the default similarity measure to *localized* NCC
+        """
+        self.similarity_measure_default_type = 'lncc'
 
     def create_similarity_measure(self, params):
         """
