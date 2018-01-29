@@ -1160,7 +1160,7 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
         # now return the computed gradients
         return grad_input, grad_sigmas
 
-def fourier_set_of_gaussian_convolutions(input, gaussian_fourier_filter_generator,sigma,compute_std_gradients=True):
+def fourier_set_of_gaussian_convolutions(input, gaussian_fourier_filter_generator,sigma,compute_std_gradients=False):
     """
     Convenience function for Fourier-based multi Gaussian convolutions. Make sure to use this one (instead of directly
     using the class FourierGaussianConvolution). This will assure that each call generates its own instance
@@ -1169,8 +1169,7 @@ def fourier_set_of_gaussian_convolutions(input, gaussian_fourier_filter_generato
     :param input: Input image
     :param gaussian_fourier_filter_generator: generator which will create Gaussian Fourier filter (and caches them)
     :param sigma: standard deviations for the Gaussian filter (need to be positive)
-    :param weights: weights for the multi-Gaussian kernel (need to sum up to one and need to be positive)
-    :param compute_weight_and_std_gradients: if set to True then gradients for weight and standard deviation are computed, otherwise they are replaced w/ zero
+    :param compute_weight_std_gradients: if set to True then gradients for standard deviation are computed, otherwise they are replaced w/ zero
     :return:
     """
     # First braces create a Function object. Any arguments given here

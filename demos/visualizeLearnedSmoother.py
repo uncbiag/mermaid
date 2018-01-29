@@ -30,7 +30,9 @@ def visualize_filter(filter,title=None):
 #d = torch.load('testBatchPars.pt')
 #d = torch.load('testBatchParsMoreIterations.pt')
 #d = torch.load('testBatchParsNewSmoother.pt')
-d = torch.load('testBatchParsNewSmootherMoreImages.pt')
+#d = torch.load('testBatchParsNewSmootherMoreImages.pt')
+#d = torch.load('testBatchGlobalWeightOpt.pt')
+d = torch.load('testBatchGlobalWeightRegularizedOpt.pt')
 
 visualize_filters = False
 
@@ -50,6 +52,7 @@ Iw = d['Iw']
 phi = d['phi']
 lam = Variable( d['registration_pars']['lam'], requires_grad=False)
 sz = d['sz']
+history = d['history']
 lowResSize = lam.size()
 spacing = d['spacing']
 
@@ -62,7 +65,7 @@ lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacin
 import pyreg.module_parameters as pars
 
 params = pars.ParameterDict()
-params.load_JSON('testBatchNewSmoother.json')
+params.load_JSON('testBatchNewerSmoother.json')
 smoother_params = params['model']['registration_model']['forward_model']
 
 smoother = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('learned_multiGaussianCombination',smoother_params)
@@ -94,8 +97,8 @@ def compute_overall_std(weights,stds):
     # now we have the variances, so take the sqrt
     return torch.sqrt(ret)
 
-#nr_of_images = sz[0]
-nr_of_images = 30 # only show a few of them
+nr_of_images = sz[0]
+#nr_of_images = 5 # only show a few of them
 
 if visualize_smooth_vector_fields:
 
@@ -126,6 +129,32 @@ if visualize_smooth_vector_fields:
 import numpy as np
 
 print_figures = True
+
+plt.clf()
+e_p, = plt.plot(history['energy'], label='energy')
+s_p, = plt.plot(history['similarity_energy'], label='similarity_energy')
+r_p, = plt.plot(history['regularization_energy'], label='regularization_energy')
+plt.legend(handles=[e_p, s_p, r_p])
+if print_figures:
+    plt.savefig('energy.pdf')
+else:
+    plt.show()
+
+def get_array_from_set_of_lists(dat, nr):
+    res = []
+    for n in range(len(dat)):
+        res.append(dat[n][nr])
+    return res
+
+plt.clf()
+for nw in range(len(history['smoother_weights'][0])):
+    cd = get_array_from_set_of_lists(history['smoother_weights'],nw)
+    plt.plot(cd)
+plt.title('Smoother weights')
+if print_figures:
+    plt.savefig('weights.pdf')
+else:
+    plt.show()
 
 if visualize_weights:
 
@@ -170,12 +199,12 @@ if visualize_weights:
         plt.clf()
 
         for g in range(nr_of_gaussians):
-            plt.subplot(2, 3, g + 1)
+            plt.subplot(2, 4, g + 1)
             plt.imshow((local_weights[g, n, ...]).numpy())
             plt.title("{:.2f}".format(stds[g]))
             plt.colorbar()
 
-        plt.subplot(2, 3, 6)
+        plt.subplot(2, 4, 8)
         os = compute_overall_std(local_weights[:, n, ...], stds )
 
         plt.imshow(os)

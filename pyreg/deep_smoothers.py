@@ -12,10 +12,9 @@ class ConsistentWeightedSmoothingModel(nn.Module):
     Enforces the same weighting for all the dimensions of the vector field to be smoothed
 
     """
-    def __init__(self, nr_of_gaussians,default_multi_gaussian_weights,min_weight=0.0001):
+    def __init__(self, nr_of_gaussians,min_weight=0.0001):
         super(ConsistentWeightedSmoothingModel, self).__init__()
         self.nr_of_gaussians = nr_of_gaussians
-        self.default_multi_gaussian_weights = default_multi_gaussian_weights
         self.min_weight = 0.0001
         self.is_initialized = False
         self.conv1 = None
@@ -31,9 +30,30 @@ class ConsistentWeightedSmoothingModel(nn.Module):
         self.conv1 = nn.Conv2d(self.nr_of_gaussians*dim + nr_of_image_channels, 20, 5, padding=2)
         self.conv2 = nn.Conv2d(20, self.nr_of_gaussians, 5, padding=2)
 
-    def forward(self, multi_smooth_v, I, retain_weights=False):
+    def spatially_average_and_set_boundary_to_zero(self,x):
+
+        # first set the boundary to zero (first dimension is batch and this only works for 2D for now)
+
+        y = torch.zeros_like(x)
+        y[:] = x
+
+        y[:,0,:] = 0
+        y[:,-1,:] = 0
+        y[:,:,0] = 0
+        y[:,:,-1] =0
+
+        # now do local averaging in the interior using the four neighborhood
+        y[:,1:-2,1:-2] = 0.25*(y[:,0:-3,1:-2] + y[:,2:-1,1:-2] + y[:,1:-2,0:-3] + y[:,1:-2,2:-1])
+
+        return y
+
+    def forward(self, multi_smooth_v, I, default_multi_gaussian_weights,
+                encourage_spatial_weight_consistency=True,retain_weights=False):
 
         self.dim = multi_smooth_v.size()[2] # format is multi_v x batch x channels x X x Y x Z (channels here are the vector field components)
+
+        # currently only implemented in 2D
+        assert(self.dim==2)
 
         if not self.is_initialized:
             nr_of_image_channels = I.size()[1]
@@ -79,10 +99,18 @@ class ConsistentWeightedSmoothingModel(nn.Module):
 
         x = self.conv2(x) # they do not need to be positive (hence ReLU removed); only the absolute weights need to be
 
-        # loop over all the responses
-        # we want to model deviations from the default values instead of the values themselves
-        for g in range(self.nr_of_gaussians):
-            x[:, g, ...] = x[:, g, ...] + self.default_multi_gaussian_weights[g]
+        # need to be adapted for multiple D
+        if encourage_spatial_weight_consistency:
+            # now we do local averaging for the weights and force the boundaries to zero
+            y = torch.zeros_like(x)
+            for g in range(self.nr_of_gaussians):
+                y[:,g,...] = self.spatially_average_and_set_boundary_to_zero(x[:,g,...])
+                x[:, g, ...] = y[:, g, ...] + default_multi_gaussian_weights[g]
+        else: # no spatial consistency
+            # loop over all the responses
+            # we want to model deviations from the default values instead of the values themselves
+            for g in range(self.nr_of_gaussians):
+                x[:, g, ...] = x[:, g, ...] + default_multi_gaussian_weights[g]
 
         #todo: maybe run through a sigmoid here
 
