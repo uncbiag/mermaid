@@ -33,15 +33,17 @@ def visualize_filter(filter,title=None):
 #d = torch.load('testBatchParsNewSmootherMoreImages.pt')
 #d = torch.load('testBatchGlobalWeightOpt.pt')
 #d = torch.load('testBatchGlobalWeightRegularizedOpt.pt')
-d = torch.load('testBatchGlobalWeightRegularizedOpt_with_lNCC.pt')
+#d = torch.load('testBatchGlobalWeightRegularizedOpt_with_lNCC.pt')
+#d = torch.load('testBatchGlobalWeightRegularizedOpt_with_NCC_lddmm.pt')
+d = torch.load('testBatchGlobalWeightRegularizedOpt_tst.pt')
 
-visualize_filters = False
+visualize_filters = True
 
 if visualize_filters:
-    w1 = d['registration_pars']['weighted_smoothing_net.conv1.weight']
-    b1 = d['registration_pars']['weighted_smoothing_net.conv1.bias']
-    w2 = d['registration_pars']['weighted_smoothing_net.conv2.weight']
-    b2 = d['registration_pars']['weighted_smoothing_net.conv2.bias']
+    w1 = d['registration_pars']['weighted_smoothing_net.conv_layers.0.weight']
+    b1 = d['registration_pars']['weighted_smoothing_net.conv_layers.0.bias']
+    w2 = d['registration_pars']['weighted_smoothing_net.conv_layers.1.weight']
+    b2 = d['registration_pars']['weighted_smoothing_net.conv_layers.1.bias']
 
     visualize_filter(w1,'w1')
     visualize_filter(w2,'w2')
@@ -57,7 +59,8 @@ history = d['history']
 lowResSize = lam.size()
 spacing = d['spacing']
 
-stds = d['registration_pars']['multi_gaussian_stds']
+stds = [0.05,0.15,0.25,0.35] # d['registration_pars']['multi_gaussian_stds']
+max_std = max(stds)
 
 lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacing, lowResSize[2:])
 
@@ -201,14 +204,14 @@ if visualize_weights:
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            plt.imshow((local_weights[g, n, ...]).numpy())
+            plt.imshow((local_weights[g, n, ...]).numpy()) #,vmin=0.0,vmax=max_std)
             plt.title("{:.2f}".format(stds[g]))
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
         os = compute_overall_std(local_weights[:, n, ...], stds )
 
-        plt.imshow(os)
+        plt.imshow(os) #,vmin=0.0,vmax=max_std)
         plt.colorbar()
         plt.suptitle('Registration: ' + str(n))
 

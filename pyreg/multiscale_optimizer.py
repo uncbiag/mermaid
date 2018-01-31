@@ -890,7 +890,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             else:
                 visual_param['save_fig'] = False
 
-            if iter % self.visualize_step == 0:
+            if (iter % self.visualize_step == 0) or (iter==self.nrOfIterations-1):
                 if self.useMap and self.mapLowResFactor is not None:
                     vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.lowResISource)
                 else:

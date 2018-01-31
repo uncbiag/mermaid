@@ -13,7 +13,7 @@ import pyreg.smoother_factory as SF
 
 params = pars.ParameterDict()
 #params.load_JSON('../test/json/test_svf_image_single_scale_config.json')
-params.load_JSON('./svf_momentum_based_config.json')
+params.load_JSON('../test/../test/json/svf_momentum_base_config.json')
 #params['model']['deformation']['use_map'] = False
 #params['model']['registration_model']['type'] = 'svf_scalar_momentum_image'
 #params['model']['deformation']['use_map'] = True
