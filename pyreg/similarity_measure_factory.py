@@ -205,9 +205,18 @@ class NCCSimilarity(SimilarityMeasure):
        """
 
         # TODO: may require a safeguard against infinity
-        ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
+
+        # this way of computing avoids the square root of the standard deviation
+        I0mean = I0.mean()
+        I1mean = I1.mean()
+        nccSqr = (((I0-I0mean.expand_as(I0))*(I1-I1mean.expand_as(I1))).mean()**2)/\
+                 (((I0-I0mean)**2).mean()*((I1-I1mean)**2).mean())
+
+        return AdaptVal((1-nccSqr)/self.sigma**2)
+
+        #ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
         # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
-        return AdaptVal((1.0-ncc**2) / (self.sigma ** 2))
+        #return AdaptVal((1.0-ncc**2) / (self.sigma ** 2))
 
 class LocalizedNCCSimilarity(SimilarityMeasure):
     """

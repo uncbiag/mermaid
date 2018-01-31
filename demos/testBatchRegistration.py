@@ -38,10 +38,10 @@ def get_image_range(im_from,im_to):
     return f
 
 # load a bunch of images as source
-I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(get_image_range(0,30))
+I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(get_image_range(0,20))
 sz = np.array(I0.shape)
 # and a bunch of images as target images
-I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(30,60))
+I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(20,40))
 
 assert( np.all(spacing0==spacing1) )
 
@@ -49,12 +49,22 @@ torch.set_num_threads(2)
 
 reg = si.RegisterImagePair()
 
-reg.register_images(I0,I1,spacing0,
+if True:
+    reg.register_images(I0,I1,spacing0,
                     model_name='svf_scalar_momentum_map',
-                    nr_of_iterations=250,
+                    nr_of_iterations=500,
                     visualize_step=5,
                     map_low_res_factor=0.5,
                     rel_ftol=1e-10,
+                    json_config_out_filename='testBatchNewerSmoother.json',
+                    params='testBatchNewerSmoother.json')
+
+if False:
+    reg.register_images(I0,I1,spacing0,
+                    model_name='lddmm_shooting_scalar_momentum_map',
+                    nr_of_iterations=5,
+                    visualize_step=5,
+                    map_low_res_factor=0.5,
                     json_config_out_filename='testBatchNewerSmoother.json',
                     params='testBatchNewerSmoother.json')
 
@@ -76,6 +86,7 @@ vars_to_save['spacing'] = spacing0
 vars_to_save['params'] = reg.get_params()
 vars_to_save['history'] = h
 
-torch.save(vars_to_save,'testBatchGlobalWeightRegularizedOpt_with_lNCC.pt')
+#torch.save(vars_to_save,'testBatchGlobalWeightRegularizedOpt_with_NCC_lddmm.pt')
+torch.save(vars_to_save,'testBatchGlobalWeightRegularizedOpt_tst.pt')
 
 

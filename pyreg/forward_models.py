@@ -580,7 +580,9 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
 
         # now compute the momentum
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, self.sz, self.spacing)
-        v = self.smoother.smooth(m,None,[phi,True],variables_from_optimizer)
+        # todo: replace this by phi again
+        #v = self.smoother.smooth(m,None,[phi,True],variables_from_optimizer)
+        v = self.smoother.smooth(m,None,[I,False],variables_from_optimizer)
 
         return [self.rhs.rhs_scalar_conservation_multiNC(lam,v),
                 self.rhs.rhs_advect_image_multiNC(I,v),
