@@ -7,7 +7,33 @@ import pyreg.deep_smoothers as DS
 import pyreg.utils as utils
 import pyreg.image_sampling as IS
 
+import numpy as np
+
 import matplotlib.pyplot as plt
+
+def visualize_filter_grid(filter,title=None):
+    nr_of_channels = filter.size()[1]
+    nr_of_features_1 = filter.size()[0]
+
+    assert( nr_of_channels==1 )
+
+    # determine grid size
+    nr_x = np.ceil(np.sqrt(nr_of_features_1)).astype('int')
+    nr_y = np.ceil(nr_of_features_1//nr_x).astype('int')
+
+    for f in range(nr_of_features_1):
+        plt.subplot(nr_y, nr_x, f+1)
+        plt.imshow(filter[f, 0, ...], cmap='gray')
+        plt.colorbar()
+        plt.axis('off')
+
+    plt.subplots_adjust(wspace=0.5, hspace=1)
+
+    if title is not None:
+        plt.suptitle( title )
+
+    plt.show()
+
 
 def visualize_filter(filter,title=None):
     nr_of_gaussians = filter.size()[1]
@@ -27,70 +53,6 @@ def visualize_filter(filter,title=None):
 
     plt.show()
 
-#d = torch.load('testBatchPars.pt')
-#d = torch.load('testBatchParsMoreIterations.pt')
-#d = torch.load('testBatchParsNewSmoother.pt')
-#d = torch.load('testBatchParsNewSmootherMoreImages.pt')
-#d = torch.load('testBatchGlobalWeightOpt.pt')
-#d = torch.load('testBatchGlobalWeightRegularizedOpt.pt')
-#d = torch.load('testBatchGlobalWeightRegularizedOpt_with_lNCC.pt')
-#d = torch.load('testBatchGlobalWeightRegularizedOpt_with_NCC_lddmm.pt')
-d = torch.load('testBatchGlobalWeightRegularizedOpt_tst.pt')
-
-visualize_filters = True
-
-if visualize_filters:
-    w1 = d['registration_pars']['weighted_smoothing_net.conv_layers.0.weight']
-    b1 = d['registration_pars']['weighted_smoothing_net.conv_layers.0.bias']
-    w2 = d['registration_pars']['weighted_smoothing_net.conv_layers.1.weight']
-    b2 = d['registration_pars']['weighted_smoothing_net.conv_layers.1.bias']
-
-    visualize_filter(w1,'w1')
-    visualize_filter(w2,'w2')
-
-
-I0 = Variable( torch.from_numpy(d['I0']), requires_grad=False)
-I1 = Variable( torch.from_numpy(d['I1']), requires_grad=False)
-Iw = d['Iw']
-phi = d['phi']
-lam = Variable( d['registration_pars']['lam'], requires_grad=False)
-sz = d['sz']
-history = d['history']
-lowResSize = lam.size()
-spacing = d['spacing']
-
-stds = [0.05,0.15,0.25,0.35] # d['registration_pars']['multi_gaussian_stds']
-max_std = max(stds)
-
-lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacing, lowResSize[2:])
-
-# smoother needs to be in the same state as before, so we need to set the parameters correctly
-
-import pyreg.module_parameters as pars
-
-params = pars.ParameterDict()
-params.load_JSON('testBatchNewerSmoother.json')
-smoother_params = params['model']['registration_model']['forward_model']
-
-smoother = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('learned_multiGaussianCombination',smoother_params)
-smoother.set_state_dict(d['registration_pars'])
-smoother.set_debug_retain_computed_local_weights(True)
-
-smoother_not_learned = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('adaptive_multiGaussian')
-
-m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam,lowResI0,lowResSize,lowResSpacing)
-
-v = smoother.smooth(m,None,[lowResI0,False])
-
-local_weights = smoother.get_debug_computed_local_weights()
-default_multi_gaussian_weights = smoother.get_default_multi_gaussian_weights()
-
-v_nl = smoother_not_learned.smooth(m)
-
-visualize_smooth_vector_fields = False
-visualize_weights = True
-nr_of_gaussians = len(stds)
-
 def compute_overall_std(weights,stds):
     szw = weights.size()
     ret = torch.zeros(szw[1:])
@@ -101,10 +63,89 @@ def compute_overall_std(weights,stds):
     # now we have the variances, so take the sqrt
     return torch.sqrt(ret)
 
-nr_of_images = sz[0]
-#nr_of_images = 5 # only show a few of them
+def get_array_from_set_of_lists(dat, nr):
+    res = []
+    for n in range(len(dat)):
+        res.append(dat[n][nr])
+    return res
+
+def compute_mask(im):
+    '''
+    computes a mask by finding all the voxels where the image is exactly zero
+
+    :param im:
+    :return:
+    '''
+    mask = np.zeros_like(im)
+    mask[im!=0] = 1
+    mask[im==0] = np.nan
+
+    return mask
+
+#d = torch.load('testBatchPars.pt')
+#d = torch.load('testBatchParsMoreIterations.pt')
+#d = torch.load('testBatchParsNewSmoother.pt')
+#d = torch.load('testBatchParsNewSmootherMoreImages.pt')
+#d = torch.load('testBatchGlobalWeightOpt.pt')
+#d = torch.load('testBatchGlobalWeightRegularizedOpt.pt')
+#d = torch.load('testBatchGlobalWeightRegularizedOpt_with_lNCC.pt')
+#d = torch.load('testBatchGlobalWeightRegularizedOpt_with_NCC_lddmm.pt')
+d = torch.load('testBatchGlobalWeightRegularizedOpt_tst.pt')
+
+I0 = Variable( torch.from_numpy(d['I0']), requires_grad=False)
+I1 = Variable( torch.from_numpy(d['I1']), requires_grad=False)
+Iw = d['Iw']
+phi = d['phi']
+lam = Variable( d['registration_pars']['lam'], requires_grad=False)
+sz = d['sz']
+history = d['history']
+lowResSize = lam.size()
+spacing = d['spacing']
+params = d['params']
+
+stds = params['model']['registration_model']['forward_model']['smoother']['multi_gaussian_stds']
+max_std = max(stds)
+
+visualize_filters = True
+visualize_smooth_vector_fields = False
+visualize_weights = True
+visualize_energies = True
+nr_of_gaussians = len(stds)
+#nr_of_images = sz[0]
+nr_of_images = 5 # only show a few of them
+print_figures = False
+
+
+if visualize_filters:
+    w1 = d['registration_pars']['weighted_smoothing_net.conv_layers.0.weight']
+    b1 = d['registration_pars']['weighted_smoothing_net.conv_layers.0.bias']
+    w2 = d['registration_pars']['weighted_smoothing_net.conv_layers.1.weight']
+    b2 = d['registration_pars']['weighted_smoothing_net.conv_layers.1.bias']
+
+    visualize_filter_grid(w1,'w1')
+    #visualize_filter(w2,'w2')
+
+
+lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacing, lowResSize[2:])
+
+# smoother needs to be in the same state as before, so we need to set the parameters correctly
+smoother_params = params['model']['registration_model']['forward_model']
+
+smoother = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('learned_multiGaussianCombination',smoother_params)
+smoother.set_state_dict(d['registration_pars'])
+smoother.set_debug_retain_computed_local_weights(True)
+
+m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam,lowResI0,lowResSize,lowResSpacing)
+
+v = smoother.smooth(m,None,[lowResI0,False])
+
+local_weights = smoother.get_debug_computed_local_weights()
+default_multi_gaussian_weights = smoother.get_default_multi_gaussian_weights()
 
 if visualize_smooth_vector_fields:
+
+    smoother_not_learned = SF.SmootherFactory(lowResSize[2:], lowResSpacing).create_smoother_by_name('adaptive_multiGaussian')
+    v_nl = smoother_not_learned.smooth(m)
 
     for n in range(nr_of_images):
 
@@ -130,35 +171,26 @@ if visualize_smooth_vector_fields:
 
         plt.show()
 
-import numpy as np
+if visualize_energies:
+    plt.clf()
+    e_p, = plt.plot(history['energy'], label='energy')
+    s_p, = plt.plot(history['similarity_energy'], label='similarity_energy')
+    r_p, = plt.plot(history['regularization_energy'], label='regularization_energy')
+    plt.legend(handles=[e_p, s_p, r_p])
+    if print_figures:
+        plt.savefig('energy.pdf')
+    else:
+        plt.show()
 
-print_figures = True
-
-plt.clf()
-e_p, = plt.plot(history['energy'], label='energy')
-s_p, = plt.plot(history['similarity_energy'], label='similarity_energy')
-r_p, = plt.plot(history['regularization_energy'], label='regularization_energy')
-plt.legend(handles=[e_p, s_p, r_p])
-if print_figures:
-    plt.savefig('energy.pdf')
-else:
-    plt.show()
-
-def get_array_from_set_of_lists(dat, nr):
-    res = []
-    for n in range(len(dat)):
-        res.append(dat[n][nr])
-    return res
-
-plt.clf()
-for nw in range(len(history['smoother_weights'][0])):
-    cd = get_array_from_set_of_lists(history['smoother_weights'],nw)
-    plt.plot(cd)
-plt.title('Smoother weights')
-if print_figures:
-    plt.savefig('weights.pdf')
-else:
-    plt.show()
+    plt.clf()
+    for nw in range(len(history['smoother_weights'][0])):
+        cd = get_array_from_set_of_lists(history['smoother_weights'],nw)
+        plt.plot(cd)
+    plt.title('Smoother weights')
+    if print_figures:
+        plt.savefig('weights.pdf')
+    else:
+        plt.show()
 
 if visualize_weights:
 
@@ -166,6 +198,10 @@ if visualize_weights:
         os = compute_overall_std(local_weights[:, n, ...], stds )
 
         plt.clf()
+
+        source_mask = compute_mask(I0[n:n+1,0:1,...].data.numpy())
+        lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(Variable( torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:])
+        lowRes_source_mask = lowRes_source_mask_v.data.numpy()[0,0,...]
 
         plt.subplot(2,3,1)
         plt.imshow(I0[n,0,...].data.numpy(),cmap='gray')
@@ -204,14 +240,14 @@ if visualize_weights:
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            plt.imshow((local_weights[g, n, ...]).numpy()) #,vmin=0.0,vmax=max_std)
+            plt.imshow((local_weights[g, n, ...]).numpy()*lowRes_source_mask) #,vmin=0.0,vmax=max_std)
             plt.title("{:.2f}".format(stds[g]))
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
         os = compute_overall_std(local_weights[:, n, ...], stds )
 
-        plt.imshow(os) #,vmin=0.0,vmax=max_std)
+        plt.imshow(os.numpy()*lowRes_source_mask) #,vmin=0.0,vmax=max_std)
         plt.colorbar()
         plt.suptitle('Registration: ' + str(n))
 

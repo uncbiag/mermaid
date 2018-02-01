@@ -27,7 +27,10 @@ requirements:
     - itk
     - pytorch
     - torchvision
-    - cuda80 # [not osx]
+    - pandas
+    - matplotlib
+    - scipy
+    - openpyxl
     - pytorch-fft # [not osx]
     - setuptools
     - sphinx
@@ -38,7 +41,10 @@ requirements:
     - itk
     - pytorch
     - torchvision
-    - cuda80 # [not osx]
+    - pandas
+    - matplotlib
+    - scipy
+    - openpyxl
     - pytorch-fft # [not osx]
     - sphinx
 
