@@ -28,8 +28,11 @@ class ConsistentWeightedSmoothingModel(nn.Module):
     Enforces the same weighting for all the dimensions of the vector field to be smoothed
 
     """
-    def __init__(self, nr_of_gaussians, gaussian_stds, params):
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, nr_of_image_channels=1, params=None ):
         super(ConsistentWeightedSmoothingModel, self).__init__()
+
+        self.nr_of_image_channels = nr_of_image_channels
+        self.dim = dim
 
         # check that the largest standard deviation is the largest one
         if max(gaussian_stds)>gaussian_stds[-1]:
@@ -62,12 +65,13 @@ class ConsistentWeightedSmoothingModel(nn.Module):
         self.min_weight = 0.0001
         self.is_initialized = False
 
-        self.conv_layers = nn.ModuleList()
+        self.conv_layers = None
 
-        # todo: check if we really need this here
-        # todo: need to fix this; if we remove this pytorch does not properly see the parameters
-        print('WARNING: smoother currently specialized for 1 image channel and 2 dimensions. Fix!')
-        self._init(1,dim=2)
+        # needs to be initialized here, otherwise the optimizer won't see the modules from ModuleList
+        # todo: figure out how to do ModuleList initialization not in __init__
+        # todo: this would allow removing dim and nr_of_image_channels from interface
+        # todo: because it could be compute on the fly when forward is executed
+        self._init(self.nr_of_image_channels,dim=self.dim)
 
         self.computed_weights = None
         self.dim = None
@@ -79,7 +83,7 @@ class ConsistentWeightedSmoothingModel(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(0.05 / n))
+                m.weight.data.normal_(0, math.sqrt(0.25 / n))
             elif isinstance(m, nn.BatchNorm2d):
                 pass
             elif isinstance(m, nn.Linear):
@@ -134,7 +138,7 @@ class ConsistentWeightedSmoothingModel(nn.Module):
                                    self.kernel_sizes[-1],
                                    padding=(self.kernel_sizes[-1]-1)//2)
 
-
+        self.conv_layers = nn.ModuleList()
         for c in convs:
             self.conv_layers.append(c)
 
@@ -240,7 +244,8 @@ class ConsistentWeightedSmoothingModel(nn.Module):
 
         # now let's apply all the convolution layers, until the last (because the last one is not relu-ed
         for l in range(len(self.conv_layers)-1):
-            x = F.relu(self.conv_layers[l](x))
+            #x = F.relu(self.conv_layers[l](x))
+            x = F.sigmoid(self.conv_layers[l](x))
 
         # and now apply the last one without a relu (because we want to support positive and negative weigths)
         x = self.conv_layers[-1](x) # they do not need to be positive (hence ReLU removed); only the absolute weights need to be
@@ -252,31 +257,33 @@ class ConsistentWeightedSmoothingModel(nn.Module):
 
         # now add the default weights and encourage spatial weight-consistency if desired
 
+        y = torch.zeros_like(x)
+
         if encourage_spatial_weight_consistency:
             # now we do local averaging for the weights and force the boundaries to zero
-            y = torch.zeros_like(x)
             for g in range(self.nr_of_gaussians):
                 y[:,g,...] = self.spatially_average(x[:,g,...])
-            x = y
-                #x[:, g, ...] = y[:, g, ...] + global_multi_gaussian_weights[g]
-        #else: # no spatial consistency
+        else:
+            y = x
+
+        z = torch.zeros_like(x)
 
         # loop over all the responses
         # we want to model deviations from the default values instead of the values themselves
         if self.one_directional_weight_change:
             for g in range(self.nr_of_gaussians-1):
-                x[:, g, ...] = x[:, g, ...] + global_multi_gaussian_weights[g]
+                z[:, g, ...] = y[:, g, ...] + global_multi_gaussian_weights[g]
             # subtract for the last one (which will be the largest)
             g = self.nr_of_gaussians-1
-            x[:, g, ...] =  -x[:, g, ...] + global_multi_gaussian_weights[g]
+            z[:, g, ...] =  -y[:, g, ...] + global_multi_gaussian_weights[g]
         else:
             for g in range(self.nr_of_gaussians):
-                x[:, g, ...] = x[:, g, ...] + global_multi_gaussian_weights[g]
+                z[:, g, ...] = y[:, g, ...] + global_multi_gaussian_weights[g]
 
         #todo: maybe run through a sigmoid here
 
         # safeguard against values that are too small; this also safeguards against having all zero weights
-        x = torch.clamp(x, min=self.min_weight)
+        x = torch.clamp(z, min=self.min_weight)
         # now project it onto the unit ball
         x = x / torch.sum(x, dim=1, keepdim=True)
         # multiply the velocity fields by the weights and sum over them
@@ -315,8 +322,10 @@ class old_ConsistentWeightedSmoothingModel(nn.Module):
     well as input images and predicts weights for a multi-Gaussian smoothing from this
     Enforces the same weighting for all the dimensions of the vector field to be smoothed
     """
-    def __init__(self, nr_of_gaussians,multi_gaussian_stds,params):
+    def __init__(self, nr_of_gaussians,multi_gaussian_stds, dim, nr_of_image_channels=1, params=None):
         super(old_ConsistentWeightedSmoothingModel, self).__init__()
+        self.nr_of_image_channels = nr_of_image_channels
+        self.dim = dim
         self.nr_of_gaussians = nr_of_gaussians
         self.min_weight = 0.0001
         self.is_initialized = False
@@ -327,6 +336,8 @@ class old_ConsistentWeightedSmoothingModel(nn.Module):
         self.gaussian_stds = multi_gaussian_stds
         self.params = params
         self.current_penalty = None
+
+        self._int(self.nr_of_image_channels,self.dim)
 
     def get_current_penalty(self):
         return self.current_penalty
@@ -455,11 +466,12 @@ class WeightedSmoothingModel(nn.Module):
     well as input images and predicts weights for a multi-Gaussian smoothing from this
 
     """
-    def __init__(self, nr_of_gaussians,default_multi_gaussian_weights,params):
+    def __init__(self, nr_of_gaussians,default_multi_gaussian_weights,dim,nr_of_image_channels=1, params=None):
         super(WeightedSmoothingModel, self).__init__()
 
         self.params = params
-
+        self.nr_of_image_channels = nr_of_image_channels
+        self.dim = dim
         self.nr_of_gaussians = nr_of_gaussians
         self.default_multi_gaussian_weights = default_multi_gaussian_weights
         self.min_weight = 0.0001
@@ -467,6 +479,8 @@ class WeightedSmoothingModel(nn.Module):
         self.conv1 = None
         self.conv2 = None
         self.computed_weights = None
+
+        self._init(self.nr_of_image_channels,self.dim)
 
     def get_computed_weights(self):
         return self.computed_weights

@@ -6,17 +6,26 @@ Mermaid is a registration toolkit making use of automatic differentiation for ra
 
 A basic installation requires the installation of a few python packages. Most of these packages can be installed via conda, but a few do not have conda installers, but can be installed via pip. 
 
-  * conda install pytorch torchvision cuda80 -c soumith
+  * conda install pytorch torchvision -c pytorch
+  * [for CPU only: conda install pytorch-cpu torchvision -c pytorch]
   * conda install cffi
   * conda install -c conda-forge itk
   * conda install progressbar
   * conda install sphinx
+  * conda install pandas
+  * conda install matplotlib
+  * conda install scipy
+  * conda install openpyxl
   * pip install pytorch-fft
   * pip install pynrrd
+
+IMPORTANT: pytorch 0.3.0 is required. The code will not run on 0.2.0
 
  The mermaid.yaml file in the install directory also contains information for all the packages that need to be installed. We will provide an anaconda installer in the (hopefully) near future.
 
 # An alterative way to install everything
+
+*WARNING: This does not work yet and has not been updated for pytorch 0.3.0
 
 It is of course also possible to install everything into a virtual conda environment. For this, do the following:
 
