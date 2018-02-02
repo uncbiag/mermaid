@@ -250,6 +250,8 @@ class ConsistentWeightedSmoothingModel(nn.Module):
         # and now apply the last one without a relu (because we want to support positive and negative weigths)
         x = self.conv_layers[-1](x) # they do not need to be positive (hence ReLU removed); only the absolute weights need to be
 
+#todo: check this mapping at the end here; need to come up with something smarter to make sure the weights start at a reasonable point
+
         if self.one_directional_weight_change: # force them to be positive; we only want to change weights in one direction
             x = F.sigmoid(x-6.0) # shifted sigmoid so that zero output roughly amounts to zero and only very positive output amounts to 1
 
@@ -282,8 +284,8 @@ class ConsistentWeightedSmoothingModel(nn.Module):
 
         #todo: maybe run through a sigmoid here
 
-        # safeguard against values that are too small; this also safeguards against having all zero weights
-        x = torch.clamp(z, min=self.min_weight)
+        # safeguard against values that are too small or too big; this also safeguards against having all zero weights
+        x = torch.clamp(z, min=self.min_weight, max=1.0)
         # now project it onto the unit ball
         x = x / torch.sum(x, dim=1, keepdim=True)
         # multiply the velocity fields by the weights and sum over them
