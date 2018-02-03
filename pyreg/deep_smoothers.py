@@ -188,6 +188,138 @@ class ConsistentWeightedSmoothingModel(nn.Module):
     def get_current_penalty(self):
         return self.current_penalty
 
+    # just for backup for now
+    def old_forward(self, multi_smooth_v, I, global_multi_gaussian_weights,
+                encourage_spatial_weight_consistency=True, retain_weights=False):
+
+        self.dim = multi_smooth_v.size()[
+            2]  # format is multi_v x batch x channels x X x Y x Z (channels here are the vector field components)
+
+        # currently only implemented in 2D
+        assert (self.dim == 2)
+
+        if not self.is_initialized:
+            nr_of_image_channels = I.size()[1]
+            self._init(nr_of_image_channels, self.dim)
+        sz = multi_smooth_v.size()
+
+        assert (sz[0] == self.nr_of_gaussians)
+        nr_c = sz[2]
+
+        new_sz = sz[1:]  # simply the size of the resulting smoothed vector fields (collapsed along the multi-direction)
+        ret = AdaptVal(Variable(torch.FloatTensor(*new_sz), requires_grad=False))
+
+        sz_weight = list(sz)
+        sz_weight = sz_weight[0:2] + sz_weight[
+                                     3:]  # cut out the channels, since the smoothing will be the same for all spatial directions
+
+        if retain_weights and self.computed_weights is None:
+            print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')
+            # create storage; size vxbatchxxXxYxZ
+            self.computed_weights = torch.FloatTensor(*sz_weight)
+
+        # loop over all channels
+
+        # todo: not clear what the input to the smoother should be. Maybe it should be the
+        # todo: vector field in all spatial dimensions and not only component-by-component
+
+        # first we stack up the response over all the channels to compute
+        # consistent weights over the dimensions
+
+        # we take multi_velocity x batch x channel x X x Y x Z format
+        # and convert it to batch x [multi_velocity*channel] x X x Y x Z format
+
+        # we need to deal with different types of input here
+        # it can either be only the image, or the image and the velocity field
+
+        if self.use_velocity_fields_as_network_input:
+            # 1st transpose
+            rot = torch.transpose(multi_smooth_v, 0, 1)
+            # now create a new view that essentially stacks the channels
+            sz_stacked = [sz[1]] + [sz[0] * sz[2]] + list(sz[3:])
+            ro = rot.contiguous().view(*sz_stacked)
+
+            # now we concatenate the image input
+            # This image data should help identify how to smooth (this is an image)
+            x = torch.cat((ro, I), 1)
+        else:  # only uses the image
+            x = I
+
+        # now let's apply all the convolution layers, until the last (because the last one is not relu-ed
+        for l in range(len(self.conv_layers) - 1):
+            # x = F.relu(self.conv_layers[l](x))
+            x = F.sigmoid(self.conv_layers[l](x))
+
+        # and now apply the last one without a relu (because we want to support positive and negative weigths)
+        x = self.conv_layers[-1](
+            x)  # they do not need to be positive (hence ReLU removed); only the absolute weights need to be
+
+        # todo: check this mapping at the end here; need to come up with something smarter to make sure the weights start at a reasonable point
+
+        if self.one_directional_weight_change:  # force them to be positive; we only want to change weights in one direction
+            x = F.sigmoid(
+                x - 6.0)  # shifted sigmoid so that zero output roughly amounts to zero and only very positive output amounts to 1
+
+        # need to be adapted for multiple D
+
+        # now add the default weights and encourage spatial weight-consistency if desired
+
+        y = torch.zeros_like(x)
+
+        if encourage_spatial_weight_consistency:
+            # now we do local averaging for the weights and force the boundaries to zero
+            for g in range(self.nr_of_gaussians):
+                y[:, g, ...] = self.spatially_average(x[:, g, ...])
+        else:
+            y = x
+
+        z = torch.zeros_like(x)
+
+        # loop over all the responses
+        # we want to model deviations from the default values instead of the values themselves
+        if self.one_directional_weight_change:
+            for g in range(self.nr_of_gaussians - 1):
+                z[:, g, ...] = y[:, g, ...] + global_multi_gaussian_weights[g]
+            # subtract for the last one (which will be the largest)
+            g = self.nr_of_gaussians - 1
+            z[:, g, ...] = -y[:, g, ...] + global_multi_gaussian_weights[g]
+        else:
+            for g in range(self.nr_of_gaussians):
+                z[:, g, ...] = y[:, g, ...] + global_multi_gaussian_weights[g]
+
+        # todo: maybe run through a sigmoid here
+
+        # safeguard against values that are too small or too big; this also safeguards against having all zero weights
+        x = torch.clamp(z, min=self.min_weight, max=1.0)
+        # now project it onto the unit ball
+        x = x / torch.sum(x, dim=1, keepdim=True)
+        # multiply the velocity fields by the weights and sum over them
+        # this is then the multi-Gaussian output
+
+        # now we apply this weight across all the channels; weight output is B x weights x X x Y x Z
+        for n in range(nr_c):
+            # reverse the order so that for a given channel we have batchxmulti_velocityxXxYxZ
+            # i.e., the multi-velocity field output is treated as a channel
+            roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
+            yc = torch.sum(roc * x, dim=1)
+            ret[:, n, ...] = yc
+
+        x = torch.transpose(x, 0, 1)  # flip it back
+
+        self.current_penalty = compute_omt_penalty(x, self.gaussian_stds)
+
+        # import matplotlib.pyplot as plt
+        # plt.clf()
+        # plt.imshow(x[0,0,...].data.numpy())
+        # plt.colorbar()
+        # plt.title(str(self.current_penalty.data.numpy()))
+        # plt.show()
+
+        if retain_weights:
+            self.computed_weights[:] = x.data
+
+        return ret
+
     def forward(self, multi_smooth_v, I, global_multi_gaussian_weights,
                 encourage_spatial_weight_consistency=True, retain_weights=False):
 
@@ -216,9 +348,6 @@ class ConsistentWeightedSmoothingModel(nn.Module):
             self.computed_weights = torch.FloatTensor(*sz_weight)
 
         # loop over all channels
-
-        # todo: not clear what the input to the smoother should be. Maybe it should be the
-        # todo: vector field in all spatial dimensions and not only component-by-component
 
         # first we stack up the response over all the channels to compute
         # consistent weights over the dimensions
@@ -250,42 +379,28 @@ class ConsistentWeightedSmoothingModel(nn.Module):
         # and now apply the last one without a relu (because we want to support positive and negative weigths)
         x = self.conv_layers[-1](x) # they do not need to be positive (hence ReLU removed); only the absolute weights need to be
 
-        if self.one_directional_weight_change: # force them to be positive; we only want to change weights in one direction
-            x = F.sigmoid(x-6.0) # shifted sigmoid so that zero output roughly amounts to zero and only very positive output amounts to 1
+        # todo, add a check that the last one is indeed for the Gaussian with the largest standard deviation
 
-        # need to be adapted for multiple D
-
-        # now add the default weights and encourage spatial weight-consistency if desired
+        # let's smooth all of them in this domain (before the sigmoid; this is similar to an AMF)
 
         y = torch.zeros_like(x)
 
         if encourage_spatial_weight_consistency:
             # now we do local averaging for the weights and force the boundaries to zero
             for g in range(self.nr_of_gaussians):
-                y[:,g,...] = self.spatially_average(x[:,g,...])
+                y[:, g, ...] = self.spatially_average(x[:, g, ...])
         else:
             y = x
 
+        # now let's make sure everything sums up to one and that the last weight starts with 1 if the output is zero
         z = torch.zeros_like(x)
+        g = self.nr_of_gaussians-1
+        w0 = F.sigmoid(x[:,g,...]+6.0) # so that zero output roughly amount to 1; todo: maybe adjust this somehow
+        z[:,g,...] = w0
+        q = F.softmax(x[:,0:g,...],dim=1)
+        for g in range(self.nr_of_gaussians-1):
+            z[:,g,...] = q[:,g,...]*(1.0-w0)
 
-        # loop over all the responses
-        # we want to model deviations from the default values instead of the values themselves
-        if self.one_directional_weight_change:
-            for g in range(self.nr_of_gaussians-1):
-                z[:, g, ...] = y[:, g, ...] + global_multi_gaussian_weights[g]
-            # subtract for the last one (which will be the largest)
-            g = self.nr_of_gaussians-1
-            z[:, g, ...] =  -y[:, g, ...] + global_multi_gaussian_weights[g]
-        else:
-            for g in range(self.nr_of_gaussians):
-                z[:, g, ...] = y[:, g, ...] + global_multi_gaussian_weights[g]
-
-        #todo: maybe run through a sigmoid here
-
-        # safeguard against values that are too small; this also safeguards against having all zero weights
-        x = torch.clamp(z, min=self.min_weight)
-        # now project it onto the unit ball
-        x = x / torch.sum(x, dim=1, keepdim=True)
         # multiply the velocity fields by the weights and sum over them
         # this is then the multi-Gaussian output
 
@@ -294,21 +409,12 @@ class ConsistentWeightedSmoothingModel(nn.Module):
             # reverse the order so that for a given channel we have batchxmulti_velocityxXxYxZ
             # i.e., the multi-velocity field output is treated as a channel
             roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
-            yc = torch.sum(roc*x,dim=1)
+            yc = torch.sum(roc*z,dim=1)
             ret[:, n, ...] = yc
 
-        x = torch.transpose(x, 0, 1) # flip it back
+        x = torch.transpose(z, 0, 1) # flip it back
 
         self.current_penalty = compute_omt_penalty(x,self.gaussian_stds)
-
-        #import matplotlib.pyplot as plt
-        #plt.clf()
-        #plt.imshow(x[0,0,...].data.numpy())
-        #plt.colorbar()
-        #plt.title(str(self.current_penalty.data.numpy()))
-        #plt.show()
-
-
 
         if retain_weights:
             self.computed_weights[:] = x.data

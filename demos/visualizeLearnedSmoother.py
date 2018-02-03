@@ -11,7 +11,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-def visualize_filter_grid(filter,title=None):
+def visualize_filter_grid(filter,title=None,print_figures=False):
     nr_of_channels = filter.size()[1]
     nr_of_features_1 = filter.size()[0]
 
@@ -19,7 +19,7 @@ def visualize_filter_grid(filter,title=None):
 
     # determine grid size
     nr_x = np.ceil(np.sqrt(nr_of_features_1)).astype('int')
-    nr_y = np.ceil(nr_of_features_1//nr_x).astype('int')
+    nr_y = nr_x
 
     for f in range(nr_of_features_1):
         plt.subplot(nr_y, nr_x, f+1)
@@ -32,10 +32,13 @@ def visualize_filter_grid(filter,title=None):
     if title is not None:
         plt.suptitle( title )
 
-    plt.show()
+    if print_figures:
+        plt.savefig('filters_w1.pdf')
+    else:
+        plt.show()
 
 
-def visualize_filter(filter,title=None):
+def visualize_filter(filter,title=None,print_figures=False):
     nr_of_gaussians = filter.size()[1]
     nr_of_features_1 = filter.size()[0]
 
@@ -51,7 +54,10 @@ def visualize_filter(filter,title=None):
     if title is not None:
         plt.suptitle( title )
 
-    plt.show()
+    if print_figures:
+        plt.savefig('filters_w2.pdf')
+    else:
+        plt.show()
 
 def compute_overall_std(weights,stds):
     szw = weights.size()
@@ -111,9 +117,9 @@ visualize_smooth_vector_fields = False
 visualize_weights = True
 visualize_energies = True
 nr_of_gaussians = len(stds)
-#nr_of_images = sz[0]
-nr_of_images = 5 # only show a few of them
-print_figures = False
+nr_of_images = sz[0]
+# nr_of_images = 5 # only show a few of them
+print_figures = True
 
 
 if visualize_filters:
@@ -122,8 +128,8 @@ if visualize_filters:
     w2 = d['registration_pars']['weighted_smoothing_net.conv_layers.1.weight']
     b2 = d['registration_pars']['weighted_smoothing_net.conv_layers.1.bias']
 
-    visualize_filter_grid(w1,'w1')
-    #visualize_filter(w2,'w2')
+    visualize_filter_grid(w1,'w1',print_figures)
+    visualize_filter(w2,'w2',print_figures)
 
 
 lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacing, lowResSize[2:])
@@ -226,7 +232,7 @@ if visualize_weights:
         plt.title('lambda')
 
         plt.subplot(2,3,6)
-        plt.imshow(os,cmap='gray')
+        plt.imshow(os.numpy(),cmap='gray')
         plt.title('std')
 
         plt.suptitle('Registration: ' + str(n))
@@ -240,14 +246,19 @@ if visualize_weights:
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            plt.imshow((local_weights[g, n, ...]).numpy()*lowRes_source_mask) #,vmin=0.0,vmax=max_std)
+            clw = local_weights[g, n, ...].numpy()
+            cmin = clw[lowRes_source_mask==1].min()
+            cmax = clw[lowRes_source_mask==1].max()
+            plt.imshow((local_weights[g, n, ...]).numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
             plt.title("{:.2f}".format(stds[g]))
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
         os = compute_overall_std(local_weights[:, n, ...], stds )
 
-        plt.imshow(os.numpy()*lowRes_source_mask) #,vmin=0.0,vmax=max_std)
+        cmin = os.numpy()[lowRes_source_mask==1].min()
+        cmax = os.numpy()[lowRes_source_mask==1].max()
+        plt.imshow(os.numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
         plt.colorbar()
         plt.suptitle('Registration: ' + str(n))
 
