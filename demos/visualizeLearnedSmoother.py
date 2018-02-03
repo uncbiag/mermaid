@@ -115,11 +115,11 @@ max_std = max(stds)
 visualize_filters = True
 visualize_smooth_vector_fields = False
 visualize_weights = True
-visualize_energies = False
+visualize_energies = True
 nr_of_gaussians = len(stds)
 nr_of_images = sz[0]
 # nr_of_images = 5 # only show a few of them
-print_figures = False
+print_figures = True
 
 
 if visualize_filters:
