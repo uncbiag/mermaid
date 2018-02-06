@@ -411,10 +411,10 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         return set({'multi_gaussian_std_and_weights'})
 
     def get_custom_optimizer_output_string(self):
-        return ", smooth(std)= " + np.array_str(self.get_gaussian_std()[0].data.numpy(),precision=3)
+        return ", smooth(std)= " + np.array_str(self.get_gaussian_std()[0].data.cpu().numpy(),precision=3)
 
     def get_custom_optimizer_values(self):
-        return {'smoother_std': self.get_gaussian_std()[0].data.numpy().copy()}
+        return {'smoother_std': self.get_gaussian_std()[0].data.cpu().numpy().copy()}
 
     def get_optimization_parameters(self):
         if self.optimize_over_smoother_parameters:
@@ -609,11 +609,11 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         return set({'multi_gaussian_std_and_weights'})
 
     def get_custom_optimizer_output_string(self):
-        return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.numpy(),precision=3) + \
-               ", smooth(weights)= " + np.array_str(self.get_gaussian_weights().data.numpy(),precision=3)
+        return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.cpu().numpy(),precision=3) + \
+               ", smooth(weights)= " + np.array_str(self.get_gaussian_weights().data.cpu().numpy(),precision=3)
 
     def get_custom_optimizer_output_values(self):
-        return {'smoother_stds': self.get_gaussian_stds().data.numpy().copy(), 'smoother_weights': self.get_gaussian_weights().data.numpy().copy()}
+        return {'smoother_stds': self.get_gaussian_stds().data.cpu().numpy().copy(), 'smoother_weights': self.get_gaussian_weights().data.cpu().numpy().copy()}
 
     def _project_parameter_vector_if_necessary(self):
         # all standard deviations need to be positive and the weights need to be non-negative
@@ -762,7 +762,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(self.multi_gaussian_stds.copy()).float(),requires_grad=False))
         self.default_multi_gaussian_weights /= self.default_multi_gaussian_weights.sum()
 
-        self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', self.default_multi_gaussian_weights.data.numpy().tolist(), 'weights for the multiple Gaussians')])
+        self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', self.default_multi_gaussian_weights.data.cpu().numpy().tolist(), 'weights for the multiple Gaussians')])
         """global weights for the Gaussians"""
         self.gaussianWeight_min = params[('gaussian_weight_min', 0.0001, 'minimal allowed weight for the Gaussians')]
         """minimal allowed weight during optimization"""
@@ -815,12 +815,12 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         return s
 
     def get_custom_optimizer_output_string(self):
-        return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.numpy(), precision=3)+ \
-               ", smooth(weights)= " + np.array_str(self.get_gaussian_weights().data.numpy(),precision=3) + \
-               ", smooth(penalty)= " + np.array_str(self.get_penalty().data.numpy(),precision=3)
+        return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.cpu().numpy(), precision=3)+ \
+               ", smooth(weights)= " + np.array_str(self.get_gaussian_weights().data.cpu().numpy(),precision=3) + \
+               ", smooth(penalty)= " + np.array_str(self.get_penalty().data.cpu().numpy(),precision=3)
 
     def get_custom_optimizer_output_values(self):
-        return {'smoother_stds': self.get_gaussian_stds().data.numpy().copy(), 'smoother_weights': self.get_gaussian_weights().data.numpy().copy()}
+        return {'smoother_stds': self.get_gaussian_stds().data.cpu().numpy().copy(), 'smoother_weights': self.get_gaussian_weights().data.cpu().numpy().copy()}
 
     def set_state_dict(self,state_dict):
 
@@ -919,7 +919,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         penalty = self.current_penalty*self.default_weight_penalty*self.spacing.prod()
 
-        #print('omt penalty = ' + str(penalty.data.numpy()))
+        #print('omt penalty = ' + str(penalty.data.cpu().numpy()))
 
         for p in self.ws.parameters():
             penalty += self.network_penalty/p.numel() * (p ** 2).sum()
