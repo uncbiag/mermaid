@@ -78,13 +78,7 @@ class RegisterImagePair(object):
         Returns the warped image
         :return: the warped image
         """
-        if self.opt is not None:
-            if self.useMap:
-                cmap = self.opt.get_map()
-                # and now warp it
-                return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing)
-            else:
-                return self.opt.get_warped_image()
+        return self.opt.get_warped_image()
 
     def get_map(self):
         """

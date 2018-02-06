@@ -205,6 +205,8 @@ class Optimizer(object):
         """Records the last successful step size an optimizer took (possible use: propogate step size between multiscale levels"""
         self.batch_id = -1
 
+        self.external_optimizer_parameter_loss = None
+
         if (self.mapLowResFactor is not None):
             self.lowResSize = self._get_low_res_size_from_size( sz, self.mapLowResFactor )
             self.lowResSpacing = self._get_low_res_spacing_from_spacing(self.spacing,sz,self.lowResSize)
@@ -347,6 +349,44 @@ class Optimizer(object):
     def load_checkpoint(self,filename):
         d = torch.load(filename)
         self.load_checkpoint_dict(d)
+
+    def set_external_optimizer_parameter_loss(self,opt_parameter_loss):
+        """
+        Allows to set an external method as an optimizer parameter loss
+        :param opt_parameter_loss: method which takes shared_model_parameters as its only input
+        :return: returns a scalar value which is the loss
+        """
+        self.external_optimizer_parameter_loss = opt_parameter_loss
+
+    def get_external_optimizer_parameter_loss(self):
+        """
+        Returns the externally set method for parameter loss. Will be None if none was set.
+        :return: method
+        """
+        return self.external_optimizer_parameter_loss
+
+    def compute_optimizer_parameter_loss(self,shared_model_parameters):
+        """
+        Returns the optimizer parameter loss. This is the method that should be called to compute this loss.
+        Will either evaluate the method optimizer_parameter_loss or if one was externally defined, the
+        externally defined one will have priority.
+
+        :param shared_model_parameters: paramters that have been declared shared in a model
+        :return: parameter loss
+        """
+        if self.external_optimizer_parameter_loss is not None:
+            return self.external_optimizer_parameter_loss(shared_model_parameters)
+        else:
+            return self.optimizer_parameter_loss(shared_model_parameters)
+
+    def optimizer_parameter_loss(self,shared_model_parameters):
+        """
+        This allows to define additional terms for the loss which are based on parameters that are shared
+        between models (for example for the smoother). Can be used to define a form of consensus optimization.
+        :param shared_model_parameters: paramters that have been declared shared in a model
+        :return: 0 by default, otherwise the corresponding penalty
+        """
+        return Variable(MyTensor(1).zero_(),requires_grad=False)
 
 class ImageRegistrationOptimizer(Optimizer):
     """
@@ -664,18 +704,19 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def get_checkpoint_dict(self):
         if self.model is not None and self.optimizer_instance is not None:
             d = super(SingleScaleRegistrationOptimizer, self).get_checkpoint_dict()
-            d['model_state'] = self.model.get_registration_parameters()
+            d['model'] = dict()
+            d['model']['state'] = self.model.get_registration_parameters()
+            d['model']['size'] = self.model.sz
+            d['model']['spacing'] = self.model.spacing
             d['optimizer_state'] = self.optimizer_instance.state_dict()
-            d['model_size'] = self.model.sz
-            d['model_spacing'] = self.model.spacing
             return d
         else:
             raise ValueError('Unable to create checkpoint, because either the model or the optimizer have not been initialized')
 
     def load_checkpoint_dict(self,d):
         if self.model is not None and self.optimizer_instance is not None:
-            self.model.set_registration_parameters(d['model_state'],d['model_size'],d['model_spacing'])
-            self.optimizer_instance.load_dict(d['optimizer_state'])
+            self.model.set_registration_parameters(d['model']['state'],d['model']['size'],d['model']['spacing'])
+            self.optimizer_instance.load_state_dict(d['optimizer_state'])
         else:
             raise ValueError('Cannot load checkpoint dictionary, because either the model or the optimizer have not been initialized')
 
@@ -691,7 +732,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         Returns the warped image
         :return: the warped image
         """
-        return self.rec_IWarped
+        if self.useMap:
+            cmap = self.get_map()
+            # and now warp it
+            return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing)
+        else:
+            return self.rec_IWarped
 
     def get_map(self):
         """
@@ -772,6 +818,14 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         return self.model.get_registration_parameters()
 
+    def get_shared_model_parameters(self):
+        """
+        Returns only the model parameters that are shared between models.
+
+        :return: shared model parameters
+        """
+        return self.model.get_shared_registration_parameters()
+
     def upsample_model_parameters(self, desiredSize):
         """
         Upsamples the model parameters
@@ -816,14 +870,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         return self.nrOfIterations
 
-    def optimizer_parameter_loss(self,shared_model_parameters):
-        """
-        This allows to define additional terms for the loss which are based on parameters that are shared
-        between models (for example for the smoother). Can be used to define a form of consensus optimization.
-        :param shared_model_parameters: paramters that have been declared shared in a model
-        :return: 0 by default, otherwise the corresponding penalty
-        """
-        return MyTensor(1).zero_()
 
     def _closure(self):
         self.optimizer_instance.zero_grad()
@@ -853,7 +899,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         # to support consensus optimization we have the option of adding a penalty term
         # based on shared parameters
-        loss = loss + self.optimizer_parameter_loss(self.model.get_shared_registration_parameters())
+        loss = loss + self.compute_optimizer_parameter_loss(self.model.get_shared_registration_parameters())
 
         loss.backward()
         #torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
@@ -1080,19 +1126,41 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         print('time:', time.time() - start)
 
 
-class SingleScaleConsensusRegistrationOptimizer(SingleScaleRegistrationOptimizer):
+class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
     def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
 
         super(SingleScaleConsensusRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params)
 
-        self.sigma = 1.0
+        self.params[('optimizer', {}, 'optimizer settings')]
+        cparams = self.params['optimizer']
+        cparams[('consensus_settings', {}, 'settings for the consensus optimizer')]
+        cparams = cparams['consensus_settings']
+
+        self.sigma = cparams[('sigma', 1.0, 'sigma/2 is multiplier for squared augmented Lagrangian penalty')]
+        """Multiplier for squared augmented Lagrangian penalty"""
+
+        self.nr_of_batch_iterations = cparams[('nr_of_batch_iterations', 5, 'how many iterations for consensus; i.e., how often to iterate over the entire dataset')]
+        """how many iterations for consensus; i.e., how often to iterate over the entire dataset"""
+        self.batch_size = cparams[('batch_size',1,'how many images per batch')]
+        """how many images per batch"""
+        self.save_intermediate_checkpoints = cparams[('save_intermediate_checkpoints',False,'when set to True checkpoints are retained for each batch iterations')]
+        """when set to True checkpoints are retained for each batch iterations"""
+
+        self.nr_of_batches = None
+
         self.current_consensus_state = None
         self.current_consensus_dual = None
-        self.nr_of_batch_iterations = 5
-        self.batch_size = 1
+        self.next_consensus_state = None
 
-    def optimizer_parameter_loss(self,shared_model_parameters):
+        self.model_name = None
+        self.add_model_name = None
+        self.add_model_networkClass = None
+        self.add_model_lossClass = None
+        self.addSimName = None
+        self.addSimMeasure = None
+
+    def _consensus_penalty_loss(self,shared_model_parameters):
         """
         This allows to define additional terms for the loss which are based on parameters that are shared
         between models (for example for the smoother). Can be used to define a form of consensus optimization.
@@ -1107,6 +1175,99 @@ class SingleScaleConsensusRegistrationOptimizer(SingleScaleRegistrationOptimizer
         additional_loss *= self.sigma/2.0
         return additional_loss
 
+    def _set_state_to_zero(self,state):
+        # set all the individual parameters to zero
+        for k in state:
+            state[k].zero_()
+
+    def _add_scaled_difference_to_state(self,state,model_shared_state,current_dual,scaling_factor):
+        for k in state:
+            state[k] += scaling_factor*(model_shared_state[k]-current_dual[k])
+
+    def _create_single_scale_optimizer(self,batch_size,consensus_penalty):
+
+        ssOpt = SingleScaleRegistrationOptimizer(batch_size, self.spacing, self.useMap, self.mapLowResFactor, self.params)
+
+        if ((self.add_model_name is not None) and
+                (self.add_model_networkClass is not None) and
+                (self.add_model_lossClass is not None)):
+            ssOpt.add_model(self.add_model_name, self.add_model_networkClass, self.add_model_lossClass)
+
+        # now set the actual model we want to solve
+        ssOpt.set_model(self.model_name)
+
+        if (self.addSimName is not None) and (self.addSimMeasure is not None):
+            ssOpt.add_similarity_measure(self.addSimName, self.addSimMeasure)
+
+        # setting the optimizer
+        #if self.optimizer is not None:
+        #    ssOpt.set_optimizer(self.optimizer)
+        #    ssOpt.set_optimizer_params(self.optimizer_params)
+        #elif self.optimizer_name is not None:
+        if self.optimizer_name is not None:
+            ssOpt.set_optimizer_by_name(self.optimizer_name)
+        else:
+            raise ValueError('Optimizers need to be specified by name of consensus optimization at the moment.')
+
+        ssOpt.set_rel_ftol(self.get_rel_ftol())
+
+        ssOpt.set_visualization(self.get_visualization())
+        ssOpt.set_visualize_step(self.get_visualize_step())
+        ssOpt.set_light_analysis_on(self.light_analysis_on)
+
+        if consensus_penalty:
+            ssOpt.set_external_optimizer_parameter_loss(self._consensus_penalty_loss)
+
+        if not self.light_analysis_on:
+            raise ValueError('not supported yet')
+
+        return ssOpt
+
+    def _initialize_consensus_variables_if_needed(self,ssOpt):
+        if self.current_consensus_state is None:
+            self.current_consensus_state = copy.deepcopy(ssOpt.get_shared_model_parameters())
+            self._set_state_to_zero(self.current_consensus_state)
+
+        if self.current_consensus_dual is None:
+            self.current_consensus_dual = copy.deepcopy(self.current_consensus_state)
+            self._set_state_to_zero(self.current_consensus_dual)
+
+        if self.next_consensus_state is None:
+            self.next_consensus_state = copy.deepcopy(self.current_consensus_dual)  # also make it zero
+            self._set_state_to_zero(self.next_consensus_state)
+
+    def add_similarity_measure(self, simName, simMeasure):
+        """
+        Adds a custom similarity measure
+
+        :param simName: name of the similarity measure (string)
+        :param simMeasure: the similarity measure itself (an object that can be instantiated)
+        """
+        self.addSimName = simName
+        self.addSimMeasure = simMeasure
+
+
+    def set_model(self, modelName):
+        """
+        Sets the model that should be solved
+
+        :param modelName: name of the model that should be solved (string)
+        """
+
+        self.model_name = modelName
+
+    def add_model(self, add_model_name, add_model_networkClass, add_model_lossClass):
+        """
+        Adds a custom model to be optimized over
+
+        :param add_model_name: name of the model (string)
+        :param add_model_networkClass: network model itself (as an object that can be instantiated)
+        :param add_model_lossClass: loss of the model (as an object that can be instantiated)
+        """
+        self.add_model_name = add_model_name
+        self.add_model_networkClass = add_model_networkClass
+        self.add_model_lossClass = add_model_lossClass
+
     def get_checkpoint_dict(self):
         d = super(SingleScaleConsensusRegistrationOptimizer, self).get_checkpoint_dict()
         d['consensus_dual'] = self.current_consensus_dual
@@ -1119,71 +1280,185 @@ class SingleScaleConsensusRegistrationOptimizer(SingleScaleRegistrationOptimizer
         else:
             raise ValueError('checkpoint does not contain: consensus_dual')
 
-    def _set_state_to_zero(self,state):
-        # set all the individual parameters to zero
-        for k in state:
-            state[k].zero_()
+    def _custom_load_checkpoint(self,ssOpt,filename):
+        d = torch.load(filename)
+        ssOpt.load_checkpoint_dict(d)
+        self.load_checkpoint_dict(d)
 
-    def _add_scaled_difference_to_state(self,state,model_shared_state,current_dual,scaling_factor):
-        for k in state:
-            state[k] += scaling_factor*(model_shared_state[k]-current_dual[k])
+    def _custom_save_checkpoint(self,ssOpt,filename):
+        sd = ssOpt.get_checkpoint_dict()
+
+        # todo: maybe make this optional to save storage
+        sd['res'] = dict()
+        sd['res']['Iw'] = ssOpt.get_warped_image()
+        sd['res']['phi'] = ssOpt.get_map()
+
+        cd = self.get_checkpoint_dict()
+        # now merge these two dictionaries
+        sd.update(cd)
+        # and now save it
+        torch.save(sd,filename)
+
+    def _set_all_still_missing_parameters(self):
+
+        if self.model_name is None:
+            model_name = self.params['model']['registration_model'][('type', 'lddmm_shooting_map', "['svf'|'svf_quasi_momentum'|'svf_scalar_momentum'|'svf_vector_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with suffix '_map' or '_image'")]
+            self.params['model']['deformation'][('use_map', True, 'use a map for the solution or not True/False' )]
+            self.set_model( model_name )
+
+        if self.optimizer_name is None:
+            self.optimizer_name = self.params['optimizer'][('name','lbfgs_ls','Optimizer (lbfgs|adam|sgd)')]
+
+
+    def get_warped_image(self):
+        """
+        Returns the warped image
+        :return: the warped image
+        """
+
+        p = dict()
+        p['warped_images'] = []
+        for current_batch in range(self.nr_of_batches):
+            current_checkpoint_filename = self._get_checkpoint_filename(current_batch, self.nr_of_batch_iterations - 1)
+            dc = torch.load(current_checkpoint_filename)
+            p['warped_images'].append(dc['res']['Iw'])
+
+        return p
+
+
+    def get_map(self):
+        """
+        Returns the deformation map
+        :return: deformation map
+        """
+
+        p = dict()
+        p['phi'] = []
+        for current_batch in range(self.nr_of_batches):
+            current_checkpoint_filename = self._get_checkpoint_filename(current_batch, self.nr_of_batch_iterations - 1)
+            dc = torch.load(current_checkpoint_filename)
+            p['phi'].append(dc['res']['phi'])
+
+        return p
+
+    def get_model_parameters(self):
+        """
+        Returns the parameters of the model
+
+        :return: model parameters
+        """
+        p = dict()
+        p['consensus_state'] = self.current_consensus_state
+        p['registration_pars'] = []
+        for current_batch in range(self.nr_of_batches):
+            current_checkpoint_filename = self._get_checkpoint_filename(current_batch,self.nr_of_batch_iterations-1)
+            dc = torch.load(current_checkpoint_filename)
+            d = dict()
+            d['model'] = dc['model']
+            d['consensus_dual'] = dc['consensus_dual']
+            p['registration_pars'].append(d)
+
+        return p
+
+    def _get_checkpoint_filename(self,batch_nr,batch_iter):
+        if self.save_intermediate_checkpoints:
+            return "./checkpoints/checkpoint_batch{:05d}_iter{:05d}.pt".format(batch_nr,batch_iter)
+        else:
+            return "./checkpoints/checkpoint_batch{:05d}.pt".format(batch_nr)
 
     def optimize(self):
-        # to make sure we have the model initialized
+
+        """
+        This optimizer performs consensus optimization:
+
+        1) (u_i_shared,u_i_individual)^{k+1} = argmin \sum_i f_i(u_i_shared,u_i_individual) + \sigma/2\|u_i_shared-u_consensus^k-z_i^k\|^2
+        2) (u_consensus)^{k+1} = 1/n\sum_{i=1}^n ((u_i_shared)^{k+1}-z_i^k)
+        3) z_i^{k+1} = z_i^k-((u_i_shared)^{k+1}-u_consensus_{k+1})
+
+        :return: n/a
+        """
+
+        if self.optimizer is not None:
+            raise ValueError('Custom optimizers are currently not supported for consensus optimization.\
+             Set the optimizer by name (e.g., in the json configuration) instead')
+
         self._set_all_still_missing_parameters()
 
-        if self.current_consensus_state is None:
-            self.current_consensus_state = copy.deepcopy(self.model.get_shared_registration_parameters())
+        # todo: support reading images from file
+        nr_of_images = self.ISource.size()[0]
+        self.nr_of_batches = np.ceil(float(nr_of_images)/float(self.batch_size)).astype('int')
 
-        if self.current_consensus_dual is None:
-            self.current_consensus_dual = copy.deepcopy(self.current_consensus_state)
-            self._set_state_to_zero(self.current_consensus_dual)
-
-        next_consensus_state = copy.deepcopy(self.current_consensus_dual)  # also make it zero
-
-        # we first clone it, because we will overwrite it
-        self.allISource = self.ISource.data.clone()
-        self.allITarget = self.ITarget.data.clone()
-
-        nr_of_batches = self.allISource.size()[0]
+        if not os.path.exists("./checkpoints"):
+            os.makedirs("./checkpoints")
 
         for iter_batch in range(self.nr_of_batch_iterations):
             print('Computing batch ' + str(iter_batch) + ' of ' + str(self.nr_of_batch_iterations))
 
-            self._set_state_to_zero(next_consensus_state)
+            next_consensus_initialized = False
+            all_histories = []
 
-            #todo: need to have a method that allows to reset the maps, etc. if the batch sizes differ
-            for current_batch in range(nr_of_batches):
-                print('Computing image pair batch ' + str(current_batch) + ' of ' + str(nr_of_batches))
+            for current_batch in range(self.nr_of_batches):
 
-                current_checkpoint_filename = "checkpoints/checkpoint_{:05d}.pt".format(current_batch)
+                from_image = current_batch*self.batch_size
+                to_image = min(nr_of_images,(current_batch+1)*self.batch_size)
+
+                nr_of_images_in_batch = to_image-from_image
+
+                current_source_batch = Variable(self.ISource[from_image:to_image, ...].data, requires_grad=False)
+                current_target_batch = Variable(self.ITarget[from_image:to_image, ...].data, requires_grad=False)
+                current_batch_image_size = np.array(current_source_batch.size())
+
+                print('Computing image pair batch ' + str(current_batch+1) + ' of ' + str(self.nr_of_batches))
+                print('Image range: [' + str(from_image) + ',' + str(to_image) + ')')
+
+                # create new optimizer
+                ssOpt = self._create_single_scale_optimizer(current_batch_image_size,consensus_penalty=True)
+
+                # to make sure we have the model initialized, force parameter installation
+                ssOpt._set_all_still_missing_parameters()
+
+                self._initialize_consensus_variables_if_needed(ssOpt)
+
+                if not next_consensus_initialized:
+                    self._set_state_to_zero(self.next_consensus_state)
+                    next_consensus_initialized = True
 
                 if iter_batch==0:
                     # for the first time, just set the dual to zero
                     self._set_state_to_zero(self.current_consensus_dual)
                 else:
                     # this loads the optimizer state and the model state and also self.current_consensus_dual
-                    self.load_checkpoint(filename=current_checkpoint_filename)
+                    previous_checkpoint_filename = self._get_checkpoint_filename(current_batch, iter_batch-1)
+                    self._custom_load_checkpoint(ssOpt,previous_checkpoint_filename)
+
                     # first update the dual variable (we do this now that we have the consensus state still
                     self._add_scaled_difference_to_state(self.current_consensus_dual,
-                                                         self.model.get_shared_registration_parameters(),
+                                                         ssOpt.get_shared_model_parameters(),
                                                          self.current_consensus_state,-1.0)
 
 
-                self.set_source_image(Variable(self.allISource[current_batch:current_batch+1,...],requires_grad=False))
-                self.set_target_image(Variable(self.allITarget[current_batch:current_batch+1,...],requires_grad=False))
+                ssOpt.set_source_image(current_source_batch)
+                ssOpt.set_target_image(current_target_batch)
 
-                super(SingleScaleConsensusRegistrationOptimizer,self).optimize()
+                ssOpt.optimize()
+
+                if (current_batch==self.nr_of_batches-1) and (iter_batch==self.nr_of_batch_iterations-1):
+                    # the last time we run this
+                    all_histories.append( ssOpt.get_history() )
 
                 # update the consensus state (is done via next_consensus_state as
                 # self.current_consensus_state is used as part of the optimization for all optimizations in the batch
-                self._add_scaled_difference_to_state(next_consensus_state,
-                                                     self.model.get_shared_registration_parameters(),
-                                                     self.current_consensus_dual,1.0/nr_of_batches)
+                self._add_scaled_difference_to_state(self.next_consensus_state,
+                                                     ssOpt.get_shared_model_parameters(),
+                                                     self.current_consensus_dual,float(nr_of_images_in_batch)/float(nr_of_images))
 
-                self.save_checkpoint(filename=current_checkpoint_filename)
+                current_checkpoint_filename = self._get_checkpoint_filename(current_batch, iter_batch)
+                self._custom_save_checkpoint(ssOpt,current_checkpoint_filename)
 
-            self.current_consensus_state = copy.deepcopy(next_consensus_state)
+            self._add_to_history('batch_history', copy.deepcopy(all_histories))
+            self.current_consensus_state = copy.deepcopy(self.next_consensus_state)
+
+
 
 
 class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):

@@ -5,6 +5,7 @@ import torch
 from torch.autograd import Variable
 from pyreg.data_wrapper import AdaptVal
 import numpy as np
+import multiprocessing as mp
 
 import pyreg.example_generation as eg
 import pyreg.module_parameters as pars
@@ -38,21 +39,21 @@ def get_image_range(im_from,im_to):
     return f
 
 # load a bunch of images as source
-I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(get_image_range(0,5))
+I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(get_image_range(0,2))
 sz = np.array(I0.shape)
 # and a bunch of images as target images
-I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(5,10))
+I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(2,4))
 
 assert( np.all(spacing0==spacing1) )
 
-torch.set_num_threads(2)
+torch.set_num_threads(mp.cpu_count())
 
 reg = si.RegisterImagePair()
 
 if True:
     reg.register_images(I0,I1,spacing0,
                     model_name='svf_scalar_momentum_map',
-                    nr_of_iterations=1,
+                    nr_of_iterations=2,
                     visualize_step=10,
                     map_low_res_factor=1.0,
                     rel_ftol=1e-13,
