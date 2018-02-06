@@ -5,20 +5,18 @@ This package enables easy single-scale and multi-scale optimization support.
 from abc import ABCMeta, abstractmethod
 import os
 import time
+import copy
 import utils
 import visualize_registration_results as vizReg
 import custom_optimizers as CO
 import numpy as np
 import torch
 from torch.autograd import Variable
-from data_wrapper import USE_CUDA, AdaptVal
+from data_wrapper import USE_CUDA, AdaptVal, MyTensor
 import model_factory as MF
 import image_sampling as IS
 from metrics import get_multi_metric
 from res_recorder import XlsxRecorder
-import pandas as pd
-
-#from MyAdam import MyAdam
 
 # add some convenience functionality
 class SimpleRegistration(object):
@@ -118,6 +116,24 @@ class SimpleSingleScaleRegistration(SimpleRegistration):
     def __init__(self,ISource,ITarget,spacing,params):
         super(SimpleSingleScaleRegistration, self).__init__(ISource,ITarget,spacing, params)
         self.optimizer = SingleScaleRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params)
+
+    def register(self):
+        """
+        Registers the source to the target image
+        :return: n/a
+        """
+        self.optimizer.set_light_analysis_on(self.light_analysis_on)
+        self.optimizer.register(self.ISource,self.ITarget)
+
+
+class SimpleSingleScaleConsensusRegistration(SimpleRegistration):
+    """
+    Single scale registration making use of consensus optimization (to allow for multiple independent registration
+    that can share parameters).
+    """
+    def __init__(self,ISource,ITarget,spacing,params):
+        super(SimpleSingleScaleConsensusRegistration, self).__init__(ISource,ITarget,spacing, params)
+        self.optimizer = SingleScaleConsensusRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params)
 
     def register(self):
         """
@@ -309,6 +325,28 @@ class Optimizer(object):
 
     def get_last_successful_step_size_taken(self):
         return self.last_successful_step_size_taken
+
+    def get_checkpoint_dict(self):
+        """
+        Returns a dict() object containing the information for the current checkpoint.
+        :return: checpoint dictionary
+        """
+        return dict()
+
+    def load_checkpoint_dict(self,d):
+        """
+        Takes the dictionary from a checkpoint and loads it as the current state of optimizer and model
+        :param d: dictionary
+        :return: n/a
+        """
+        pass
+
+    def save_checkpoint(self,filename):
+        torch.save(self.get_checkpoint_dict(),filename)
+
+    def load_checkpoint(self,filename):
+        d = torch.load(filename)
+        self.load_checkpoint_dict(d)
 
 class ImageRegistrationOptimizer(Optimizer):
     """
@@ -580,8 +618,6 @@ class ImageRegistrationOptimizer(Optimizer):
         self.optimizer_params = opt_params
 
 
-
-
 class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     """
     Optimizer operating on a single scale. Typically this will be the full image resolution.
@@ -614,7 +650,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
-
         self.rec_energy = None
         self.rec_similarityEnergy = None
         self.rec_regEnergy = None
@@ -625,6 +660,24 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.rec_custom_optimizer_output_string = ''
         """the evaluation information"""
         self.rec_custom_optimizer_output_values = None
+
+    def get_checkpoint_dict(self):
+        if self.model is not None and self.optimizer_instance is not None:
+            d = super(SingleScaleRegistrationOptimizer, self).get_checkpoint_dict()
+            d['model_state'] = self.model.get_registration_parameters()
+            d['optimizer_state'] = self.optimizer_instance.state_dict()
+            d['model_size'] = self.model.sz
+            d['model_spacing'] = self.model.spacing
+            return d
+        else:
+            raise ValueError('Unable to create checkpoint, because either the model or the optimizer have not been initialized')
+
+    def load_checkpoint_dict(self,d):
+        if self.model is not None and self.optimizer_instance is not None:
+            self.model.set_registration_parameters(d['model_state'],d['model_size'],d['model_spacing'])
+            self.optimizer_instance.load_dict(d['optimizer_state'])
+        else:
+            raise ValueError('Cannot load checkpoint dictionary, because either the model or the optimizer have not been initialized')
 
     def get_energy(self):
         """
@@ -763,6 +816,15 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         return self.nrOfIterations
 
+    def optimizer_parameter_loss(self,shared_model_parameters):
+        """
+        This allows to define additional terms for the loss which are based on parameters that are shared
+        between models (for example for the smoother). Can be used to define a form of consensus optimization.
+        :param shared_model_parameters: paramters that have been declared shared in a model
+        :return: 0 by default, otherwise the corresponding penalty
+        """
+        return MyTensor(1).zero_()
+
     def _closure(self):
         self.optimizer_instance.zero_grad()
         # 1) Forward pass: Compute predicted y by passing x to the model
@@ -788,6 +850,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget,
                                   self.model.get_variables_to_transfer_to_loss_function(),
                                   opt_variables )
+
+        # to support consensus optimization we have the option of adding a penalty term
+        # based on shared parameters
+        loss = loss + self.optimizer_parameter_loss(self.model.get_shared_registration_parameters())
 
         loss.backward()
         #torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
@@ -967,6 +1033,13 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.params['optimizer'][('single_scale', {}, 'single scale settings')]
             self.nrOfIterations = self.params['optimizer']['single_scale'][('nr_of_iterations', 10, 'number of iterations')]
 
+        # get the optimizer
+        if self.optimizer_instance is None:
+            self.optimizer_instance = self._get_optimizer_instance()
+
+        if USE_CUDA:
+            self.model = self.model.cuda()
+
 
     def optimize(self):
         """
@@ -976,13 +1049,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # obtain all missing parameters (i.e., only set the ones that were not explicitly set)
         self._set_all_still_missing_parameters()
 
-        # do the actual optimization
-        self.optimizer_instance = self._get_optimizer_instance()
-
         # optimize for a few steps
         start = time.time()
-        if USE_CUDA:
-            self.model = self.model.cuda()
 
         self.last_energy = None
 
@@ -1011,6 +1079,111 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         print('time:', time.time() - start)
 
+
+class SingleScaleConsensusRegistrationOptimizer(SingleScaleRegistrationOptimizer):
+
+    def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
+
+        super(SingleScaleConsensusRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params)
+
+        self.sigma = 1.0
+        self.current_consensus_state = None
+        self.current_consensus_dual = None
+        self.nr_of_batch_iterations = 5
+        self.batch_size = 1
+
+    def optimizer_parameter_loss(self,shared_model_parameters):
+        """
+        This allows to define additional terms for the loss which are based on parameters that are shared
+        between models (for example for the smoother). Can be used to define a form of consensus optimization.
+        :param shared_model_parameters: parameters that have been declared shared in a model
+        :return: 0 by default, otherwise the corresponding penalty
+        """
+        additional_loss = Variable(MyTensor(1).zero_(),requires_grad=False)
+        for k in shared_model_parameters:
+            additional_loss += ((shared_model_parameters[k]\
+                               -self.current_consensus_state[k]\
+                               -self.current_consensus_dual[k])**2).sum()
+        additional_loss *= self.sigma/2.0
+        return additional_loss
+
+    def get_checkpoint_dict(self):
+        d = super(SingleScaleConsensusRegistrationOptimizer, self).get_checkpoint_dict()
+        d['consensus_dual'] = self.current_consensus_dual
+        return d
+
+    def load_checkpoint_dict(self, d):
+        super(SingleScaleConsensusRegistrationOptimizer, self).load_checkpoint_dict(d)
+        if d.has_key('consensus_dual'):
+            self.current_consensus_dual = d['consensus_dual']
+        else:
+            raise ValueError('checkpoint does not contain: consensus_dual')
+
+    def _set_state_to_zero(self,state):
+        # set all the individual parameters to zero
+        for k in state:
+            state[k].zero_()
+
+    def _add_scaled_difference_to_state(self,state,model_shared_state,current_dual,scaling_factor):
+        for k in state:
+            state[k] += scaling_factor*(model_shared_state[k]-current_dual[k])
+
+    def optimize(self):
+        # to make sure we have the model initialized
+        self._set_all_still_missing_parameters()
+
+        if self.current_consensus_state is None:
+            self.current_consensus_state = copy.deepcopy(self.model.get_shared_registration_parameters())
+
+        if self.current_consensus_dual is None:
+            self.current_consensus_dual = copy.deepcopy(self.current_consensus_state)
+            self._set_state_to_zero(self.current_consensus_dual)
+
+        next_consensus_state = copy.deepcopy(self.current_consensus_dual)  # also make it zero
+
+        # we first clone it, because we will overwrite it
+        self.allISource = self.ISource.data.clone()
+        self.allITarget = self.ITarget.data.clone()
+
+        nr_of_batches = self.allISource.size()[0]
+
+        for iter_batch in range(self.nr_of_batch_iterations):
+            print('Computing batch ' + str(iter_batch) + ' of ' + str(self.nr_of_batch_iterations))
+
+            self._set_state_to_zero(next_consensus_state)
+
+            #todo: need to have a method that allows to reset the maps, etc. if the batch sizes differ
+            for current_batch in range(nr_of_batches):
+                print('Computing image pair batch ' + str(current_batch) + ' of ' + str(nr_of_batches))
+
+                current_checkpoint_filename = "checkpoints/checkpoint_{:05d}.pt".format(current_batch)
+
+                if iter_batch==0:
+                    # for the first time, just set the dual to zero
+                    self._set_state_to_zero(self.current_consensus_dual)
+                else:
+                    # this loads the optimizer state and the model state and also self.current_consensus_dual
+                    self.load_checkpoint(filename=current_checkpoint_filename)
+                    # first update the dual variable (we do this now that we have the consensus state still
+                    self._add_scaled_difference_to_state(self.current_consensus_dual,
+                                                         self.model.get_shared_registration_parameters(),
+                                                         self.current_consensus_state,-1.0)
+
+
+                self.set_source_image(Variable(self.allISource[current_batch:current_batch+1,...],requires_grad=False))
+                self.set_target_image(Variable(self.allITarget[current_batch:current_batch+1,...],requires_grad=False))
+
+                super(SingleScaleConsensusRegistrationOptimizer,self).optimize()
+
+                # update the consensus state (is done via next_consensus_state as
+                # self.current_consensus_state is used as part of the optimization for all optimizations in the batch
+                self._add_scaled_difference_to_state(next_consensus_state,
+                                                     self.model.get_shared_registration_parameters(),
+                                                     self.current_consensus_dual,1.0/nr_of_batches)
+
+                self.save_checkpoint(filename=current_checkpoint_filename)
+
+            self.current_consensus_state = copy.deepcopy(next_consensus_state)
 
 
 class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):

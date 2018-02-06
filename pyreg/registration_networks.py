@@ -31,7 +31,7 @@ import image_sampling as IS
 from data_wrapper import MyTensor
 
 import utils
-
+import collections
 import numpy as np
 
 from abc import ABCMeta, abstractmethod
@@ -61,6 +61,8 @@ class RegistrationNet(nn.Module):
         """the number of images, i.e., the batch size B"""
         self.nrOfChannels = sz[1]
         """the number of image channels, i.e., C"""
+
+        self._shared_parameters = set()
 
     def get_variables_to_transfer_to_loss_function(self):
         """
@@ -103,6 +105,19 @@ class RegistrationNet(nn.Module):
         :return: returns the registration parameters 
         """
         return self.state_dict()
+
+    def get_shared_registration_parameters(self):
+        """
+        Returns the parameters that have been declared shared for optimization.
+        This can for example be parameters of a smoother that are shared between registrations.
+        """
+        cs = self.state_dict()
+        shared_params = collections.OrderedDict()
+
+        for key in cs:
+            if self._shared_parameters.issuperset({key}):
+                shared_params[key] = cs[key]
+        return shared_params
 
     def set_registration_parameters(self, sd, sz, spacing):
         """
@@ -348,7 +363,7 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
-        self.smoother.associate_parameters_with_module(self)
+        self._shared_parameters = self._shared_parameters.union(self.smoother.associate_parameters_with_module(self))
         """registers the smoother parameters so that they are optimized over if applicable"""
         self.v = torch.zeros_like(self.m)
         """corresponding velocity field"""
@@ -931,7 +946,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother"""
-        self.smoother.associate_parameters_with_module(self)
+        self._shared_parameters = self._shared_parameters.union(self.smoother.associate_parameters_with_module(self))
         """registers the smoother parameters so that they are optimized over if applicable"""
 
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':
@@ -1287,7 +1302,7 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother"""
-        self.smoother.associate_parameters_with_module(self)
+        self._shared_parameters = self._shared_parameters.union(self.smoother.associate_parameters_with_module(self))
         """registers the smoother parameters so that they are optimized over if applicable"""
 
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':

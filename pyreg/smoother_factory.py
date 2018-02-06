@@ -53,7 +53,13 @@ class Smoother(object):
         """For smoothers that make use of the map, stores the source image to which the map can be applied"""
 
     def associate_parameters_with_module(self,module):
-        pass
+        """
+        Associates parameters that should be optimized with the given module.
+
+        :param module: module to associate the parameters to
+        :return: set of parameters that were associated
+        """
+        return set()
 
 
     def get_penalty(self):
@@ -402,6 +408,7 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
 
     def associate_parameters_with_module(self,module):
         module.register_parameter('multi_gaussian_std_and_weights',self.optimizer_params)
+        return set({'multi_gaussian_std_and_weights'})
 
     def get_custom_optimizer_output_string(self):
         return ", smooth(std)= " + np.array_str(self.get_gaussian_std()[0].data.numpy(),precision=3)
@@ -599,6 +606,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
 
     def associate_parameters_with_module(self,module):
         module.register_parameter('multi_gaussian_std_and_weights',self.multi_gaussian_optimizer_params)
+        return set({'multi_gaussian_std_and_weights'})
 
     def get_custom_optimizer_output_string(self):
         return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.numpy(),precision=3) + \
@@ -792,11 +800,19 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.debug_retain_computed_local_weights = True
 
     def associate_parameters_with_module(self,module):
+        s = set()
         if self.optimize_over_smoother_stds:
             module.register_parameter('multi_gaussian_stds',self.multi_gaussian_stds_optimizer_params)
+            s.add('multi_gaussian_stds')
         if self.optimize_over_smoother_weights:
             module.register_parameter('multi_gaussian_weights', self.multi_gaussian_weights_optimizer_params)
+            s.add('multi_gaussian_weights')
         module.add_module('weighted_smoothing_net',self.ws)
+        sd = self.ws.state_dict()
+        for key in sd:
+            s.add('weighted_smoothing_net.' + str(key))
+
+        return s
 
     def get_custom_optimizer_output_string(self):
         return ", smooth(stds)= " + np.array_str(self.get_gaussian_stds().data.numpy(), precision=3)+ \

@@ -118,6 +118,7 @@ class RegisterImagePair(object):
                                    json_config_out_filename=None,
                                    visualize_step=5,
                                    use_multi_scale=False,
+                                   use_consensus_optimization=False,
                                    params=None):
         """
         Registers two images. Only ISource, ITarget, spacing, and model_name need to be specified.
@@ -136,6 +137,7 @@ class RegisterImagePair(object):
         :param json_config_out_filename: output file name for the used configuration.
         :param visualize_step: step at which the solution is visualized; if set to None, no visualizations will be created
         :param use_multi_scale: if set to True a multi-scale solver will be used
+        :param use_consensus_optimization: if set to True, consensus optimization is used (i.e., independently optimized batches with the contraint that shared parameters are the same)
         :param params: parameter structure to pass settings or filename to load the settings from file.
         :return: n/a
         """
@@ -166,6 +168,7 @@ class RegisterImagePair(object):
                       json_config_out_filename=json_config_out_filename,
                       visualize_step=visualize_step,
                       use_multi_scale=use_multi_scale,
+                      use_consensus_optimization=use_consensus_optimization,
                       params=params)
 
     def register_images(self,ISource,ITarget,spacing,model_name,
@@ -179,6 +182,7 @@ class RegisterImagePair(object):
                         json_config_out_filename=None,
                         visualize_step=5,
                         use_multi_scale=False,
+                        use_consensus_optimization=False,
                         params=None):
         """
         Registers two images. Only ISource, ITarget, spacing, and model_name need to be specified.
@@ -198,6 +202,7 @@ class RegisterImagePair(object):
         :param json_config_out_filename: output file name for the used configuration.
         :param visualize_step: step at which the solution is visualized; if set to None, no visualizations will be created
         :param use_multi_scale: if set to True a multi-scale solver will be used
+        :param use_consensus_optimization: if set to True, consensus optimization is used (i.e., independently optimized batches with the contraint that shared parameters are the same)
         :param params: parameter structure to pass settings or filename to load the settings from file.
         :return: n/a
         """
@@ -247,9 +252,15 @@ class RegisterImagePair(object):
                 self.params['model']['registration_model']['forward_model']['smoother']['optimize_over_smoother_parameters'] = optimize_over_smoother_parameters
 
             if use_multi_scale:
-                self.opt = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+                if use_consensus_optimization:
+                    raise ValueError('Consensus optimization is not yet supported for multi-scale registration')
+                else:
+                    self.opt = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
             else:
-                self.opt = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+                if use_consensus_optimization:
+                    self.opt = MO.SimpleSingleScaleConsensusRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+                else:
+                    self.opt = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
 
             if visualize_step is not None:
                 self.opt.get_optimizer().set_visualization(True)
