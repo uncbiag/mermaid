@@ -716,7 +716,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def load_checkpoint_dict(self,d):
         if self.model is not None and self.optimizer_instance is not None:
             self.model.set_registration_parameters(d['model']['state'],d['model']['size'],d['model']['spacing'])
-            self.optimizer_instance.load_state_dict(d['optimizer_state'])
+            print('WARNING: Turned off the loading of the optimizer state')
+            #self.optimizer_instance.load_state_dict(d['optimizer_state'])
         else:
             raise ValueError('Cannot load checkpoint dictionary, because either the model or the optimizer have not been initialized')
 
@@ -1168,11 +1169,13 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         :return: 0 by default, otherwise the corresponding penalty
         """
         additional_loss = Variable(MyTensor(1).zero_(),requires_grad=False)
+        total_number_of_parameters = 1
         for k in shared_model_parameters:
+            total_number_of_parameters *= shared_model_parameters[k].numel()
             additional_loss += ((shared_model_parameters[k]\
                                -self.current_consensus_state[k]\
                                -self.current_consensus_dual[k])**2).sum()
-        additional_loss *= self.sigma/2.0
+        additional_loss *= self.sigma/(2.0*total_number_of_parameters)
         return additional_loss
 
     def _set_state_to_zero(self,state):

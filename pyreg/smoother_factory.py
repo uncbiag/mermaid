@@ -921,8 +921,14 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         #print('omt penalty = ' + str(penalty.data.numpy()))
 
+        total_number_of_parameters = 1
+        par_penalty = Variable(MyTensor(1).zero_(),requires_grad=False)
         for p in self.ws.parameters():
-            penalty += self.network_penalty/p.numel() * (p ** 2).sum()
+            total_number_of_parameters *= p.numel()
+            par_penalty += (p ** 2).sum()
+
+        par_penalty *= self.network_penalty/total_number_of_parameters
+        penalty += par_penalty
 
         return penalty
 
