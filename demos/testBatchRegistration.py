@@ -54,7 +54,7 @@ if True:
     reg.register_images(I0,I1,spacing0,
                     model_name='svf_scalar_momentum_map',
                     nr_of_iterations=25,
-                    visualize_step=10,
+                    visualize_step=None,
                     map_low_res_factor=1.0,
                     rel_ftol=1e-6,
                     json_config_out_filename='testBatchNewerSmoother.json',
