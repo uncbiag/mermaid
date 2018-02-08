@@ -335,10 +335,12 @@ class Optimizer(object):
         """
         return dict()
 
-    def load_checkpoint_dict(self,d):
+    def load_checkpoint_dict(self,d,load_optimizer_state=False):
         """
         Takes the dictionary from a checkpoint and loads it as the current state of optimizer and model
+
         :param d: dictionary
+        :param load_optimizer_state: if set to True the optimizer state will be restored
         :return: n/a
         """
         pass
@@ -714,11 +716,13 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             raise ValueError('Unable to create checkpoint, because either the model or the optimizer have not been initialized')
 
-    def load_checkpoint_dict(self,d):
+    def load_checkpoint_dict(self,d,load_optimizer_state=False):
         if self.model is not None and self.optimizer_instance is not None:
             self.model.set_registration_parameters(d['model']['state'],d['model']['size'],d['model']['spacing'])
-            print('WARNING: Turned off the loading of the optimizer state')
-            #self.optimizer_instance.load_state_dict(d['optimizer_state'])
+            if load_optimizer_state:
+                self.optimizer_instance.load_state_dict(d['optimizer_state'])
+            else:
+                print('WARNING: Turned off the loading of the optimizer state')
         else:
             raise ValueError('Cannot load checkpoint dictionary, because either the model or the optimizer have not been initialized')
 
@@ -1120,6 +1124,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         start = time.time()
 
         self.last_energy = None
+        could_not_find_successful_step = False
 
         for iter in range(self.nrOfIterations):
 
@@ -1129,6 +1134,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.optimizer_instance.step(self._closure)
             if hasattr(self.optimizer_instance,'last_step_size_taken'):
                 self.last_successful_step_size_taken = self.optimizer_instance.last_step_size_taken()
+
+            if self.last_successful_step_size_taken==0.0:
+                print('Optimizer was not able to find a successful step. Stopping iterations.')
+                could_not_find_successful_step = True
+                if iter==0:
+                    print('The gradient was likely too large or the optimization started from an optimal point.')
+                    print('If this behavior is unexpected try adjusting the settings of the similiarity measure or allow the optimizer to try out smaller steps.')
+
+                # to make sure warped images and the map is correct, call closure once more
+                self._closure()
 
             if self.useMap:
                 tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy,
@@ -1142,8 +1157,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                                                   self.rec_IWarped,
                                                   self.rec_custom_optimizer_output_string,
                                                   self.rec_custom_optimizer_output_values)
-            if tolerance_reached:
+
+            if tolerance_reached or could_not_find_successful_step:
+                if tolerance_reached:
+                    print('Terminating optimization, because the desired tolerance was reached.')
                 break
+
             self.iter_count = iter+1
 
         print('time:', time.time() - start)
@@ -1170,7 +1189,17 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         self.save_intermediate_checkpoints = cparams[('save_intermediate_checkpoints',False,'when set to True checkpoints are retained for each batch iterations')]
         """when set to True checkpoints are retained for each batch iterations"""
 
+        self.checkpoint_output_directory = cparams[('checkpoint_output_directory','checkpoints','directory where the checkpoints will be stored')]
+        """output directory where the checkpoints will be saved"""
+
+        self.save_consensus_state_checkpoints = cparams[('save_consensus_state_checkpoints',True,'saves the current consensus state; typically only the individual states are saved as checkpoints')]
+        """saves the current consensus state; typically only the individual states are saved as checkpoints"""
+
+        self.continue_from_last_checkpoint = cparams[('continue_from_last_checkpoint',True,'If true then iterations are resumed from last checkpoint. Allows restarting an optimization')]
+        """allows restarting an optimization by continuing from the last checkpoint"""
+
         self.nr_of_batches = None
+        self.nr_of_images = None
 
         self.current_consensus_state = None
         self.current_consensus_dual = None
@@ -1308,7 +1337,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         d['consensus_dual'] = self.current_consensus_dual
         return d
 
-    def load_checkpoint_dict(self, d):
+    def load_checkpoint_dict(self, d, load_optimizer_state=False):
         super(SingleScaleConsensusRegistrationOptimizer, self).load_checkpoint_dict(d)
         if d.has_key('consensus_dual'):
             self.current_consensus_dual = d['consensus_dual']
@@ -1319,6 +1348,10 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         d = torch.load(filename)
         ssOpt.load_checkpoint_dict(d)
         self.load_checkpoint_dict(d)
+
+    def _custom_single_batch_load_checkpoint(self,ssOpt,filename):
+        d = torch.load(filename)
+        ssOpt.load_checkpoint_dict(d,load_optimizer_state=True)
 
     def _custom_save_checkpoint(self,ssOpt,filename):
         sd = ssOpt.get_checkpoint_dict()
@@ -1406,37 +1439,84 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
     def _get_checkpoint_filename(self,batch_nr,batch_iter):
         if self.save_intermediate_checkpoints:
-            return "./checkpoints/checkpoint_batch{:05d}_iter{:05d}.pt".format(batch_nr,batch_iter)
+            return os.path.join(self.checkpoint_output_directory,
+                                "checkpoint_batch{:05d}_iter{:05d}.pt".format(batch_nr,batch_iter))
         else:
-            return "./checkpoints/checkpoint_batch{:05d}.pt".format(batch_nr)
+            return os.path.join(self.checkpoint_output_directory,
+                                "checkpoint_batch{:05d}.pt".format(batch_nr))
 
-    def optimize(self):
+    def _get_consensus_checkpoint_filename(self,batch_iter):
+        return os.path.join(self.checkpoint_output_directory,
+                            "consensus_state_iter{:05d}.pt".format(batch_iter))
 
+    def _optimize_as_single_batch(self,resume_from_iter=None):
         """
-        This optimizer performs consensus optimization:
+        Does optimization where everything is represented as a single batch. This is essentially like an individual
+        optimization, but supports checkpointing.
 
-        1) (u_i_shared,u_i_individual)^{k+1} = argmin \sum_i f_i(u_i_shared,u_i_individual) + \sigma/2\|u_i_shared-u_consensus^k-z_i^k\|^2
-        2) (u_consensus)^{k+1} = 1/n\sum_{i=1}^n ((u_i_shared)^{k+1}-z_i^k)
-        3) z_i^{k+1} = z_i^k-((u_i_shared)^{k+1}-u_consensus_{k+1})
-
+        :param resume_from_iter: resumes computations from this iteration (assumes the corresponding checkpoint exists here)
         :return: n/a
         """
 
-        if self.optimizer is not None:
-            raise ValueError('Custom optimizers are currently not supported for consensus optimization.\
-             Set the optimizer by name (e.g., in the json configuration) instead')
+        if resume_from_iter is not None:
+            iter_offset = resume_from_iter+1
+            print('Resuming from checkpoint iteration: ' + str(resume_from_iter))
+        else:
+            iter_offset = 0
 
-        self._set_all_still_missing_parameters()
+        for iter_batch in range(iter_offset,self.nr_of_batch_iterations+iter_offset):
+            print('Computing batch iteration ' + str(iter_batch + 1) + ' of ' + str(iter_offset+self.nr_of_batch_iterations))
 
-        # todo: support reading images from file
-        nr_of_images = self.ISource.size()[0]
-        self.nr_of_batches = np.ceil(float(nr_of_images)/float(self.batch_size)).astype('int')
+            all_histories = []
+            current_batch = 0 # there is only one batch, this one
 
-        if not os.path.exists("./checkpoints"):
-            os.makedirs("./checkpoints")
+            current_source_batch = Variable(self.ISource[:, ...].data, requires_grad=False)
+            current_target_batch = Variable(self.ITarget[:, ...].data, requires_grad=False)
+            current_batch_image_size = np.array(current_source_batch.size())
 
-        for iter_batch in range(self.nr_of_batch_iterations):
-            print('Computing batch ' + str(iter_batch) + ' of ' + str(self.nr_of_batch_iterations))
+            # there is not consensus penalty here as this is technically not consensus optimization
+            # todo: could ultimately replace the single scale optimizer; here used to write out checkpoints
+            ssOpt = self._create_single_scale_optimizer(current_batch_image_size, consensus_penalty=False)
+
+            # to make sure we have the model initialized, force parameter installation
+            ssOpt._set_all_still_missing_parameters()
+
+            # this loads the optimizer state and the model state, but here not the self.current_consensus_dual
+            if iter_batch>0:
+                previous_checkpoint_filename = self._get_checkpoint_filename(current_batch, iter_batch - 1)
+                self._custom_single_batch_load_checkpoint(ssOpt, previous_checkpoint_filename)
+
+            ssOpt.set_source_image(current_source_batch)
+            ssOpt.set_target_image(current_target_batch)
+
+            ssOpt.optimize()
+
+            if (current_batch == self.nr_of_batches - 1) and (iter_batch == self.nr_of_batch_iterations - 1):
+                # the last time we run this
+                all_histories.append(ssOpt.get_history())
+
+            current_checkpoint_filename = self._get_checkpoint_filename(current_batch, iter_batch)
+            self._custom_save_checkpoint(ssOpt, current_checkpoint_filename)
+
+            self._add_to_history('batch_history', copy.deepcopy(all_histories))
+
+
+    def _optimize_with_multiple_batches(self, resume_from_iter=None):
+        """
+        Does consensus optimization over multiple batches.
+
+        :param resume_from_iter: resumes computations from this iteration (assumes the corresponding checkpoint exists here)
+        :return: n/a
+        """
+
+        if resume_from_iter is not None:
+            iter_offset = resume_from_iter+1
+            print('Resuming from checkpoint iteration: ' + str(resume_from_iter))
+        else:
+            iter_offset = 0
+
+        for iter_batch in range(iter_offset,self.nr_of_batch_iterations+iter_offset):
+            print('Computing batch iteration ' + str(iter_batch+1) + ' of ' + str(iter_offset+self.nr_of_batch_iterations))
 
             next_consensus_initialized = False
             all_histories = []
@@ -1444,7 +1524,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
             for current_batch in range(self.nr_of_batches):
 
                 from_image = current_batch*self.batch_size
-                to_image = min(nr_of_images,(current_batch+1)*self.batch_size)
+                to_image = min(self.nr_of_images,(current_batch+1)*self.batch_size)
 
                 nr_of_images_in_batch = to_image-from_image
 
@@ -1452,7 +1532,8 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
                 current_target_batch = Variable(self.ITarget[from_image:to_image, ...].data, requires_grad=False)
                 current_batch_image_size = np.array(current_source_batch.size())
 
-                print('Computing image pair batch ' + str(current_batch+1) + ' of ' + str(self.nr_of_batches))
+                print('Computing image pair batch ' + str(current_batch+1) + ' of ' + str(self.nr_of_batches) +
+                      ' of batch iteration ' + str(iter_batch+1) + ' of ' + str(iter_offset+self.nr_of_batch_iterations))
                 print('Image range: [' + str(from_image) + ',' + str(to_image) + ')')
 
                 # create new optimizer
@@ -1506,7 +1587,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
                 # self.current_consensus_state is used as part of the optimization for all optimizations in the batch
                 self._add_scaled_difference_to_state(self.next_consensus_state,
                                                      ssOpt.get_shared_model_parameters(),
-                                                     self.current_consensus_dual,float(nr_of_images_in_batch)/float(nr_of_images))
+                                                     self.current_consensus_dual,float(nr_of_images_in_batch)/float(self.nr_of_images))
 
                 current_checkpoint_filename = self._get_checkpoint_filename(current_batch, iter_batch)
                 self._custom_save_checkpoint(ssOpt,current_checkpoint_filename)
@@ -1514,7 +1595,102 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
             self._add_to_history('batch_history', copy.deepcopy(all_histories))
             self._copy_state(self.current_consensus_state, self.next_consensus_state)
 
+            if self.save_consensus_state_checkpoints:
+                consensus_filename = self._get_consensus_checkpoint_filename(iter_batch)
+                torch.save({'consensus_state':self.current_consensus_state},consensus_filename)
 
+
+    def _get_checkpoint_iter_with_complete_batch(self,start_at_iter):
+
+        if start_at_iter<0:
+            print('Could NOT find a complete checkpoint batch.')
+            return None
+
+        is_complete_batch = True
+        for current_batch in range(self.nr_of_batches):
+            cfilename = self._get_checkpoint_filename(current_batch, start_at_iter)
+            if os.path.isfile(cfilename):
+                print('Checkpoint file: ' + cfilename + " exists.")
+            else:
+                print('Checkpoint file: ' + cfilename + " does NOT exist.")
+                is_complete_batch = False
+                break
+
+        if is_complete_batch:
+            print('Found complete batch for batch iteration ' + str(start_at_iter))
+            return start_at_iter
+        else:
+            return self._get_checkpoint_iter_with_complete_batch(start_at_iter-1)
+
+
+    def _get_last_checkpoint_iteration_from_checkpoint_files(self):
+        """
+        Looks through the checkpoint files and checks which ones were the last saved ones.
+        This allows for picking up the iterations after a completed or terminated optimization.
+        Also checks that the same number of batches are used, otherwise an optimization cannot be resumed
+        from a checkpoint.
+
+        :return: last iteration performed for complete batch
+        """
+
+        print('Attempting to resume optimization from checkpoint data.')
+        print('Searching for existing checkpoint data ...')
+
+        # first find all the computed iters
+        largest_found_iter = None
+
+        current_iter_batch = 0
+        while os.path.isfile(self._get_checkpoint_filename(0,current_iter_batch)):
+            print('Found checkpoint iteration: ' + str(current_iter_batch))
+            largest_found_iter = current_iter_batch
+            current_iter_batch +=1
+
+        if largest_found_iter is None:
+            print('Could not find any checkpoint data from which to resume.')
+            return None
+        else:
+            largest_iter_with_complete_batch = self._get_checkpoint_iter_with_complete_batch(largest_found_iter)
+            return largest_iter_with_complete_batch
+
+
+    def optimize(self):
+
+        """
+        This optimizer performs consensus optimization:
+
+        1) (u_i_shared,u_i_individual)^{k+1} = argmin \sum_i f_i(u_i_shared,u_i_individual) + \sigma/2\|u_i_shared-u_consensus^k-z_i^k\|^2
+        2) (u_consensus)^{k+1} = 1/n\sum_{i=1}^n ((u_i_shared)^{k+1}-z_i^k)
+        3) z_i^{k+1} = z_i^k-((u_i_shared)^{k+1}-u_consensus_{k+1})
+
+        :return: n/a
+        """
+
+        if self.optimizer is not None:
+            raise ValueError('Custom optimizers are currently not supported for consensus optimization.\
+             Set the optimizer by name (e.g., in the json configuration) instead.')
+
+        self._set_all_still_missing_parameters()
+
+        # todo: support reading images from file
+        self.nr_of_images = self.ISource.size()[0]
+        self.nr_of_batches = np.ceil(float(self.nr_of_images)/float(self.batch_size)).astype('int')
+
+        if self.continue_from_last_checkpoint:
+            last_checkpoint_iteration = self._get_last_checkpoint_iteration_from_checkpoint_files()
+
+
+        if self.nr_of_batches==1:
+            compute_as_single_batch = True
+        else:
+            compute_as_single_batch = False
+
+        if not os.path.exists(self.checkpoint_output_directory):
+            os.makedirs(self.checkpoint_output_directory)
+
+        if compute_as_single_batch:
+            self._optimize_as_single_batch(resume_from_iter=last_checkpoint_iteration)
+        else:
+            self._optimize_with_multiple_batches(resume_from_iter=last_checkpoint_iteration)
 
 
 class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
