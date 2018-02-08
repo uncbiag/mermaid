@@ -1639,19 +1639,25 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         # first find all the computed iters
         largest_found_iter = None
 
-        current_iter_batch = 0
-        while os.path.isfile(self._get_checkpoint_filename(0,current_iter_batch)):
-            print('Found checkpoint iteration: ' + str(current_iter_batch))
-            largest_found_iter = current_iter_batch
-            current_iter_batch +=1
+        if self.save_intermediate_checkpoints:
+            current_iter_batch = 0
+            while os.path.isfile(self._get_checkpoint_filename(0,current_iter_batch)):
+                print('Found checkpoint iteration: ' + str(current_iter_batch) + ' : ' + self._get_checkpoint_filename(0,current_iter_batch))
+                largest_found_iter = current_iter_batch
+                current_iter_batch +=1
 
+        else:
+            if os.path.isfile(self._get_checkpoint_filename(0,0)):
+                print('Found checkpoint: ' + str(self._get_checkpoint_filename(0,0)))
+                large_found_iter = 0
+                              
         if largest_found_iter is None:
             print('Could not find any checkpoint data from which to resume.')
             return None
         else:
             largest_iter_with_complete_batch = self._get_checkpoint_iter_with_complete_batch(largest_found_iter)
             return largest_iter_with_complete_batch
-
+                
 
     def optimize(self):
 
