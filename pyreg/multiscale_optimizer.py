@@ -693,6 +693,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.rec_energy = None
         self.rec_similarityEnergy = None
         self.rec_regEnergy = None
+        self.rec_opt_par_loss_energy = None
         self.rec_phiWarped = None
         self.rec_IWarped = None
         self.last_energy = None
@@ -819,6 +820,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         return self.model.get_registration_parameters()
 
+    def set_shared_model_parameters(self,p):
+        """
+        Set only the shared parameters of the model
+
+        :param p: shared registration parameters as an ordered dict
+        :return: n/a
+        """
+
+        self.model.set_shared_registration_parameters(p)
+
     def get_shared_model_parameters(self):
         """
         Returns only the model parameters that are shared between models.
@@ -889,44 +900,50 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             else:
                 self.rec_phiWarped = self.model(self.identityMap, self.ISource, opt_variables )
 
-            loss = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource,
+            loss_overall_energy,sim_energy,reg_energy = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource,
                                   self.model.get_variables_to_transfer_to_loss_function(),
                                   opt_variables )
         else:
             self.rec_IWarped = self.model(self.ISource, opt_variables )
-            loss = self.criterion(self.rec_IWarped, self.ISource, self.ITarget,
+            loss_overall_energy,sim_energy,reg_energy = self.criterion(self.rec_IWarped, self.ISource, self.ITarget,
                                   self.model.get_variables_to_transfer_to_loss_function(),
                                   opt_variables )
 
         # to support consensus optimization we have the option of adding a penalty term
         # based on shared parameters
-        loss = loss + self.compute_optimizer_parameter_loss(self.model.get_shared_registration_parameters())
-
-        loss.backward()
+        opt_par_loss_energy = self.compute_optimizer_parameter_loss(self.model.get_shared_registration_parameters())
+        loss_overall_energy = loss_overall_energy + opt_par_loss_energy
+        loss_overall_energy.backward()
         #torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
 
         self.rec_custom_optimizer_output_string = self.model.get_custom_optimizer_output_string()
         self.rec_custom_optimizer_output_values = self.model.get_custom_optimizer_output_values()
 
-        if self.useMap:
+        self.rec_energy = loss_overall_energy
+        self.rec_similarityEnergy = sim_energy
+        self.rec_regEnergy = reg_energy
+        self.rec_opt_par_loss_energy = opt_par_loss_energy
 
-            if self.iter_count % 1 == 0:
-                self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
-                    self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource, self.model.get_variables_to_transfer_to_loss_function())
-        else:
-            if self.iter_count % 1 == 0:
-                self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
-                    self.rec_IWarped, self.ISource, self.ITarget, self.model.get_variables_to_transfer_to_loss_function())
+        #if self.useMap:
+        #
+        #    if self.iter_count % 1 == 0:
+        #        self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
+        #            self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource, self.model.get_variables_to_transfer_to_loss_function())
+        #else:
+        #    if self.iter_count % 1 == 0:
+        #        self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
+        #            self.rec_IWarped, self.ISource, self.ITarget, self.model.get_variables_to_transfer_to_loss_function())
 
-        return loss
+        return loss_overall_energy
 
-    def analysis(self, energy, similarityEnergy, regEnergy, Warped, custom_optimizer_output_string = '', custom_optimizer_output_values=None):
+    def analysis(self, energy, similarityEnergy, regEnergy, opt_par_energy, phi_or_warped_image, custom_optimizer_output_string ='', custom_optimizer_output_values=None):
         """
         print out the and visualize the result
         :param energy:
         :param similarityEnergy:
         :param regEnergy:
-        :param Warped:
+        :param opt_par_energy
+        :param phi_or_warped_image:
         :return: returns True if termination tolerance was reached, otherwise returns False
         """
 
@@ -937,6 +954,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self._add_to_history('energy',cur_energy[0])
         self._add_to_history('similarity_energy',utils.t2np(similarityEnergy.float())[0])
         self._add_to_history('regularization_energy',utils.t2np(regEnergy.float())[0])
+        self._add_to_history('opt_par_energy',utils.t2np(opt_par_energy.float())[0])
 
         if custom_optimizer_output_values is not None:
             for key in custom_optimizer_output_values:
@@ -948,11 +966,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.rel_f = abs(self.last_energy - cur_energy) / (1 + abs(cur_energy))
             self._add_to_history('relF',self.rel_f[0])
 
-            print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF={relF} {cos}'
+            print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, optParE={optParE}, relF={relF} {cos}'
                   .format(iter=self.iter_count,
                           energy=cur_energy,
                           similarityE=utils.t2np(similarityEnergy.float()),
                           regE=utils.t2np(regEnergy.float()),
+                          optParE=utils.t2np(opt_par_energy.float()),
                           relF=self.rel_f,
                           cos=custom_optimizer_output_string))
 
@@ -963,11 +982,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         else:
             self._add_to_history('relF',None)
-            print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, relF=n/a {cos}'
+            print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, optParE={optParE}, relF=n/a {cos}'
                   .format(iter=self.iter_count,
                           energy=cur_energy,
                           similarityE=utils.t2np(similarityEnergy.float()),
                           regE=utils.t2np(regEnergy.float()),
+                          optParE=utils.t2np(opt_par_energy.float()),
                           cos=custom_optimizer_output_string))
 
         self.last_energy = cur_energy
@@ -978,7 +998,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.useMap and not self.light_analysis_on and self.save_excel:
             if self.LSource is not None:
                 if iter % 4 == 0:
-                    LSource_warped = utils.get_warped_label_map(self.LSource, Warped, self.spacing )
+                    LSource_warped = utils.get_warped_label_map(self.LSource, phi_or_warped_image, self.spacing)
                     LTarget = self.get_target_label()
                     metric_results_dic = get_multi_metric(LSource_warped, LTarget, eval_label_list=None, rm_bg=False)
                     self.recorder.set_batch_based_env(self.get_pair_path(),self.get_batch_id())
@@ -1009,10 +1029,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 else:
                     vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.ISource)
                 if self.useMap:
-                    I1Warped = utils.compute_warped_image_multiNC(self.ISource, Warped, self.spacing)
-                    vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, Warped, visual_param)
+                    I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing)
+                    vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
                 else:
-                    vizReg.show_current_images(iter, self.ISource, self.ITarget, Warped, vizImage, vizName, None, visual_param)
+                    vizReg.show_current_images(iter, self.ISource, self.ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
 
         return False
 
@@ -1112,12 +1132,14 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             if self.useMap:
                 tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy,
-                                                  self.rec_regEnergy, self.rec_phiWarped,
+                                                  self.rec_regEnergy, self.rec_opt_par_loss_energy,
+                                                  self.rec_phiWarped,
                                                   self.rec_custom_optimizer_output_string,
                                                   self.rec_custom_optimizer_output_values)
             else:
                 tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy,
-                                                  self.rec_regEnergy, self.rec_IWarped,
+                                                  self.rec_regEnergy, self.rec_opt_par_loss_energy,
+                                                  self.rec_IWarped,
                                                   self.rec_custom_optimizer_output_string,
                                                   self.rec_custom_optimizer_output_values)
             if tolerance_reached:
@@ -1153,6 +1175,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         self.current_consensus_state = None
         self.current_consensus_dual = None
         self.next_consensus_state = None
+        self.last_shared_state = None
 
         self.model_name = None
         self.add_model_name = None
@@ -1171,11 +1194,16 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         additional_loss = Variable(MyTensor(1).zero_(),requires_grad=False)
         total_number_of_parameters = 1
         for k in shared_model_parameters:
-            total_number_of_parameters *= shared_model_parameters[k].numel()
+            total_number_of_parameters += shared_model_parameters[k].numel()
             additional_loss += ((shared_model_parameters[k]\
                                -self.current_consensus_state[k]\
                                -self.current_consensus_dual[k])**2).sum()
+
+
         additional_loss *= self.sigma/(2.0*total_number_of_parameters)
+
+        #print('sigma=' + str(self.sigma) + '; additional loss = ' + str( additional_loss.data.cpu().numpy()))
+
         return additional_loss
 
     def _set_state_to_zero(self,state):
@@ -1234,6 +1262,10 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.current_consensus_dual is None:
             self.current_consensus_dual = copy.deepcopy(self.current_consensus_state)
             self._set_state_to_zero(self.current_consensus_dual)
+
+        if self.last_shared_state is None:
+            self.last_shared_state = copy.deepcopy(self.current_consensus_state)
+            self._set_state_to_zero(self.last_shared_state)
 
         if self.next_consensus_state is None:
             self.next_consensus_state = copy.deepcopy(self.current_consensus_dual)  # also make it zero
@@ -1301,6 +1333,15 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         sd.update(cd)
         # and now save it
         torch.save(sd,filename)
+
+    def _copy_state(self,state_to,state_from):
+
+        for key in state_to:
+            if state_from.has_key(key):
+                state_to[key].copy_(state_from[key])
+            else:
+                raise ValueError('Could not copy key ' + key)
+
 
     def _set_all_still_missing_parameters(self):
 
@@ -1415,10 +1456,19 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
                 print('Image range: [' + str(from_image) + ',' + str(to_image) + ')')
 
                 # create new optimizer
-                ssOpt = self._create_single_scale_optimizer(current_batch_image_size,consensus_penalty=True)
+                if iter_batch==0:
+                    # do not apply the penalty the first time around
+                    ssOpt = self._create_single_scale_optimizer(current_batch_image_size,consensus_penalty=False)
+                else:
+                    ssOpt = self._create_single_scale_optimizer(current_batch_image_size,consensus_penalty=True)
 
                 # to make sure we have the model initialized, force parameter installation
                 ssOpt._set_all_still_missing_parameters()
+
+                if iter_batch==0:
+                    # in the first round just initialize the shared state with what was computed previously
+                    if self.last_shared_state is not None:
+                        ssOpt.set_shared_model_parameters(self.last_shared_state)
 
                 self._initialize_consensus_variables_if_needed(ssOpt)
 
@@ -1429,6 +1479,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
                 if iter_batch==0:
                     # for the first time, just set the dual to zero
                     self._set_state_to_zero(self.current_consensus_dual)
+                    # load the last
                 else:
                     # this loads the optimizer state and the model state and also self.current_consensus_dual
                     previous_checkpoint_filename = self._get_checkpoint_filename(current_batch, iter_batch-1)
@@ -1445,6 +1496,8 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
                 ssOpt.optimize()
 
+                self._copy_state(self.last_shared_state,ssOpt.get_shared_model_parameters())
+
                 if (current_batch==self.nr_of_batches-1) and (iter_batch==self.nr_of_batch_iterations-1):
                     # the last time we run this
                     all_histories.append( ssOpt.get_history() )
@@ -1459,7 +1512,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
                 self._custom_save_checkpoint(ssOpt,current_checkpoint_filename)
 
             self._add_to_history('batch_history', copy.deepcopy(all_histories))
-            self.current_consensus_state = copy.deepcopy(self.next_consensus_state)
+            self._copy_state(self.current_consensus_state, self.next_consensus_state)
 
 
 

@@ -131,6 +131,21 @@ class RegistrationNet(nn.Module):
         self.sz = sz
         self.spacing = spacing
 
+
+    def set_shared_registration_parameters(self, sd):
+        """
+        Allows to only set the shared registration parameters
+
+        :param sd: dictionary containing the shared parameters
+        :return: n/a
+        """
+
+        cs = self.state_dict()
+
+        for key in sd:
+            if cs.has_key(key):
+               cs[key].copy_(sd[key])
+
     def downsample_registration_parameters(self, desiredSz):
         """
         Method to downsample the registration parameters spatially to a desired size. Should be overwritten by a derived class. 
@@ -544,10 +559,10 @@ class RegistrationImageLoss(RegistrationLoss):
         :param I1_target: target image
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
-        :return: registration energy
+        :return: tuple: overall energy, similarity energy, regularization energy
         """
         energy, sim, reg = self.get_energy(I1_warped, I0_source, I1_target, variables_from_forward_model, variables_from_optimizer)
-        return energy
+        return energy, sim, reg
 
 
 class RegistrationMapLoss(RegistrationLoss):
@@ -613,10 +628,10 @@ class RegistrationMapLoss(RegistrationLoss):
         :param lowres_I0: for map with reduced resolution this is the downsampled source image, may be needed to compute the regularization energy
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
-        :return: returns the value of the loss function (i.e., the registration energy)
+        :return: tuple: overall energy, similarity energy, regularization energy
         """
         energy, sim, reg = self.get_energy(phi0, phi1, I0_source, I1_target, lowres_I0, variables_from_forward_model, variables_from_optimizer)
-        return energy
+        return energy,sim,reg
 
 
 class SVFImageLoss(RegistrationImageLoss):
