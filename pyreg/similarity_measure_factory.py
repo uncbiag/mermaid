@@ -144,7 +144,8 @@ class SSDSimilarity(SimilarityMeasure):
         """
 
         # TODO: This is to avoid a current pytorch bug 0.3.0 which cannot properly deal with infinity or NaN
-        return AdaptVal((utils.remove_infs_from_variable((I0- I1) ** 2)).sum() / (self.sigma ** 2) * self.volumeElement)
+        return AdaptVal(utils.remove_infs_from_variable(((I0 - I1) ** 2).sum() / (self.sigma ** 2) * self.volumeElement))
+
         #return AdaptVal(((I0 - I1) ** 2).sum() / (self.sigma ** 2) * self.volumeElement)
 
 
