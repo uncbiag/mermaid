@@ -25,17 +25,23 @@ except ImportError:
 import pandas as pd
 
 
-def remove_infs_from_variable(v):
+def remove_infs_from_variable(v,reduction_factor=1.0):
     # 32 - bit floating point: torch.FloatTensor, torch.cuda.FloatTensor
     # 64 - bit floating point: torch.DoubleTensor, torch.cuda.DoubleTensor
     # 16 - bit floating point: torch.HalfTensor, torch.cuda.HalfTensor
 
     if type(v.data)==torch.FloatTensor or type(v.data)==torch.cuda.FloatTensor:
-        return torch.clamp(v,min=np.asscalar(np.finfo('float32').min),max=np.asscalar(np.finfo('float32').max))
+        return torch.clamp(v,
+                           min=(np.asscalar(np.finfo('float32').min))/reduction_factor,
+                           max=(np.asscalar(np.finfo('float32').max))/reduction_factor)
     elif type(v.data)==torch.DoubleTensor or type(v.data)==torch.cuda.DoubleTensor:
-        return torch.clamp(v,min=np.asscalar(np.finfo('float64').min),max=np.asscalar(np.finfo('float64').max))
+        return torch.clamp(v,
+                           min=(np.asscalar(np.finfo('float64').min))/reduction_factor,
+                           max=(np.asscalar(np.finfo('float64').max))/reduction_factor)
     elif type(v.data)==torch.HalfTensor or type(v.data)==torch.cuda.HalfTensor:
-        return torch.clamp(v,min=np.asscalar(np.finfo('float16').min),max=np.asscalar(np.finfo('float16').max))
+        return torch.clamp(v,
+                           min=(np.asscalar(np.finfo('float16').min))/reduction_factor,
+                           max=(np.asscalar(np.finfo('float16').max))/reduction_factor)
     else:
         raise ValueError('Unknown data type: ' + str( type(v.data)))
 
