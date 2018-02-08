@@ -924,7 +924,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         total_number_of_parameters = 1
         par_penalty = Variable(MyTensor(1).zero_(),requires_grad=False)
         for p in self.ws.parameters():
-            total_number_of_parameters *= p.numel()
+            total_number_of_parameters += p.numel()
             par_penalty += (p ** 2).sum()
 
         par_penalty *= self.network_penalty/total_number_of_parameters
