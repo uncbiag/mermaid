@@ -194,6 +194,6 @@ v.backward(q)
 
 torch.set_num_threads(8)
 
-test = mygradcheck(ce.FourierMultiGaussianConvolution(gaussian_fourier_filter_generator,True),
+test = mygradcheck(ce.FourierMultiGaussianConvolution(gaussian_fourier_filter_generator,True,True),
                  (m, stds, weights ) , eps=1e-6, atol=1e-4)
 print(test)
