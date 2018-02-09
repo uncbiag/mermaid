@@ -622,6 +622,8 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         self.start_optimize_over_smoother_parameters_at_iteration = \
             params[('start_optimize_over_smoother_parameters_at_iteration', 0, 'Does not optimize the parameters before this iteration')]
 
+        self.omt_power = params[('omt_power',2.0,'Power for the optimal mass transport (i.e., to which power distances are penalized')]
+        """optimal mass transport power"""
 
     def get_default_multi_gaussian_weights(self):
         # todo: check, should it really return this?
@@ -746,7 +748,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         # todo: check that this is properly handled for the learned optimizer (i.e., as a variable for optimization opposed to a constant)
         max_std = torch.max(multi_gaussian_stds)
         for i, s in enumerate(multi_gaussian_stds):
-            penalty += weights[i] * ((s - max_std) ** 2)
+            penalty += weights[i] * ((s - max_std) ** self.omt_power)
 
         return penalty
 
