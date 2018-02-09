@@ -940,7 +940,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         return loss_overall_energy
 
-    def analysis(self, energy, similarityEnergy, regEnergy, opt_par_energy, phi_or_warped_image, custom_optimizer_output_string ='', custom_optimizer_output_values=None):
+    def analysis(self, energy, similarityEnergy, regEnergy, opt_par_energy, phi_or_warped_image, custom_optimizer_output_string ='', custom_optimizer_output_values=None, force_visualization=False):
         """
         print out the and visualize the result
         :param energy:
@@ -948,8 +948,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param regEnergy:
         :param opt_par_energy
         :param phi_or_warped_image:
-        :return: returns True if termination tolerance was reached, otherwise returns False
+        :return: returns tuple: first entry True if termination tolerance was reached, otherwise returns False; second entry if the image was visualized
         """
+
+        was_visualized = False
+        reached_tolerance = False
 
         cur_energy = utils.t2np(energy.float())
         # energy analysis
@@ -970,7 +973,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.rel_f = abs(self.last_energy - cur_energy) / (1 + abs(cur_energy))
             self._add_to_history('relF',self.rel_f[0])
 
-            print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, optParE={optParE}, relF={relF} {cos}'
+            print('Iter {iter}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF={relF} {cos}'
                   .format(iter=self.iter_count,
                           energy=cur_energy,
                           similarityE=utils.t2np(similarityEnergy.float()),
@@ -982,11 +985,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             # check if relative convergence tolerance is reached
             if self.rel_f < self.rel_ftol:
                 print('Reached relative function tolerance of = ' + str(self.rel_ftol))
-                return True
+                reached_tolerance =  True
 
         else:
             self._add_to_history('relF',None)
-            print('Iter {iter}: E={energy}, similarityE={similarityE}, regE={regE}, optParE={optParE}, relF=n/a {cos}'
+            print('Iter {iter}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF=n/a {cos}'
                   .format(iter=self.iter_count,
                           energy=cur_energy,
                           similarityE=utils.t2np(similarityEnergy.float()),
@@ -1027,7 +1030,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             else:
                 visual_param['save_fig'] = False
 
-            if (iter % self.visualize_step == 0) or (iter==self.nrOfIterations-1):
+            if (iter % self.visualize_step == 0) or (iter==self.nrOfIterations-1) or force_visualization:
+                was_visualized = True
                 if self.useMap and self.mapLowResFactor is not None:
                     vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.lowResISource)
                 else:
@@ -1038,7 +1042,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 else:
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
 
-        return False
+        return reached_tolerance,was_visualized
 
     def _get_optimizer_instance(self):
 
@@ -1146,21 +1150,29 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 self._closure()
 
             if self.useMap:
-                tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy,
-                                                  self.rec_regEnergy, self.rec_opt_par_loss_energy,
-                                                  self.rec_phiWarped,
-                                                  self.rec_custom_optimizer_output_string,
-                                                  self.rec_custom_optimizer_output_values)
+                vis_arg = self.rec_phiWarped
             else:
-                tolerance_reached = self.analysis(self.rec_energy, self.rec_similarityEnergy,
-                                                  self.rec_regEnergy, self.rec_opt_par_loss_energy,
-                                                  self.rec_IWarped,
-                                                  self.rec_custom_optimizer_output_string,
-                                                  self.rec_custom_optimizer_output_values)
+                vis_arg = self.rec_IWarped
+
+            tolerance_reached,was_visualized = self.analysis(self.rec_energy, self.rec_similarityEnergy,
+                                              self.rec_regEnergy, self.rec_opt_par_loss_energy,
+                                              vis_arg,
+                                              self.rec_custom_optimizer_output_string,
+                                              self.rec_custom_optimizer_output_values)
+
 
             if tolerance_reached or could_not_find_successful_step:
                 if tolerance_reached:
                     print('Terminating optimization, because the desired tolerance was reached.')
+
+                # force the output of the last image in this case, if it has not been visualized previously
+                if not was_visualized and (self.visualize or self.save_fig):
+                    _, _ = self.analysis(self.rec_energy, self.rec_similarityEnergy,
+                                              self.rec_regEnergy, self.rec_opt_par_loss_energy,
+                                              vis_arg,
+                                              self.rec_custom_optimizer_output_string,
+                                              self.rec_custom_optimizer_output_values,
+                                              force_visualization=True)
                 break
 
             self.iter_count = iter+1
@@ -1683,7 +1695,8 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
         if self.continue_from_last_checkpoint:
             last_checkpoint_iteration = self._get_last_checkpoint_iteration_from_checkpoint_files()
-
+        else:
+            last_checkpoint_iteration = None
 
         if self.nr_of_batches==1:
             compute_as_single_batch = True

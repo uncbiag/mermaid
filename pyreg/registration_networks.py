@@ -605,9 +605,8 @@ class RegistrationMapLoss(RegistrationLoss):
                 print( 'Max disp = ' + str( utils.t2np( dispMax )))
             sz = dispSqr.size()
 
-            # needs to be limited based on the size of the array, as we sum later, otherwise overflow may occur in pytorch
             # todo: remove once pytorch can properly deal with infinite values
-            maxDispSqr = utils.remove_infs_from_variable(dispSqr,np.prod(np.array(sz))).max() # required to shield this from inf during the optimization
+            maxDispSqr = utils.remove_infs_from_variable(dispSqr).max() # required to shield this from inf during the optimization
 
             dispPenalty = (torch.max((maxDispSqr - self.max_displacement_sqr),
                                      Variable(MyTensor(sz).zero_(), requires_grad=False))).sum()
