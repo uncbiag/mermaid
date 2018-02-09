@@ -1082,14 +1082,29 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 if self.last_successful_step_size_taken is not None:
                     desired_lr = self.last_successful_step_size_taken
                 else:
-                    desired_lr = 0.25
-                opt_instance = torch.optim.SGD(self.model.parameters(), lr=desired_lr, momentum=0.9, dampening=0, weight_decay=0, nesterov=True)
+                    desired_lr = self.params['optimizer']['sgd'][('lr',0.001,'desired learning rate')]
+                sgd_momentum = self.params['optimizer']['sgd'][('momentum',0.9,'sgd momentum')]
+                sgd_dampening = self.params['optimizer']['sgd'][('dampening',0.0,'sgd dampening')]
+                sgd_weight_decay = self.params['optimizer']['sgd'][('weight_decay',0.0,'sgd weight decay')]
+                sgd_nesterov = self.params['optimizer']['sgd'][('nesterov',True,'use Nesterove scheme')]
+                opt_instance = torch.optim.SGD(self.model.parameters(), lr=desired_lr,
+                                               momentum=sgd_momentum,
+                                               dampening=sgd_dampening,
+                                               weight_decay=sgd_weight_decay,
+                                               nesterov=sgd_nesterov)
+                return opt_instance
             elif self.optimizer_name == 'adam':
                 if self.last_successful_step_size_taken is not None:
                     desired_lr = self.last_successful_step_size_taken
                 else:
-                    desired_lr = 0.0025
-                opt_instance = torch.optim.Adam(self.model.parameters(), lr=desired_lr, betas=(0.9, 0.999), eps=self.rel_ftol, weight_decay=0)
+                    desired_lr = self.params['optimizer']['adam'][('lr',0.001,'desired learning rate')]
+                adam_betas = self.params['optimizer']['adam'][('betas',[0.9,0.999],'adam betas')]
+                adam_eps = self.params['optimizer']['adam'][('eps',self.rel_ftol,'adam eps')]
+                adam_weight_decay = self.params['optimizer']['adam'][('weight_decay',0.0,'adam weight decay')]
+                opt_instance = torch.optim.Adam(self.model.parameters(), lr=desired_lr,
+                                                betas=adam_betas,
+                                                eps=adam_eps,
+                                                weight_decay=adam_weight_decay)
                 return opt_instance
             else:
                 raise ValueError('Optimizer = ' + str(self.optimizer_name) + ' not yet supported')
