@@ -193,12 +193,12 @@ class ConsistentWeightedSmoothingModel(nn.Module):
         # Since the smoothing will be the same for all spatial directions (for a velocity field),
         # this basically amounts to cutting out the channels; i.e., multi_v x batch x X x Y
         sz_weight = list(sz_mv)
-        sz_weight = sz_weight[0:2] + sz_weight[3:]
+        sz_weight = [sz_weight[1]] + [sz_weight[0]] + sz_weight[3:]
 
         # if the weights should be stored (for debugging), create the tensor to store them here
         if retain_weights and self.computed_weights is None:
             print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')
-            # create storage; size v x batch x X x Y
+            # create storage; batch x size v x X x Y
             self.computed_weights = torch.FloatTensor(*sz_weight)
 
         # the input to the network is simply the image

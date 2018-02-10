@@ -39,10 +39,10 @@ def get_image_range(im_from,im_to):
     return f
 
 # load a bunch of images as source
-I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(get_image_range(0,20))
+I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(get_image_range(0,25))
 sz = np.array(I0.shape)
 # and a bunch of images as target images
-I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(20,40))
+I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(get_image_range(25,50))
 
 assert( np.all(spacing0==spacing1) )
 
