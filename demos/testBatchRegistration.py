@@ -53,10 +53,10 @@ reg = si.RegisterImagePair()
 if True:
     reg.register_images(I0,I1,spacing0,
                     model_name='svf_scalar_momentum_map',
-                    nr_of_iterations=100,
-                    visualize_step=20,
+                    nr_of_iterations=300,
+                    visualize_step=10,
                     map_low_res_factor=0.5,
-                    rel_ftol=1e-6,
+                    rel_ftol=1e-15,
                     json_config_out_filename='testBatchNewerSmoother.json',
                     use_consensus_optimization=True,
                     params='testBatchNewerSmoother.json')

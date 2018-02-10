@@ -692,6 +692,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
+        self.use_step_size_scheduler = self.params['optimizer'][('use_step_size_scheduler',False,'If set to True the step sizes are reduced if no progress is made')]
+
         self.rec_energy = None
         self.rec_similarityEnergy = None
         self.rec_regEnergy = None
@@ -1145,12 +1147,25 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.last_energy = None
         could_not_find_successful_step = False
 
+        if self.use_step_size_scheduler:
+            self.params['optimizer'][('scheduler', {}, 'parameters for the ReduceLROnPlateau scheduler')]
+            scheduler_verbose = self.params['optimizer']['scheduler'][('verbose',True,'if True prints out changes in learning rate')]
+            scheduler_factor = self.params['optimizer']['scheduler'][('factor',0.5,'reduction factor')]
+            scheduler_patience = self.params['optimizer']['scheduler'][('patience',10,'how many steps without reduction before LR is changed')]
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_instance, 'min',
+                                                                   verbose=scheduler_verbose,
+                                                                   factor=scheduler_factor,
+                                                                   patience=scheduler_patience)
+
         for iter in range(self.nrOfIterations):
 
             # take a step of the optimizer
             # for p in self.optimizer_instance._params:
             #     p.data = p.data.float()
-            self.optimizer_instance.step(self._closure)
+            current_loss = self.optimizer_instance.step(self._closure)
+            if self.use_step_size_scheduler:
+                scheduler.step(current_loss.data[0])
+
             if hasattr(self.optimizer_instance,'last_step_size_taken'):
                 self.last_successful_step_size_taken = self.optimizer_instance.last_step_size_taken()
 
