@@ -114,8 +114,8 @@ history = d['history']
 spacing = d['spacing']
 params = d['params']
 
-nr_of_batches = 4
-nr_of_batch_iters = 10
+nr_of_batches = 1
+nr_of_batch_iters = 1
 
 c_filename = get_checkpoint_filename(0, nr_of_batch_iters-1)
 q = torch.load(c_filename)
@@ -149,6 +149,7 @@ lowResSize = lam.size()
 stds = params['model']['registration_model']['forward_model']['smoother']['multi_gaussian_stds']
 max_std = max(stds)
 
+single_batch = True
 visualize_filters = True
 visualize_smooth_vector_fields = False
 visualize_weights = True
@@ -164,7 +165,10 @@ lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacin
 smoother_params = params['model']['registration_model']['forward_model']
 
 smoother = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('learned_multiGaussianCombination',smoother_params)
-smoother.set_state_dict(d['registration_pars']['consensus_state'])
+if single_batch:
+    smoother.set_state_dict(d['registration_pars']['registration_pars'][0]['model']['state'])
+else:
+    smoother.set_state_dict(d['registration_pars']['consensus_state'])
 smoother.set_debug_retain_computed_local_weights(True)
 
 m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam,lowResI0,lowResSize,lowResSpacing)
@@ -228,7 +232,7 @@ if False:
 if visualize_weights:
 
     for n in range(nr_of_images):
-        os = compute_overall_std(local_weights[:, n, ...], stds )
+        os = compute_overall_std(local_weights[:,n, ...], stds )
 
         plt.clf()
 
@@ -283,7 +287,7 @@ if visualize_weights:
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
-        os = compute_overall_std(local_weights[:, n, ...], stds )
+        os = compute_overall_std(local_weights[:,n, ...], stds )
 
         cmin = os.numpy()[lowRes_source_mask==1].min()
         cmax = os.numpy()[lowRes_source_mask==1].max()
@@ -298,17 +302,20 @@ if visualize_weights:
 
 
 if visualize_filters:
-    w1 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.0.weight']
-    b1 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.0.bias']
-    w2 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.1.weight']
-    b2 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.1.bias']
+    if single_batch:
+        w1 = d['registration_pars']['registration_pars'][0]['model']['state']['weighted_smoothing_net.conv_layers.0.weight']
+    else:
+        w1 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.0.weight']
+        b1 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.0.bias']
+        w2 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.1.weight']
+        b2 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.1.bias']
 
     visualize_filter_grid(w1,'w1',print_figures,'filters_w1_consensus.pdf')
     #visualize_filter(w2,'w2',print_figures)
 
-    for batch in range(4):
+    for batch in range(1):
         #for iter in range(4):
-        for iter in range(9,10):
+        for iter in range(0,1):
             c_filename = get_checkpoint_filename(batch,iter)
             cd = torch.load(c_filename)
             cw1 = cd['model']['state']['weighted_smoothing_net.conv_layers.0.weight']

@@ -812,7 +812,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.default_weight_penalty = params[('default_weight_penalty', 1.0, 'factor by which the deviation from the dafault weights is penalized')]
         """penalty factor for deviation from default weights"""
 
-        self.network_penalty = params[('network_penalty', 1.0, 'factor by which the L2 norm of network weights is penalized')]
+        self.network_penalty = params[('network_penalty', 0.0, 'factor by which the L2 norm of network weights is penalized')]
         """penalty factor for L2 norm of network weights"""
 
         self.encourage_spatial_weight_consistency = params[('encourage_spatial_weight_consistency',True,'If True tries adds an averaging term in the network to make weights spatially consistent')]
