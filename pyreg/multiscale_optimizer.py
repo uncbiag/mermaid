@@ -1240,6 +1240,9 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         self.continue_from_last_checkpoint = cparams[('continue_from_last_checkpoint',False,'If true then iterations are resumed from last checkpoint. Allows restarting an optimization')]
         """allows restarting an optimization by continuing from the last checkpoint"""
 
+        self.load_optimizer_state_from_checkpoint = cparams[('load_optimizer_state_from_checkpoint',True,'If set to False only the state of the model is loaded when resuming from a checkpoint')]
+        """If set to False only the state of the model is loaded when resuming from a checkpoint"""
+
         self.nr_of_batches = None
         self.nr_of_images = None
 
@@ -1393,7 +1396,8 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
     def _custom_single_batch_load_checkpoint(self,ssOpt,filename):
         d = torch.load(filename)
-        ssOpt.load_checkpoint_dict(d,load_optimizer_state=True)
+        if self.load_optimizer_state_from_checkpoint:
+            ssOpt.load_checkpoint_dict(d,load_optimizer_state=True)
 
     def _custom_save_checkpoint(self,ssOpt,filename):
         sd = ssOpt.get_checkpoint_dict()

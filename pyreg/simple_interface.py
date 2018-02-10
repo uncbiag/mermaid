@@ -114,7 +114,7 @@ class RegisterImagePair(object):
                                    use_consensus_optimization=False,
                                    checkpoint_dir='checkpoints',
                                    resume_from_last_checkpoint=False,
-                                   optimizer_name='lbfgs_ls',
+                                   optimizer_name=None,
                                    params=None):
         """
         Registers two images. Only ISource, ITarget, spacing, and model_name need to be specified.
@@ -184,7 +184,7 @@ class RegisterImagePair(object):
                         use_consensus_optimization=False,
                         checkpoint_dir=None,
                         resume_from_last_checkpoint=False,
-                        optimizer_name='lbfgs_ls',
+                        optimizer_name=None,
                         params=None):
         """
         Registers two images. Only ISource, ITarget, spacing, and model_name need to be specified.
@@ -234,7 +234,8 @@ class RegisterImagePair(object):
             self.params['model']['deformation']['use_map'] = self.useMap
             self.params['model']['registration_model']['type'] = model_name
 
-            self.params['optimizer']['name'] = optimizer_name
+            if optimizer_name is not None:
+                self.params['optimizer']['name'] = optimizer_name
 
             if nr_of_iterations is not None:
                 self.params['optimizer']['single_scale']['nr_of_iterations'] = nr_of_iterations
