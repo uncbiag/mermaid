@@ -232,7 +232,7 @@ if False:
 if visualize_weights:
 
     for n in range(nr_of_images):
-        os = compute_overall_std(local_weights[:,n, ...], stds )
+        os = compute_overall_std(local_weights[n,...], stds )
 
         plt.clf()
 
@@ -279,15 +279,15 @@ if visualize_weights:
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            clw = local_weights[g, n, ...].numpy()
+            clw = local_weights[n,g, ...].numpy()
             cmin = clw[lowRes_source_mask==1].min()
             cmax = clw[lowRes_source_mask==1].max()
-            plt.imshow((local_weights[g, n, ...]).numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
+            plt.imshow((local_weights[n,g, ...]).numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
             plt.title("{:.2f}".format(stds[g]))
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
-        os = compute_overall_std(local_weights[:,n, ...], stds )
+        os = compute_overall_std(local_weights[n,...], stds )
 
         cmin = os.numpy()[lowRes_source_mask==1].min()
         cmax = os.numpy()[lowRes_source_mask==1].max()
