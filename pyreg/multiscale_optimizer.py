@@ -692,7 +692,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
-        self.use_step_size_scheduler = self.params['optimizer'][('use_step_size_scheduler',False,'If set to True the step sizes are reduced if no progress is made')]
+        self.use_step_size_scheduler = self.params['optimizer'][('use_step_size_scheduler',True,'If set to True the step sizes are reduced if no progress is made')]
 
         self.rec_energy = None
         self.rec_similarityEnergy = None
@@ -1224,9 +1224,9 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         self.sigma = cparams[('sigma', 1.0, 'sigma/2 is multiplier for squared augmented Lagrangian penalty')]
         """Multiplier for squared augmented Lagrangian penalty"""
 
-        self.nr_of_batch_iterations = cparams[('nr_of_batch_iterations', 5, 'how many iterations for consensus; i.e., how often to iterate over the entire dataset')]
+        self.nr_of_batch_iterations = cparams[('nr_of_batch_iterations', 1, 'how many iterations for consensus; i.e., how often to iterate over the entire dataset')]
         """how many iterations for consensus; i.e., how often to iterate over the entire dataset"""
-        self.batch_size = cparams[('batch_size',1,'how many images per batch')]
+        self.batch_size = cparams[('batch_size',100,'how many images per batch (if set larger or equal to the number of images, it will be processed as one batch')]
         """how many images per batch"""
         self.save_intermediate_checkpoints = cparams[('save_intermediate_checkpoints',False,'when set to True checkpoints are retained for each batch iterations')]
         """when set to True checkpoints are retained for each batch iterations"""
@@ -1237,7 +1237,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         self.save_consensus_state_checkpoints = cparams[('save_consensus_state_checkpoints',True,'saves the current consensus state; typically only the individual states are saved as checkpoints')]
         """saves the current consensus state; typically only the individual states are saved as checkpoints"""
 
-        self.continue_from_last_checkpoint = cparams[('continue_from_last_checkpoint',True,'If true then iterations are resumed from last checkpoint. Allows restarting an optimization')]
+        self.continue_from_last_checkpoint = cparams[('continue_from_last_checkpoint',False,'If true then iterations are resumed from last checkpoint. Allows restarting an optimization')]
         """allows restarting an optimization by continuing from the last checkpoint"""
 
         self.nr_of_batches = None
@@ -1691,7 +1691,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             if os.path.isfile(self._get_checkpoint_filename(0,0)):
                 print('Found checkpoint: ' + str(self._get_checkpoint_filename(0,0)))
-                large_found_iter = 0
+                largest_found_iter = 0
                               
         if largest_found_iter is None:
             print('Could not find any checkpoint data from which to resume.')

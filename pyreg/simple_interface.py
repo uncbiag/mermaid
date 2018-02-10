@@ -108,11 +108,13 @@ class RegisterImagePair(object):
                                    map_low_res_factor=None,
                                    rel_ftol=None,
                                    smoother_type=None,
-                                   optimize_over_smoother_parameters=None,
                                    json_config_out_filename=None,
                                    visualize_step=5,
                                    use_multi_scale=False,
                                    use_consensus_optimization=False,
+                                   checkpoint_dir='checkpoints',
+                                   resume_from_last_checkpoint=False,
+                                   optimizer_name='lbfgs_ls',
                                    params=None):
         """
         Registers two images. Only ISource, ITarget, spacing, and model_name need to be specified.
@@ -127,11 +129,13 @@ class RegisterImagePair(object):
         :param map_low_res_factor: allows for parameterization of the registration at lower resolution than the image (0,1]
         :param rel_ftol: relative function tolerance for optimizer
         :param smoother_type: type of smoother (e.g., 'gaussian' or 'multiGaussian')
-        :param optimize_over_smoother_parameters: for adaptive smoothers, weights/parameters will be optimized over if set to True
         :param json_config_out_filename: output file name for the used configuration.
         :param visualize_step: step at which the solution is visualized; if set to None, no visualizations will be created
         :param use_multi_scale: if set to True a multi-scale solver will be used
         :param use_consensus_optimization: if set to True, consensus optimization is used (i.e., independently optimized batches with the contraint that shared parameters are the same)
+        :param checkpoint_dir: directory in which the checkpoints are written for consensus optimization
+        :param resume_from_last_checkpoint: for consensus optimizer, resumes optimization from last checkpoint
+        :param optimizer_name: name of the optimizer lbfgs_ls|adam|sgd
         :param params: parameter structure to pass settings or filename to load the settings from file.
         :return: n/a
         """
@@ -158,11 +162,13 @@ class RegisterImagePair(object):
                       map_low_res_factor=map_low_res_factor,
                       rel_ftol=rel_ftol,
                       smoother_type=smoother_type,
-                      optimize_over_smoother_parameters=optimize_over_smoother_parameters,
                       json_config_out_filename=json_config_out_filename,
                       visualize_step=visualize_step,
                       use_multi_scale=use_multi_scale,
                       use_consensus_optimization=use_consensus_optimization,
+                      checkpoint_dir=checkpoint_dir,
+                      resume_from_last_checkpoint=resume_from_last_checkpoint,
+                      optimizer_name=optimizer_name,
                       params=params)
 
     def register_images(self,ISource,ITarget,spacing,model_name,
@@ -172,11 +178,13 @@ class RegisterImagePair(object):
                         map_low_res_factor=None,
                         rel_ftol=None,
                         smoother_type=None,
-                        optimize_over_smoother_parameters=None,
                         json_config_out_filename=None,
                         visualize_step=5,
                         use_multi_scale=False,
                         use_consensus_optimization=False,
+                        checkpoint_dir=None,
+                        resume_from_last_checkpoint=False,
+                        optimizer_name='lbfgs_ls',
                         params=None):
         """
         Registers two images. Only ISource, ITarget, spacing, and model_name need to be specified.
@@ -192,11 +200,13 @@ class RegisterImagePair(object):
         :param map_low_res_factor: allows for parameterization of the registration at lower resolution than the image (0,1]
         :param rel_ftol: relative function tolerance for optimizer
         :param smoother_type: type of smoother (e.g., 'gaussian' or 'multiGaussian')
-        :param optimize_over_smoother_parameters: for adaptive smoothers, weights/parameters will be optimized over if set to True
         :param json_config_out_filename: output file name for the used configuration.
         :param visualize_step: step at which the solution is visualized; if set to None, no visualizations will be created
         :param use_multi_scale: if set to True a multi-scale solver will be used
         :param use_consensus_optimization: if set to True, consensus optimization is used (i.e., independently optimized batches with the contraint that shared parameters are the same)
+        :param checkpoint_dir: directory in which the checkpoints are written for consensus optimization
+        :param resume_from_last_checkpoint: for consensus optimizer, resumes optimization from last checkpoint
+        :param optimizer_name: name of the optimizer lbfgs_ls|adam|sgd
         :param params: parameter structure to pass settings or filename to load the settings from file.
         :return: n/a
         """
@@ -224,6 +234,8 @@ class RegisterImagePair(object):
             self.params['model']['deformation']['use_map'] = self.useMap
             self.params['model']['registration_model']['type'] = model_name
 
+            self.params['optimizer']['name'] = optimizer_name
+
             if nr_of_iterations is not None:
                 self.params['optimizer']['single_scale']['nr_of_iterations'] = nr_of_iterations
 
@@ -242,8 +254,11 @@ class RegisterImagePair(object):
             if smoother_type is not None:
                 self.params['model']['registration_model']['forward_model']['smoother']['type'] = smoother_type
 
-            if optimize_over_smoother_parameters is not None:
-                self.params['model']['registration_model']['forward_model']['smoother']['optimize_over_smoother_parameters'] = optimize_over_smoother_parameters
+            if (checkpoint_dir is not None) and use_consensus_optimization:
+                self.params['optimizer']['consensus_settings']['checkpoint_output_directory'] = checkpoint_dir
+
+            if resume_from_last_checkpoint and use_consensus_optimization:
+                self.params['optimizer']['consensus_settings']['continue_from_last_checkpoint'] = True
 
             if use_multi_scale:
                 if use_consensus_optimization:
