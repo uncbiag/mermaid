@@ -150,7 +150,7 @@ stds = params['model']['registration_model']['forward_model']['smoother']['multi
 max_std = max(stds)
 
 single_batch = True
-visualize_filters = True
+visualize_filters = False
 visualize_smooth_vector_fields = False
 visualize_weights = True
 visualize_energies = False
