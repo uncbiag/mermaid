@@ -199,8 +199,13 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         feature_num = self.params[('number_of_features_in_first_layer', 32, 'number of features in the first encoder layer (64 in quicksilver)')]
         use_dropout= self.params[('use_dropout',False,'use dropout for the layers')]
         self.use_separate_decoders_per_gaussian = self.params[('use_separate_decoders_per_gaussian',True,'if set to true separte decoder branches are used for each Gaussian')]
+        self.use_momentum_as_input = self.params[('use_momentum_as_input',True,'If true, uses the image and the momentum as input')]
 
-        self.encoder_1 = encoder_block_2d(1, feature_num, use_dropout)
+        if self.use_momentum_as_input:
+            self.encoder_1 = encoder_block_2d(self.get_number_of_input_channels(nr_of_image_channels,dim), feature_num, use_dropout)
+        else:
+            self.encoder_1 = encoder_block_2d(1, feature_num, use_dropout)
+
         self.encoder_2 = encoder_block_2d(feature_num, feature_num * 2, use_dropout)
 
         # todo: maybe have one decoder for each Gaussian here.
@@ -218,11 +223,23 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             self.decoder_2 = decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, last_block=True)  # 3?
 
 
-    def forward(self, multi_smooth_v, I, global_multi_gaussian_weights,
+    def get_number_of_input_channels(self, nr_of_image_channels, dim):
+        """
+        legacy; to support velocity fields as input channels
+        currently only returns the number of image channels, but if something else would be used as
+        the network input, would need to return the total number of inputs
+        """
+        if self.use_momentum_as_input:
+            return self.nr_of_image_channels + dim
+        else:
+            return self.nr_of_image_channels
+
+    def forward(self, multi_smooth_v, I, m, global_multi_gaussian_weights,
                 encourage_spatial_weight_consistency=True, retain_weights=False):
 
         # format of multi_smooth_v is multi_v x batch x channels x X x Y
         # (channels here are the vector field components)
+        # I is the image, m is the momentum. multi_smooth_v is the momentum smoothed with the various kernels
 
         """
         First make sure that the multi_smooth_v has the correct dimension.
@@ -250,7 +267,11 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             self.computed_weights = torch.FloatTensor(*sz_weight)
 
         # here is the actual network; maybe abstract this out later
-        x=I
+        if self.use_momentum_as_input:
+            x = torch.cat([I,m],dim=1)
+        else:
+            # the input to the network is simply the image
+            x = I
 
         encoder_output = self.encoder_2(self.encoder_1(x))
 
@@ -309,6 +330,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
                                                                      params=params)
 
         self.kernel_sizes = self.params[('kernel_sizes',[7,7],'size of the convolution kernels')]
+        self.use_momentum_as_input = self.params[('use_momentum_as_input',True,'If true, uses the image and the momentum as input')]
 
         # check that all the kernel-size are odd
         for ks in self.kernel_sizes:
@@ -332,6 +354,18 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         # todo: this would allow removing dim and nr_of_image_channels from interface
         # todo: because it could be compute on the fly when forward is executed
         self._init(self.nr_of_image_channels,dim=self.dim)
+
+
+    def get_number_of_input_channels(self, nr_of_image_channels, dim):
+        """
+        legacy; to support velocity fields as input channels
+        currently only returns the number of image channels, but if something else would be used as
+        the network input, would need to return the total number of inputs
+        """
+        if self.use_momentum_as_input:
+            return self.nr_of_image_channels + dim
+        else:
+            return self.nr_of_image_channels
 
     def _init(self,nr_of_image_channels,dim):
         """
@@ -366,11 +400,12 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
 
         self._initialize_weights()
 
-    def forward(self, multi_smooth_v, I, global_multi_gaussian_weights,
+    def forward(self, multi_smooth_v, I, m, global_multi_gaussian_weights,
                 encourage_spatial_weight_consistency=True, retain_weights=False):
 
         # format of multi_smooth_v is multi_v x batch x channels x X x Y
         # (channels here are the vector field components)
+        # I is the image, m is the momentum. multi_smooth_v is the momentum smoothed with the various kernels
 
         """
         First make sure that the multi_smooth_v has the correct dimension.
@@ -397,8 +432,12 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             # create storage; batch x size v x X x Y
             self.computed_weights = torch.FloatTensor(*sz_weight)
 
-        # the input to the network is simply the image
-        x = I
+
+        if self.use_momentum_as_input:
+            x = torch.cat([I,m],dim=1)
+        else:
+            # the input to the network is simply the image
+            x = I
 
         # now let's apply all the convolution layers, until the last
         # (because the last one is not relu-ed
