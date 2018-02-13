@@ -233,6 +233,12 @@ class Optimizer(object):
 
         self.history = dict()
 
+        self.optimizer_has_been_initialized = False
+        """
+            Needs to be set before the actual optimization commences; allows to keep track if all parameters have been set
+            and for example to delay external parameter settings
+        """
+
     def get_history(self):
         """
         Returns the optimization history as a dictionary. Keeps track of energies, iterations counts, and additonal custom measures.
@@ -715,6 +721,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """the evaluation information"""
         self.rec_custom_optimizer_output_values = None
 
+        self.delayed_model_parameters = None
+        self.delayed_model_parameters_still_to_be_set = False
+
     def get_checkpoint_dict(self):
         if self.model is not None and self.optimizer_instance is not None:
             d = super(SingleScaleRegistrationOptimizer, self).get_checkpoint_dict()
@@ -822,10 +831,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         :param p: parameters
         """
-        if (self.useMap) and (self.mapLowResFactor is not None):
-            self.model.set_registration_parameters(p, self.lowResSize, self.lowResSpacing)
+
+        if self.optimizer_has_been_initialized:
+            if (self.useMap) and (self.mapLowResFactor is not None):
+                self.model.set_registration_parameters(p, self.lowResSize, self.lowResSpacing)
+            else:
+                self.model.set_registration_parameters(p, self.sz, self.spacing)
+            self.delayed_model_parameters_still_to_be_set = False
         else:
-            self.model.set_registration_parameters(p, self.sz, self.spacing)
+            self.delayed_model_parameters_still_to_be_set = True
+            self.delayed_model_parameters = p
 
     def get_model_parameters(self):
         """
@@ -1141,14 +1156,18 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if USE_CUDA:
             self.model = self.model.cuda()
 
-
     def optimize(self):
         """
         Do the single scale optimization
         """
 
-        # obtain all missing parameters (i.e., only set the ones that were not explicitly set)
         self._set_all_still_missing_parameters()
+        self.optimizer_has_been_initialized = True
+
+        # in this way model parameters can be "set" before the optimizer has been properly initialized
+        if self.delayed_model_parameters_still_to_be_set:
+            print('Setting model parameters, delayed')
+            self.set_model_parameters(self.delayed_model_parameters)
 
         # optimize for a few steps
         start = time.time()
@@ -1492,6 +1511,9 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
         return p
 
+    def set_model_parameters(self, p):
+        raise ValueError('Setting model parameters not yet supported by consensus optimizer')
+
     def _get_checkpoint_filename(self,batch_nr,batch_iter):
         if self.save_intermediate_checkpoints:
             return os.path.join(self.checkpoint_output_directory,
@@ -1712,7 +1734,6 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             largest_iter_with_complete_batch = self._get_checkpoint_iter_with_complete_batch(largest_found_iter)
             return largest_iter_with_complete_batch
-                
 
     def optimize(self):
 
@@ -1728,9 +1749,10 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
         if self.optimizer is not None:
             raise ValueError('Custom optimizers are currently not supported for consensus optimization.\
-             Set the optimizer by name (e.g., in the json configuration) instead.')
+                           Set the optimizer by name (e.g., in the json configuration) instead.')
 
         self._set_all_still_missing_parameters()
+        self.optimizer_has_been_initialized = True
 
         # todo: support reading images from file
         self.nr_of_images = self.ISource.size()[0]
@@ -1924,6 +1946,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             return None
 
+    def set_model_parameters(self,p):
+        raise ValueError('Setting model parameters not yet supported for multi-scale optimizer')
 
     def _set_all_still_missing_parameters(self):
 
@@ -1943,6 +1967,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         Perform the actual multi-scale optimization
         """
         self._set_all_still_missing_parameters()
+        self.optimizer_has_been_initialized = True
 
         if (self.ISource is None) or (self.ITarget is None):
             raise ValueError('Source and target images need to be set first')

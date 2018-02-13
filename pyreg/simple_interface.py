@@ -36,6 +36,11 @@ class RegisterImagePair(object):
 
         self.opt = None
 
+        self.delayed_model_parameters = None
+        self.delayed_model_parameters_still_to_be_set = False
+
+        self.optimizer_has_been_initialized = False
+
     def get_params(self):
         """
         Gets configuration parameters
@@ -111,9 +116,10 @@ class RegisterImagePair(object):
 
         if self.opt is not None:
             self.opt.set_model_parameters(p)
+            self.delayed_model_parameters_still_to_be_set = False
         else:
-            raise ValueError('Could not set the model parameters for an unknown optimizer')
-
+            self.delayed_model_parameters_still_to_be_set = True
+            self.delayed_model_parameters = p
 
     def register_images_from_files(self,source_filename,target_filename,model_name,
                                    nr_of_iterations=None,
@@ -293,6 +299,11 @@ class RegisterImagePair(object):
                 self.opt.get_optimizer().set_visualization(False)
 
             self.opt.set_light_analysis_on(True)
+
+            self.optimizer_has_been_initialized = True
+            if self.delayed_model_parameters_still_to_be_set:
+                self.set_model_parameters(self.delayed_model_parameters)
+
             self.opt.register()
 
             if json_config_out_filename is not None:
