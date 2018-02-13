@@ -31,7 +31,7 @@ import image_sampling as IS
 from data_wrapper import MyTensor
 
 import utils
-
+import collections
 import numpy as np
 
 from abc import ABCMeta, abstractmethod
@@ -61,6 +61,8 @@ class RegistrationNet(nn.Module):
         """the number of images, i.e., the batch size B"""
         self.nrOfChannels = sz[1]
         """the number of image channels, i.e., C"""
+
+        self._shared_parameters = set()
 
     def get_variables_to_transfer_to_loss_function(self):
         """
@@ -104,6 +106,19 @@ class RegistrationNet(nn.Module):
         """
         return self.state_dict()
 
+    def get_shared_registration_parameters(self):
+        """
+        Returns the parameters that have been declared shared for optimization.
+        This can for example be parameters of a smoother that are shared between registrations.
+        """
+        cs = self.state_dict()
+        shared_params = collections.OrderedDict()
+
+        for key in cs:
+            if self._shared_parameters.issuperset({key}):
+                shared_params[key] = cs[key]
+        return shared_params
+
     def set_registration_parameters(self, sd, sz, spacing):
         """
         Abstract method to set the registration parameters externally. This can for example be useful when the optimizer should be initialized at a specific value
@@ -115,6 +130,21 @@ class RegistrationNet(nn.Module):
         self.load_state_dict(sd)
         self.sz = sz
         self.spacing = spacing
+
+
+    def set_shared_registration_parameters(self, sd):
+        """
+        Allows to only set the shared registration parameters
+
+        :param sd: dictionary containing the shared parameters
+        :return: n/a
+        """
+
+        cs = self.state_dict()
+
+        for key in sd:
+            if cs.has_key(key):
+               cs[key].copy_(sd[key])
 
     def downsample_registration_parameters(self, desiredSz):
         """
@@ -348,7 +378,7 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
-        self.smoother.associate_parameters_with_module(self)
+        self._shared_parameters = self._shared_parameters.union(self.smoother.associate_parameters_with_module(self))
         """registers the smoother parameters so that they are optimized over if applicable"""
         self.v = torch.zeros_like(self.m)
         """corresponding velocity field"""
@@ -529,10 +559,10 @@ class RegistrationImageLoss(RegistrationLoss):
         :param I1_target: target image
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
-        :return: registration energy
+        :return: tuple: overall energy, similarity energy, regularization energy
         """
         energy, sim, reg = self.get_energy(I1_warped, I0_source, I1_target, variables_from_forward_model, variables_from_optimizer)
-        return energy
+        return energy, sim, reg
 
 
 class RegistrationMapLoss(RegistrationLoss):
@@ -575,9 +605,12 @@ class RegistrationMapLoss(RegistrationLoss):
                 print( 'Max disp = ' + str( utils.t2np( dispMax )))
             sz = dispSqr.size()
 
+            # todo: remove once pytorch can properly deal with infinite values
             maxDispSqr = utils.remove_infs_from_variable(dispSqr).max() # required to shield this from inf during the optimization
 
-            dispPenalty = ( torch.max( ( maxDispSqr - self.max_displacement_sqr ), Variable( MyTensor(sz).zero_(), requires_grad=False ) )).sum()
+            dispPenalty = (torch.max((maxDispSqr - self.max_displacement_sqr),
+                                     Variable(MyTensor(sz).zero_(), requires_grad=False))).sum()
+
             reg = reg + dispPenalty
         else:
             if self.display_max_displacement==True:
@@ -598,10 +631,10 @@ class RegistrationMapLoss(RegistrationLoss):
         :param lowres_I0: for map with reduced resolution this is the downsampled source image, may be needed to compute the regularization energy
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
-        :return: returns the value of the loss function (i.e., the registration energy)
+        :return: tuple: overall energy, similarity energy, regularization energy
         """
         energy, sim, reg = self.get_energy(phi0, phi1, I0_source, I1_target, lowres_I0, variables_from_forward_model, variables_from_optimizer)
-        return energy
+        return energy,sim,reg
 
 
 class SVFImageLoss(RegistrationImageLoss):
@@ -931,7 +964,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother"""
-        self.smoother.associate_parameters_with_module(self)
+        self._shared_parameters = self._shared_parameters.union(self.smoother.associate_parameters_with_module(self))
         """registers the smoother parameters so that they are optimized over if applicable"""
 
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':
@@ -1287,7 +1320,7 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother"""
-        self.smoother.associate_parameters_with_module(self)
+        self._shared_parameters = self._shared_parameters.union(self.smoother.associate_parameters_with_module(self))
         """registers the smoother parameters so that they are optimized over if applicable"""
 
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':

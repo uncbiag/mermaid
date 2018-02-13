@@ -6,9 +6,12 @@ from abc import ABCMeta, abstractmethod
 import torch
 from torch.autograd import Variable
 from data_wrapper import AdaptVal
+from data_wrapper import MyTensor
 import utils
 from math import floor
 from similarity_helper_omt import *
+
+import numpy as np
 
 class SimilarityMeasure(object):
     """
@@ -144,7 +147,8 @@ class SSDSimilarity(SimilarityMeasure):
         """
 
         # TODO: This is to avoid a current pytorch bug 0.3.0 which cannot properly deal with infinity or NaN
-        return AdaptVal((utils.remove_infs_from_variable((I0- I1) ** 2)).sum() / (self.sigma ** 2) * self.volumeElement)
+        return AdaptVal(utils.remove_infs_from_variable(((I0 - I1) ** 2).sum() / (self.sigma ** 2) * self.volumeElement))
+
         #return AdaptVal(((I0 - I1) ** 2).sum() / (self.sigma ** 2) * self.volumeElement)
 
 
@@ -218,9 +222,18 @@ class NCCSimilarity(SimilarityMeasure):
        :return: (1-NCC^2)/sigma^2
        """
         # TODO: may require a safeguard against infinity
-        ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
+
+        # this way of computing avoids the square root of the standard deviation
+        I0mean = I0.mean()
+        I1mean = I1.mean()
+        nccSqr = (((I0-I0mean.expand_as(I0))*(I1-I1mean.expand_as(I1))).mean()**2)/\
+                 (((I0-I0mean)**2).mean()*((I1-I1mean)**2).mean())
+
+        return AdaptVal((1-nccSqr)/self.sigma**2)
+
+        #ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
         # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
-        return AdaptVal((1.0-ncc**2) / (self.sigma ** 2))
+        #return AdaptVal((1.0-ncc**2) / (self.sigma ** 2))
 
 
 
@@ -233,15 +246,15 @@ class LocalizedNCCSimilarity(SimilarityMeasure):
     def __init__(self, spacing, params):
         super(LocalizedNCCSimilarity,self).__init__(spacing,params)
         #todo: maybe add some form of Gaussian weighing and tie it to the real image dimensions
-        self.cube_radius = params[('cube_radius', 3, 'cube will be (2*radius)^d (in voxels) for local NCC computation')]
+        self.gaussian_std = params[('gaussian_std', 0.025, 'standard deviation of Gaussian that will be used for local NCC computations')]
         """half the side length of the cube over which lNCC is computed"""
 
-        # todo: maybe come up with a way to restrict the initial steps of the optimizer
-        print('WARNING: LNCC seems to be very sensitive to the weighting')
-        print('WARNING: Make sure sigma is large for now')
-        print('WARNING: LNCC is experimental at this stage')
-        print('WARNING: A possible solution may be modifying the optimizer to avoid very large steps')
-        print('WARNING: Otherwise, setting the max displacement is a current workaround')
+        self.nr_of_elements_in_direction = None
+        self.weighting_coefficients = None
+        self.mask = None
+
+        self._create_gaussian_weighting(self.gaussian_std)
+
 
     def _get_shifted_1d(self, I, x):
         ret = torch.zeros_like(I)
@@ -292,6 +305,36 @@ class LocalizedNCCSimilarity(SimilarityMeasure):
 
         return ret
 
+    def _create_gaussian_weighting(self,sigma):
+
+        radiusSqr = (3.*sigma)**2
+        self.nr_of_elements_in_direction = MyTensor(self.dim).zero_()
+        for i in range(self.dim):
+            self.nr_of_elements_in_direction[i] = 3*sigma/self.spacing[i]
+        self.nr_of_elements_in_direction = torch.ceil(self.nr_of_elements_in_direction).int()
+
+        # now create the precomputed weights
+        self.weighting_coefficients = MyTensor(*list((2*self.nr_of_elements_in_direction+1).int())).zero_()
+        self.mask = torch.zeros_like(self.weighting_coefficients)
+
+        if self.dim==1:
+            pass
+        elif self.dim==2:
+            for x in range(-self.nr_of_elements_in_direction[0],self.nr_of_elements_in_direction[0]+1):
+                for y in range(-self.nr_of_elements_in_direction[1],self.nr_of_elements_in_direction[1]+1):
+                    currentRSqr = (x*self.spacing[0])**2 + (y*self.spacing[1])**2
+                    if currentRSqr<= radiusSqr:
+                        self.weighting_coefficients[x+self.nr_of_elements_in_direction[0],y+self.nr_of_elements_in_direction[1]]=\
+                            np.exp(-currentRSqr/(2*sigma**2))
+                        self.mask[x+self.nr_of_elements_in_direction[0],y+self.nr_of_elements_in_direction[1]] = 1
+            # now normalize it
+            self.weighting_coefficients /= self.weighting_coefficients.sum()
+        elif self.dim==3:
+            pass
+        else:
+            raise ValueError('Only dimensions 1,2, and 3 are supported.')
+
+
     def _compute_local_squared_cross_correlation(self,I0,I1):
 
         ones = torch.ones_like(I0)
@@ -308,34 +351,48 @@ class LocalizedNCCSimilarity(SimilarityMeasure):
         I0I1 = I0*I1
 
         if self.dim==1:
-            for x in range(-self.cube_radius,self.cube_radius+1):
-                sumOnes += self._get_shifted_1d(ones, x)
-                sumI0 += self._get_shifted_1d(I0, x)
-                sumI1 += self._get_shifted_1d(I1, x)
-                sumI0I1 += self._get_shifted_1d(I0I1, x)
-                sumI0I0 += self._get_shifted_1d(I0I0, x)
-                sumI1I1 += self._get_shifted_1d(I1I1, x)
+            for x in range(-self.nr_of_elements_in_direction[0],self.nr_of_elements_in_direction[0]+1):
+                if self.mask[self.nr_of_elements_in_direction[0] + x] > 0:
+                    current_weight = self.weighting_coefficients[self.nr_of_elements_in_direction[0]+x]
+                    sumOnes += current_weight*self._get_shifted_1d(ones, x)
+                    sumI0 += current_weight*self._get_shifted_1d(I0, x)
+                    sumI1 += current_weight*self._get_shifted_1d(I1, x)
+                    sumI0I1 += current_weight*self._get_shifted_1d(I0I1, x)
+                    sumI0I0 += current_weight*self._get_shifted_1d(I0I0, x)
+                    sumI1I1 += current_weight*self._get_shifted_1d(I1I1, x)
 
         elif self.dim==2:
-            for x in range(-self.cube_radius,self.cube_radius+1):
-                for y in range(-self.cube_radius,self.cube_radius+1):
-                    sumOnes += self._get_shifted_2d(ones,x,y)
-                    sumI0 += self._get_shifted_2d(I0,x,y)
-                    sumI1 += self._get_shifted_2d(I1,x,y)
-                    sumI0I1 += self._get_shifted_2d(I0I1,x,y)
-                    sumI0I0 += self._get_shifted_2d(I0I0,x,y)
-                    sumI1I1 += self._get_shifted_2d(I1I1,x,y)
+            for x in range(-self.nr_of_elements_in_direction[0],self.nr_of_elements_in_direction[0]+1):
+                for y in range(-self.nr_of_elements_in_direction[1],self.nr_of_elements_in_direction[1]+1):
+                    if self.mask[self.nr_of_elements_in_direction[0]+x,self.nr_of_elements_in_direction[1]+y]>0:
+                        current_weight = self.weighting_coefficients[self.nr_of_elements_in_direction[0]+x,self.nr_of_elements_in_direction[1]+y]
+                        sumOnes += current_weight*self._get_shifted_2d(ones,x,y)
+                        sumI0 += current_weight*self._get_shifted_2d(I0,x,y)
+                        sumI1 += current_weight*self._get_shifted_2d(I1,x,y)
+                        sumI0I1 += current_weight*self._get_shifted_2d(I0I1,x,y)
+                        sumI0I0 += current_weight*self._get_shifted_2d(I0I0,x,y)
+                        sumI1I1 += current_weight*self._get_shifted_2d(I1I1,x,y)
 
         elif self.dim==3:
-            for x in range(-self.cube_radius, self.cube_radius + 1):
-                for y in range(-self.cube_radius, self.cube_radius + 1):
-                    for z in range(-self.cube_radius, self.cube_radius + 1):
-                        sumOnes += self._get_shifted_3d(ones, x, y, z)
-                        sumI0 += self._get_shifted_3d(I0, x, y, z)
-                        sumI1 += self._get_shifted_3d(I1, x, y, z)
-                        sumI0I1 += self._get_shifted_3d(I0I1, x, y, z)
-                        sumI0I0 += self._get_shifted_3d(I0I0, x, y, z)
-                        sumI1I1 += self._get_shifted_3d(I1I1, x, y, z)
+            for x in range(-self.nr_of_elements_in_direction[0], self.nr_of_elements_in_direction[0] + 1):
+                for y in range(-self.nr_of_elements_in_direction[1], self.nr_of_elements_in_direction[1] + 1):
+                    for z in range(-self.nr_of_elements_in_direction[2], self.nr_of_elements_in_direction[2] + 1):
+                        if self.mask[
+                            self.nr_of_elements_in_direction[0] + x,
+                            self.nr_of_elements_in_direction[1] + y,
+                            self.nr_of_elements_in_direction[2] + z] > 0:
+
+                            current_weight = self.weighting_coefficients[
+                                self.nr_of_elements_in_direction[0] + x,
+                                self.nr_of_elements_in_direction[1] + y,
+                                self.nr_of_elements_in_direction[2] + z]
+
+                            sumOnes += current_weight*self._get_shifted_3d(ones, x, y, z)
+                            sumI0 += current_weight*self._get_shifted_3d(I0, x, y, z)
+                            sumI1 += current_weight*self._get_shifted_3d(I1, x, y, z)
+                            sumI0I1 += current_weight*self._get_shifted_3d(I0I1, x, y, z)
+                            sumI0I0 += current_weight*self._get_shifted_3d(I0I0, x, y, z)
+                            sumI1I1 += current_weight*self._get_shifted_3d(I1I1, x, y, z)
 
         else:
             raise ValueError('Only supported in dimensions 1, 2, and 3')

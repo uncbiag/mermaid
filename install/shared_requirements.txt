@@ -8,3 +8,5 @@ itk
 sphinx
 pynrrd
 progressbar
+pandas
+openpyxl

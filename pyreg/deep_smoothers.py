@@ -5,258 +5,491 @@ import torch.nn as nn
 import numpy as np
 from data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
-class ConsistentWeightedSmoothingModel(nn.Module):
+import math
+
+def compute_omt_penalty(weights, multi_gaussian_stds,desired_power=2.0):
+
+    # weights: B x weights x X x Y
+
+    if weights.size()[1] != len(multi_gaussian_stds):
+        raise ValueError('Number of weights need to be the same as number of Gaussians. Format recently changed for weights to B x weights x X x Y')
+
+    penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+    batch_size = weights.size()[0]
+    max_std = max(multi_gaussian_stds)
+    for i,s in enumerate(multi_gaussian_stds):
+        penalty += ((weights[:,i,...]).sum())*((s-max_std)**desired_power)
+
+    penalty /= batch_size
+
+    return penalty
+
+
+class DeepSmoothingModel(nn.Module):
+    """
+    Base class for mini neural network which takes as an input a set of smoothed velocity field as
+    well as input images and predicts weights for a multi-Gaussian smoothing from this
+    Enforces the same weighting for all the dimensions of the vector field to be smoothed
+
+    """
+
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, nr_of_image_channels=1, params=None):
+        super(DeepSmoothingModel, self).__init__()
+
+        self.nr_of_image_channels = nr_of_image_channels
+        self.dim = dim
+
+        # check that the largest standard deviation is the largest one
+        if max(gaussian_stds) > gaussian_stds[-1]:
+            raise ValueError('The last standard deviation needs to be the largest')
+
+        self.params = params
+
+        self.nr_of_gaussians = nr_of_gaussians
+        self.gaussian_stds = gaussian_stds
+        self.min_weight = 0.0001
+
+        self.computed_weights = None
+        """stores the computed weights if desired"""
+        self.current_penalty = None
+        """to stores the current penalty (for example OMT) after running through the model"""
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(0.25 / n))
+            elif isinstance(m, nn.BatchNorm2d):
+                pass
+            elif isinstance(m, nn.Linear):
+                pass
+
+    def get_number_of_image_channels_from_state_dict(self, state_dict, dim):
+        """legacy; to support velocity fields as input channels"""
+        return self.nr_of_image_channels
+
+    def get_number_of_input_channels(self, nr_of_image_channels, dim):
+        """
+        legacy; to support velocity fields as input channels
+        currently only returns the number of image channels, but if something else would be used as
+        the network input, would need to return the total number of inputs
+        """
+        return self.nr_of_image_channels
+
+    def get_computed_weights(self):
+        return self.computed_weights
+
+    def spatially_average(self, x):
+        """
+        does spatial averaging of a 2D image with potentially multiple batches: format B x X x Y
+        :param x:
+        :return:
+        """
+
+        # first set the boundary to zero (first dimension is batch and this only works for 2D for now)
+
+        y = torch.zeros_like(x)
+
+        # now do local averaging in the interior using the four neighborhood
+        y[:, 1:-1, 1:-1] = 0.5 * x[:, 1:-1, 1:-1] + 0.125 * (
+                    x[:, 0:-2, 1:-1] + x[:, 2:, 1:-1] + x[:, 1:-1, 0:-2] + x[:, 1:-1, 2:])
+
+        # do the corners
+        y[:, 0, 0] = 8. / 6. * (0.5 * x[:, 0, 0] + 0.125 * (x[:, 1, 0] + x[:, 0, 1]))
+        y[:, 0, -1] = 8. / 6. * (0.5 * x[:, 0, -1] + 0.125 * (x[:, 1, -1] + x[:, 0, -2]))
+        y[:, -1, 0] = 8. / 6. * (0.5 * x[:, -1, 0] + 0.125 * (x[:, -2, 0] + x[:, -1, 1]))
+        y[:, -1, -1] = 8. / 6. * (0.5 * x[:, -1, -1] + 0.125 * (x[:, -2, -1] + x[:, -1, -2]))
+
+        # and lastly the edges
+        y[:, 1:-1, 0] = 8. / 7. * (0.5 * x[:, 1:-1, 0] + 0.125 * (x[:, 1:-1, 1] + x[:, 0:-2, 0] + x[:, 2:, 0]))
+        y[:, 0, 1:-1] = 8. / 7. * (0.5 * x[:, 0, 1:-1] + 0.125 * (x[:, 1, 1:-1] + x[:, 0, 0:-2] + x[:, 0, 2:]))
+        y[:, 1:-1, -1] = 8. / 7. * (0.5 * x[:, 1:-1, -1] + 0.125 * (x[:, 1:-1, -2] + x[:, 0:-2, -1] + x[:, 2:, -1]))
+        y[:, -1, 1:-1] = 8. / 7. * (0.5 * x[:, -1, 1:-1] + 0.125 * (x[:, -2, 1:-1] + x[:, -1, 0:-2] + x[:, -1, 2:]))
+
+        return y
+
+    def get_current_penalty(self):
+        """
+        returns the current penalty for the weights (OMT penalty here)
+        :return:
+        """
+        return self.current_penalty
+
+#nn.Conv2d(nr_of_input_channels,self.nr_of_features_per_layer[0],self.kernel_sizes[0], padding=(self.kernel_sizes[0]-1)//2)
+#torch.nn.Conv3d(in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True)
+
+class encoder_block_2d(nn.Module):
+    def __init__(self, input_feature, output_feature, use_dropout):
+        super(encoder_block_2d, self).__init__()
+        self.conv_input = nn.Conv2d(in_channels=input_feature, out_channels=output_feature,
+                                    kernel_size=3, stride=1, padding=1, dilation=1)
+        self.conv_inblock1 = nn.Conv2d(in_channels=output_feature, out_channels=output_feature,
+                                       kernel_size=3, stride=1, padding=1, dilation=1)
+        self.conv_inblock2 = nn.Conv2d(in_channels=output_feature, out_channels=output_feature,
+                                       kernel_size=3, stride=1, padding=1, dilation=1)
+        self.conv_pooling = nn.Conv2d(in_channels=output_feature, out_channels=output_feature,
+                                      kernel_size=2, stride=2, padding=0, dilation=1)
+        self.prelu1 = nn.PReLU()
+        self.prelu2 = nn.PReLU()
+        self.prelu3 = nn.PReLU()
+        self.prelu4 = nn.PReLU()
+        self.use_dropout = use_dropout
+        self.dropout = nn.Dropout(0.2)
+    def apply_dropout(self, input):
+        if self.use_dropout:
+            return self.dropout(input)
+        else:
+            return input
+    def forward(self, x):
+        output = self.conv_input(x)
+        output = self.apply_dropout(self.prelu1(output))
+        output = self.apply_dropout(self.prelu2(self.conv_inblock1(output)))
+        output = self.apply_dropout(self.prelu3(self.conv_inblock2(output)))
+        return self.prelu4(self.conv_pooling(output))
+
+
+class decoder_block_2d(nn.Module):
+    def __init__(self, input_feature, output_feature, pooling_filter,use_dropout,last_block=False):
+        super(decoder_block_2d, self).__init__()
+        # todo: check padding here, not sure if it is the right thing to do
+        self.conv_unpooling = nn.ConvTranspose2d(in_channels=input_feature, out_channels=input_feature,
+                                                 kernel_size=pooling_filter, stride=2, padding=0,output_padding=0)
+        self.conv_inblock1 = nn.Conv2d(in_channels=input_feature, out_channels=input_feature,
+                                       kernel_size=3, stride=1, padding=1, dilation=1)
+        self.conv_inblock2 = nn.Conv2d(in_channels=input_feature, out_channels=input_feature,
+                                       kernel_size=3, stride=1, padding=1, dilation=1)
+        self.conv_output = nn.Conv2d(in_channels=input_feature, out_channels=output_feature,
+                                     kernel_size=3, stride=1, padding=1, dilation=1)
+        self.prelu1 = nn.PReLU()
+        self.prelu2 = nn.PReLU()
+        self.prelu3 = nn.PReLU()
+        self.prelu4 = nn.PReLU()
+        self.use_dropout = use_dropout
+        self.last_block = last_block
+        self.dropout = nn.Dropout(0.2)
+        self.output_feature = output_feature
+
+    def apply_dropout(self, input):
+        if self.use_dropout:
+            return self.dropout(input)
+        else:
+            return input
+    def forward(self, x):
+        output = self.prelu1(self.conv_unpooling(x))
+        output = self.apply_dropout(self.prelu2(self.conv_inblock1(output)))
+        output = self.apply_dropout(self.prelu3(self.conv_inblock2(output)))
+        if self.last_block: # generates final output
+            return self.conv_output(output);
+        else: # generates intermediate results
+            return self.apply_dropout(self.prelu4(self.conv_output(output)))
+
+
+class EncoderDecoderSmoothingModel(DeepSmoothingModel):
+    """
+    Similar to the model used in Quicksilver
+    """
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, nr_of_image_channels=1, params=None ):
+        super(EncoderDecoderSmoothingModel, self).__init__(nr_of_gaussians=nr_of_gaussians,\
+                                                                     gaussian_stds=gaussian_stds,\
+                                                                     dim=dim,\
+                                                                     nr_of_image_channels=nr_of_image_channels,\
+                                                                     params=params)
+
+        # is 64 in quicksilver paper
+        feature_num = self.params[('number_of_features_in_first_layer', 32, 'number of features in the first encoder layer (64 in quicksilver)')]
+        use_dropout= self.params[('use_dropout',False,'use dropout for the layers')]
+        self.use_separate_decoders_per_gaussian = self.params[('use_separate_decoders_per_gaussian',True,'if set to true separte decoder branches are used for each Gaussian')]
+
+        self.encoder_1 = encoder_block_2d(1, feature_num, use_dropout)
+        self.encoder_2 = encoder_block_2d(feature_num, feature_num * 2, use_dropout)
+
+        # todo: maybe have one decoder for each Gaussian here.
+        # todo: the current version seems to produce strange gridded results
+
+        if self.use_separate_decoders_per_gaussian:
+            self.decoder_1 = nn.ModuleList()
+            self.decoder_2 = nn.ModuleList()
+            # create two decoder blocks for each Gaussian
+            for g in range(nr_of_gaussians):
+                self.decoder_1.append( decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout) )
+                self.decoder_2.append( decoder_block_2d(feature_num, 1, 2, use_dropout, last_block=True) )
+        else:
+            self.decoder_1 = decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout)
+            self.decoder_2 = decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, last_block=True)  # 3?
+
+
+    def forward(self, multi_smooth_v, I, global_multi_gaussian_weights,
+                encourage_spatial_weight_consistency=True, retain_weights=False):
+
+        # format of multi_smooth_v is multi_v x batch x channels x X x Y
+        # (channels here are the vector field components)
+
+        """
+        First make sure that the multi_smooth_v has the correct dimension.
+        I.e., the correct spatial dimension and one output for each Gaussian (multi_v)
+        """
+        sz_mv = multi_smooth_v.size()
+        dim_mv = sz_mv[2]  # format is
+        # currently only implemented in 2D
+        assert (dim_mv == 2)
+        assert (sz_mv[0] == self.nr_of_gaussians)
+
+        # create the output tensor: will be of dimension: batch x channels x X x Y
+        ret = AdaptVal(Variable(torch.FloatTensor(*sz_mv[1:]), requires_grad=False))
+
+        # now determine the size for the weights
+        # Since the smoothing will be the same for all spatial directions (for a velocity field),
+        # this basically amounts to cutting out the channels; i.e., multi_v x batch x X x Y
+        sz_weight = list(sz_mv)
+        sz_weight = [sz_weight[1]] + [sz_weight[0]] + sz_weight[3:]
+
+        # if the weights should be stored (for debugging), create the tensor to store them here
+        if retain_weights and self.computed_weights is None:
+            print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')
+            # create storage; batch x size v x X x Y
+            self.computed_weights = torch.FloatTensor(*sz_weight)
+
+        # here is the actual network; maybe abstract this out later
+        x=I
+
+        encoder_output = self.encoder_2(self.encoder_1(x))
+
+        if self.use_separate_decoders_per_gaussian:
+            # here we have seperate decoder outputs for the different Gaussians
+            # should give it more flexibility
+            decoder_output_individual = []
+            for g in range(self.nr_of_gaussians):
+                decoder_output_individual.append( self.decoder_2[g](self.decoder_1[g](encoder_output)) )
+            decoder_output = torch.cat(decoder_output_individual, dim=1);
+        else:
+            decoder_output = self.decoder_2(self.decoder_1(encoder_output))
+
+        # now we are ready for the softmax
+        weights = F.softmax(decoder_output, dim=1)
+
+        # ends here
+
+        # multiply the velocity fields by the weights and sum over them
+        # this is then the multi-Gaussian output
+
+        # now we apply this weight across all the channels; weight output is B x weights x X x Y
+        for n in range(self.dim):
+            # reverse the order so that for a given channel we have batch x multi_velocity x X x Y
+            # i.e., the multi-velocity field output is treated as a channel
+            # reminder: # format of multi_smooth_v is multi_v x batch x channels x X x Y
+            # (channels here are the vector field components); i.e. as many as there are dimensions
+            # each one of those should be smoothed the same
+
+            # roc should be: batch x multi_v x X x Y
+            roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
+            yc = torch.sum(roc * weights, dim=1)
+            ret[:, n, ...] = yc  # ret is: batch x channels x X x Y
+
+        self.current_penalty = compute_omt_penalty(weights, self.gaussian_stds)
+
+        if retain_weights:
+            # todo: change visualization to work with this new format:
+            # B x weights x X x Y instead of weights x B x X x Y
+            self.computed_weights[:] = weights.data
+
+        return ret
+
+class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
     """
     Mini neural network which takes as an input a set of smoothed velocity field as
     well as input images and predicts weights for a multi-Gaussian smoothing from this
     Enforces the same weighting for all the dimensions of the vector field to be smoothed
 
     """
-    def __init__(self, nr_of_gaussians,min_weight=0.0001):
-        super(ConsistentWeightedSmoothingModel, self).__init__()
-        self.nr_of_gaussians = nr_of_gaussians
-        self.min_weight = 0.0001
-        self.is_initialized = False
-        self.conv1 = None
-        self.conv2 = None
-        self.computed_weights = None
-        self.dim = None
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, nr_of_image_channels=1, params=None ):
+        super(SimpleConsistentWeightedSmoothingModel, self).__init__(nr_of_gaussians=nr_of_gaussians,\
+                                                                     gaussian_stds=gaussian_stds,\
+                                                                     dim=dim,\
+                                                                     nr_of_image_channels=nr_of_image_channels,\
+                                                                     params=params)
 
-    def get_computed_weights(self):
-        return self.computed_weights
+        self.kernel_sizes = self.params[('kernel_sizes',[7,7],'size of the convolution kernels')]
+
+        # check that all the kernel-size are odd
+        for ks in self.kernel_sizes:
+            if ks%2== 0:
+                raise ValueError('Kernel sizes need to be odd')
+
+        # the last layers feature number is not specified as it will simply be the number of Gaussians
+        self.nr_of_features_per_layer = self.params[('number_of_features_per_layer',[20],'Number of features for the convolution later; last one is set to number of Gaussians')]
+        # add the number of Gaussians to the last layer
+        self.nr_of_features_per_layer = self.nr_of_features_per_layer + [nr_of_gaussians]
+
+        self.nr_of_layers = len(self.kernel_sizes)
+        assert( self.nr_of_layers== len(self.nr_of_features_per_layer) )
+
+        self.use_relu = self.params[('use_relu',True,'if set to True uses Relu, otherwise sigmoid')]
+
+        self.conv_layers = None
+
+        # needs to be initialized here, otherwise the optimizer won't see the modules from ModuleList
+        # todo: figure out how to do ModuleList initialization not in __init__
+        # todo: this would allow removing dim and nr_of_image_channels from interface
+        # todo: because it could be compute on the fly when forward is executed
+        self._init(self.nr_of_image_channels,dim=self.dim)
 
     def _init(self,nr_of_image_channels,dim):
-        self.is_initialized = True
-        self.conv1 = nn.Conv2d(self.nr_of_gaussians*dim + nr_of_image_channels, 20, 5, padding=2)
-        self.conv2 = nn.Conv2d(20, self.nr_of_gaussians, 5, padding=2)
+        """
+        Initalizes all the conv layers
+        :param nr_of_image_channels:
+        :param dim:
+        :return:
+        """
 
-    def spatially_average_and_set_boundary_to_zero(self,x):
+        assert(self.nr_of_layers>0)
+        assert(dim==2)
 
-        # first set the boundary to zero (first dimension is batch and this only works for 2D for now)
+        nr_of_input_channels = self.get_number_of_input_channels(nr_of_image_channels,dim)
 
-        y = torch.zeros_like(x)
-        y[:] = x
+        convs = [None]*self.nr_of_layers
 
-        y[:,0,:] = 0
-        y[:,-1,:] = 0
-        y[:,:,0] = 0
-        y[:,:,-1] =0
+        # first layer
+        convs[0] = nn.Conv2d(nr_of_input_channels,
+                                  self.nr_of_features_per_layer[0],
+                                  self.kernel_sizes[0], padding=(self.kernel_sizes[0]-1)//2)
 
-        # now do local averaging in the interior using the four neighborhood
-        y[:,1:-2,1:-2] = 0.25*(y[:,0:-3,1:-2] + y[:,2:-1,1:-2] + y[:,1:-2,0:-3] + y[:,1:-2,2:-1])
+        # all the intermediate layers and the last one
+        for l in range(self.nr_of_layers-1):
+            convs[l+1] = nn.Conv2d(self.nr_of_features_per_layer[l],
+                                        self.nr_of_features_per_layer[l+1],
+                                        self.kernel_sizes[l+1],
+                                        padding=(self.kernel_sizes[l+1]-1)//2)
 
-        return y
+        self.conv_layers = nn.ModuleList()
+        for c in convs:
+            self.conv_layers.append(c)
 
-    def forward(self, multi_smooth_v, I, default_multi_gaussian_weights,
-                encourage_spatial_weight_consistency=True,retain_weights=False):
+        self._initialize_weights()
 
-        self.dim = multi_smooth_v.size()[2] # format is multi_v x batch x channels x X x Y x Z (channels here are the vector field components)
+    def forward(self, multi_smooth_v, I, global_multi_gaussian_weights,
+                encourage_spatial_weight_consistency=True, retain_weights=False):
 
+        # format of multi_smooth_v is multi_v x batch x channels x X x Y
+        # (channels here are the vector field components)
+
+        """
+        First make sure that the multi_smooth_v has the correct dimension.
+        I.e., the correct spatial dimension and one output for each Gaussian (multi_v)
+        """
+        sz_mv = multi_smooth_v.size()
+        dim_mv = sz_mv[2] # format is
         # currently only implemented in 2D
-        assert(self.dim==2)
+        assert(dim_mv==2)
+        assert(sz_mv[0]==self.nr_of_gaussians)
 
-        if not self.is_initialized:
-            nr_of_image_channels = I.size()[1]
-            self._init(nr_of_image_channels,self.dim)
-        sz = multi_smooth_v.size()
+        # create the output tensor: will be of dimension: batch x channels x X x Y
+        ret = AdaptVal(Variable(torch.FloatTensor(*sz_mv[1:]), requires_grad=False))
 
-        assert(sz[0]==self.nr_of_gaussians)
-        nr_c = sz[2]
+        # now determine the size for the weights
+        # Since the smoothing will be the same for all spatial directions (for a velocity field),
+        # this basically amounts to cutting out the channels; i.e., multi_v x batch x X x Y
+        sz_weight = list(sz_mv)
+        sz_weight = [sz_weight[1]] + [sz_weight[0]] + sz_weight[3:]
 
-        new_sz = sz[1:] # simply the size of the resulting smoothed vector fields (collapsed along the multi-direction)
-        ret = AdaptVal(Variable(torch.FloatTensor(*new_sz),requires_grad=False))
-
-        sz_weight = list(sz)
-        sz_weight = sz_weight[0:2] + sz_weight[3:]  # cut out the channels, since the smoothing will be the same for all spatial directions
-
+        # if the weights should be stored (for debugging), create the tensor to store them here
         if retain_weights and self.computed_weights is None:
             print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')
-            # create storage; size vxbatchxxXxYxZ
+            # create storage; batch x size v x X x Y
             self.computed_weights = torch.FloatTensor(*sz_weight)
 
-        # loop over all channels
+        # the input to the network is simply the image
+        x = I
 
-        # todo: not clear what the input to the smoother should be. Maybe it should be the
-        # todo: vector field in all spatial dimensions and not only component-by-component
+        # now let's apply all the convolution layers, until the last
+        # (because the last one is not relu-ed
+        for l in range(len(self.conv_layers) - 1):
+            if self.use_relu:
+                x = F.relu(self.conv_layers[l](x))
+            else:
+                x = F.sigmoid(self.conv_layers[l](x))
 
-        # first we stack up the response over all the channels to compute
-        # consistent weights over the dimensions
+        # and now apply the last one without an activation for now
+        # because we want to have the ability to smooth *before* the softmax
+        # this is similar to smoothing in the logit domain for an active mean field approach
+        x = self.conv_layers[-1](x)
 
-        # we take multi_velocity x batch x channel x X x Y x Z format
-        # and convert it to batch x [multi_velocity*channel] x X x Y x Z format
-
-        # 1st transpose
-        rot = torch.transpose(multi_smooth_v,0,1)
-        # now create a new view that essentially stacks the channels
-        sz_stacked = [sz[1]] + [sz[0]*sz[2]] + list(sz[3:])
-        ro = rot.contiguous().view(*sz_stacked)
-        # now we concatenate the image input
-        # This image data should help identify how to smooth (this is an image)
-        x = torch.cat((ro, I), 1)
-        x = F.relu(self.conv1(x))
-        # make the output non-negative
-        #x = F.relu(self.conv2(x))
-
-        x = self.conv2(x) # they do not need to be positive (hence ReLU removed); only the absolute weights need to be
-
-        # need to be adapted for multiple D
+        # now do the smoothing if desired
+        y = torch.zeros_like(x)
         if encourage_spatial_weight_consistency:
             # now we do local averaging for the weights and force the boundaries to zero
-            y = torch.zeros_like(x)
             for g in range(self.nr_of_gaussians):
-                y[:,g,...] = self.spatially_average_and_set_boundary_to_zero(x[:,g,...])
-                x[:, g, ...] = y[:, g, ...] + default_multi_gaussian_weights[g]
-        else: # no spatial consistency
-            # loop over all the responses
-            # we want to model deviations from the default values instead of the values themselves
-            for g in range(self.nr_of_gaussians):
-                x[:, g, ...] = x[:, g, ...] + default_multi_gaussian_weights[g]
+                y[:, g, ...] = self.spatially_average(x[:, g, ...])
+        else:
+            y = x
 
-        #todo: maybe run through a sigmoid here
+        # now we are ready for the softmax
+        weights = F.softmax(y, dim=1)
 
-        # safeguard against values that are too small; this also safeguards against having all zero weights
-        x = torch.clamp(x, min=self.min_weight)
-        # now project it onto the unit ball
-        x = x / torch.sum(x, dim=1, keepdim=True)
         # multiply the velocity fields by the weights and sum over them
         # this is then the multi-Gaussian output
 
-        # now we apply this weight across all the channels; weight output is B x weights x X x Y x Z
-        for n in range(nr_c):
-            # reverse the order so that for a given channel we have batchxmulti_velocityxXxYxZ
+        # now we apply this weight across all the channels; weight output is B x weights x X x Y
+        for n in range(self.dim):
+            # reverse the order so that for a given channel we have batch x multi_velocity x X x Y
             # i.e., the multi-velocity field output is treated as a channel
+            # reminder: # format of multi_smooth_v is multi_v x batch x channels x X x Y
+            # (channels here are the vector field components); i.e. as many as there are dimensions
+            # each one of those should be smoothed the same
+
+            # roc should be: batch x multi_v x X x Y
             roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
-            yc = torch.sum(roc*x,dim=1)
-            ret[:, n, ...] = yc
+            yc = torch.sum(roc*weights,dim=1)
+            ret[:, n, ...] = yc # ret is: batch x channels x X x Y
+
+        self.current_penalty = compute_omt_penalty(weights,self.gaussian_stds)
 
         if retain_weights:
-            self.computed_weights[:] = torch.transpose(x.data, 0, 1)  # flip it back
+            # todo: change visualization to work with this new format:
+            # B x weights x X x Y instead of weights x B x X x Y
+            self.computed_weights[:] = weights.data
 
         return ret
 
-class WeightedSmoothingModel(nn.Module):
-    """
-    Mini neural network which takes as an input a set of smoothed velocity field as
-    well as input images and predicts weights for a multi-Gaussian smoothing from this
 
+class DeepSmootherFactory(object):
     """
-    def __init__(self, nr_of_gaussians,default_multi_gaussian_weights,min_weight=0.0001):
-        super(WeightedSmoothingModel, self).__init__()
+    Factory to quickly create different types of deep smoothers.
+    """
+
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, nr_of_image_channels=1 ):
         self.nr_of_gaussians = nr_of_gaussians
-        self.default_multi_gaussian_weights = default_multi_gaussian_weights
-        self.min_weight = 0.0001
-        self.is_initialized = False
-        self.conv1 = None
-        self.conv2 = None
-        self.computed_weights = None
+        """number of Gaussians as input"""
+        self.gaussian_stds = gaussian_stds
+        """stds of the Gaussians"""
+        self.dim = dim
+        """dimension of input image"""
+        self.nr_of_image_channels = nr_of_image_channels
+        """number of channels the image has (currently only one is supported)"""
 
-    def get_computed_weights(self):
-        return self.computed_weights
+        if self.nr_of_image_channels!=1:
+            raise ValueError('Currently only one image channel supported')
 
-    def _init(self,nr_of_image_channels,dim=None):
-        self.is_initialized = True
-        kernel_size = 7
-        self.conv1 = nn.Conv2d(self.nr_of_gaussians + nr_of_image_channels, 20, kernel_size, padding=(kernel_size-1)//2)
-        self.conv2 = nn.Conv2d(20, self.nr_of_gaussians, kernel_size, padding=(kernel_size-1)//2)
 
-    def forward(self, multi_smooth_v, I, retain_weights=False):
+    def create_deep_smoother(self, params ):
+        """
+        Create the desired deep smoother
+        :param params: ParamterDict() object to hold paramters which should be passed on
+        :return: returns the deep smoother
+        """
 
-        if not self.is_initialized:
-            nr_of_image_channels = I.size()[1]
-            self._init(nr_of_image_channels)
-        sz = multi_smooth_v.size()
-        assert(sz[0]==self.nr_of_gaussians)
-        nr_c = sz[2]
-
-        new_sz = sz[1:]
-        ret = AdaptVal(Variable(torch.FloatTensor(*new_sz),requires_grad=False))
-
-        if retain_weights and self.computed_weights is None:
-            print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')
-            # create storage; same dimension as the multi velocity field input vxbatchxchannelxXxYxZ
-            self.computed_weights = torch.FloatTensor(*sz)
-
-        # loop over all channels
-
-        # todo: not clear what the input to the smoother should be. Maybe it should be the
-        # todo: vector field in all spatial dimensions and not only component-by-component
-
-        for n in range(nr_c):
-            # reverse the order so that for a given channel we have batchxmulti_velocityxXxYxZ
-            # i.e., the multi-velocity field output is treated as a channel
-            ro = torch.transpose(multi_smooth_v[:,:,n,...],0,1)
-            # concatenate the data that should help identify how to smooth (this is an image)
-            x = torch.cat( (ro,I), 1 )
-            x = F.relu(self.conv1(x))
-            # make the output non-negative
-
-            #x = F.relu(self.conv2(x))
-            x = self.conv2(x)
-
-            # loop over all the responses
-            # we want to model deviations from the default values instead of the values themselves
-            for g in range(self.nr_of_gaussians):
-                x[:,g,...] = x[:,g,...] + self.default_multi_gaussian_weights[g]
-
-            # safeguard against values that are too small; this also safeguards against having all zero weights
-            x = torch.clamp(x,min=self.min_weight)
-            # now project it onto the unit ball
-            x = x/torch.sum(x,dim=1,keepdim=True)
-            # multiply the velocity fields by the weights and sum over them
-            # this is then the multi-Gaussian output
-            y = torch.sum(ro*x,dim=1)
-
-            ret[:,n,...] = y
-
-            if retain_weights:
-                self.computed_weights[:,:,n,...] =  torch.transpose(x.data,0,1) # flip it back
-
-        return ret
-
-class old_WeightedSmoothingModel(nn.Module):
-    """
-    Mini neural network which takes as an input a set of smoothed velocity field as
-    well as input images and predicts weights for a multi-Gaussian smoothing from this
-
-    """
-    def __init__(self, nr_of_gaussians,default_multi_gaussian_weights=None):
-        super(old_WeightedSmoothingModel, self).__init__()
-        self.nr_of_gaussians = nr_of_gaussians
-        self.is_initialized = False
-        self.conv1 = None
-        self.conv2 = None
-
-    def _init(self,nr_of_image_channels):
-        self.is_initialized = True
-        self.conv1 = nn.Conv2d(self.nr_of_gaussians + nr_of_image_channels, 20, 5, padding=2)
-        self.conv2 = nn.Conv2d(20, self.nr_of_gaussians, 5, padding=2)
-
-    def forward(self, multi_smooth_v, I):
-        if not self.is_initialized:
-            nr_of_image_channels = I.size()[1]
-            self._init(nr_of_image_channels)
-        sz = multi_smooth_v.size()
-        assert(sz[0]==self.nr_of_gaussians)
-        nr_c = sz[2]
-
-        new_sz = sz[1:]
-        ret = AdaptVal(Variable(torch.FloatTensor(*new_sz),requires_grad=False))
-
-        # loop over all channels
-        for n in range(nr_c):
-            # reverse the order so that for a given channel we have batchxmulti_velocityxXxYxZ
-            # i.e., the multi-velocity field output is treated as a channel
-            ro = torch.transpose(multi_smooth_v[:,:,n,...],0,1)
-            # concatenate the data that should help identify how to smooth (this is an image)
-            x = torch.cat( (ro,I), 1 )
-            x = F.relu(self.conv1(x))
-            # make the output non-negative
-            x = F.relu(self.conv2(x))
-            # now project it onto the unit ball
-            x = x/torch.sum(x,dim=1,keepdim=True)
-            # multiply the velocity fields by the weights and sum over them
-            # this is then the multi-Gaussian output
-            y = torch.sum(ro*x,dim=1)
-            ret[:,n,...] = y
-
-        return ret
+        cparams = params[('deep_smoother',{})]
+        smootherType = cparams[('type', 'simple_consistent','type of deep smoother (simple_consistent|encoder_decoder)')]
+        if smootherType=='simple_consistent':
+            return SimpleConsistentWeightedSmoothingModel(nr_of_gaussians=self.nr_of_gaussians,
+                                                          gaussian_stds=self.gaussian_stds,
+                                                          dim=self.dim,
+                                                          nr_of_image_channels=self.nr_of_image_channels,
+                                                          params=cparams)
+        elif smootherType=='encoder_decoder':
+            return EncoderDecoderSmoothingModel(nr_of_gaussians=self.nr_of_gaussians,
+                                                  gaussian_stds=self.gaussian_stds,
+                                                  dim=self.dim,
+                                                  nr_of_image_channels=self.nr_of_image_channels,
+                                                  params=cparams)
+        else:
+            raise ValueError('Deep smoother: ' + smootherType + ' not known')

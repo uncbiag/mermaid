@@ -11,7 +11,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-def visualize_filter_grid(filter,title=None,print_figures=False):
+def visualize_filter_grid(filter,title=None,print_figures=False,fname=None):
     nr_of_channels = filter.size()[1]
     nr_of_features_1 = filter.size()[0]
 
@@ -20,6 +20,8 @@ def visualize_filter_grid(filter,title=None,print_figures=False):
     # determine grid size
     nr_x = np.ceil(np.sqrt(nr_of_features_1)).astype('int')
     nr_y = nr_x
+
+    plt.clf()
 
     for f in range(nr_of_features_1):
         plt.subplot(nr_y, nr_x, f+1)
@@ -33,7 +35,9 @@ def visualize_filter_grid(filter,title=None,print_figures=False):
         plt.suptitle( title )
 
     if print_figures:
-        plt.savefig('filters_w1.pdf')
+        if fname is None:
+            fname = 'filters_w1.pdf'
+        plt.savefig(fname)
     else:
         plt.show()
 
@@ -88,6 +92,10 @@ def compute_mask(im):
 
     return mask
 
+def get_checkpoint_filename(batch_nr, batch_iter):
+    return "./checkpoints/checkpoint_batch{:05d}_iter{:05d}.pt".format(batch_nr, batch_iter)
+
+
 #d = torch.load('testBatchPars.pt')
 #d = torch.load('testBatchParsMoreIterations.pt')
 #d = torch.load('testBatchParsNewSmoother.pt')
@@ -96,41 +104,60 @@ def compute_mask(im):
 #d = torch.load('testBatchGlobalWeightRegularizedOpt.pt')
 #d = torch.load('testBatchGlobalWeightRegularizedOpt_with_lNCC.pt')
 #d = torch.load('testBatchGlobalWeightRegularizedOpt_with_NCC_lddmm.pt')
+
 d = torch.load('testBatchGlobalWeightRegularizedOpt_tst.pt')
 
 I0 = Variable( torch.from_numpy(d['I0']), requires_grad=False)
 I1 = Variable( torch.from_numpy(d['I1']), requires_grad=False)
-Iw = d['Iw']
-phi = d['phi']
-lam = Variable( d['registration_pars']['lam'], requires_grad=False)
 sz = d['sz']
 history = d['history']
-lowResSize = lam.size()
 spacing = d['spacing']
 params = d['params']
+
+nr_of_batches = 1
+nr_of_batch_iters = 1
+
+c_filename = get_checkpoint_filename(0, nr_of_batch_iters-1)
+q = torch.load(c_filename)
+#lam_one = Variable( q['model']['state']['lam'], requires_grad=False)
+lam_one = q['model']['state']['lam']
+lam_one_sz = lam_one.size()
+batch_size = lam_one_sz[0]
+
+new_size_lam = list(lam_one_sz)
+new_size_lam[0] = sz[0]
+
+import copy
+new_size_phi = copy.deepcopy(sz)
+new_size_phi[1] = 2
+
+# get all the lambdas
+lam = torch.FloatTensor(*new_size_lam).zero_()
+phi = Variable(torch.FloatTensor(*new_size_phi).zero_(),requires_grad=False)
+Iw = Variable(torch.FloatTensor(*sz).zero_(), requires_grad=False)
+
+for b in range(nr_of_batches):
+    c_filename = get_checkpoint_filename(b, nr_of_batch_iters - 1)
+    q = torch.load(c_filename)
+    lam[b*batch_size:min((b+1)*batch_size,sz[0]),...] = q['model']['state']['lam']
+    Iw[b*batch_size:min((b+1)*batch_size,sz[0]),...] = q['res']['Iw']
+    phi[b*batch_size:min((b+1)*batch_size,sz[0]),...] = q['res']['phi']
+
+lam = Variable(lam,requires_grad=False)
+lowResSize = lam.size()
 
 stds = params['model']['registration_model']['forward_model']['smoother']['multi_gaussian_stds']
 max_std = max(stds)
 
-visualize_filters = True
+single_batch = True
+visualize_filters = False
 visualize_smooth_vector_fields = False
 visualize_weights = True
-visualize_energies = True
+visualize_energies = False
 nr_of_gaussians = len(stds)
 nr_of_images = sz[0]
 # nr_of_images = 5 # only show a few of them
 print_figures = True
-
-
-if visualize_filters:
-    w1 = d['registration_pars']['weighted_smoothing_net.conv_layers.0.weight']
-    b1 = d['registration_pars']['weighted_smoothing_net.conv_layers.0.bias']
-    w2 = d['registration_pars']['weighted_smoothing_net.conv_layers.1.weight']
-    b2 = d['registration_pars']['weighted_smoothing_net.conv_layers.1.bias']
-
-    visualize_filter_grid(w1,'w1',print_figures)
-    visualize_filter(w2,'w2',print_figures)
-
 
 lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacing, lowResSize[2:])
 
@@ -138,7 +165,10 @@ lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacin
 smoother_params = params['model']['registration_model']['forward_model']
 
 smoother = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('learned_multiGaussianCombination',smoother_params)
-smoother.set_state_dict(d['registration_pars'])
+if single_batch:
+    smoother.set_state_dict(d['registration_pars']['registration_pars'][0]['model']['state'])
+else:
+    smoother.set_state_dict(d['registration_pars']['consensus_state'])
 smoother.set_debug_retain_computed_local_weights(True)
 
 m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam,lowResI0,lowResSize,lowResSpacing)
@@ -177,7 +207,8 @@ if visualize_smooth_vector_fields:
 
         plt.show()
 
-if visualize_energies:
+#if visualize_energies:
+if False:
     plt.clf()
     e_p, = plt.plot(history['energy'], label='energy')
     s_p, = plt.plot(history['similarity_energy'], label='similarity_energy')
@@ -232,7 +263,9 @@ if visualize_weights:
         plt.title('lambda')
 
         plt.subplot(2,3,6)
-        plt.imshow(os.numpy(),cmap='gray')
+        cmin = os.numpy()[lowRes_source_mask == 1].min()
+        cmax = os.numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(os.numpy()*lowRes_source_mask,cmap='gray',vmin=cmin,vmax=cmax)
         plt.title('std')
 
         plt.suptitle('Registration: ' + str(n))
@@ -246,10 +279,10 @@ if visualize_weights:
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            clw = local_weights[n,g,...].numpy()
+            clw = local_weights[n,g, ...].numpy()
             cmin = clw[lowRes_source_mask==1].min()
             cmax = clw[lowRes_source_mask==1].max()
-            plt.imshow((local_weights[n,g,...]).numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
+            plt.imshow((local_weights[n,g, ...]).numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
             plt.title("{:.2f}".format(stds[g]))
             plt.colorbar()
 
@@ -268,3 +301,25 @@ if visualize_weights:
             plt.show()
 
 
+if visualize_filters:
+    if single_batch:
+        w1 = d['registration_pars']['registration_pars'][0]['model']['state']['weighted_smoothing_net.conv_layers.0.weight']
+    else:
+        w1 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.0.weight']
+        b1 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.0.bias']
+        w2 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.1.weight']
+        b2 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.1.bias']
+
+    visualize_filter_grid(w1,'w1',print_figures,'filters_w1_consensus.pdf')
+    #visualize_filter(w2,'w2',print_figures)
+
+    for batch in range(1):
+        #for iter in range(4):
+        for iter in range(0,1):
+            c_filename = get_checkpoint_filename(batch,iter)
+            cd = torch.load(c_filename)
+            cw1 = cd['model']['state']['weighted_smoothing_net.conv_layers.0.weight']
+
+            cfname = 'filters_w1_batch_{:05d}.pdf'.format(batch)
+
+            visualize_filter_grid(cw1,c_filename,print_figures,cfname)

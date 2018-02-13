@@ -22,20 +22,30 @@ try:
 except ImportError:
     print('WARNING: nn_interpolation could not be imported (only supported in CUDA at the moment), some functionality may not be available.')
 
-import pandas as pd
-
 
 def remove_infs_from_variable(v):
     # 32 - bit floating point: torch.FloatTensor, torch.cuda.FloatTensor
     # 64 - bit floating point: torch.DoubleTensor, torch.cuda.DoubleTensor
     # 16 - bit floating point: torch.HalfTensor, torch.cuda.HalfTensor
 
+    # todo: maybe find a cleaner way of handling this
+    # this is to make sure that subsequent sums work (hence will be smaller than it could be,
+    # but values of this size should not occur in practice anyway
+    sz = v.size()
+    reduction_factor = np.prod(np.array(sz))
+
     if type(v.data)==torch.FloatTensor or type(v.data)==torch.cuda.FloatTensor:
-        return torch.clamp(v,min=np.asscalar(np.finfo('float32').min),max=np.asscalar(np.finfo('float32').max))
+        return torch.clamp(v,
+                           min=(np.asscalar(np.finfo('float32').min))/reduction_factor,
+                           max=(np.asscalar(np.finfo('float32').max))/reduction_factor)
     elif type(v.data)==torch.DoubleTensor or type(v.data)==torch.cuda.DoubleTensor:
-        return torch.clamp(v,min=np.asscalar(np.finfo('float64').min),max=np.asscalar(np.finfo('float64').max))
+        return torch.clamp(v,
+                           min=(np.asscalar(np.finfo('float64').min))/reduction_factor,
+                           max=(np.asscalar(np.finfo('float64').max))/reduction_factor)
     elif type(v.data)==torch.HalfTensor or type(v.data)==torch.cuda.HalfTensor:
-        return torch.clamp(v,min=np.asscalar(np.finfo('float16').min),max=np.asscalar(np.finfo('float16').max))
+        return torch.clamp(v,
+                           min=(np.asscalar(np.finfo('float16').min))/reduction_factor,
+                           max=(np.asscalar(np.finfo('float16').max))/reduction_factor)
     else:
         raise ValueError('Unknown data type: ' + str( type(v.data)))
 
