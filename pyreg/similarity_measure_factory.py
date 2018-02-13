@@ -7,6 +7,8 @@ import torch
 from torch.autograd import Variable
 from data_wrapper import AdaptVal
 import utils
+from math import floor
+from similarity_helper_omt import *
 
 class SimilarityMeasure(object):
     """
@@ -17,6 +19,7 @@ class SimilarityMeasure(object):
     def __init__(self, spacing, params):
         self.spacing = spacing
         """pixel/voxel spacing"""
+
         self.volumeElement = self.spacing.prod()
         """volume element"""
         self.dim = len(spacing)
@@ -147,12 +150,22 @@ class SSDSimilarity(SimilarityMeasure):
 
 class OptimalMassTransportSimilarity(SimilarityMeasure):
     """
-    Similarity measure based on optimal mass transport.
+    Constructor
+        :param spacing: spacing of the grid (as in parameters structure)
+        :param std_dev: similarity measure parameter
+        :param sinkhorn_iterations: number of iterations in sinkhorn algorithm
+        :param std_sinkhorn: standard deviation of the entropic regularization (not too small to avoid nan)
 
     """
 
-    def __init__(self, spacing, params):
+    def __init__(self, spacing, params,sinkhorn_iterations = 200,std_sinkhorn = 0.08):
         super(OptimalMassTransportSimilarity, self).__init__(spacing, params)
+        self.spacing = spacing
+        self.params = params
+        self.std_dev = self.sigma
+        self.std_sinkhorn = std_sinkhorn
+        self.sinkhorn_iterations = sinkhorn_iterations
+
 
     def compute_similarity(self, I0, I1, I0Source, phi):
         """
@@ -172,21 +185,25 @@ class OptimalMassTransportSimilarity(SimilarityMeasure):
         if phi is None:
             raise ValueError('OptimalMassTransportSimiliary can only be computed for map-based models.')
 
-        #todo: just compute SSD for now, change this to OMT
-
         # warp the source image (would be more efficient if we process a batch of images at once;
         # but okay for now and no overhead if you only use one image pair at a time)
         I1_warped = utils.compute_warped_image(I0Source, phi, self.spacing)
 
-        return AdaptVal((utils.remove_infs_from_variable((I1_warped - I1) ** 2)).sum() / (self.sigma ** 2) * self.volumeElement)
+        # Encapsulate the data in tensor Variables
+        multiplier0 = Variable(torch.zeros(I0.size()))
+        multiplier1 = Variable(torch.zeros(I1.size()))
+        nr_iterations_sinkhorn = Variable(torch.Tensor([self.sinkhorn_iterations]))
+        std_sink = Variable(torch.Tensor([self.std_sinkhorn]))
 
+        # Compute the actual similarity
+        result = OTSimilarityHelper.apply(phi,I1_warped,I1,multiplier0,multiplier1,Variable(torch.Tensor(self.spacing)),nr_iterations_sinkhorn,std_sink)
+        return result/(self.std_dev**2)
 
 class NCCSimilarity(SimilarityMeasure):
     """
     Computes a normalized-cross correlation based similarity measure between two images.
     :math:`sim = (1-ncc^2)/(\\sigma^2)`
     """
-
     def __init__(self, spacing, params):
         super(NCCSimilarity,self).__init__(spacing,params)
 
@@ -200,11 +217,12 @@ class NCCSimilarity(SimilarityMeasure):
        :param phi: not used
        :return: (1-NCC^2)/sigma^2
        """
-
         # TODO: may require a safeguard against infinity
         ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
         # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
         return AdaptVal((1.0-ncc**2) / (self.sigma ** 2))
+
+
 
 class LocalizedNCCSimilarity(SimilarityMeasure):
     """
