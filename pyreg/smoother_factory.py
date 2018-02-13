@@ -1048,10 +1048,11 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         # the input image, which may provide some guidance on where to smooth
 
         if self.debug_retain_computed_local_weights:
-            smoothed_v = self.ws(vcollection, I, self.get_gaussian_weights(), self.encourage_spatial_weight_consistency, self.debug_retain_computed_local_weights)
+            # v is actually the vector-valued momentum here; changed the interface to pass this also
+            smoothed_v = self.ws(vcollection, I, v, self.get_gaussian_weights(), self.encourage_spatial_weight_consistency, self.debug_retain_computed_local_weights)
             self.debug_computed_local_weights = self.ws.get_computed_weights()
         else:
-            smoothed_v = self.ws(vcollection, I, self.get_gaussian_weights(), self.encourage_spatial_weight_consistency)
+            smoothed_v = self.ws(vcollection, I, v, self.get_gaussian_weights(), self.encourage_spatial_weight_consistency)
 
         if vout is not None:
             vout[:] = smoothed_v

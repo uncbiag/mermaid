@@ -101,6 +101,20 @@ class RegisterImagePair(object):
         else:
             return None
 
+    def set_model_parameters(self,p):
+        """
+        Sets the model parameters
+
+        :param p: model parameters
+        :return:
+        """
+
+        if self.opt is not None:
+            self.opt.set_model_parameters(p)
+        else:
+            raise ValueError('Could not set the model parameters for an unknown optimizer')
+
+
     def register_images_from_files(self,source_filename,target_filename,model_name,
                                    nr_of_iterations=None,
                                    similarity_measure_type=None,

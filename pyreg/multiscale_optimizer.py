@@ -105,6 +105,15 @@ class SimpleRegistration(object):
         """
         return self.optimizer.get_model_parameters()
 
+    def set_model_parameters(self,p):
+        """
+        Sets the parameters of a model
+
+        :param p: model parameters
+        :return:
+        """
+        self.optimizer.set_model_parameters(p)
+
     def set_light_analysis_on(self, light_analysis_on):
         self.light_analysis_on = light_analysis_on
 
