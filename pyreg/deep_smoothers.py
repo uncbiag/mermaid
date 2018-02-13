@@ -195,8 +195,10 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
                                                                      nr_of_image_channels=nr_of_image_channels,\
                                                                      params=params)
 
-        feature_num = 16
-        use_dropout=False
+        # is 64 in quicksilver paper
+        feature_num = self.params[('number_of_features_in_first_layer', 32, 'number of features in the first encoder layer (64 in quicksilver)')]
+        use_dropout= self.params[('use_dropout',False,'use dropout for the layers')]
+        self.use_separate_decoders_per_gaussian = self.params[('use_separate_decoders_per_gaussian',True,'if set to true separte decoder branches are used for each Gaussian')]
 
         self.encoder_1 = encoder_block_2d(1, feature_num, use_dropout)
         self.encoder_2 = encoder_block_2d(feature_num, feature_num * 2, use_dropout)
@@ -204,8 +206,16 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         # todo: maybe have one decoder for each Gaussian here.
         # todo: the current version seems to produce strange gridded results
 
-        self.decoder_1 = decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout)
-        self.decoder_2 = decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, last_block=True)  # 3?
+        if self.use_separate_decoders_per_gaussian:
+            self.decoder_1 = nn.ModuleList()
+            self.decoder_2 = nn.ModuleList()
+            # create two decoder blocks for each Gaussian
+            for g in range(nr_of_gaussians):
+                self.decoder_1.append( decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout) )
+                self.decoder_2.append( decoder_block_2d(feature_num, 1, 2, use_dropout, last_block=True) )
+        else:
+            self.decoder_1 = decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout)
+            self.decoder_2 = decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, last_block=True)  # 3?
 
 
     def forward(self, multi_smooth_v, I, global_multi_gaussian_weights,
@@ -243,7 +253,16 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         x=I
 
         encoder_output = self.encoder_2(self.encoder_1(x))
-        decoder_output = self.decoder_2(self.decoder_1(encoder_output))
+
+        if self.use_separate_decoders_per_gaussian:
+            # here we have seperate decoder outputs for the different Gaussians
+            # should give it more flexibility
+            decoder_output_individual = []
+            for g in range(self.nr_of_gaussians):
+                decoder_output_individual.append( self.decoder_2[g](self.decoder_1[g](encoder_output)) )
+            decoder_output = torch.cat(decoder_output_individual, dim=1);
+        else:
+            decoder_output = self.decoder_2(self.decoder_1(encoder_output))
 
         # now we are ready for the softmax
         weights = F.softmax(decoder_output, dim=1)
