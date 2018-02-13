@@ -9,6 +9,16 @@ import pyreg.fileio as FIO
 import pyreg.simple_interface as SI
 
 import matplotlib.pyplot as plt
+import os
+import fnmatch
+
+def find(pattern, path):
+    result = []
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            if fnmatch.fnmatch(name, pattern):
+                result.append(os.path.join(root, name))
+    return result
 
 def get_image_range(im_from,im_to):
     f = []
@@ -32,7 +42,10 @@ def compute_average_image(images):
 
 # first get a few files to build the atlas from
 
-images = get_image_range(0,100)
+#images = get_image_range(0,7)
+images_list = find('*Label1.sliced.nii.gz', '../test_data/label_slices/')
+images = images_list[0:10]
+
 Iavg,spacing = compute_average_image(images)
 
 plt.imshow(Iavg[0,0,...].numpy(),cmap='gray')
@@ -44,22 +57,52 @@ plt.show()
 si = SI.RegisterImagePair()
 im_io = FIO.ImageIO()
 
-nr_of_cycles = 3
+# initialize list to save model parameters in between cycles
+mp = []
 
+nr_of_cycles = 3
 for c in range(nr_of_cycles):
     print('Starting cycle ' + str(c) + '/' + str(nr_of_cycles))
     for i,im_name in enumerate(images):
         print('Registering image ' + str(i) + '/' + str(len(images)))
         Ic, hdrc, spacing, _ = im_io.read_to_nc_format(filename=im_name)
-        si.register_images(Ic, Iavg.numpy(), spacing,
-                           model_name='svf_scalar_momentum_map',
-                           map_low_res_factor=0.5,
-                           nr_of_iterations=50,
-                           visualize_step=None)
+        # set former model parameters if available
+        if c !=0:
+            si.set_model_parameters(mp[i])
+        # register current image to average image
+        ## si.register_images(Ic, Iavg.cpu().numpy(),
+        # si.register_images(Ic, Iavg.numpy(),
+        #                    spacing,
+        #                    model_name='svf_scalar_momentum_map',
+        #                    map_low_res_factor=0.5,
+        #                    nr_of_iterations=7,
+        #                    visualize_step=None)
+        ## si.register_images(Ic, Iavg.cpu().numpy(),
+        si.register_images(Ic, Iavg.numpy(),
+                           spacing, model_name='svf_scalar_momentum_map',
+                           smoother_type='adaptive_multiGaussian',
+                           # optimize_over_smoother_parameters=True,
+                           map_low_res_factor=1.0,
+                           visualize_step=None,
+                           nr_of_iterations=15,
+                           rel_ftol=1e-4,
+                           similarity_measure_sigma=1)
+        ## si.register_images(Ic, Iavg.cpu().numpy(),
+        # si.register_images(Ic, Iavg.numpy(),
+        #                    spacing, model_name='affine_map', nr_of_iterations=15,
+        #                    visualize_step=None, rel_ftol=1e-4)
         wi = si.get_warped_image()
 
+        # save current model parametrs for the next circle
+        if c==0:
+            mp.append(si.get_model_parameters())
+        elif c!=nr_of_cycles-1:
+            mp[i] = si.get_model_parameters()
+
         if c==nr_of_cycles-1: # last time this is run, so let's save the image
-            current_filename = './out_data/reg_oasis2d_' + str(i).zfill(4) + '.nrrd'
+            #current_filename = './reg_oasis2d_' + str(i).zfill(4) + '.nrrd'
+            current_filename = './atlasTest_Label1_regImage' + str(i).zfill(4) +'.nrrd'
+            print("writing image " + str(i))
             im_io.write(current_filename,wi,hdrc)
 
         if i==0:
@@ -69,9 +112,9 @@ for c in range(nr_of_cycles):
 
     Iavg = newAvg/len(images)
 
+    #plt.imshow(Iavg[0, 0, ...].cpu().numpy(), cmap='gray')
     plt.imshow(Iavg[0,0,...].numpy(),cmap='gray')
     plt.title( 'Average ' + str(c+1) + '/' + str(nr_of_cycles) )
     plt.colorbar()
     plt.show()
-
 
