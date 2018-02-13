@@ -119,52 +119,100 @@ class DeepSmoothingModel(nn.Module):
 #torch.nn.Conv3d(in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True)
 
 class encoder_block_2d(nn.Module):
-    def __init__(self, input_feature, output_feature, use_dropout):
+    def __init__(self, input_feature, output_feature, use_dropout, use_batch_normalization):
         super(encoder_block_2d, self).__init__()
+
+        if use_batch_normalization:
+            conv_bias = False
+        else:
+            conv_bias = True
+
         self.conv_input = nn.Conv2d(in_channels=input_feature, out_channels=output_feature,
-                                    kernel_size=3, stride=1, padding=1, dilation=1)
+                                    kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
         self.conv_inblock1 = nn.Conv2d(in_channels=output_feature, out_channels=output_feature,
-                                       kernel_size=3, stride=1, padding=1, dilation=1)
+                                       kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
         self.conv_inblock2 = nn.Conv2d(in_channels=output_feature, out_channels=output_feature,
-                                       kernel_size=3, stride=1, padding=1, dilation=1)
+                                       kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
         self.conv_pooling = nn.Conv2d(in_channels=output_feature, out_channels=output_feature,
-                                      kernel_size=2, stride=2, padding=0, dilation=1)
+                                      kernel_size=2, stride=2, padding=0, dilation=1,bias=conv_bias)
         self.prelu1 = nn.PReLU()
         self.prelu2 = nn.PReLU()
         self.prelu3 = nn.PReLU()
         self.prelu4 = nn.PReLU()
+
+        if use_batch_normalization:
+            self.bn_1 = nn.BatchNorm2d(output_feature)
+            self.bn_2 = nn.BatchNorm2d(output_feature)
+            self.bn_3 = nn.BatchNorm2d(output_feature)
+            self.bn_4 = nn.BatchNorm2d(output_feature)
+
         self.use_dropout = use_dropout
+        self.use_batch_normalization = use_batch_normalization
         self.dropout = nn.Dropout(0.2)
+
     def apply_dropout(self, input):
         if self.use_dropout:
             return self.dropout(input)
         else:
             return input
-    def forward(self, x):
+
+    def forward_with_batch_normalization(self,x):
+        output = self.conv_input(x)
+        output = self.apply_dropout(self.prelu1(self.bn_1(output)))
+        output = self.apply_dropout(self.prelu2(self.bn_2(self.conv_inblock1(output))))
+        output = self.apply_dropout(self.prelu3(self.bn_3(self.conv_inblock2(output))))
+        return self.prelu4(self.bn_4(self.conv_pooling(output)))
+
+    def forward_without_batch_normalization(self,x):
         output = self.conv_input(x)
         output = self.apply_dropout(self.prelu1(output))
         output = self.apply_dropout(self.prelu2(self.conv_inblock1(output)))
         output = self.apply_dropout(self.prelu3(self.conv_inblock2(output)))
         return self.prelu4(self.conv_pooling(output))
 
+    def forward(self, x):
+        if self.use_batch_normalization:
+            return self.forward_with_batch_normalization(x)
+        else:
+            return self.forward_without_batch_normalization(x)
 
 class decoder_block_2d(nn.Module):
-    def __init__(self, input_feature, output_feature, pooling_filter,use_dropout,last_block=False):
+    def __init__(self, input_feature, output_feature, pooling_filter,use_dropout, use_batch_normalization,last_block=False):
         super(decoder_block_2d, self).__init__()
         # todo: check padding here, not sure if it is the right thing to do
+
+        if use_batch_normalization:
+            conv_bias = False
+        else:
+            conv_bias = True
+
         self.conv_unpooling = nn.ConvTranspose2d(in_channels=input_feature, out_channels=input_feature,
-                                                 kernel_size=pooling_filter, stride=2, padding=0,output_padding=0)
+                                                 kernel_size=pooling_filter, stride=2, padding=0,output_padding=0,bias=conv_bias)
         self.conv_inblock1 = nn.Conv2d(in_channels=input_feature, out_channels=input_feature,
-                                       kernel_size=3, stride=1, padding=1, dilation=1)
+                                       kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
         self.conv_inblock2 = nn.Conv2d(in_channels=input_feature, out_channels=input_feature,
-                                       kernel_size=3, stride=1, padding=1, dilation=1)
-        self.conv_output = nn.Conv2d(in_channels=input_feature, out_channels=output_feature,
-                                     kernel_size=3, stride=1, padding=1, dilation=1)
+                                       kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
+        if last_block:
+            self.conv_output = nn.Conv2d(in_channels=input_feature, out_channels=output_feature,
+                                         kernel_size=3, stride=1, padding=1, dilation=1)
+        else:
+            self.conv_output = nn.Conv2d(in_channels=input_feature, out_channels=output_feature,
+                                         kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
+
         self.prelu1 = nn.PReLU()
         self.prelu2 = nn.PReLU()
         self.prelu3 = nn.PReLU()
         self.prelu4 = nn.PReLU()
+
+        if use_batch_normalization:
+            self.bn_1 = nn.BatchNorm2d(input_feature)
+            self.bn_2 = nn.BatchNorm2d(input_feature)
+            self.bn_3 = nn.BatchNorm2d(input_feature)
+            if not last_block:
+                self.bn_4 = nn.BatchNorm2d(output_feature)
+
         self.use_dropout = use_dropout
+        self.use_batch_normalization = use_batch_normalization
         self.last_block = last_block
         self.dropout = nn.Dropout(0.2)
         self.output_feature = output_feature
@@ -174,15 +222,30 @@ class decoder_block_2d(nn.Module):
             return self.dropout(input)
         else:
             return input
-    def forward(self, x):
+
+    def forward_with_batch_normalization(self,x):
+        output = self.prelu1(self.bn_1(self.conv_unpooling(x)))
+        output = self.apply_dropout(self.prelu2(self.bn_2(self.conv_inblock1(output))))
+        output = self.apply_dropout(self.prelu3(self.bn_3(self.conv_inblock2(output))))
+        if self.last_block:  # generates final output
+            return self.conv_output(output);
+        else:  # generates intermediate results
+            return self.apply_dropout(self.prelu4(self.bn_4(self.conv_output(output))))
+
+    def forward_without_batch_normalization(self,x):
         output = self.prelu1(self.conv_unpooling(x))
         output = self.apply_dropout(self.prelu2(self.conv_inblock1(output)))
         output = self.apply_dropout(self.prelu3(self.conv_inblock2(output)))
-        if self.last_block: # generates final output
+        if self.last_block:  # generates final output
             return self.conv_output(output);
-        else: # generates intermediate results
+        else:  # generates intermediate results
             return self.apply_dropout(self.prelu4(self.conv_output(output)))
 
+    def forward(self, x):
+        if self.use_batch_normalization:
+            return self.forward_with_batch_normalization(x)
+        else:
+            return self.forward_without_batch_normalization(x)
 
 class EncoderDecoderSmoothingModel(DeepSmoothingModel):
     """
@@ -200,13 +263,15 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         use_dropout= self.params[('use_dropout',False,'use dropout for the layers')]
         self.use_separate_decoders_per_gaussian = self.params[('use_separate_decoders_per_gaussian',True,'if set to true separte decoder branches are used for each Gaussian')]
         self.use_momentum_as_input = self.params[('use_momentum_as_input',True,'If true, uses the image and the momentum as input')]
+        use_batch_normalization = self.params[('use_batch_normalization',True,'If true, uses batch normalization between layers')]
 
         if self.use_momentum_as_input:
-            self.encoder_1 = encoder_block_2d(self.get_number_of_input_channels(nr_of_image_channels,dim), feature_num, use_dropout)
+            self.encoder_1 = encoder_block_2d(self.get_number_of_input_channels(nr_of_image_channels,dim), feature_num,
+                                              use_dropout, use_batch_normalization)
         else:
-            self.encoder_1 = encoder_block_2d(1, feature_num, use_dropout)
+            self.encoder_1 = encoder_block_2d(1, feature_num, use_dropout, use_batch_normalization)
 
-        self.encoder_2 = encoder_block_2d(feature_num, feature_num * 2, use_dropout)
+        self.encoder_2 = encoder_block_2d(feature_num, feature_num * 2, use_dropout, use_batch_normalization)
 
         # todo: maybe have one decoder for each Gaussian here.
         # todo: the current version seems to produce strange gridded results
@@ -216,11 +281,11 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             self.decoder_2 = nn.ModuleList()
             # create two decoder blocks for each Gaussian
             for g in range(nr_of_gaussians):
-                self.decoder_1.append( decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout) )
-                self.decoder_2.append( decoder_block_2d(feature_num, 1, 2, use_dropout, last_block=True) )
+                self.decoder_1.append( decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization) )
+                self.decoder_2.append( decoder_block_2d(feature_num, 1, 2, use_dropout, use_batch_normalization, last_block=True) )
         else:
-            self.decoder_1 = decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout)
-            self.decoder_2 = decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, last_block=True)  # 3?
+            self.decoder_1 = decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization)
+            self.decoder_2 = decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, use_batch_normalization, last_block=True)  # 3?
 
 
     def get_number_of_input_channels(self, nr_of_image_channels, dim):
@@ -276,7 +341,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         encoder_output = self.encoder_2(self.encoder_1(x))
 
         if self.use_separate_decoders_per_gaussian:
-            # here we have seperate decoder outputs for the different Gaussians
+            # here we have separate decoder outputs for the different Gaussians
             # should give it more flexibility
             decoder_output_individual = []
             for g in range(self.nr_of_gaussians):
