@@ -1047,6 +1047,18 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         # apply the network selecting the smoothing from the set of smoothed results (vcollection) and
         # the input image, which may provide some guidance on where to smooth
 
+        # todo: debug; remove later
+        if False:
+            if variables_from_optimizer is not None:
+                if variables_from_optimizer['iter']==0:
+                    torch.save(self.ws.state_dict(),'ws_state_dict_iter_00.pt')
+
+                if variables_from_optimizer['iter'] == 10:
+                    torch.save(self.ws.state_dict(), 'ws_state_dict_iter_10.pt')
+
+                if variables_from_optimizer['iter']==20:
+                    torch.save(self.ws.state_dict(),'ws_state_dict_iter_20.pt')
+
         if self.debug_retain_computed_local_weights:
             # v is actually the vector-valued momentum here; changed the interface to pass this also
             smoothed_v = self.ws(vcollection, I, v, self.get_gaussian_weights(), self.encourage_spatial_weight_consistency, self.debug_retain_computed_local_weights)
