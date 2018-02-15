@@ -7,7 +7,9 @@ import pyreg.fileio as FIO
 class PairwiseRegistrationDataset(Dataset):
     """keeps track of pairwise image as well as checkpoints for their state"""
 
-    def __init__(self, output_directory, source_image_filenames, target_image_filenames,params):
+    def __init__(self, output_directory, source_image_filenames, target_image_filenames, params):
+
+        self.params = params
 
         self.output_directory = output_directory
         self.source_image_filenames = source_image_filenames
@@ -39,16 +41,18 @@ class PairwiseRegistrationDataset(Dataset):
         # load the actual images
         current_source_filename, current_target_filename = self._get_source_target_image_filenames(idx)
 
-        im_io = FIO.imageIO()
+        im_io = FIO.ImageIO()
 
-        ISource = im_io.read_batch_to_nc_format([current_source_filename],
+        ISource,_,_,_ = im_io.read_batch_to_nc_format([current_source_filename],
                                                 intensity_normalize=self.intensity_normalize,
                                                 squeeze_image=self.squeeze_image,
-                                                normalize_spacing=self.normalize_spacing)
-        ITarget = im_io.read_batch_to_nc_format([current_target_filename],
+                                                normalize_spacing=self.normalize_spacing,
+                                                silent_mode=True)
+        ITarget,_,_,_ = im_io.read_batch_to_nc_format([current_target_filename],
                                                 intensity_normalize=self.intensity_normalize,
                                                 squeeze_image=self.squeeze_image,
-                                                normalize_spacing=self.normalize_spacing)
+                                                normalize_spacing=self.normalize_spacing,
+                                                silent_mode=True)
 
         # load the state if it already exists
         current_state_filename = self._get_state_filename(idx)
@@ -59,9 +63,10 @@ class PairwiseRegistrationDataset(Dataset):
             individual_state = None
 
         sample = dict()
-        sample['individual_state'] = individual_state
+        if individual_state is not None:
+            sample['individual_state'] = individual_state
         sample['individual_state_filename'] = current_state_filename
-        sample['ISource'] = ISource
-        sample['ITarget'] = ITarget
+        sample['ISource'] = ISource[0,...] # as we only loaded a batch-of-one we remove the first dimension
+        sample['ITarget'] = ITarget[0,...] # as we only loaded a batch-of-one we remove the first dimension
 
         return sample

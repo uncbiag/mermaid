@@ -40,9 +40,10 @@ def get_image_range(im_from,im_to):
 
 symmetrize_images = False
 use_batch_registration = True
+nr_of_image_pairs = 10
 
-I0_filenames = get_image_range(0,15)
-I1_filenames = get_image_range(15,30)
+I0_filenames = get_image_range(0,nr_of_image_pairs)
+I1_filenames = get_image_range(nr_of_image_pairs,2*nr_of_image_pairs)
 
 if use_batch_registration:
     spacing = None
@@ -79,14 +80,14 @@ reg = si.RegisterImagePair()
 if True:
     reg.register_images(I0,I1,spacing,
                     model_name='svf_scalar_momentum_map',
-                    nr_of_iterations=21,
-                    visualize_step=5,
+                    nr_of_iterations=10,
+                    visualize_step=20,
                     map_low_res_factor=0.5,
                     rel_ftol=1e-15,
                     json_config_out_filename='testBatchNewerSmoother.json',
-                    use_batch_optimization=True,
+                    use_consensus_optimization=True,
                     params='testBatchNewerSmoother.json')
-                    #use_consensus_optimization=True,
+                    #use_batch_optimization=True,
 if False:
     reg.register_images(I0,I1,spacing,
                     model_name='lddmm_shooting_scalar_momentum_map',
@@ -107,10 +108,9 @@ vars_to_save = dict()
 vars_to_save['registration_pars'] = pars
 vars_to_save['I0'] = I0
 vars_to_save['I1'] = I1
-vars_to_save['sz'] = I0.size()
 vars_to_save['Iw'] = Iw
 vars_to_save['phi'] = phi
-vars_to_save['spacing'] = spacing0
+vars_to_save['spacing'] = spacing
 vars_to_save['params'] = reg.get_params()
 vars_to_save['history'] = h
 
