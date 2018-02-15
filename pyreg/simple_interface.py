@@ -268,7 +268,7 @@ class RegisterImagePair(object):
             raise ValueError('Cannot simultaneously select consensus AND batch optimization')
 
         if use_batch_optimization:
-            if torch.is_tensor(ISource) or torch.is_tensor(ITarget):
+            if type(ISource)==np.ndarray or type(ITarget)==np.ndarray:
                 raise ValueError('Batch normalization requires filename lists as inputs')
 
             if (self.sz is None) or spacing is None:
@@ -282,6 +282,13 @@ class RegisterImagePair(object):
                         spacing = spacing_from_file
                 else:
                     raise ValueError('Expected a list of filenames')
+
+        else:
+            if self.sz is None:
+                if type(ISource)==np.ndarray:
+                    self.sz = ISource.shape
+                else:
+                    raise ValueError('Input image needs to be a numpy array')
 
         if params is None:
             self.params = pars.ParameterDict()
