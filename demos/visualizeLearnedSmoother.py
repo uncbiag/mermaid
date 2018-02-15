@@ -103,7 +103,7 @@ I1 = Variable( torch.from_numpy(d['I1']), requires_grad=False)
 Iw = d['Iw']
 phi = d['phi']
 lam = Variable( d['registration_pars']['lam'], requires_grad=False)
-sz = d['sz']
+sz = I0.size()
 history = d['history']
 lowResSize = lam.size()
 spacing = d['spacing']

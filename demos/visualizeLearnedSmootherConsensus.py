@@ -109,7 +109,7 @@ d = torch.load('testBatchGlobalWeightRegularizedOpt_tst.pt')
 
 I0 = Variable( torch.from_numpy(d['I0']), requires_grad=False)
 I1 = Variable( torch.from_numpy(d['I1']), requires_grad=False)
-sz = d['sz']
+sz = I0.size()
 history = d['history']
 spacing = d['spacing']
 params = d['params']

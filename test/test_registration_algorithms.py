@@ -46,7 +46,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         szEx = np.tile(example_img_len, dim)  # size of the desired images: (sz)^dim
         I0, I1, self.spacing = eg.CreateSquares(dim).create_image_pair(szEx,self.params)  # create a default image size with two sample squares
-        sz = np.array(I0.shape)
+        self.sz = np.array(I0.shape)
 
         # create the source and target image as pyTorch variables
         self.ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
@@ -60,7 +60,7 @@ class Test_registration_algorithms(unittest.TestCase):
         self.params['image_smoothing']['smoother'][('type', 'gaussian', "['gaussianSpatial'|'gaussian'|'diffusion']")]
 
         cparams = self.params['image_smoothing']
-        s = SF.SmootherFactory(sz[2::], self.spacing).create_smoother(cparams)
+        s = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         self.ISource = s.smooth(self.ISource)
         self.ITarget = s.smooth(self.ITarget)
 
@@ -78,7 +78,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage( 32 )
 
-        so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.params)
+        so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
         so.set_light_analysis_on(True)
         so.register()
@@ -98,7 +98,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage()
 
-        so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+        so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
         so.set_light_analysis_on(True)
         so.register()
@@ -117,7 +117,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage()
 
-        so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+        so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
         so.set_light_analysis_on(True)
         so.register()
@@ -136,7 +136,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage()
 
-        mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+        mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         mo.get_optimizer().set_visualization(False)
         mo.set_light_analysis_on(True)
         mo.register()
@@ -155,7 +155,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage()
 
-        mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+        mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         mo.get_optimizer().set_visualization(False)
         mo.set_light_analysis_on(True)
         mo.register()
@@ -174,7 +174,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage()
 
-        mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+        mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         mo.get_optimizer().set_visualization(False)
         mo.set_light_analysis_on(True)
         mo.register()
@@ -194,7 +194,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage()
 
-        mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+        mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         mo.get_optimizer().set_visualization(False)
         mo.set_light_analysis_on(True)
         mo.register()
@@ -213,7 +213,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage( 32 )
 
-        so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.params)
+        so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
         so.set_light_analysis_on(True)
         so.register()
@@ -232,7 +232,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage()
 
-        so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.params)
+        so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
         so.set_light_analysis_on(True)
         so.register()
@@ -251,7 +251,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage()
 
-        so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.params)
+        so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
         so.set_light_analysis_on(True)
         so.register()
@@ -273,7 +273,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage()
 
-        so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+        so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
         so.set_light_analysis_on(True)
         so.register()
@@ -294,7 +294,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage()
 
-        so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+        so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
         so.set_light_analysis_on(True)
         so.register()
@@ -316,7 +316,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage()
 
-        so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+        so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
         so.set_light_analysis_on(True)
         so.register()
@@ -337,7 +337,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         self.createImage()
 
-        so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+        so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
         so.set_light_analysis_on(True)
         so.register()

@@ -18,6 +18,11 @@ import image_sampling as IS
 from metrics import get_multi_metric
 from res_recorder import XlsxRecorder
 
+from torch.utils.data import Dataset, DataLoader
+import optimizer_data_loaders as OD
+
+import collections
+
 # add some convenience functionality
 class SimpleRegistration(object):
     """
@@ -25,7 +30,7 @@ class SimpleRegistration(object):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self,ISource,ITarget,spacing,params):
+    def __init__(self,ISource,ITarget,spacing,sz,params):
         """
         :param ISource: source image
         :param ITarget: target image
@@ -38,7 +43,7 @@ class SimpleRegistration(object):
         self.spacing = spacing
         self.ISource = ISource
         self.ITarget = ITarget
-        self.sz = np.array( ISource.size() )
+        self.sz = sz
         self.optimizer = None
         self.light_analysis_on = None
 
@@ -122,8 +127,8 @@ class SimpleSingleScaleRegistration(SimpleRegistration):
     """
     Simple single scale registration
     """
-    def __init__(self,ISource,ITarget,spacing,params):
-        super(SimpleSingleScaleRegistration, self).__init__(ISource,ITarget,spacing, params)
+    def __init__(self,ISource,ITarget,spacing,sz,params):
+        super(SimpleSingleScaleRegistration, self).__init__(ISource,ITarget,spacing,sz,params)
         self.optimizer = SingleScaleRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params)
 
     def register(self):
@@ -140,9 +145,26 @@ class SimpleSingleScaleConsensusRegistration(SimpleRegistration):
     Single scale registration making use of consensus optimization (to allow for multiple independent registration
     that can share parameters).
     """
-    def __init__(self,ISource,ITarget,spacing,params):
-        super(SimpleSingleScaleConsensusRegistration, self).__init__(ISource,ITarget,spacing, params)
+    def __init__(self,ISource,ITarget,spacing,sz,params):
+        super(SimpleSingleScaleConsensusRegistration, self).__init__(ISource,ITarget,spacing,sz,params)
         self.optimizer = SingleScaleConsensusRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params)
+
+    def register(self):
+        """
+        Registers the source to the target image
+        :return: n/a
+        """
+        self.optimizer.set_light_analysis_on(self.light_analysis_on)
+        self.optimizer.register(self.ISource,self.ITarget)
+
+
+class SimpleSingleScaleBatchRegistration(SimpleRegistration):
+    """
+    Single scale registration making use of batch optimization (to allow optimizing over many or large images).
+    """
+    def __init__(self,ISource,ITarget,spacing,sz,params):
+        super(SimpleSingleScaleBatchRegistration, self).__init__(ISource,ITarget,spacing,sz,params)
+        self.optimizer = SingleScaleBatchRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params)
 
     def register(self):
         """
@@ -157,8 +179,8 @@ class SimpleMultiScaleRegistration(SimpleRegistration):
     """
     Simple multi scale registration
     """
-    def __init__(self,ISource,ITarget,spacing,params):
-        super(SimpleMultiScaleRegistration, self).__init__(ISource, ITarget, spacing, params)
+    def __init__(self,ISource,ITarget,spacing,sz,params):
+        super(SimpleMultiScaleRegistration, self).__init__(ISource, ITarget, spacing,sz,params)
         self.optimizer = MultiScaleRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params)
 
     def register(self):
@@ -601,8 +623,17 @@ class ImageRegistrationOptimizer(Optimizer):
         :param I: source image
         """
         self.ISource = I
+
+    def _compute_low_res_image(self,I):
+        low_res_image = None
         if self.mapLowResFactor is not None:
-            self.lowResISource,_ = self.sampler.downsample_image_to_size(self.ISource,self.spacing,self.lowResSize[2::])
+            low_res_image,_ = self.sampler.downsample_image_to_size(self.ISource,self.spacing,self.lowResSize[2::])
+        return low_res_image
+
+    def compute_low_res_image_if_needed(self):
+        """To be called before the optimization starts"""
+        if self.mapLowResFactor is not None:
+            self.lowResISource = self._compute_low_res_image(self.ISource)
 
     def set_source_label(self, LSource):
         """
@@ -708,6 +739,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """the optimizer instance to perform the actual optimization"""
 
         self.use_step_size_scheduler = self.params['optimizer'][('use_step_size_scheduler',True,'If set to True the step sizes are reduced if no progress is made')]
+        self.scheduler = None
 
         self.rec_energy = None
         self.rec_similarityEnergy = None
@@ -867,6 +899,24 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :return: shared model parameters
         """
         return self.model.get_shared_registration_parameters()
+
+    def set_individual_model_parameters(self,p):
+        """
+        Set only the individual parameters of the model
+
+        :param p: individual registration parameters as an ordered dict
+        :return: n/a
+        """
+
+        self.model.set_individual_registration_parameters(p)
+
+    def get_individual_model_parameters(self):
+        """
+        Returns only the model parameters that individual to a model (i.e., not shared).
+
+        :return: individual model parameters
+        """
+        return self.model.get_individual_registration_parameters()
 
     def upsample_model_parameters(self, desiredSize):
         """
@@ -1162,6 +1212,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
 
         self._set_all_still_missing_parameters()
+        self.compute_low_res_image_if_needed()
         self.optimizer_has_been_initialized = True
 
         # in this way model parameters can be "set" before the optimizer has been properly initialized
@@ -1175,16 +1226,17 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.last_energy = None
         could_not_find_successful_step = False
 
-        if self.use_step_size_scheduler:
+        if self.use_step_size_scheduler and self.scheduler is None:
             self.params['optimizer'][('scheduler', {}, 'parameters for the ReduceLROnPlateau scheduler')]
             scheduler_verbose = self.params['optimizer']['scheduler'][('verbose',True,'if True prints out changes in learning rate')]
             scheduler_factor = self.params['optimizer']['scheduler'][('factor',0.5,'reduction factor')]
             scheduler_patience = self.params['optimizer']['scheduler'][('patience',10,'how many steps without reduction before LR is changed')]
-            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_instance, 'min',
+            self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_instance, 'min',
                                                                    verbose=scheduler_verbose,
                                                                    factor=scheduler_factor,
                                                                    patience=scheduler_patience)
 
+        self.iter_count = 0
         for iter in range(self.nrOfIterations):
 
             # take a step of the optimizer
@@ -1192,7 +1244,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             #     p.data = p.data.float()
             current_loss = self.optimizer_instance.step(self._closure)
             if self.use_step_size_scheduler:
-                scheduler.step(current_loss.data[0])
+                self.scheduler.step(current_loss.data[0])
 
             if hasattr(self.optimizer_instance,'last_step_size_taken'):
                 self.last_successful_step_size_taken = self.optimizer_instance.last_step_size_taken()
@@ -1238,6 +1290,264 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         print('time:', time.time() - start)
 
 
+class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
+
+    def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
+
+        super(SingleScaleBatchRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params)
+
+        self.params[('optimizer', {}, 'optimizer settings')]
+        cparams = self.params['optimizer']
+        cparams[('batch_settings', {}, 'settings for the batch optimizer')]
+        cparams = cparams['batch_settings']
+
+        self.batch_size = cparams[('batch_size',5,'how many images per batch (if set larger or equal to the number of images, it will be processed as one batch')]
+        """how many images per batch"""
+
+        self.shuffle = cparams[('shuffle', True, 'if batches should be shuffled between epochs')]
+        """shuffle batches between epochshow many images per batch"""
+
+        self.num_workers = cparams[('num_workers',4,'Number of workers to read the data')]
+        """number of workers to read the data"""
+
+        self.nr_of_epochs = cparams[('nr_of_epochs', 1,'how many epochs')]
+        """how many iterations for batch; i.e., how often to iterate over the entire dataset = epochs"""
+
+        self.individual_state_output_dir = cparams[('individual_state_output_dir','individual_states','output directory to store the individual states during the iterations')]
+        """output directory to store the individual states during the iterations"""
+
+        self.model_name = None
+        self.add_model_name = None
+        self.add_model_networkClass = None
+        self.add_model_lossClass = None
+        self.addSimName = None
+        self.addSimMeasure = None
+
+        self.ssOpt = None
+
+    def add_similarity_measure(self, simName, simMeasure):
+        """
+        Adds a custom similarity measure
+
+        :param simName: name of the similarity measure (string)
+        :param simMeasure: the similarity measure itself (an object that can be instantiated)
+        """
+        self.addSimName = simName
+        self.addSimMeasure = simMeasure
+
+
+    def set_model(self, modelName):
+        """
+        Sets the model that should be solved
+
+        :param modelName: name of the model that should be solved (string)
+        """
+
+        self.model_name = modelName
+
+
+    def add_model(self, add_model_name, add_model_networkClass, add_model_lossClass):
+        """
+        Adds a custom model to be optimized over
+
+        :param add_model_name: name of the model (string)
+        :param add_model_networkClass: network model itself (as an object that can be instantiated)
+        :param add_model_lossClass: loss of the model (as an object that can be instantiated)
+        """
+        self.add_model_name = add_model_name
+        self.add_model_networkClass = add_model_networkClass
+        self.add_model_lossClass = add_model_lossClass
+
+
+    def get_checkpoint_dict(self):
+        d = super(SingleScaleBatchRegistrationOptimizer, self).get_checkpoint_dict()
+        if self.ssOpt is not None:
+            d['shared_state'] = self.ssOpt.get_shared_model_parameters()
+        return d
+
+    def load_checkpoint_dict(self, d, load_optimizer_state=False):
+        super(SingleScaleBatchRegistrationOptimizer, self).load_checkpoint_dict(d)
+        if d.has_key('shared_state'):
+            if self.ssOpt is not None:
+                self.ssOpt.set_shared_model_parameters(d['shared_state'])
+        else:
+            raise ValueError('checkpoint does not contain: consensus_dual')
+
+    def get_warped_image(self):
+        """
+        Returns the warped image
+        :return: the warped image
+        """
+
+        p = dict()
+        p['warped_images'] = []
+
+        print('get_warped_image: not yet implemented')
+
+        return p
+
+    def get_map(self):
+        """
+        Returns the deformation map
+        :return: deformation map
+        """
+
+        p = dict()
+        p['phi'] = []
+
+        print('get_map: not yet implemented')
+
+        return p
+
+
+    def get_model_parameters(self):
+        """
+        Returns the parameters of the model
+
+        :return: model parameters
+        """
+        p = dict()
+        if self.ssOpt is not None:
+            p['shared_state'] = self.ssOpt.get_shared_model_parameters()
+
+        return p
+
+    def set_model_parameters(self, p):
+        raise ValueError('Setting model parameters not yet supported by batch optimizer')
+
+    def _set_all_still_missing_parameters(self):
+        if self.model_name is None:
+            model_name = self.params['model']['registration_model'][('type', 'lddmm_shooting_map',
+                                                                     "['svf'|'svf_quasi_momentum'|'svf_scalar_momentum'|'svf_vector_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with suffix '_map' or '_image'")]
+            self.params['model']['deformation'][('use_map', True, 'use a map for the solution or not True/False')]
+            self.set_model(model_name)
+
+        if self.optimizer_name is None:
+            self.optimizer_name = self.params['optimizer'][('name', 'sgd', 'Optimizer (lbfgs|adam|sgd)')]
+
+    def _create_single_scale_optimizer(self,batch_size):
+        ssOpt = SingleScaleRegistrationOptimizer(batch_size, self.spacing, self.useMap, self.mapLowResFactor, self.params)
+
+        if ((self.add_model_name is not None) and
+                (self.add_model_networkClass is not None) and
+                (self.add_model_lossClass is not None)):
+            ssOpt.add_model(self.add_model_name, self.add_model_networkClass, self.add_model_lossClass)
+
+        # now set the actual model we want to solve
+        ssOpt.set_model(self.model_name)
+
+        if (self.addSimName is not None) and (self.addSimMeasure is not None):
+            ssOpt.add_similarity_measure(self.addSimName, self.addSimMeasure)
+
+        if self.optimizer_name is not None:
+            ssOpt.set_optimizer_by_name(self.optimizer_name)
+        else:
+            raise ValueError('Optimizers need to be specified by name of consensus optimization at the moment.')
+
+        ssOpt.set_rel_ftol(self.get_rel_ftol())
+
+        ssOpt.set_visualization(self.get_visualization())
+        ssOpt.set_visualize_step(self.get_visualize_step())
+        ssOpt.set_light_analysis_on(self.light_analysis_on)
+
+        if not self.light_analysis_on:
+            raise ValueError('not supported yet')
+
+        return ssOpt
+
+    def _write_out_individual_states(self,model_pars,filenames):
+        nr_filenames = len(filenames)
+
+        # first check that we are only dealing with tensors here and that they all have the same batch size
+        data_is_consistent = True
+        for key in model_pars:
+            if torch.is_tensor(model_pars[key]):
+                if model_pars[key].size()[0]!=nr_filenames:
+                    data_is_consistent = False
+                    break
+            else:
+                data_is_consistent = False
+                break
+
+        if not data_is_consistent:
+            raise ValueError('Data-types not supported or dimensions not consistent with batch size')
+
+        for i, filename in enumerate(filenames):
+            d = collections.OrderedDict()
+            for key in model_pars:
+                d[key] = model_pars[key][i,...]
+            torch.save(d,filename)
+
+    def optimize(self):
+        """
+        The optimizer to optimize over batches of images
+
+        :return: n/a
+        """
+
+        if self.optimizer is not None:
+            raise ValueError('Custom optimizers are currently not supported for batch optimization.\
+                                  Set the optimizer by name (e.g., in the json configuration) instead. Should be some form of stochastic gradient descent.')
+
+
+        self._set_all_still_missing_parameters()
+        self.optimizer_has_been_initialized = True
+
+        iter_offset = 0
+
+        if torch.is_tensor(self.ISource) or torch.is_tensor(self.ITarget):
+            raise ValueError('Batch optimizer expects lists of filenames as inputs for the source and target images')
+
+        registration_data_set = OD.PairwiseRegistrationDataset(output_directory=self.individual_state_output_dir,
+                                                               source_image_filenames=self.ISource,
+                                                               target_image_filenames=self.ITarget,
+                                                               params=self.params)
+
+        nr_of_datasets = len(registration_data_set)
+        if nr_of_datasets%self.batch_size!=0:
+            raise ValueError('Number of registration pairs needs to be divisible by the batch size.')
+
+        dataloader = DataLoader(registration_data_set, batch_size=self.batch_size,
+                                shuffle=self.shuffle, num_workers=self.num_workers)
+
+        self.ssOpt = None
+        last_batch_size = None
+
+        for iter_batch in range(iter_offset,self.nr_of_epochs+iter_offset):
+            print('Computing epoch ' + str(iter_batch + 1) + ' of ' + str(iter_offset+self.nr_of_epochs))
+
+            for i, sample in enumerate(dataloader, 0):
+
+                # get the data from the dataloader
+                current_source_batch = AdaptVal(Variable(sample['ISource'], requires_grad=False))
+                current_target_batch = AdaptVal(Variable(sample['ITarget'], requires_grad=False))
+
+                # create the optimizer
+                batch_size = current_source_batch.size()
+                if (batch_size != last_batch_size) and (last_batch_size is not None):
+                    raise ValueError('Ooops, this should not have happened.')
+
+                if (batch_size != last_batch_size) or (self.ssOpt is None):
+                    # we need to create a new optimizer; otherwise optimizer already exists
+                    self.ssOpt = self._create_single_scale_optimizer(batch_size)
+                    # to make sure we have the model initialized, force parameter installation
+                    self.ssOpt._set_all_still_missing_parameters()
+                last_batch_size = batch_size
+
+                if sample.has_key('individual_state'):
+                    current_individual_state = sample['individual_state']
+                    if current_individual_state is not None:
+                        self.ssOpt.set_individual_model_parameters(current_individual_state)
+
+                self.ssOpt.set_source_image(current_source_batch)
+                self.ssOpt.set_target_image(current_target_batch)
+
+                self.ssOpt.optimize()
+
+                # need to save this index by index so we can shuffle
+                self._write_out_individual_states(self.ssOpt.get_individual_model_parameters(),sample['individual_state_filename'])
+
+
 class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
     def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
@@ -1252,7 +1562,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         self.sigma = cparams[('sigma', 1.0, 'sigma/2 is multiplier for squared augmented Lagrangian penalty')]
         """Multiplier for squared augmented Lagrangian penalty"""
 
-        self.nr_of_batch_iterations = cparams[('nr_of_batch_iterations', 1, 'how many iterations for consensus; i.e., how often to iterate over the entire dataset')]
+        self.nr_of_epochs = cparams[('nr_of_epochs', 1, 'how many iterations for consensus; i.e., how often to iterate over the entire dataset')]
         """how many iterations for consensus; i.e., how often to iterate over the entire dataset"""
         self.batch_size = cparams[('batch_size',100,'how many images per batch (if set larger or equal to the number of images, it will be processed as one batch')]
         """how many images per batch"""
@@ -1470,7 +1780,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         p = dict()
         p['warped_images'] = []
         for current_batch in range(self.nr_of_batches):
-            current_checkpoint_filename = self._get_checkpoint_filename(current_batch, self.nr_of_batch_iterations - 1)
+            current_checkpoint_filename = self._get_checkpoint_filename(current_batch, self.nr_of_epochs - 1)
             dc = torch.load(current_checkpoint_filename)
             p['warped_images'].append(dc['res']['Iw'])
 
@@ -1486,7 +1796,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         p = dict()
         p['phi'] = []
         for current_batch in range(self.nr_of_batches):
-            current_checkpoint_filename = self._get_checkpoint_filename(current_batch, self.nr_of_batch_iterations - 1)
+            current_checkpoint_filename = self._get_checkpoint_filename(current_batch, self.nr_of_epochs - 1)
             dc = torch.load(current_checkpoint_filename)
             p['phi'].append(dc['res']['phi'])
 
@@ -1502,7 +1812,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         p['consensus_state'] = self.current_consensus_state
         p['registration_pars'] = []
         for current_batch in range(self.nr_of_batches):
-            current_checkpoint_filename = self._get_checkpoint_filename(current_batch,self.nr_of_batch_iterations-1)
+            current_checkpoint_filename = self._get_checkpoint_filename(current_batch,self.nr_of_epochs-1)
             dc = torch.load(current_checkpoint_filename)
             d = dict()
             d['model'] = dc['model']
@@ -1541,8 +1851,8 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             iter_offset = 0
 
-        for iter_batch in range(iter_offset,self.nr_of_batch_iterations+iter_offset):
-            print('Computing batch iteration ' + str(iter_batch + 1) + ' of ' + str(iter_offset+self.nr_of_batch_iterations))
+        for iter_batch in range(iter_offset,self.nr_of_epochs+iter_offset):
+            print('Computing epoch ' + str(iter_batch + 1) + ' of ' + str(iter_offset+self.nr_of_epochs))
 
             all_histories = []
             current_batch = 0 # there is only one batch, this one
@@ -1568,7 +1878,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
             ssOpt.optimize()
 
-            if (current_batch == self.nr_of_batches - 1) and (iter_batch == self.nr_of_batch_iterations - 1):
+            if (current_batch == self.nr_of_batches - 1) and (iter_batch == self.nr_of_epochs - 1):
                 # the last time we run this
                 all_histories.append(ssOpt.get_history())
 
@@ -1592,8 +1902,8 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             iter_offset = 0
 
-        for iter_batch in range(iter_offset,self.nr_of_batch_iterations+iter_offset):
-            print('Computing batch iteration ' + str(iter_batch+1) + ' of ' + str(iter_offset+self.nr_of_batch_iterations))
+        for iter_batch in range(iter_offset,self.nr_of_epochs+iter_offset):
+            print('Computing epoch ' + str(iter_batch+1) + ' of ' + str(iter_offset+self.nr_of_epochs))
 
             next_consensus_initialized = False
             all_histories = []
@@ -1610,7 +1920,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
                 current_batch_image_size = np.array(current_source_batch.size())
 
                 print('Computing image pair batch ' + str(current_batch+1) + ' of ' + str(self.nr_of_batches) +
-                      ' of batch iteration ' + str(iter_batch+1) + ' of ' + str(iter_offset+self.nr_of_batch_iterations))
+                      ' of batch iteration ' + str(iter_batch+1) + ' of ' + str(iter_offset+self.nr_of_epochs))
                 print('Image range: [' + str(from_image) + ',' + str(to_image) + ')')
 
                 # create new optimizer
@@ -1656,7 +1966,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
                 self._copy_state(self.last_shared_state,ssOpt.get_shared_model_parameters())
 
-                if (current_batch==self.nr_of_batches-1) and (iter_batch==self.nr_of_batch_iterations-1):
+                if (current_batch==self.nr_of_batches-1) and (iter_batch==self.nr_of_epochs-1):
                     # the last time we run this
                     all_histories.append( ssOpt.get_history() )
 

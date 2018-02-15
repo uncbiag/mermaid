@@ -106,6 +106,19 @@ class RegistrationNet(nn.Module):
         """
         return self.state_dict()
 
+    def get_individual_registration_parameters(self):
+        """
+        Returns the parameters that have *not* been declared shared for optimization.
+        This can for example be the parameters that of a given registration model *without* shared parameters of a smoother.
+        """
+        cs = self.state_dict()
+        individual_params = collections.OrderedDict()
+
+        for key in cs:
+            if not self._shared_parameters.issuperset({key}):
+                individual_params[key] = cs[key]
+        return individual_params
+
     def get_shared_registration_parameters(self):
         """
         Returns the parameters that have been declared shared for optimization.
@@ -132,18 +145,32 @@ class RegistrationNet(nn.Module):
         self.spacing = spacing
 
 
-    def set_shared_registration_parameters(self, sd):
+    def set_individual_registration_parameters(self, sd):
         """
-        Allows to only set the shared registration parameters
+        Allows to only set the registration parameters which are not shared between registrations.
 
-        :param sd: dictionary containing the shared parameters
+        :param sd: dictionary containing the parameters
         :return: n/a
         """
 
         cs = self.state_dict()
 
         for key in sd:
-            if cs.has_key(key):
+            if cs.has_key(key) and not self._shared_parameters.issuperset({key}):
+                cs[key].copy_(sd[key])
+
+    def set_shared_registration_parameters(self, sd):
+        """
+        Allows to only set the shared registration parameters
+
+        :param sd: dictionary containing the parameters
+        :return: n/a
+        """
+
+        cs = self.state_dict()
+
+        for key in sd:
+            if cs.has_key(key) and self._shared_parameters.issuperset({key}):
                cs[key].copy_(sd[key])
 
     def downsample_registration_parameters(self, desiredSz):

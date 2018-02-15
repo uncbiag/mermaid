@@ -29,6 +29,7 @@ class RegisterImagePair(object):
         self.ITarget = None
 
         self.spacing = None
+        self.sz = None
 
         self.normalize_intensity = True
         self.squeeze_image = True
@@ -121,6 +122,15 @@ class RegisterImagePair(object):
             self.delayed_model_parameters_still_to_be_set = True
             self.delayed_model_parameters = p
 
+    def _get_spacing_and_size_from_image_file(self,filename):
+        example_ISource, hdr0, spacing0, normalized_spacing0 = \
+            fileio.ImageIO().read_to_nc_format(filename,
+                                               intensity_normalize=self.normalize_intensity,
+                                               squeeze_image=self.squeeze_image,
+                                               normalize_spacing=self.normalize_spacing)
+
+        return spacing0,np.array(example_ISource.shape)
+
     def register_images_from_files(self,source_filename,target_filename,model_name,
                                    nr_of_iterations=None,
                                    similarity_measure_type=None,
@@ -132,6 +142,7 @@ class RegisterImagePair(object):
                                    visualize_step=5,
                                    use_multi_scale=False,
                                    use_consensus_optimization=False,
+                                   use_batch_optimization=False,
                                    checkpoint_dir='checkpoints',
                                    resume_from_last_checkpoint=False,
                                    optimizer_name=None,
@@ -153,6 +164,7 @@ class RegisterImagePair(object):
         :param visualize_step: step at which the solution is visualized; if set to None, no visualizations will be created
         :param use_multi_scale: if set to True a multi-scale solver will be used
         :param use_consensus_optimization: if set to True, consensus optimization is used (i.e., independently optimized batches with the contraint that shared parameters are the same)
+        :param use_batch_optimization: if set to True, batch optimization is used (i.e., optimization done w/ mini batches)
         :param checkpoint_dir: directory in which the checkpoints are written for consensus optimization
         :param resume_from_last_checkpoint: for consensus optimizer, resumes optimization from last checkpoint
         :param optimizer_name: name of the optimizer lbfgs_ls|adam|sgd
@@ -160,20 +172,38 @@ class RegisterImagePair(object):
         :return: n/a
         """
 
-        ISource,hdr0,spacing0,normalized_spacing0 = \
-            fileio.ImageIO().read_to_nc_format(source_filename,
-                                               intensity_normalize=self.normalize_intensities,
-                                               squeeze_image=self.squeeze_image,
-                                               normalize_spacing=self.normalize_spacing)
+        if use_batch_optimization and use_consensus_optimization:
+            raise ValueError('Cannot simultaneously select consensus AND batch optimization')
 
-        ITarget,hdr1,spacing1,normalized_spacing1 = \
-            fileio.ImageIO().read_to_nc_format(target_filename,
-                                               intensity_normalize=self.normalize_intensities,
-                                               squeeze_image=self.squeeze_image,
-                                               normalize_spacing=self.normalize_spacing)
+        if not use_batch_optimization:
+            ISource,hdr0,spacing0,normalized_spacing0 = \
+                fileio.ImageIO().read_to_nc_format(source_filename,
+                                                   intensity_normalize=self.normalize_intensity,
+                                                   squeeze_image=self.squeeze_image,
+                                                   normalize_spacing=self.normalize_spacing)
 
-        assert (np.all(normalized_spacing0 == normalized_spacing1))
-        spacing = normalized_spacing0
+            ITarget,hdr1,spacing1,normalized_spacing1 = \
+                fileio.ImageIO().read_to_nc_format(target_filename,
+                                                   intensity_normalize=self.normalize_intensity,
+                                                   squeeze_image=self.squeeze_image,
+                                                   normalize_spacing=self.normalize_spacing)
+            assert (np.all(normalized_spacing0 == normalized_spacing1))
+            spacing = normalized_spacing0
+            self.sz = np.array( ISource.size() )
+
+        else:
+            # batch normalization needs the filenames as input
+            ISource = source_filename
+            ITarget = target_filename
+
+            # let's read one to get the spacing
+            print('Reading one image to obtain the spacing information')
+            if type(source_filename)==list:
+                one_filename = source_filename[0]
+            else:
+                one_filename = source_filename
+
+            spacing,self.sz = self._get_spacing_and_size_from_image_file(one_filename)
 
         self.register_images(ISource,ITarget,spacing,model_name,
                       nr_of_iterations=nr_of_iterations,
@@ -186,6 +216,7 @@ class RegisterImagePair(object):
                       visualize_step=visualize_step,
                       use_multi_scale=use_multi_scale,
                       use_consensus_optimization=use_consensus_optimization,
+                      use_batch_optimization=use_batch_optimization,
                       checkpoint_dir=checkpoint_dir,
                       resume_from_last_checkpoint=resume_from_last_checkpoint,
                       optimizer_name=optimizer_name,
@@ -202,6 +233,7 @@ class RegisterImagePair(object):
                         visualize_step=5,
                         use_multi_scale=False,
                         use_consensus_optimization=False,
+                        use_batch_optimization=False,
                         checkpoint_dir=None,
                         resume_from_last_checkpoint=False,
                         optimizer_name=None,
@@ -224,12 +256,32 @@ class RegisterImagePair(object):
         :param visualize_step: step at which the solution is visualized; if set to None, no visualizations will be created
         :param use_multi_scale: if set to True a multi-scale solver will be used
         :param use_consensus_optimization: if set to True, consensus optimization is used (i.e., independently optimized batches with the contraint that shared parameters are the same)
+        :param use_batch_optimization: if set to True, batch optimization is used (i.e., optimization done w/ mini batches)
         :param checkpoint_dir: directory in which the checkpoints are written for consensus optimization
         :param resume_from_last_checkpoint: for consensus optimizer, resumes optimization from last checkpoint
         :param optimizer_name: name of the optimizer lbfgs_ls|adam|sgd
         :param params: parameter structure to pass settings or filename to load the settings from file.
         :return: n/a
         """
+
+        if use_batch_optimization and use_consensus_optimization:
+            raise ValueError('Cannot simultaneously select consensus AND batch optimization')
+
+        if use_batch_optimization:
+            if torch.is_tensor(ISource) or torch.is_tensor(ITarget):
+                raise ValueError('Batch normalization requires filename lists as inputs')
+
+            if (self.sz is None) or spacing is None:
+                # need to get it from the image
+                if type(ISource)==list:
+                    one_filename = ISource[0]
+                    spacing_from_file, sz_from_file = self._get_spacing_and_size_from_image_file(one_filename)
+                    if self.sz is None:
+                        self.sz = sz_from_file
+                    if spacing is None:
+                        spacing = spacing_from_file
+                else:
+                    raise ValueError('Expected a list of filenames')
 
         if params is None:
             self.params = pars.ParameterDict()
@@ -241,8 +293,13 @@ class RegisterImagePair(object):
         else:
             raise ValueError('Unknown parameter format: ' + str( type(params)))
 
-        self.ISource = AdaptVal(Variable(torch.from_numpy(ISource.copy()), requires_grad=False))
-        self.ITarget = AdaptVal(Variable(torch.from_numpy(ITarget), requires_grad=False))
+        if use_batch_optimization:
+            self.ISource = ISource
+            self.ITarget = ITarget
+        else:
+            self.ISource = AdaptVal(Variable(torch.from_numpy(ISource.copy()), requires_grad=False))
+            self.ITarget = AdaptVal(Variable(torch.from_numpy(ITarget), requires_grad=False))
+
         self.spacing = spacing
 
         if not self.available_models.has_key(model_name):
@@ -282,15 +339,17 @@ class RegisterImagePair(object):
                 self.params['optimizer']['consensus_settings']['continue_from_last_checkpoint'] = True
 
             if use_multi_scale:
-                if use_consensus_optimization:
-                    raise ValueError('Consensus optimization is not yet supported for multi-scale registration')
+                if use_consensus_optimization or use_batch_optimization:
+                    raise ValueError('Consensus or batch optimization is not yet supported for multi-scale registration')
                 else:
-                    self.opt = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+                    self.opt = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
             else:
                 if use_consensus_optimization:
-                    self.opt = MO.SimpleSingleScaleConsensusRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+                    self.opt = MO.SimpleSingleScaleConsensusRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
+                elif use_batch_optimization:
+                    self.opt = MO.SimpleSingleScaleBatchRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
                 else:
-                    self.opt = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.params)
+                    self.opt = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
 
             if visualize_step is not None:
                 self.opt.get_optimizer().set_visualization(True)
