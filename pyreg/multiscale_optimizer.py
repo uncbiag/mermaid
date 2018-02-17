@@ -270,6 +270,7 @@ class Optimizer(object):
 
         self.rel_ftol = self.params['optimizer']['single_scale'][('rel_ftol',self.rel_ftol,'relative termination tolerance for optimizer')]
 
+        self.show_iteration_output = True
         self.history = dict()
 
         self.optimizer_has_been_initialized = False
@@ -277,6 +278,12 @@ class Optimizer(object):
             Needs to be set before the actual optimization commences; allows to keep track if all parameters have been set
             and for example to delay external parameter settings
         """
+
+    def turn_iteration_output_on(self):
+        self.show_iteration_output = True
+
+    def turn_iteration_output_off(self):
+        self.show_iteration_output = False
 
     def get_history(self):
         """
@@ -473,6 +480,7 @@ class ImageRegistrationOptimizer(Optimizer):
         """how often the figures are updated; each self.visualize_step-th iteration"""
         self.nrOfIterations = None
         """the maximum number of iterations for the optimizer"""
+
         self.save_fig_path=None
         self.save_fig=None
         self.save_fig_num =None
@@ -754,16 +762,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
-        self.use_step_size_scheduler = self.params['optimizer'][('use_step_size_scheduler',True,'If set to True the step sizes are reduced if no progress is made')]
-        self.scheduler = None
-
-        if self.use_step_size_scheduler:
-            self.params['optimizer'][('scheduler', {}, 'parameters for the ReduceLROnPlateau scheduler')]
-            self.scheduler_verbose = self.params['optimizer']['scheduler'][('verbose', True, 'if True prints out changes in learning rate')]
-            self.scheduler_factor = self.params['optimizer']['scheduler'][('factor', 0.5, 'reduction factor')]
-            self.scheduler_patience = self.params['optimizer']['scheduler'][('patience', 10, 'how many steps without reduction before LR is changed')]
-        else:
-            self.scheduler_patience = 0
+        self.scheduler = None # for the step size scheduler
+        self.patience = None # for the step size scheduler
+        self._use_external_scheduler = False
 
         self.rec_energy = None
         self.rec_similarityEnergy = None
@@ -816,6 +817,22 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 print('WARNING: Turned off the loading of the optimizer state')
         else:
             raise ValueError('Cannot load checkpoint dictionary, because either the model or the optimizer have not been initialized')
+
+    def get_opt_par_energy(self):
+        """
+        Energy for optimizer parameters
+
+        :return:
+        """
+        return self.rec_opt_par_loss_energy.cpu().data.numpy()
+
+    def get_custom_output_values(self):
+        """
+        Custom output values
+
+        :return:
+        """
+        return self.rec_custom_optimizer_output_values
 
     def get_energy(self):
         """
@@ -1111,29 +1128,32 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.rel_f = abs(self.last_energy - cur_energy) / (1 + abs(cur_energy))
             self._add_to_history('relF',self.rel_f[0])
 
-            print('Iter {iter}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF={relF} {cos}'
-                  .format(iter=self.iter_count,
-                          energy=cur_energy,
-                          similarityE=utils.t2np(similarityEnergy.float()),
-                          regE=utils.t2np(regEnergy.float()),
-                          optParE=utils.t2np(opt_par_energy.float()),
-                          relF=self.rel_f,
-                          cos=custom_optimizer_output_string))
+            if self.show_iteration_output:
+                print('Iter {iter}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF={relF} {cos}'
+                      .format(iter=self.iter_count,
+                              energy=cur_energy,
+                              similarityE=utils.t2np(similarityEnergy.float()),
+                              regE=utils.t2np(regEnergy.float()),
+                              optParE=utils.t2np(opt_par_energy.float()),
+                              relF=self.rel_f,
+                              cos=custom_optimizer_output_string))
 
             # check if relative convergence tolerance is reached
             if self.rel_f < self.rel_ftol:
-                print('Reached relative function tolerance of = ' + str(self.rel_ftol))
+                if self.show_iteration_output:
+                    print('Reached relative function tolerance of = ' + str(self.rel_ftol))
                 reached_tolerance =  True
 
         else:
             self._add_to_history('relF',None)
-            print('Iter {iter}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF=n/a {cos}'
-                  .format(iter=self.iter_count,
-                          energy=cur_energy,
-                          similarityE=utils.t2np(similarityEnergy.float()),
-                          regE=utils.t2np(regEnergy.float()),
-                          optParE=utils.t2np(opt_par_energy.float()),
-                          cos=custom_optimizer_output_string))
+            if self.show_iteration_output:
+                print('Iter {iter}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF=n/a {cos}'
+                      .format(iter=self.iter_count,
+                              energy=cur_energy,
+                              similarityE=utils.t2np(similarityEnergy.float()),
+                              regE=utils.t2np(regEnergy.float()),
+                              optParE=utils.t2np(opt_par_energy.float()),
+                              cos=custom_optimizer_output_string))
 
         self.last_energy = cur_energy
         iter = self.iter_count
@@ -1347,6 +1367,32 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         return d
 
+    def _remove_state_variables_for_individual_parameters(self,individual_pars):
+        """
+        Removes the optimizer state for individual parameters.
+        This is required at the beginning as we do not want to reuse the SGD momentum for example for an unrelated registration.
+
+        :param individual_pars: individual parameters are returned by get_sgd_individual_model_parameters_and_optimizer_states
+        :return: n/a
+        """
+
+        if self.optimizer_instance is None:
+            raise ValueError('Optimizer not yet created')
+
+        if (self._sgd_par_list is None) or (self._sgd_par_names is None):
+            raise ValueError(
+                'sgd par list and/or par names not available; needs to be created before passing it to the optimizer')
+
+        # loop over the SGD parameter groups (this is modeled after the code in the SGD optimizer)
+        for group in self.optimizer_instance.param_groups:
+
+            for p in group['params']:
+                # let's first see if this is a shared state
+                if not self._sgd_par_names[p]['is_shared']:
+                    # we want to delete the state of this one
+                    self.optimizer_instance.state.pop(p)
+
+
     def _create_optimizer_parameter_dictionary(self,individual_pars, shared_pars,
                                               settings_individual=dict(), settings_shared=dict()):
 
@@ -1488,7 +1534,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 sgd_weight_decay_individual = self.params['optimizer']['sgd']['individual'][('weight_decay',0.0,'sgd weight decay')]
                 sgd_nesterov_individual = self.params['optimizer']['sgd']['individual'][('nesterov',True,'use Nesterove scheme')]
 
-                desired_lr_shared = self.params['optimizer']['sgd']['shared'][('lr', 0.0005, 'desired learning rate')]
+                desired_lr_shared = self.params['optimizer']['sgd']['shared'][('lr', 0.00005, 'desired learning rate')]
                 sgd_momentum_shared = self.params['optimizer']['sgd']['shared'][('momentum', 0.9, 'sgd momentum')]
                 sgd_dampening_shared = self.params['optimizer']['sgd']['shared'][('dampening', 0.0, 'sgd dampening')]
                 sgd_weight_decay_shared = self.params['optimizer']['sgd']['shared'][('weight_decay', 0.0, 'sgd weight decay')]
@@ -1565,6 +1611,15 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def get_scheduler_patience(self):
         return self.scheduler_patience
 
+    def _set_use_external_scheduler(self):
+        self._use_external_scheduler = True
+
+    def _set_use_internal_scheduler(self):
+        self._use_external_scheduler = False
+
+    def _get_use_external_scheduler(self):
+        return self._use_external_scheduler
+
     def optimize(self):
         """
         Do the single scale optimization
@@ -1587,11 +1642,22 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.last_energy = None
         could_not_find_successful_step = False
 
-        if self.use_step_size_scheduler and self.scheduler is None:
-            self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_instance, 'min',
-                                                                   verbose=self.scheduler_verbose,
-                                                                   factor=self.scheduler_factor,
-                                                                   patience=self.scheduler_patience)
+        if not self._use_external_scheduler:
+            self.use_step_size_scheduler = self.params['optimizer'][('use_step_size_scheduler',True,'If set to True the step sizes are reduced if no progress is made')]
+
+            if self.use_step_size_scheduler:
+                self.params['optimizer'][('scheduler', {}, 'parameters for the ReduceLROnPlateau scheduler')]
+                self.scheduler_verbose = self.params['optimizer']['scheduler'][
+                    ('verbose', True, 'if True prints out changes in learning rate')]
+                self.scheduler_factor = self.params['optimizer']['scheduler'][('factor', 0.5, 'reduction factor')]
+                self.scheduler_patience = self.params['optimizer']['scheduler'][
+                    ('patience', 10, 'how many steps without reduction before LR is changed')]
+
+            if self.use_step_size_scheduler and self.scheduler is None:
+                self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_instance, 'min',
+                                                                       verbose=self.scheduler_verbose,
+                                                                       factor=self.scheduler_factor,
+                                                                       patience=self.scheduler_patience)
 
         self.iter_count = 0
         for iter in range(self.nrOfIterations):
@@ -1600,8 +1666,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             # for p in self.optimizer_instance._params:
             #     p.data = p.data.float()
             current_loss = self.optimizer_instance.step(self._closure)
-            if self.use_step_size_scheduler:
-                self.scheduler.step(current_loss.data[0])
+
+            # an external scheduler may for example be used in batch optimization
+            if not self._use_external_scheduler:
+                if self.use_step_size_scheduler:
+                    self.scheduler.step(current_loss.data[0])
 
             if hasattr(self.optimizer_instance,'last_step_size_taken'):
                 self.last_successful_step_size_taken = self.optimizer_instance.last_step_size_taken()
@@ -1644,7 +1713,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             self.iter_count = iter+1
 
-        print('time:', time.time() - start)
+        if self.show_iteration_output:
+            print('time:', time.time() - start)
 
 
 class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
@@ -1678,6 +1748,26 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.checkpoint_interval = cparams[('checkpoint_interval',1,'after how many epochs, checkpoints are saved; if set to 0, checkpoint will not be saved')]
         """after how many epochs checkpoints are saved"""
+
+        self.verbose_output = cparams[('verbose_output',False,'turns on verbose output')]
+
+        self.show_sample_optimizer_output = cparams[('show_sample_optimizer_output',True,'If true shows the energies during optimizaton of a sample')]
+        """Shows iterations for each sample being optimized"""
+
+        self.also_eliminate_shared_state_between_samples_during_first_epoch = \
+            self.params['optimizer']['sgd'][('also_eliminate_shared_state_between_samples_during_first_epoch', False,
+                                             'if set to true all states are eliminated, otherwise only the individual ones')]
+
+        self.use_step_size_scheduler = self.params['optimizer'][('use_step_size_scheduler', True, 'If set to True the step sizes are reduced if no progress is made')]
+        self.scheduler = None
+
+        if self.use_step_size_scheduler:
+            self.params['optimizer'][('scheduler', {}, 'parameters for the ReduceLROnPlateau scheduler')]
+            self.scheduler_verbose = self.params['optimizer']['scheduler'][
+                ('verbose', True, 'if True prints out changes in learning rate')]
+            self.scheduler_factor = self.params['optimizer']['scheduler'][('factor', 0.5, 'reduction factor')]
+            self.scheduler_patience = self.params['optimizer']['scheduler'][
+                ('patience', 10, 'how many steps without reduction before LR is changed')]
 
         self.model_name = None
         self.add_model_name = None
@@ -1870,8 +1960,28 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
         nr_of_samples = nr_of_datasets//self.batch_size
 
+        last_energy = None
+        last_sim_energy = None
+        last_reg_energy = None
+        last_opt_energy = None
+
         for iter_batch in range(iter_offset,self.nr_of_epochs+iter_offset):
-            print('Computing epoch ' + str(iter_batch + 1) + ' of ' + str(iter_offset+self.nr_of_epochs))
+            if self.verbose_output:
+                print('Computing epoch ' + str(iter_batch + 1) + ' of ' + str(iter_offset+self.nr_of_epochs))
+
+            cur_running_energy = np.array([0.0])
+            cur_running_sim_energy = np.array([0.0])
+            cur_running_reg_energy = np.array([0.0])
+            cur_running_opt_energy = np.array([0.0])
+
+            cur_min_energy = None
+            cur_max_energy = None
+            cur_min_sim_energy = None
+            cur_max_sim_energy = None
+            cur_min_reg_energy = None
+            cur_max_reg_energy = None
+            cur_min_opt_energy = None
+            cur_max_opt_energy = None
 
             for i, sample in enumerate(dataloader, 0):
 
@@ -1898,7 +2008,18 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                     # to make sure we have the model initialized, force parameter installation
                     self.ssOpt._set_all_still_missing_parameters()
                     # since this is chunked-up we increase the patience
-                    self.ssOpt.set_scheduler_patience_silent(self.ssOpt.get_scheduler_patience()*nr_of_samples)
+                    self.ssOpt._set_use_external_scheduler()
+
+                    if self.show_sample_optimizer_output:
+                        self.ssOpt.turn_iteration_output_on()
+                    else:
+                        self.ssOpt.turn_iteration_output_off()
+
+                    if self.use_step_size_scheduler and self.scheduler is None:
+                        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.ssOpt.optimizer_instance, 'min',
+                                                                                    verbose=self.scheduler_verbose,
+                                                                                    factor=self.scheduler_factor,
+                                                                                    patience=self.scheduler_patience)
 
                 last_batch_size = batch_size
 
@@ -1906,6 +2027,8 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                     if sample.has_key('individual_parameter'):
                         current_individual_parameters = sample['individual_parameter']
                         if current_individual_parameters is not None:
+                            if self.verbose_output:
+                                print('INFO: loading current individual optimizer state')
                             self.ssOpt.set_sgd_individual_model_parameters_and_optimizer_states(current_individual_parameters)
                     else:
                         print('WARNING: could not find previous parameter file')
@@ -1918,27 +2041,97 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                         torch.save(self.ssOpt.get_individual_model_parameters(),par_file)
                     else:
                         # now we load them
-                        print('INFO: forcing the initial individual parameters to default and removing optimizer state')
+                        if self.verbose_output:
+                            print('INFO: forcing the initial individual parameters to default')
                         self.ssOpt.set_individual_model_parameters(torch.load(par_file))
                         # and we need to kill the optimizer state (to get rid of the previous momentum)
-                        self.ssOpt.optimizer_instance.state = defaultdict(dict)
+                        if self.also_eliminate_shared_state_between_samples_during_first_epoch:
+                            if self.verbose_output:
+                                print('INFO: discarding the entire optimizer state')
+                            self.ssOpt.optimizer_instance.state = defaultdict(dict)
+                        else:
+                            if self.verbose_output:
+                                print('INFO: discarding current *individual* optimizer states only')
+                            self.ssOpt._remove_state_variables_for_individual_parameters(self.ssOpt.get_sgd_individual_model_parameters_and_optimizer_states())
 
+                if i==0:
+                    # to avoid excessive graphical output
+                    self.ssOpt.turn_visualization_on()
+                else:
+                    self.ssOpt.turn_visualization_off()
 
                 self.ssOpt.optimize()
+
+                cur_energy,cur_sim_energy,cur_reg_energy = self.ssOpt.get_energy()
+                cur_opt_energy = self.ssOpt.get_opt_par_energy()
+
+                cur_running_energy += 1./nr_of_samples*cur_energy
+                cur_running_sim_energy += 1./nr_of_samples*cur_sim_energy
+                cur_running_reg_energy += 1./nr_of_samples*cur_reg_energy
+                cur_running_opt_energy += 1./nr_of_samples*cur_opt_energy
+
+                if i==0:
+                    cur_min_energy = cur_energy
+                    cur_max_energy = cur_energy
+                    cur_min_sim_energy = cur_sim_energy
+                    cur_max_sim_energy = cur_sim_energy
+                    cur_min_reg_energy = cur_reg_energy
+                    cur_max_reg_energy = cur_reg_energy
+                    cur_min_opt_energy = cur_opt_energy
+                    cur_max_opt_energy = cur_opt_energy
+                else:
+                    cur_min_energy = min(cur_energy,cur_min_energy)
+                    cur_max_energy = max(cur_energy,cur_max_energy)
+                    cur_min_sim_energy = min(cur_sim_energy,cur_min_sim_energy)
+                    cur_max_sim_energy = max(cur_sim_energy,cur_max_sim_energy)
+                    cur_min_reg_energy = min(cur_reg_energy,cur_min_reg_energy)
+                    cur_max_reg_energy = max(cur_reg_energy,cur_max_reg_energy)
+                    cur_min_opt_energy = min(cur_opt_energy,cur_min_opt_energy)
+                    cur_max_opt_energy = max(cur_opt_energy,cur_max_opt_energy)
 
                 # need to save this index by index so we can shuffle
                 self.ssOpt._write_out_individual_parameters(self.ssOpt.get_sgd_individual_model_parameters_and_optimizer_states(),sample['individual_parameter_filename'])
 
                 if self.checkpoint_interval>0 or (iter_batch==self.nr_of_epochs+iter_offset-1):
                     if (iter_batch%self.checkpoint_interval==0) or (iter_batch==self.nr_of_epochs+iter_offset-1):
-                        print('Writing out individual checkpoint data for epoch ' + str(iter_batch) + ' for sample ' + str(i+1) + '/' + str(nr_of_samples))
+                        if self.verbose_output:
+                            print('Writing out individual checkpoint data for epoch ' + str(iter_batch) + ' for sample ' + str(i+1) + '/' + str(nr_of_samples))
                         individual_filenames = self._get_individual_checkpoint_filenames(self.checkpoint_output_directory,sample['idx'],iter_batch)
                         self.ssOpt._write_out_individual_parameters(self.ssOpt.get_sgd_individual_model_parameters_and_optimizer_states(),individual_filenames)
 
                         if i==nr_of_samples-1:
-                            print('Writing out shared checkpoint data for epoch ' + str(iter_batch))
+                            if self.verbose_output:
+                                print('Writing out shared checkpoint data for epoch ' + str(iter_batch))
                             shared_filename = self._get_shared_checkpoint_filename(self.checkpoint_output_directory,iter_batch)
                             self.ssOpt._write_out_shared_parameters(self.ssOpt.get_sgd_shared_model_parameters(),shared_filename)
+
+            if self.show_sample_optimizer_output:
+                if (last_energy is not None) and (last_sim_energy is not None) and (last_reg_energy is not None):
+                    print('\n\nEpoch {:05d}: Last energies   : E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}], optE=[{:2.5f}]'\
+                          .format(iter_batch-1,last_energy[0],last_sim_energy[0],last_reg_energy[0],last_opt_energy[0]))
+                else:
+                    print('\n\n')
+
+            last_energy = cur_running_energy
+            last_sim_energy = cur_running_sim_energy
+            last_reg_energy = cur_running_reg_energy
+            last_opt_energy = cur_running_opt_energy
+
+            if self.show_sample_optimizer_output:
+                print('Epoch {:05d}: Current energies: E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}], optE=[{:2.5f}]'\
+                  .format(iter_batch,last_energy[0], last_sim_energy[0],last_reg_energy[0],last_opt_energy[0]))
+            else:
+                print('Epoch {:05d}: Current energies: E={:2.5f}:[{:1.2f},{:1.2f}], simE={:2.5f}:[{:1.2f},{:1.2f}], regE={:2.5f}:[{:1.2f},{:1.2f}], optE={:1.2f}:[{:1.2f},{:1.2f}]'\
+                      .format(iter_batch, last_energy[0], cur_min_energy[0], cur_max_energy[0],
+                              last_sim_energy[0], cur_min_sim_energy[0], cur_max_sim_energy[0],
+                              last_reg_energy[0], cur_min_reg_energy[0], cur_max_reg_energy[0],
+                              last_opt_energy[0], cur_min_opt_energy[0], cur_max_opt_energy[0]))
+
+            if self.show_sample_optimizer_output:
+                print('\n\n')
+
+            if self.use_step_size_scheduler:
+                self.scheduler.step(last_energy)
 
 
 class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
