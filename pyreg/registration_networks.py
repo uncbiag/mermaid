@@ -104,19 +104,25 @@ class RegistrationNet(nn.Module):
         
         :return: returns the registration parameters 
         """
-        return self.state_dict()
+        cs = list(self.named_parameters())
+        params = collections.OrderedDict()
+
+        for key_value in cs:
+            params[key_value[0]] = key_value[1]
+
+        return params
 
     def get_individual_registration_parameters(self):
         """
         Returns the parameters that have *not* been declared shared for optimization.
         This can for example be the parameters that of a given registration model *without* shared parameters of a smoother.
         """
-        cs = self.state_dict()
+        cs = list(self.named_parameters())
         individual_params = collections.OrderedDict()
 
-        for key in cs:
-            if not self._shared_parameters.issuperset({key}):
-                individual_params[key] = cs[key]
+        for key_value in cs:
+            if not self._shared_parameters.issuperset({key_value[0]}):
+                individual_params[key_value[0]] = key_value[1]
         return individual_params
 
     def get_shared_registration_parameters(self):
@@ -124,54 +130,69 @@ class RegistrationNet(nn.Module):
         Returns the parameters that have been declared shared for optimization.
         This can for example be parameters of a smoother that are shared between registrations.
         """
-        cs = self.state_dict()
+        cs = list(self.named_parameters())
         shared_params = collections.OrderedDict()
 
-        for key in cs:
-            if self._shared_parameters.issuperset({key}):
-                shared_params[key] = cs[key]
+        for key_value in cs:
+            if self._shared_parameters.issuperset({key_value[0]}):
+                shared_params[key_value[0]] = key_value[1]
         return shared_params
 
-    def set_registration_parameters(self, sd, sz, spacing):
+    def set_registration_parameters(self, pars, sz, spacing):
         """
         Abstract method to set the registration parameters externally. This can for example be useful when the optimizer should be initialized at a specific value
         
-        :param sd: model state dictionary
+        :param pars: dictionary of registration parameters
         :param sz: size of the image the parameter corresponds to 
         :param spacing: spacing of the image the parameter corresponds to 
         """
-        self.load_state_dict(sd)
+
+        cs = self.state_dict()
+
+        for key in pars:
+            if cs.has_key(key):
+                if torch.is_tensor(pars[key]):
+                    cs[key].copy_(pars[key])
+                else: #is a parameter
+                    cs[key].copy_(pars[key].data)
+
         self.sz = sz
         self.spacing = spacing
 
 
-    def set_individual_registration_parameters(self, sd):
+    def set_individual_registration_parameters(self, pars):
         """
         Allows to only set the registration parameters which are not shared between registrations.
 
-        :param sd: dictionary containing the parameters
+        :param pars: dictionary containing the parameters
         :return: n/a
         """
 
         cs = self.state_dict()
 
-        for key in sd:
+        for key in pars:
             if cs.has_key(key) and not self._shared_parameters.issuperset({key}):
-                cs[key].copy_(sd[key])
+                if torch.is_tensor(pars[key]):
+                    cs[key].copy_(pars[key])
+                else: # is a parameter
+                    cs[key].copy_(pars[key].data)
 
-    def set_shared_registration_parameters(self, sd):
+    def set_shared_registration_parameters(self, pars):
         """
         Allows to only set the shared registration parameters
 
-        :param sd: dictionary containing the parameters
+        :param pars: dictionary containing the parameters
         :return: n/a
         """
 
         cs = self.state_dict()
 
-        for key in sd:
+        for key in pars:
             if cs.has_key(key) and self._shared_parameters.issuperset({key}):
-               cs[key].copy_(sd[key])
+                if torch.is_tensor(pars[key]):
+                    cs[key].copy_(pars[key])
+                else: # is a parameter
+                    cs[key].copy_(pars[key].data)
 
     def downsample_registration_parameters(self, desiredSz):
         """

@@ -23,6 +23,34 @@ except ImportError:
     print('WARNING: nn_interpolation could not be imported (only supported in CUDA at the moment), some functionality may not be available.')
 
 
+def get_parameter_list_from_parameter_dict(pd):
+    """
+    Takes a dictionary which contains key value pairs for model parameters and converts it into a list of parameters that can
+    be used as an input to an optimizer.
+
+    :param pd: parameter dictionary
+    :return: list of parameters
+    """
+    pl = []
+    for key in pd:
+        pl.append(pd[key])
+    return pl
+
+def get_parameter_list_and_par_to_name_dict_from_parameter_dict(pd):
+    """
+    Same as get_parameter_list_from_parameter_dict; but also returns a dictionary which keeps track of the keys based on memory id
+
+    :param pd: parameter dictionary
+    :return: tuple of (parameter_list,name_dictionary)
+    """
+
+    par_to_name_dict = dict()
+    pl = []
+    for key in pd:
+        pl.append(pd[key])
+        par_to_name_dict[pd[key]] = key
+    return pl,par_to_name_dict
+
 def remove_infs_from_variable(v):
     # 32 - bit floating point: torch.FloatTensor, torch.cuda.FloatTensor
     # 64 - bit floating point: torch.DoubleTensor, torch.cuda.DoubleTensor
