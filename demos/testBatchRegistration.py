@@ -40,7 +40,7 @@ def get_image_range(im_from,im_to):
 
 symmetrize_images = False
 use_batch_registration = False
-nr_of_image_pairs = 10
+nr_of_image_pairs = 20
 
 I0_filenames = get_image_range(0,nr_of_image_pairs)
 I1_filenames = get_image_range(nr_of_image_pairs,2*nr_of_image_pairs)
@@ -77,19 +77,17 @@ torch.set_num_threads(mp.cpu_count())
 
 reg = si.RegisterImagePair()
 
-if True:
+if use_batch_registration:
     reg.register_images(I0, I1, spacing,
                         model_name='svf_scalar_momentum_map',
-                        nr_of_iterations=10,
+                        nr_of_iterations=15,
                         visualize_step=20,
                         map_low_res_factor=0.5,
                         rel_ftol=1e-15,
                         json_config_out_filename='testBatchNewerSmoother.json',
-                        use_consensus_optimization=True,
+                        use_batch_optimization=True,
                         params='testBatchNewerSmoother.json')
-    # use_batch_optimization=True)
-
-if False:
+else:
     reg.register_images(I0,I1,spacing,
                     model_name='svf_scalar_momentum_map',
                     nr_of_iterations=10,
@@ -99,7 +97,7 @@ if False:
                     json_config_out_filename='testBatchNewerSmoother.json',
                     use_consensus_optimization=True,
                     params='testBatchNewerSmoother.json')
-                    #use_batch_optimization=True,
+
 if False:
     reg.register_images(I0,I1,spacing,
                     model_name='lddmm_shooting_scalar_momentum_map',

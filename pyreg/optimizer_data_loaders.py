@@ -5,7 +5,7 @@ import os
 import pyreg.fileio as FIO
 
 class PairwiseRegistrationDataset(Dataset):
-    """keeps track of pairwise image as well as checkpoints for their state"""
+    """keeps track of pairwise image as well as checkpoints for their parameters"""
 
     def __init__(self, output_directory, source_image_filenames, target_image_filenames, params):
 
@@ -32,9 +32,9 @@ class PairwiseRegistrationDataset(Dataset):
     def _get_source_target_image_filenames(self,idx):
         return (self.source_image_filenames[idx],self.target_image_filenames[idx])
 
-    def _get_state_filename(self,idx):
-        state_filename = os.path.join(self.output_directory,'individual_state_pair_{:05d}.pt'.format(idx))
-        return state_filename
+    def _get_parameter_filename(self,idx):
+        parameter_filename = os.path.join(self.output_directory,'individual_parameter_pair_{:05d}.pt'.format(idx))
+        return parameter_filename
 
     def __getitem__(self,idx):
 
@@ -54,18 +54,19 @@ class PairwiseRegistrationDataset(Dataset):
                                                 normalize_spacing=self.normalize_spacing,
                                                 silent_mode=True)
 
-        # load the state if it already exists
-        current_state_filename = self._get_state_filename(idx)
+        # load the parameter file if it already exists
+        current_parameter_filename = self._get_parameter_filename(idx)
         # check if there is already a saved file
-        if os.path.isfile(current_state_filename):
-            individual_state = torch.load(current_state_filename)
+        if os.path.isfile(current_parameter_filename):
+            individual_parameter = torch.load(current_parameter_filename)
         else:
-            individual_state = None
+            individual_parameter = None
 
         sample = dict()
-        if individual_state is not None:
-            sample['individual_state'] = individual_state
-        sample['individual_state_filename'] = current_state_filename
+        if individual_parameter is not None:
+            sample['individual_parameter'] = individual_parameter
+        sample['idx'] = idx
+        sample['individual_parameter_filename'] = current_parameter_filename
         sample['ISource'] = ISource[0,...] # as we only loaded a batch-of-one we remove the first dimension
         sample['ITarget'] = ITarget[0,...] # as we only loaded a batch-of-one we remove the first dimension
 

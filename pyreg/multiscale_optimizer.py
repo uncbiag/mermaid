@@ -21,7 +21,7 @@ from res_recorder import XlsxRecorder
 from torch.utils.data import Dataset, DataLoader
 import optimizer_data_loaders as OD
 
-import collections
+from collections import defaultdict
 
 # add some convenience functionality
 class SimpleRegistration(object):
@@ -118,6 +118,23 @@ class SimpleRegistration(object):
         :return:
         """
         self.optimizer.set_model_parameters(p)
+
+    def get_model_state_dict(self):
+        """
+        Returns the state dictionary of the mode
+
+        :return: state dictionary
+        """
+        return self.optimizer.get_model_state_dict()
+
+    def set_model_state_dict(self,sd):
+        """
+        Sets the state dictionary of the model
+
+        :param sd: state dictionary
+        :return:
+        """
+        self.optimizer.set_model_state_dict(sd)
 
     def set_light_analysis_on(self, light_analysis_on):
         self.light_analysis_on = light_analysis_on
@@ -705,7 +722,6 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         self.optimizer_params = opt_params
 
-
 class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     """
     Optimizer operating on a single scale. Typically this will be the full image resolution.
@@ -741,6 +757,14 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.use_step_size_scheduler = self.params['optimizer'][('use_step_size_scheduler',True,'If set to True the step sizes are reduced if no progress is made')]
         self.scheduler = None
 
+        if self.use_step_size_scheduler:
+            self.params['optimizer'][('scheduler', {}, 'parameters for the ReduceLROnPlateau scheduler')]
+            self.scheduler_verbose = self.params['optimizer']['scheduler'][('verbose', True, 'if True prints out changes in learning rate')]
+            self.scheduler_factor = self.params['optimizer']['scheduler'][('factor', 0.5, 'reduction factor')]
+            self.scheduler_patience = self.params['optimizer']['scheduler'][('patience', 10, 'how many steps without reduction before LR is changed')]
+        else:
+            self.scheduler_patience = 0
+
         self.rec_energy = None
         self.rec_similarityEnergy = None
         self.rec_regEnergy = None
@@ -755,12 +779,27 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.delayed_model_parameters = None
         self.delayed_model_parameters_still_to_be_set = False
+        self.delayed_model_state_dict = None
+        self.delayed_model_state_dict_still_to_be_set = False
+
+        # to be able to transfer state and parameters
+        self._sgd_par_list = None # holds the list of parameters
+        self._sgd_par_names = None # holds the list of names associated with these parameters
+        self._sgd_name_to_model_par = None # allows mapping from name to model parameter
+        self._sgd_split_shared = None # keeps track if the shared states were split or not
+        self._sgd_split_individual = None # keeps track if the individual states were split or not
+
+    def get_sgd_split_shared(self):
+        return self._sgd_split_shared
+
+    def get_sgd_split_indvidual(self):
+        return self._sgd_split_individual
 
     def get_checkpoint_dict(self):
         if self.model is not None and self.optimizer_instance is not None:
             d = super(SingleScaleRegistrationOptimizer, self).get_checkpoint_dict()
             d['model'] = dict()
-            d['model']['state'] = self.model.get_registration_parameters()
+            d['model']['parameters'] = self.model.get_registration_parameters()
             d['model']['size'] = self.model.sz
             d['model']['spacing'] = self.model.spacing
             d['optimizer_state'] = self.optimizer_instance.state_dict()
@@ -770,7 +809,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
     def load_checkpoint_dict(self,d,load_optimizer_state=False):
         if self.model is not None and self.optimizer_instance is not None:
-            self.model.set_registration_parameters(d['model']['state'],d['model']['size'],d['model']['spacing'])
+            self.model.set_registration_parameters(d['model']['parameters'],d['model']['size'],d['model']['spacing'])
             if load_optimizer_state:
                 self.optimizer_instance.load_state_dict(d['optimizer_state'])
             else:
@@ -856,6 +895,29 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         self.mf.add_model(modelName, modelNetworkClass, modelLossClass, useMap, modelDescription)
         self.params['model']['registration_model']['type'] = (modelName, 'was customized; needs to be explicitly instantiated, cannot be loaded')
+
+    def set_model_state_dict(self,sd):
+        """
+        Sets the state dictionary of the model
+
+        :param sd: state dictionary
+        :return: n/a
+        """
+
+        if self.optimizer_has_been_initialized:
+            self.model.load_state_dict(sd)
+            self.delayed_model_state_dict_still_to_be_set = False
+        else:
+            self.delayed_model_state_dict_still_to_be_set = True
+            self.delayed_model_state_dict = sd
+
+    def get_model_state_dict(self):
+        """
+        Returns the state dictionary of the model
+
+        :return: state dictionary
+        """
+        return self.model.state_dict()
 
     def set_model_parameters(self, p):
         """
@@ -1120,6 +1182,267 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         return reached_tolerance,was_visualized
 
+    # todo: write these parameter/optimizer functions also for shared parameters and all parameters
+    def set_sgd_individual_model_parameters_and_optimizer_states(self, pars):
+        """
+        Set the individual model parameters and states that may be stored by the optimizer such as the momentum.
+        Expects as input what get_sgd_individual_model_parameters_and_optimizer_states creates as output,
+        but potentially multiple copies of it (as generated by a pyTorch dataloader). I.e., it takes in a dataloader sample.
+        NOTE: currently only supports SGD
+
+        :param pars: parameter list as produced by get_sgd_individual_model_parameters_and_optimizer_states
+        :return: n/a
+        """
+        if self.optimizer_instance is None:
+            raise ValueError('Optimizer not yet created')
+
+        if (self._sgd_par_list is None) or (self._sgd_par_names is None):
+            raise ValueError(
+                'sgd par list and/or par names not available; needs to be created before passing it to the optimizer')
+
+        if len(pars) == 0:
+            print('WARNING: found no values')
+            return
+
+        # the optimizer (if properly initialized) already holds pointers to the model parameters and the optimizer states
+        # so we can set everything in one swoop here
+
+        # loop over the SGD parameter groups (this is modeled after the code in the SGD optimizer)
+        # this input will represent a sample from a pytorch dataloader
+
+        # wrap the parameters in a list if needed (so we can mirror the setup from get_sgd_...
+        if type(pars)==list:
+            use_pars = pars
+        else:
+            use_pars = [pars]
+
+        for p in use_pars:
+            if 'is_shared' in p:
+                if not p['is_shared'][0]: # need to grab the first one, because the dataloader replicated these entries
+                    current_name = p['name'][0]
+
+                    assert( torch.is_tensor(p['model_params']))
+                    current_model_params = p['model_params']
+
+                    if 'momentum_buffer' in p:
+                        assert( torch.is_tensor(p['momentum_buffer']) )
+                        current_momentum_buffer = p['momentum_buffer']
+                    else:
+                        current_momentum_buffer = None
+
+                    # now we need to match this with the parameters and the state of the SGD optimizer
+                    model_par = self._sgd_name_to_model_par[current_name]
+                    model_par.data.copy_(current_model_params)
+
+                    # and now do the same with the state
+                    param_state = self.optimizer_instance.state[model_par]
+                    if 'momentum_buffer' in param_state:
+                        param_state['momentum_buffer'].copy_(current_momentum_buffer)
+
+    def _convert_obj_with_parameters_to_obj_with_tensors(self, p):
+        """
+        Converts structures that consist of lists and dictionaries with parameters to tensors
+
+        :param p: parameter structure
+        :return: object with parameters converted to tensors
+        """
+
+        if type(p) == list:
+            ret_p = []
+            for e in p:
+                ret_p.append(self._convert_obj_with_parameters_to_obj_with_tensors(e))
+            return ret_p
+        elif type(p) == dict:
+            ret_p = dict()
+            for key in p:
+                ret_p[key] = self._convert_obj_with_parameters_to_obj_with_tensors((p[key]))
+            return ret_p
+        elif type(p) == torch.nn.parameter.Parameter:
+            return p.data
+        else:
+            return p
+
+    def get_sgd_shared_model_parameters(self):
+        """
+        Gets the model parameters that are shared.
+
+        :return:
+        """
+
+        if self.optimizer_instance is None:
+            raise ValueError('Optimizer not yet created')
+
+        if (self._sgd_par_list is None) or (self._sgd_par_names is None):
+            raise ValueError(
+                'sgd par list and/or par names not available; needs to be created before passing it to the optimizer')
+
+        d = []
+
+        # loop over the SGD parameter groups (this is modeled after the code in the SGD optimizer)
+        for group in self.optimizer_instance.param_groups:
+
+            group_dict = dict()
+            group_dict['params'] = []
+
+            for p in group['params']:
+                current_group_params = dict()
+                # let's first see if this is a shared state
+                if self._sgd_par_names[p]['is_shared']:
+                    # keep track of the names so we can and batch, so we can read it back in
+                    current_group_params.update(self._sgd_par_names[p])
+                    # now deal with the optimizer state if available
+                    current_group_params['model_params'] = self._convert_obj_with_parameters_to_obj_with_tensors(p)
+
+                    group_dict['params'].append(current_group_params)
+
+            d.append(group_dict)
+
+        return d
+
+
+    def get_sgd_individual_model_parameters_and_optimizer_states(self):
+        """
+        Gets the individual model parameters and states that may be stored by the optimizer such as the momentum.
+        NOTE: currently only supports SGD
+
+        :return:
+        """
+        if self.optimizer_instance is None:
+            raise ValueError('Optimizer not yet created')
+
+        if (self._sgd_par_list is None) or (self._sgd_par_names is None):
+            raise ValueError(
+                'sgd par list and/or par names not available; needs to be created before passing it to the optimizer')
+
+        d = []
+
+        # loop over the SGD parameter groups (this is modeled after the code in the SGD optimizer)
+        for group in self.optimizer_instance.param_groups:
+
+            group_dict = dict()
+            group_dict['weight_decay'] = group['weight_decay']
+            group_dict['momentum'] = group['momentum']
+            group_dict['dampening'] = group['dampening']
+            group_dict['nesterov'] = group['nesterov']
+            group_dict['lr'] = group['lr']
+
+            group_dict['params'] = []
+
+            for p in group['params']:
+                current_group_params = dict()
+                # let's first see if this is a shared state
+                if not self._sgd_par_names[p]['is_shared']:
+                    # keep track of the names so we can and batch, so we can read it back in
+                    current_group_params.update(self._sgd_par_names[p])
+                    # now deal with the optimizer state if available
+                    current_group_params['model_params'] = self._convert_obj_with_parameters_to_obj_with_tensors(p)
+                    if group['momentum'] != 0:
+                        param_state = self.optimizer_instance.state[p]
+                        if 'momentum_buffer' in param_state:
+                            current_group_params['momentum_buffer'] = self._convert_obj_with_parameters_to_obj_with_tensors(param_state['momentum_buffer'])
+
+                    group_dict['params'].append(current_group_params)
+
+            d.append(group_dict)
+
+        return d
+
+    def _create_optimizer_parameter_dictionary(self,individual_pars, shared_pars,
+                                              settings_individual=dict(), settings_shared=dict()):
+
+        par_list = []
+        """List of parameters that can directly be passed to an optimizer; different list elements define different parameter groups"""
+        par_names = dict()
+        """dictionary which maps from a parameters id (i.e., memory) to its description: name/is_shared"""
+        # name is the name of the variable
+        # is_shared keeps track of if a parameter was declared shared (opposed to individual, which we need for registrations)
+
+        names_to_par = dict()
+        """dictionary which maps from a parameter name back to the parameter"""
+
+        # first deal with the individual parameters
+        pl_ind, par_to_name_ind = utils.get_parameter_list_and_par_to_name_dict_from_parameter_dict(individual_pars)
+        cd = {'params': pl_ind}
+        cd.update(settings_individual)
+        par_list.append(cd)
+        # add all the names
+        for current_par, key in zip(pl_ind, par_to_name_ind):
+            par_names[key] = {'name': par_to_name_ind[key], 'is_shared': False}
+            names_to_par[par_to_name_ind[key]] = current_par
+
+        # now deal with the shared parameters
+        pl_shared, par_to_name_shared = utils.get_parameter_list_and_par_to_name_dict_from_parameter_dict(shared_pars)
+        cd = {'params': pl_shared}
+        cd.update(settings_shared)
+        par_list.append(cd)
+        for current_par, key in zip(pl_shared, par_to_name_shared):
+            par_names[key] = {'name': par_to_name_shared[key], 'is_shared': True}
+            names_to_par[par_to_name_shared[key]] = current_par
+
+        return par_list, par_names, names_to_par
+
+    def _write_out_shared_parameters(self, model_pars, filename):
+
+        # just write out the ones that are shared
+        for group in model_pars:
+            if 'params' in group:
+                was_shared_group = False  # there can only be one
+                # create lists that will hold the information for the different batches
+                cur_pars = []
+
+                # now iterate through the current parameter list
+                for p in group['params']:
+                    needs_to_be_saved = True
+                    if 'is_shared' in p:
+                        if not p['is_shared']:
+                            needs_to_be_saved = False
+
+                    if needs_to_be_saved:
+                        # we found a shared entry
+                        was_shared_group = True
+                        cur_pars.append(p)
+
+                # now we have the parameter list for one of the elements of the batch and we can write it out
+                if was_shared_group:  # otherwise will be overwritten by a later parameter group
+                    torch.save(cur_pars, filename)
+
+
+    def _write_out_individual_parameters(self, model_pars, filenames):
+
+        batch_size = len(filenames)
+
+        # just write out the ones that are individual
+        for group in model_pars:
+            if 'params' in group:
+                was_individual_group = False  # there can only be one
+                # create lists that will hold the information for the different batches
+                for b in range(batch_size):
+                    cur_pars = []
+
+                    # now iterate through the current parameter list
+                    for p in group['params']:
+                        if 'is_shared' in p:
+                            # we found an individual entry
+                            if not p['is_shared']:
+                                was_individual_group = True
+                                # now go through this dictionary, extract the current batch info in it,
+                                # and append it to the current batch parameter list
+                                cur_dict = dict()
+                                for p_el in p:
+                                    if p_el == 'name':
+                                        cur_dict['name'] = p[p_el]
+                                    elif p_el == 'is_shared':
+                                        cur_dict['is_shared'] = p[p_el]
+                                    else:
+                                        # this will be a tensor so we need to extract the information for the current batch
+                                        cur_dict[p_el] = p[p_el][b, ...]
+
+                                cur_pars.append(cur_dict)
+
+                    # now we have the parameter list for one of the elements of the batch and we can write it out
+                    if was_individual_group:  # otherwise will be overwritten by a later parameter group
+                        torch.save(cur_pars, filenames[b])
+
     def _get_optimizer_instance(self):
 
         if (self.model is None) or (self.criterion is None):
@@ -1155,19 +1478,42 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                                            history_size=history_size, line_search_fn=line_search_fn)
                 return opt_instance
             elif self.optimizer_name == 'sgd':
-                if self.last_successful_step_size_taken is not None:
-                    desired_lr = self.last_successful_step_size_taken
-                else:
-                    desired_lr = self.params['optimizer']['sgd'][('lr',0.001,'desired learning rate')]
-                sgd_momentum = self.params['optimizer']['sgd'][('momentum',0.9,'sgd momentum')]
-                sgd_dampening = self.params['optimizer']['sgd'][('dampening',0.0,'sgd dampening')]
-                sgd_weight_decay = self.params['optimizer']['sgd'][('weight_decay',0.0,'sgd weight decay')]
-                sgd_nesterov = self.params['optimizer']['sgd'][('nesterov',True,'use Nesterove scheme')]
-                opt_instance = torch.optim.SGD(self.model.parameters(), lr=desired_lr,
-                                               momentum=sgd_momentum,
-                                               dampening=sgd_dampening,
-                                               weight_decay=sgd_weight_decay,
-                                               nesterov=sgd_nesterov)
+                #if self.last_successful_step_size_taken is not None:
+                #    desired_lr = self.last_successful_step_size_taken
+                #else:
+
+                desired_lr_individual = self.params['optimizer']['sgd']['individual'][('lr',0.0005,'desired learning rate')]
+                sgd_momentum_individual = self.params['optimizer']['sgd']['individual'][('momentum',0.9,'sgd momentum')]
+                sgd_dampening_individual = self.params['optimizer']['sgd']['individual'][('dampening',0.0,'sgd dampening')]
+                sgd_weight_decay_individual = self.params['optimizer']['sgd']['individual'][('weight_decay',0.0,'sgd weight decay')]
+                sgd_nesterov_individual = self.params['optimizer']['sgd']['individual'][('nesterov',True,'use Nesterove scheme')]
+
+                desired_lr_shared = self.params['optimizer']['sgd']['shared'][('lr', 0.0005, 'desired learning rate')]
+                sgd_momentum_shared = self.params['optimizer']['sgd']['shared'][('momentum', 0.9, 'sgd momentum')]
+                sgd_dampening_shared = self.params['optimizer']['sgd']['shared'][('dampening', 0.0, 'sgd dampening')]
+                sgd_weight_decay_shared = self.params['optimizer']['sgd']['shared'][('weight_decay', 0.0, 'sgd weight decay')]
+                sgd_nesterov_shared = self.params['optimizer']['sgd']['shared'][('nesterov', True, 'use Nesterove scheme')]
+
+                settings_shared = {'momentum': sgd_momentum_shared,
+                                   'dampening': sgd_dampening_shared,
+                                   'weight_decay': sgd_weight_decay_shared,
+                                   'nesterov': sgd_nesterov_shared,
+                                   'lr': desired_lr_shared}
+
+                settings_individual = {'momentum': sgd_momentum_individual,
+                                   'dampening': sgd_dampening_individual,
+                                   'weight_decay': sgd_weight_decay_individual,
+                                   'nesterov': sgd_nesterov_individual,
+                                   'lr': desired_lr_individual}
+
+                self._sgd_par_list, self._sgd_par_names, self._sgd_name_to_model_par = self._create_optimizer_parameter_dictionary(
+                    self.model.get_individual_registration_parameters(),
+                    self.model.get_shared_registration_parameters(),
+                    settings_individual=settings_individual,
+                    settings_shared=settings_shared)
+
+                opt_instance = torch.optim.SGD(self._sgd_par_list)
+
                 return opt_instance
             elif self.optimizer_name == 'adam':
                 if self.last_successful_step_size_taken is not None:
@@ -1206,19 +1552,34 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if USE_CUDA:
             self.model = self.model.cuda()
 
+        self.compute_low_res_image_if_needed()
+        self.optimizer_has_been_initialized = True
+
+    def set_scheduler_patience(self,patience):
+        self.params['optimizer']['scheduler']['patience'] = patience
+        self.scheduler_patience = patience
+
+    def set_scheduler_patience_silent(self,patience):
+        self.scheduler_patience = patience
+
+    def get_scheduler_patience(self):
+        return self.scheduler_patience
+
     def optimize(self):
         """
         Do the single scale optimization
         """
 
         self._set_all_still_missing_parameters()
-        self.compute_low_res_image_if_needed()
-        self.optimizer_has_been_initialized = True
 
         # in this way model parameters can be "set" before the optimizer has been properly initialized
         if self.delayed_model_parameters_still_to_be_set:
             print('Setting model parameters, delayed')
             self.set_model_parameters(self.delayed_model_parameters)
+
+        if self.delayed_model_state_dict_still_to_be_set:
+            print('Setting model state dict, delayed')
+            self.set_model_state_dict(self.delayed_model_state_dict)
 
         # optimize for a few steps
         start = time.time()
@@ -1227,14 +1588,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         could_not_find_successful_step = False
 
         if self.use_step_size_scheduler and self.scheduler is None:
-            self.params['optimizer'][('scheduler', {}, 'parameters for the ReduceLROnPlateau scheduler')]
-            scheduler_verbose = self.params['optimizer']['scheduler'][('verbose',True,'if True prints out changes in learning rate')]
-            scheduler_factor = self.params['optimizer']['scheduler'][('factor',0.5,'reduction factor')]
-            scheduler_patience = self.params['optimizer']['scheduler'][('patience',10,'how many steps without reduction before LR is changed')]
             self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_instance, 'min',
-                                                                   verbose=scheduler_verbose,
-                                                                   factor=scheduler_factor,
-                                                                   patience=scheduler_patience)
+                                                                   verbose=self.scheduler_verbose,
+                                                                   factor=self.scheduler_factor,
+                                                                   patience=self.scheduler_patience)
 
         self.iter_count = 0
         for iter in range(self.nrOfIterations):
@@ -1301,7 +1658,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
         cparams[('batch_settings', {}, 'settings for the batch optimizer')]
         cparams = cparams['batch_settings']
 
-        self.batch_size = cparams[('batch_size',5,'how many images per batch (if set larger or equal to the number of images, it will be processed as one batch')]
+        self.batch_size = cparams[('batch_size',2,'how many images per batch (if set larger or equal to the number of images, it will be processed as one batch')]
         """how many images per batch"""
 
         self.shuffle = cparams[('shuffle', True, 'if batches should be shuffled between epochs')]
@@ -1313,8 +1670,14 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
         self.nr_of_epochs = cparams[('nr_of_epochs', 1,'how many epochs')]
         """how many iterations for batch; i.e., how often to iterate over the entire dataset = epochs"""
 
-        self.individual_state_output_dir = cparams[('individual_state_output_dir','individual_states','output directory to store the individual states during the iterations')]
-        """output directory to store the individual states during the iterations"""
+        self.individual_parameter_output_dir = cparams[('individual_parameter_output_dir','individual_parameters','output directory to store the individual parameters during the iterations')]
+        """output directory to store the individual parameters during the iterations"""
+
+        self.checkpoint_output_directory = cparams[('checkpoint_output_directory', 'checkpoints', 'directory where the checkpoints will be stored')]
+        """output directory where the checkpoints will be saved"""
+
+        self.checkpoint_interval = cparams[('checkpoint_interval',1,'after how many epochs, checkpoints are saved; if set to 0, checkpoint will not be saved')]
+        """after how many epochs checkpoints are saved"""
 
         self.model_name = None
         self.add_model_name = None
@@ -1362,14 +1725,14 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
     def get_checkpoint_dict(self):
         d = super(SingleScaleBatchRegistrationOptimizer, self).get_checkpoint_dict()
         if self.ssOpt is not None:
-            d['shared_state'] = self.ssOpt.get_shared_model_parameters()
+            d['shared_parameters'] = self.ssOpt.get_shared_model_parameters()
         return d
 
     def load_checkpoint_dict(self, d, load_optimizer_state=False):
         super(SingleScaleBatchRegistrationOptimizer, self).load_checkpoint_dict(d)
-        if d.has_key('shared_state'):
+        if d.has_key('shared_parameters'):
             if self.ssOpt is not None:
-                self.ssOpt.set_shared_model_parameters(d['shared_state'])
+                self.ssOpt.set_shared_model_parameters(d['shared_parameters'])
         else:
             raise ValueError('checkpoint does not contain: consensus_dual')
 
@@ -1408,7 +1771,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         p = dict()
         if self.ssOpt is not None:
-            p['shared_state'] = self.ssOpt.get_shared_model_parameters()
+            p['shared_parameters'] = self.ssOpt.get_shared_model_parameters()
 
         return p
 
@@ -1424,6 +1787,8 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
         if self.optimizer_name is None:
             self.optimizer_name = self.params['optimizer'][('name', 'sgd', 'Optimizer (lbfgs|adam|sgd)')]
+
+        self.optimizer_has_been_initialized = True
 
     def _create_single_scale_optimizer(self,batch_size):
         ssOpt = SingleScaleRegistrationOptimizer(batch_size, self.spacing, self.useMap, self.mapLowResFactor, self.params)
@@ -1455,28 +1820,16 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
         return ssOpt
 
-    def _write_out_individual_states(self,model_pars,filenames):
-        nr_filenames = len(filenames)
+    def _get_individual_checkpoint_filenames(self,output_directory,idx,epoch_iter):
+        filenames = []
+        for v in idx:
+            filenames.append(os.path.join(output_directory,'checkpoint_individual_parameter_pair_{:05d}_epoch_{:05d}.pt'.format(v,epoch_iter)))
+        return filenames
 
-        # first check that we are only dealing with tensors here and that they all have the same batch size
-        data_is_consistent = True
-        for key in model_pars:
-            if torch.is_tensor(model_pars[key]):
-                if model_pars[key].size()[0]!=nr_filenames:
-                    data_is_consistent = False
-                    break
-            else:
-                data_is_consistent = False
-                break
+    def _get_shared_checkpoint_filename(self,output_directory,epoch_iter):
 
-        if not data_is_consistent:
-            raise ValueError('Data-types not supported or dimensions not consistent with batch size')
-
-        for i, filename in enumerate(filenames):
-            d = collections.OrderedDict()
-            for key in model_pars:
-                d[key] = model_pars[key][i,...]
-            torch.save(d,filename)
+        filename = os.path.join(output_directory,'checkpoint_shared_parameters_epoch_{:05d}.pt'.format(epoch_iter))
+        return filename
 
     def optimize(self):
         """
@@ -1491,14 +1844,16 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
 
         self._set_all_still_missing_parameters()
-        self.optimizer_has_been_initialized = True
+
+        if not os.path.exists(self.checkpoint_output_directory):
+            os.makedirs(self.checkpoint_output_directory)
 
         iter_offset = 0
 
         if torch.is_tensor(self.ISource) or torch.is_tensor(self.ITarget):
             raise ValueError('Batch optimizer expects lists of filenames as inputs for the source and target images')
 
-        registration_data_set = OD.PairwiseRegistrationDataset(output_directory=self.individual_state_output_dir,
+        registration_data_set = OD.PairwiseRegistrationDataset(output_directory=self.individual_parameter_output_dir,
                                                                source_image_filenames=self.ISource,
                                                                target_image_filenames=self.ITarget,
                                                                params=self.params)
@@ -1512,6 +1867,8 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.ssOpt = None
         last_batch_size = None
+
+        nr_of_samples = nr_of_datasets//self.batch_size
 
         for iter_batch in range(iter_offset,self.nr_of_epochs+iter_offset):
             print('Computing epoch ' + str(iter_batch + 1) + ' of ' + str(iter_offset+self.nr_of_epochs))
@@ -1527,25 +1884,61 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                 if (batch_size != last_batch_size) and (last_batch_size is not None):
                     raise ValueError('Ooops, this should not have happened.')
 
+                initialize_optimizer = False
                 if (batch_size != last_batch_size) or (self.ssOpt is None):
+                    initialize_optimizer = True
                     # we need to create a new optimizer; otherwise optimizer already exists
                     self.ssOpt = self._create_single_scale_optimizer(batch_size)
-                    # to make sure we have the model initialized, force parameter installation
-                    self.ssOpt._set_all_still_missing_parameters()
-                last_batch_size = batch_size
 
-                if sample.has_key('individual_state'):
-                    current_individual_state = sample['individual_state']
-                    if current_individual_state is not None:
-                        self.ssOpt.set_individual_model_parameters(current_individual_state)
-
+                # images need to be set before calling _set_all_still_missing_parameters
                 self.ssOpt.set_source_image(current_source_batch)
                 self.ssOpt.set_target_image(current_target_batch)
+
+                if initialize_optimizer:
+                    # to make sure we have the model initialized, force parameter installation
+                    self.ssOpt._set_all_still_missing_parameters()
+                    # since this is chunked-up we increase the patience
+                    self.ssOpt.set_scheduler_patience_silent(self.ssOpt.get_scheduler_patience()*nr_of_samples)
+
+                last_batch_size = batch_size
+
+                if iter_batch!=0: # only load the individual parameters after the first epoch
+                    if sample.has_key('individual_parameter'):
+                        current_individual_parameters = sample['individual_parameter']
+                        if current_individual_parameters is not None:
+                            self.ssOpt.set_sgd_individual_model_parameters_and_optimizer_states(current_individual_parameters)
+                    else:
+                        print('WARNING: could not find previous parameter file')
+                else:
+                    # this is the case when optimization is run for the first time for a batch
+                    # In this case we want to have a fresh start for the initial conditions
+                    par_file = os.path.join(self.individual_parameter_output_dir,'default_init.pt')
+                    if i==0:
+                        # this is the first time, so we store the individual parameters
+                        torch.save(self.ssOpt.get_individual_model_parameters(),par_file)
+                    else:
+                        # now we load them
+                        print('INFO: forcing the initial individual parameters to default and removing optimizer state')
+                        self.ssOpt.set_individual_model_parameters(torch.load(par_file))
+                        # and we need to kill the optimizer state (to get rid of the previous momentum)
+                        self.ssOpt.optimizer_instance.state = defaultdict(dict)
+
 
                 self.ssOpt.optimize()
 
                 # need to save this index by index so we can shuffle
-                self._write_out_individual_states(self.ssOpt.get_individual_model_parameters(),sample['individual_state_filename'])
+                self.ssOpt._write_out_individual_parameters(self.ssOpt.get_sgd_individual_model_parameters_and_optimizer_states(),sample['individual_parameter_filename'])
+
+                if self.checkpoint_interval>0 or (iter_batch==self.nr_of_epochs+iter_offset-1):
+                    if (iter_batch%self.checkpoint_interval==0) or (iter_batch==self.nr_of_epochs+iter_offset-1):
+                        print('Writing out individual checkpoint data for epoch ' + str(iter_batch) + ' for sample ' + str(i+1) + '/' + str(nr_of_samples))
+                        individual_filenames = self._get_individual_checkpoint_filenames(self.checkpoint_output_directory,sample['idx'],iter_batch)
+                        self.ssOpt._write_out_individual_parameters(self.ssOpt.get_sgd_individual_model_parameters_and_optimizer_states(),individual_filenames)
+
+                        if i==nr_of_samples-1:
+                            print('Writing out shared checkpoint data for epoch ' + str(iter_batch))
+                            shared_filename = self._get_shared_checkpoint_filename(self.checkpoint_output_directory,iter_batch)
+                            self.ssOpt._write_out_shared_parameters(self.ssOpt.get_sgd_shared_model_parameters(),shared_filename)
 
 
 class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
@@ -1770,6 +2163,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.optimizer_name is None:
             self.optimizer_name = self.params['optimizer'][('name','lbfgs_ls','Optimizer (lbfgs|adam|sgd)')]
 
+        self.optimizer_has_been_initialized = True
 
     def get_warped_image(self):
         """
@@ -2062,7 +2456,6 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
                            Set the optimizer by name (e.g., in the json configuration) instead.')
 
         self._set_all_still_missing_parameters()
-        self.optimizer_has_been_initialized = True
 
         # todo: support reading images from file
         self.nr_of_images = self.ISource.size()[0]
@@ -2272,12 +2665,13 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.params['model']['deformation'][('use_map', True, 'use a map for the solution or not True/False' )]
             self.set_model( model_name )
 
+        self.optimizer_has_been_initialized = True
+
     def optimize(self):
         """
         Perform the actual multi-scale optimization
         """
         self._set_all_still_missing_parameters()
-        self.optimizer_has_been_initialized = True
 
         if (self.ISource is None) or (self.ITarget is None):
             raise ValueError('Source and target images need to be set first')
