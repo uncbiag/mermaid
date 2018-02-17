@@ -39,8 +39,8 @@ def get_image_range(im_from,im_to):
     return f
 
 symmetrize_images = False
-use_batch_registration = False
-nr_of_image_pairs = 20
+use_batch_registration = True
+nr_of_image_pairs = 5
 
 I0_filenames = get_image_range(0,nr_of_image_pairs)
 I1_filenames = get_image_range(nr_of_image_pairs,2*nr_of_image_pairs)
@@ -80,7 +80,7 @@ reg = si.RegisterImagePair()
 if use_batch_registration:
     reg.register_images(I0, I1, spacing,
                         model_name='svf_scalar_momentum_map',
-                        nr_of_iterations=15,
+                        nr_of_iterations=5,
                         visualize_step=20,
                         map_low_res_factor=0.5,
                         rel_ftol=1e-15,
