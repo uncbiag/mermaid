@@ -12,14 +12,17 @@ class IntensityNormalizeImage(object):
         self.default_normalization_mode = 'percentile_normalization'
         """Default intensity normalization method"""
 
-    def percentile_normalization(self,I,perc=95):
+    def percentile_normalization(self,I,perc=99.):
         """
         Linearly normalized image intensities so that the 95-th percentile gets mapped to 0.95; 0 stays 0
         :param I: input image
         :param perc: desired percentile
         :return: returns the normalized image
         """
-        I = I / np.percentile(I, 95) * 0.95
+        # first zero out negative values
+        np.clip(I, 0, None, out=I)
+        # then normalize the 95th percentile
+        I = I / np.percentile(I, perc) * perc/100.
         return I
 
     def defaultIntensityNormalization(self,I):

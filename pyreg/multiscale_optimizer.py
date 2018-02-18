@@ -2452,6 +2452,10 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
             # todo: could ultimately replace the single scale optimizer; here used to write out checkpoints
             ssOpt = self._create_single_scale_optimizer(current_batch_image_size, consensus_penalty=False)
 
+            # needs to be set before calling _set_all_still_missing_parameters
+            ssOpt.set_source_image(current_source_batch)
+            ssOpt.set_target_image(current_target_batch)
+
             # to make sure we have the model initialized, force parameter installation
             ssOpt._set_all_still_missing_parameters()
 
@@ -2459,9 +2463,6 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
             if iter_batch>0:
                 previous_checkpoint_filename = self._get_checkpoint_filename(current_batch, iter_batch - 1)
                 self._custom_single_batch_load_checkpoint(ssOpt, previous_checkpoint_filename)
-
-            ssOpt.set_source_image(current_source_batch)
-            ssOpt.set_target_image(current_target_batch)
 
             ssOpt.optimize()
 
