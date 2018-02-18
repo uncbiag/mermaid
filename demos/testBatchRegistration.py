@@ -40,7 +40,7 @@ def get_image_range(im_from,im_to):
 
 symmetrize_images = False
 use_batch_registration = True
-nr_of_image_pairs = 5
+nr_of_image_pairs = 30
 
 I0_filenames = get_image_range(0,nr_of_image_pairs)
 I1_filenames = get_image_range(nr_of_image_pairs,2*nr_of_image_pairs)

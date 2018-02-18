@@ -463,9 +463,14 @@ class ImageIO(FileIO):
 
         if self.intensity_normalize_image==True:
             im = IM.IntensityNormalizeImage().defaultIntensityNormalization(im)
+            if not silent_mode:
+                print('INFO: Image WAS intensity normalized when loading:' \
+                      + ' [' + str(im.min()) + ',' + str(im.max()) + ']')
+
         else:
             if not silent_mode:
-                print('WARNING: Image was NOT intensity normalized when loading.')
+                print('WARNING: Image was NOT intensity normalized when loading:' \
+                      + ' [' + str(im.min()) + ',' + str(im.max()) + ']')
 
         if self.normalize_spacing:
             if not silent_mode:
