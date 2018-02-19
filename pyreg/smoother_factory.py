@@ -127,14 +127,14 @@ class Smoother(object):
         return None
 
     @abstractmethod
-    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
         """
         Abstract method to smooth a vector field. Only this method should be overwritten in derived classes.
 
         :param v: input field to smooth  BxCxXxYxZ
         :param vout: if not None then result is returned in this variable
-        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
-                Can be used to design image-dependent smoothers; typically not used.
+        :param pars: dictionary that can contain various extra variables; for smoother this will for example be
+            the current image 'I' or the current map 'phi'. typically not used.
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: should return the a smoothed scalar field, image dimension BxCXxYxZ
         """
@@ -142,14 +142,14 @@ class Smoother(object):
 
 
 
-    def smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
+    def smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
         """
         Smoothes a vector field of dimension BxCxXxYxZ,
 
         :param v: vector field to smooth BxCxXxYxZ
         :param vout: if not None then result is returned in this variable
-        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
-                Can be used to design image-dependent smoothers; typically not used.
+        :param pars: dictionary that can contain various extra variables; for smoother this will for example be
+            the current image 'I' or the current map 'phi'. typically not used.
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed vector field BxCxXxYxZ
         """
@@ -159,7 +159,7 @@ class Smoother(object):
         else:
             Sv = Variable(MyTensor(v.size()).zero_())
 
-        Sv[:] = self.apply_smooth(v,vout,I_or_phi,variables_from_optimizer)    # here must use :, very important !!!!
+        Sv[:] = self.apply_smooth(v,vout,pars,variables_from_optimizer)    # here must use :, very important !!!!
         return Sv
 
 
@@ -191,14 +191,14 @@ class DiffusionSmoother(Smoother):
         """
         return self.iter
 
-    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
         """
         Smoothes a scalar field of dimension XxYxZ
 
         :param v: input image
         :param vout: if not None returns the result in this variable
-        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
-                Can be used to design image-dependent smoothers; typically not used.
+        :param pars: dictionary that can contain various extra variables; for smoother this will for example be
+            the current image 'I' or the current map 'phi'. typically not used.
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
@@ -320,14 +320,14 @@ class GaussianSpatialSmoother(GaussianSmoother):
         else:
             raise ValueError('Can only perform padding in dimensions 1-3')
 
-    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
         """
         Smooth the scalar field using Gaussian smoothing in the spatial domain
 
         :param v: image to smooth
         :param vout: if not None returns the result in this variable
-        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
-                Can be used to design image-dependent smoothers; typically not used.
+        :param pars: dictionary that can contain various extra variables; for smoother this will for example be
+            the current image 'I' or the current map 'phi'. typically not used.
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
@@ -361,14 +361,14 @@ class GaussianFourierSmoother(GaussianSmoother):
         """
         pass
 
-    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
         :param v: image to smooth
         :param vout: if not None returns the result in this variable
-        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
-                Can be used to design image-dependent smoothers; typically not used.
+        :param pars: dictionary that can contain various extra variables; for smoother this will for example be
+            the current image 'I' or the current map 'phi'. typically not used.
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
@@ -449,14 +449,14 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         gaussianStd = self._get_gaussian_std_from_optimizer_params()
         return gaussianStd
 
-    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
         :param v: image to smooth
         :param vout: if not None returns the result in this variable
-        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
-                Can be used to design image-dependent smoothers; typically not used.
+        :param pars: dictionary that can contain various extra variables; for smoother this will for example be
+            the current image 'I' or the current map 'phi'. typically not used.
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
@@ -761,14 +761,14 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
 
         return penalty
 
-    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
         :param v: image to smooth
         :param vout: if not None returns the result in this variable
-        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
-                Can be used to design image-dependent smoothers; typically not used.
+        :param pars: dictionary that can contain various extra variables; for smoother this will for example be
+            the current image 'I' or the current map 'phi'. typically not used.
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
@@ -1008,14 +1008,14 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         return penalty
 
-    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
         :param v: image to smooth
         :param vout: if not None returns the result in this variable
-        :param I_or_phi: list that either only contains an image or a map as first entry and False or True as the second entry for image/map respectively
-                Can be used to design image-dependent smoothers; typically not used.
+        :param pars: dictionary that can contain various extra variables; for smoother this will for example be
+            the current image 'I' or the current map 'phi'. typically not used.
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
@@ -1034,30 +1034,18 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         # we now use a small neural net to learn the weighting
 
         # needs an image as its input
-        if I_or_phi is None:
+        if not pars.has_key('I'):
             raise ValueError('Smoother requires an image as an input')
 
-        is_map = I_or_phi[1]
+        is_map = pars.has_key('phi')
         if is_map:
             # todo: for a map input we simply create the input image by applying the map
             raise ValueError('Only implemented for image input at the moment')
         else:
-            I = I_or_phi[0]
+            I = pars['I']
 
         # apply the network selecting the smoothing from the set of smoothed results (vcollection) and
         # the input image, which may provide some guidance on where to smooth
-
-        # todo: debug; remove later
-        if False:
-            if variables_from_optimizer is not None:
-                if variables_from_optimizer['iter']==0:
-                    torch.save(self.ws.state_dict(),'ws_state_dict_iter_00.pt')
-
-                if variables_from_optimizer['iter'] == 10:
-                    torch.save(self.ws.state_dict(), 'ws_state_dict_iter_10.pt')
-
-                if variables_from_optimizer['iter']==20:
-                    torch.save(self.ws.state_dict(),'ws_state_dict_iter_20.pt')
 
         if self.debug_retain_computed_local_weights:
             # v is actually the vector-valued momentum here; changed the interface to pass this also
@@ -1116,7 +1104,7 @@ class AdaptiveSmoother(Smoother):
         return v
 
 
-    def apply_smooth(self, v, vout=None, I_or_phi=None, variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
         pass
 
 

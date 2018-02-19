@@ -333,7 +333,7 @@ class AdvectMap(ForwardModel):
         :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: Simply returns this velocity field
         """
-        return pars
+        return pars['v']
 
     def f(self,t, x, u, pars, variables_from_optimizer=None):
         """
@@ -369,7 +369,7 @@ class AdvectImage(ForwardModel):
         :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: Simply returns this velocity field
         """
-        return pars
+        return pars['v']
 
     def f(self,t, x, u, pars, variables_from_optimizer=None):
         """
@@ -415,7 +415,7 @@ class EPDiffImage(ForwardModel):
         # assume x[0] is m and x[1] is I for the state
         m = x[0]
         I = x[1]
-        v = self.smoother.smooth(m,None,[I,False],variables_from_optimizer)
+        v = self.smoother.smooth(m,None,utils.combine_dict(pars,{'I': I}),variables_from_optimizer)
         # print('max(|v|) = ' + str( v.abs().max() ))
         return [self.rhs.rhs_epdiff_multiNC(m,v), self.rhs.rhs_advect_image_multiNC(I,v)]
 
@@ -466,7 +466,7 @@ class EPDiffMap(ForwardModel):
         m = x[0]
         phi = x[1]
         if not self.use_net:
-            v = self.smoother.smooth(m,None,[phi,True],variables_from_optimizer)
+            v = self.smoother.smooth(m,None,utils.combine_dict(pars,{'phi':phi}),variables_from_optimizer)
         else:
             v = self.smoother.adaptive_smooth(m, phi, using_map=True)
 
@@ -526,7 +526,7 @@ class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
 
         # now compute the momentum
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, self.sz, self.spacing)
-        v = self.smoother.smooth(m,None,[I,False],variables_from_optimizer)
+        v = self.smoother.smooth(m,None,utils.combine_dict(pars,{'I':I}),variables_from_optimizer)
 
         # advection for I, scalar-conservation law for lam
         return [self.rhs.rhs_scalar_conservation_multiNC(lam, v), self.rhs.rhs_advect_image_multiNC(I, v)]
@@ -582,7 +582,7 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, self.sz, self.spacing)
         # todo: replace this by phi again
         #v = self.smoother.smooth(m,None,[phi,True],variables_from_optimizer)
-        v = self.smoother.smooth(m,None,[I,False],variables_from_optimizer)
+        v = self.smoother.smooth(m,None,utils.combine_dict(pars,{'I':I}),variables_from_optimizer)
 
         return [self.rhs.rhs_scalar_conservation_multiNC(lam,v),
                 self.rhs.rhs_advect_image_multiNC(I,v),

@@ -461,7 +461,9 @@ class ImageRegistrationOptimizer(Optimizer):
         self.ISource = None
         """source image"""
         self.lowResISource = None
-        """if mapLowResFactor <1, a lowres image needs to be created to parameterize some of the registration algorithms"""
+        """if mapLowResFactor <1, a lowres soure image needs to be created to parameterize some of the registration algorithms"""
+        self.lowResITarget = None
+        """if mapLowResFactor <1, a lowres target image may need to be created to be used as additonal inputs for registration algorithms"""
         self.ITarget = None
         """target image"""
         self.LSource = None
@@ -659,6 +661,8 @@ class ImageRegistrationOptimizer(Optimizer):
         """To be called before the optimization starts"""
         if self.mapLowResFactor is not None:
             self.lowResISource = self._compute_low_res_image(self.ISource)
+            # todo: can be removed to save memory; is more experimental at this point
+            self.lowResITarget = self._compute_low_res_image(self.ITarget)
 
     def set_source_label(self, LSource):
         """
@@ -1620,6 +1624,24 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def _get_use_external_scheduler(self):
         return self._use_external_scheduler
 
+    def _get_dictionary_to_pass_to_integrator(self):
+        """
+        This is experimental to allow passing additional parameters to integrators/smoothers, etc.
+
+        :return: dictionary
+        """
+
+        d = dict()
+
+        if self.mapLowResFactor is not None:
+            d['I0'] = self.lowResISource
+            d['I1'] = self.lowResITarget
+        else:
+            d['I0'] = self.ISource
+            d['I1'] = self.ITarget
+
+        return d
+
     def optimize(self):
         """
         Do the single scale optimization
@@ -1635,6 +1657,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.delayed_model_state_dict_still_to_be_set:
             print('Setting model state dict, delayed')
             self.set_model_state_dict(self.delayed_model_state_dict)
+
+        # this allows passing addtional parameters to the smoothers for all models and smoothers
+        self.model.set_dictionary_to_pass_to_integrator(self._get_dictionary_to_pass_to_integrator())
+        self.criterion.set_dictionary_to_pass_to_smoother(self._get_dictionary_to_pass_to_integrator())
 
         # optimize for a few steps
         start = time.time()
