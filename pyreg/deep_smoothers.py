@@ -297,8 +297,9 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         use_batch_normalization = self.params[('use_batch_normalization',True,'If true, uses batch normalization between layers')]
         self.use_one_encoder_decoder_block = self.params[('use_one_encoder_decoder_block',True,'If False, using two each as in the quicksilver paper')]
 
+        self.use_target_image_as_input = self.params[('use_target_image_as_input', True, 'If true, uses the target image as additional input')]
 
-        if self.use_momentum_as_input:
+        if self.use_momentum_as_input or self.use_target_image_as_input:
             self.encoder_1 = encoder_block_2d(self.get_number_of_input_channels(nr_of_image_channels,dim), feature_num,
                                               use_dropout, use_batch_normalization)
         else:
@@ -331,12 +332,15 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         currently only returns the number of image channels, but if something else would be used as
         the network input, would need to return the total number of inputs
         """
+        add_channels = 0
         if self.use_momentum_as_input:
-            return self.nr_of_image_channels + dim
-        else:
-            return self.nr_of_image_channels
+            add_channels+=dim
+        if self.use_target_image_as_input:
+            add_channels+=1
 
-    def forward(self, multi_smooth_v, I, m, global_multi_gaussian_weights,
+        return self.nr_of_image_channels + add_channels
+
+    def forward(self, multi_smooth_v, I, additonal_inputs, global_multi_gaussian_weights,
                 encourage_spatial_weight_consistency=True, retain_weights=False):
 
         # format of multi_smooth_v is multi_v x batch x channels x X x Y
@@ -369,11 +373,11 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             self.computed_weights = torch.FloatTensor(*sz_weight)
 
         # here is the actual network; maybe abstract this out later
+        x = I
         if self.use_momentum_as_input:
-            x = torch.cat([I,m],dim=1)
-        else:
-            # the input to the network is simply the image
-            x = I
+            x = torch.cat([x,additonal_inputs['m']],dim=1)
+        if self.use_target_image_as_input:
+            x = torch.cat([x, additonal_inputs['I1']], dim=1)
 
         if self.use_one_encoder_decoder_block:
             encoder_output = self.encoder_1(x)
@@ -446,7 +450,9 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
                                                                      params=params)
 
         self.kernel_sizes = self.params[('kernel_sizes',[7,7],'size of the convolution kernels')]
-        self.use_momentum_as_input = self.params[('use_momentum_as_input',True,'If true, uses the image and the momentum as input')]
+        self.use_momentum_as_input = self.params[('use_momentum_as_input',True,'If true, uses the momentum as an additional input')]
+        self.use_target_image_as_input = self.params[('use_target_image_as_input',True,'If true, uses the target image as additional input')]
+
 
         # check that all the kernel-size are odd
         for ks in self.kernel_sizes:
@@ -478,10 +484,13 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         currently only returns the number of image channels, but if something else would be used as
         the network input, would need to return the total number of inputs
         """
+        add_channels = 0
         if self.use_momentum_as_input:
-            return self.nr_of_image_channels + dim
-        else:
-            return self.nr_of_image_channels
+            add_channels+=dim
+        if self.use_target_image_as_input:
+            add_channels+=1
+
+        return self.nr_of_image_channels + add_channels
 
     def _init(self,nr_of_image_channels,dim):
         """
@@ -492,7 +501,6 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         """
 
         assert(self.nr_of_layers>0)
-        assert(dim==2)
 
         nr_of_input_channels = self.get_number_of_input_channels(nr_of_image_channels,dim)
 
@@ -516,7 +524,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
 
         self._initialize_weights()
 
-    def forward(self, multi_smooth_v, I, m, global_multi_gaussian_weights,
+    def forward(self, multi_smooth_v, I, additonal_inputs, global_multi_gaussian_weights,
                 encourage_spatial_weight_consistency=True, retain_weights=False):
 
         # format of multi_smooth_v is multi_v x batch x channels x X x Y
@@ -529,8 +537,6 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         """
         sz_mv = multi_smooth_v.size()
         dim_mv = sz_mv[2] # format is
-        # currently only implemented in 2D
-        assert(dim_mv==2)
         assert(sz_mv[0]==self.nr_of_gaussians)
 
         # create the output tensor: will be of dimension: batch x channels x X x Y
@@ -548,12 +554,12 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             # create storage; batch x size v x X x Y
             self.computed_weights = torch.FloatTensor(*sz_weight)
 
-
+        # network input
+        x = I
         if self.use_momentum_as_input:
-            x = torch.cat([I,m],dim=1)
-        else:
-            # the input to the network is simply the image
-            x = I
+            x = torch.cat([x,additonal_inputs['m']],dim=1)
+        if self.use_target_image_as_input:
+            x = torch.cat([x,additonal_inputs['I1']],dim=1)
 
         # now let's apply all the convolution layers, until the last
         # (because the last one is not relu-ed
