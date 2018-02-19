@@ -24,6 +24,35 @@ def compute_omt_penalty(weights, multi_gaussian_stds,desired_power=2.0):
 
     return penalty
 
+def DimConv(dim):
+    if dim==1:
+        return nn.Conv1d
+    elif dim==2:
+        return nn.Conv2d
+    elif dim==3:
+        return nn.Conv3d
+    else:
+        raise ValueError('Only supported for dimensions 1, 2, and 3')
+
+def DimBatchNorm(dim):
+    if dim==1:
+        return nn.BatchNorm1d
+    elif dim==2:
+        return nn.BatchNorm2d
+    elif dim==3:
+        return nn.BatchNorm3d
+    else:
+        raise ValueError('Only supported for dimensions 1, 2, and 3')
+
+def DimConvTranspose(dim):
+    if dim==1:
+        return nn.ConvTranspose1d
+    elif dim==2:
+        return nn.ConvTranspose2d
+    elif dim==3:
+        return nn.ConvTranspose3d
+    else:
+        raise ValueError('Only supported for dimensions 1, 2, and 3')
 
 class DeepSmoothingModel(nn.Module):
     """
@@ -56,10 +85,12 @@ class DeepSmoothingModel(nn.Module):
 
     def _initialize_weights(self):
         for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+            if isinstance(m, DimConv(self.dim)):
+                n = m.out_channels
+                for d in range(self.dim):
+                    n *= m.kernel_size[d]
                 m.weight.data.normal_(0, math.sqrt(0.25 / n))
-            elif isinstance(m, nn.BatchNorm2d):
+            elif isinstance(m, DimBatchNorm(self.dim)):
                 pass
             elif isinstance(m, nn.Linear):
                 pass
@@ -127,13 +158,13 @@ class encoder_block_2d(nn.Module):
         else:
             conv_bias = True
 
-        self.conv_input = nn.Conv2d(in_channels=input_feature, out_channels=output_feature,
+        self.conv_input = DimConv(self.dim)(in_channels=input_feature, out_channels=output_feature,
                                     kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
-        self.conv_inblock1 = nn.Conv2d(in_channels=output_feature, out_channels=output_feature,
+        self.conv_inblock1 = DimConv(self.dim)(in_channels=output_feature, out_channels=output_feature,
                                        kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
-        self.conv_inblock2 = nn.Conv2d(in_channels=output_feature, out_channels=output_feature,
+        self.conv_inblock2 = DimConv(self.dim)(in_channels=output_feature, out_channels=output_feature,
                                        kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
-        self.conv_pooling = nn.Conv2d(in_channels=output_feature, out_channels=output_feature,
+        self.conv_pooling = DimConv(self.dim)(in_channels=output_feature, out_channels=output_feature,
                                       kernel_size=2, stride=2, padding=0, dilation=1,bias=conv_bias)
         self.prelu1 = nn.PReLU()
         self.prelu2 = nn.PReLU()
@@ -141,10 +172,10 @@ class encoder_block_2d(nn.Module):
         self.prelu4 = nn.PReLU()
 
         if use_batch_normalization:
-            self.bn_1 = nn.BatchNorm2d(output_feature)
-            self.bn_2 = nn.BatchNorm2d(output_feature)
-            self.bn_3 = nn.BatchNorm2d(output_feature)
-            self.bn_4 = nn.BatchNorm2d(output_feature)
+            self.bn_1 = DimBatchNorm(self.dim)(output_feature)
+            self.bn_2 = DimBatchNorm(self.dim)(output_feature)
+            self.bn_3 = DimBatchNorm(self.dim)(output_feature)
+            self.bn_4 = DimBatchNorm(self.dim)(output_feature)
 
         self.use_dropout = use_dropout
         self.use_batch_normalization = use_batch_normalization
@@ -186,17 +217,17 @@ class decoder_block_2d(nn.Module):
         else:
             conv_bias = True
 
-        self.conv_unpooling = nn.ConvTranspose2d(in_channels=input_feature, out_channels=input_feature,
+        self.conv_unpooling = DimConvTranspose(self.dim)(in_channels=input_feature, out_channels=input_feature,
                                                  kernel_size=pooling_filter, stride=2, padding=0,output_padding=0,bias=conv_bias)
-        self.conv_inblock1 = nn.Conv2d(in_channels=input_feature, out_channels=input_feature,
+        self.conv_inblock1 = DimConv(self.dim)(in_channels=input_feature, out_channels=input_feature,
                                        kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
-        self.conv_inblock2 = nn.Conv2d(in_channels=input_feature, out_channels=input_feature,
+        self.conv_inblock2 = DimConv(self.dim)(in_channels=input_feature, out_channels=input_feature,
                                        kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
         if last_block:
-            self.conv_output = nn.Conv2d(in_channels=input_feature, out_channels=output_feature,
+            self.conv_output = DimConv(self.dim)(in_channels=input_feature, out_channels=output_feature,
                                          kernel_size=3, stride=1, padding=1, dilation=1)
         else:
-            self.conv_output = nn.Conv2d(in_channels=input_feature, out_channels=output_feature,
+            self.conv_output = DimConv(self.dim)(in_channels=input_feature, out_channels=output_feature,
                                          kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
 
         self.prelu1 = nn.PReLU()
@@ -205,11 +236,11 @@ class decoder_block_2d(nn.Module):
         self.prelu4 = nn.PReLU()
 
         if use_batch_normalization:
-            self.bn_1 = nn.BatchNorm2d(input_feature)
-            self.bn_2 = nn.BatchNorm2d(input_feature)
-            self.bn_3 = nn.BatchNorm2d(input_feature)
+            self.bn_1 = DimBatchNorm(self.dim)(input_feature)
+            self.bn_2 = DimBatchNorm(self.dim)(input_feature)
+            self.bn_3 = DimBatchNorm(self.dim)(input_feature)
             if not last_block:
-                self.bn_4 = nn.BatchNorm2d(output_feature)
+                self.bn_4 = DimBatchNorm(self.dim)(output_feature)
 
         self.use_dropout = use_dropout
         self.use_batch_normalization = use_batch_normalization
@@ -468,13 +499,13 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         convs = [None]*self.nr_of_layers
 
         # first layer
-        convs[0] = nn.Conv2d(nr_of_input_channels,
+        convs[0] = DimConv(self.dim)(nr_of_input_channels,
                                   self.nr_of_features_per_layer[0],
                                   self.kernel_sizes[0], padding=(self.kernel_sizes[0]-1)//2)
 
         # all the intermediate layers and the last one
         for l in range(self.nr_of_layers-1):
-            convs[l+1] = nn.Conv2d(self.nr_of_features_per_layer[l],
+            convs[l+1] = DimConv(self.dim)(self.nr_of_features_per_layer[l],
                                         self.nr_of_features_per_layer[l+1],
                                         self.kernel_sizes[l+1],
                                         padding=(self.kernel_sizes[l+1]-1)//2)

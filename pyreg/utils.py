@@ -22,6 +22,17 @@ try:
 except ImportError:
     print('WARNING: nn_interpolation could not be imported (only supported in CUDA at the moment), some functionality may not be available.')
 
+def combine_dict(d1,d2):
+    """
+    Creates a dictionary which has entries from both of them
+
+    :param d1: dictionary 1
+    :param d2: dictionary 2
+    :return: resulting dictionary
+    """
+    d = d1.copy()
+    d.update(d2)
+    return d
 
 def get_parameter_list_from_parameter_dict(pd):
     """
