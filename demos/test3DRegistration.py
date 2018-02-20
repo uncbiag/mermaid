@@ -29,8 +29,8 @@ reg = si.RegisterImagePair()
 
 reg.register_images(I0, I1, spacing,
                     model_name='svf_scalar_momentum_map',
-                    nr_of_iterations=30,
-                    visualize_step=100,
+                    nr_of_iterations=1,
+                    visualize_step=250,
                     map_low_res_factor=0.25,
                     rel_ftol=1e-10,
                     use_consensus_optimization=True,

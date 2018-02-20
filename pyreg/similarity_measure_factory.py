@@ -318,7 +318,14 @@ class LocalizedNCCSimilarity(SimilarityMeasure):
         self.mask = torch.zeros_like(self.weighting_coefficients)
 
         if self.dim==1:
-            pass
+            for x in range(-self.nr_of_elements_in_direction[0],self.nr_of_elements_in_direction[0]+1):
+                currentRSqr = (x*self.spacing[0])**2
+                if currentRSqr<= radiusSqr:
+                    self.weighting_coefficients[x+self.nr_of_elements_in_direction[0]]=np.exp(-currentRSqr/(2*sigma**2))
+                    self.mask[x+self.nr_of_elements_in_direction[0]] = 1
+            # now normalize it
+            self.weighting_coefficients /= self.weighting_coefficients.sum()
+
         elif self.dim==2:
             for x in range(-self.nr_of_elements_in_direction[0],self.nr_of_elements_in_direction[0]+1):
                 for y in range(-self.nr_of_elements_in_direction[1],self.nr_of_elements_in_direction[1]+1):
@@ -330,7 +337,19 @@ class LocalizedNCCSimilarity(SimilarityMeasure):
             # now normalize it
             self.weighting_coefficients /= self.weighting_coefficients.sum()
         elif self.dim==3:
-            pass
+            for x in range(-self.nr_of_elements_in_direction[0],self.nr_of_elements_in_direction[0]+1):
+                for y in range(-self.nr_of_elements_in_direction[1],self.nr_of_elements_in_direction[1]+1):
+                    for z in range(-self.nr_of_elements_in_direction[2], self.nr_of_elements_in_direction[2] + 1):
+                        currentRSqr = (x*self.spacing[0])**2 + (y*self.spacing[1])**2 + (z*self.spacing[2])**2
+                        if currentRSqr<= radiusSqr:
+                            self.weighting_coefficients[x+self.nr_of_elements_in_direction[0],
+                                                        y+self.nr_of_elements_in_direction[1],
+                                                        z+self.nr_of_elements_in_direction[2]]= np.exp(-currentRSqr/(2*sigma**2))
+                            self.mask[x+self.nr_of_elements_in_direction[0],
+                                      y+self.nr_of_elements_in_direction[1],
+                                      z+self.nr_of_elements_in_direction[2]] = 1
+            # now normalize it
+            self.weighting_coefficients /= self.weighting_coefficients.sum()
         else:
             raise ValueError('Only dimensions 1,2, and 3 are supported.')
 
