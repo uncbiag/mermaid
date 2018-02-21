@@ -121,6 +121,20 @@ class RegistrationNet(nn.Module):
         """
         pass
 
+    def get_registration_parameters_and_buffers(self):
+        """
+        Method to return the registration parameters and buffers (i.e., the model state directory)
+
+        :return: returns the registration parameters and buffers
+        """
+        cs = self.state_dict()
+        params = collections.OrderedDict()
+
+        for key in cs:
+            params[key] = cs[key]
+
+        return params
+
     def get_registration_parameters(self):
         """
         Abstract method to return the registration parameters
@@ -148,6 +162,22 @@ class RegistrationNet(nn.Module):
                 individual_params[key_value[0]] = key_value[1]
         return individual_params
 
+    def get_shared_registration_parameters_and_buffers(self):
+        """
+        Same as get_shared_registration_parameters, but does also include buffers which may not be parameters.
+
+        :return:
+        """
+
+        cs = self.state_dict()  # in this way we also get the buffers
+        shared_params_and_buffers = collections.OrderedDict()
+
+        for key_value in cs:
+            if self._shared_parameters.issuperset({key_value}):
+                shared_params_and_buffers[key_value] = cs[key_value]
+
+        return shared_params_and_buffers
+
     def get_shared_registration_parameters(self):
         """
         Returns the parameters that have been declared shared for optimization.
@@ -159,6 +189,7 @@ class RegistrationNet(nn.Module):
         for key_value in cs:
             if self._shared_parameters.issuperset({key_value[0]}):
                 shared_params[key_value[0]] = key_value[1]
+
         return shared_params
 
     def set_registration_parameters(self, pars, sz, spacing):

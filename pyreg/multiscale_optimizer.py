@@ -804,7 +804,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.model is not None and self.optimizer_instance is not None:
             d = super(SingleScaleRegistrationOptimizer, self).get_checkpoint_dict()
             d['model'] = dict()
-            d['model']['parameters'] = self.model.get_registration_parameters()
+            d['model']['parameters'] = self.model.get_registration_parameters_and_buffers()
             d['model']['size'] = self.model.sz
             d['model']['spacing'] = self.model.spacing
             d['optimizer_state'] = self.optimizer_instance.state_dict()
@@ -816,7 +816,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.model is not None and self.optimizer_instance is not None:
             self.model.set_registration_parameters(d['model']['parameters'],d['model']['size'],d['model']['spacing'])
             if load_optimizer_state:
-                self.optimizer_instance.load_state_dict(d['optimizer_state'])
+                try:
+                    self.optimizer_instance.load_state_dict(d['optimizer_state'])
+                    print('INFO: Was able to load the previous optimzer state from checkpoint data')
+                except:
+                    print('INFO: Could not load the previous optimizer state')
             else:
                 print('WARNING: Turned off the loading of the optimizer state')
         else:
@@ -974,6 +978,14 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
 
         self.model.set_shared_registration_parameters(p)
+
+    def get_shared_model_parameters_and_buffers(self):
+        """
+        Returns only the model parameters that are shared between models and the shared buffers associated w/ it.
+
+        :return: shared model parameters and buffers
+        """
+        return self.model.get_shared_registration_parameters_and_buffers()
 
     def get_shared_model_parameters(self):
         """
@@ -1841,7 +1853,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
     def get_checkpoint_dict(self):
         d = super(SingleScaleBatchRegistrationOptimizer, self).get_checkpoint_dict()
         if self.ssOpt is not None:
-            d['shared_parameters'] = self.ssOpt.get_shared_model_parameters()
+            d['shared_parameters'] = self.ssOpt.get_shared_model_parameters_and_buffers()
         return d
 
     def load_checkpoint_dict(self, d, load_optimizer_state=False):
@@ -1887,7 +1899,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         p = dict()
         if self.ssOpt is not None:
-            p['shared_parameters'] = self.ssOpt.get_shared_model_parameters()
+            p['shared_parameters'] = self.ssOpt.get_shared_model_parameters_and_buffers()
 
         return p
 
