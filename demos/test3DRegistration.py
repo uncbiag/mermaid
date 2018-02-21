@@ -30,7 +30,7 @@ reg = si.RegisterImagePair()
 reg.register_images(I0, I1, spacing,
                     model_name='svf_scalar_momentum_map',
                     nr_of_iterations=1,
-                    visualize_step=250,
+                    visualize_step=2,
                     map_low_res_factor=0.25,
                     rel_ftol=1e-10,
                     use_consensus_optimization=True,
@@ -47,7 +47,7 @@ phis = reg.get_map()
 #map_io.write('phi3d.nrrd',phis['phi'][0],hdr)
 #im_io.write('I0_warped.nrrd',Iw,hdr)
 
-save_me = True
+save_me = False
 if save_me:
     d = dict()
     d['pars'] = pars

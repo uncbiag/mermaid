@@ -331,7 +331,8 @@ class Optimizer(object):
         :param lowResSize: size of low re parameterization
         :return: returns spacing of low res parameterization
         """
-        return spacing * np.array(sz[2::]) / np.array(lowResSize[2::])
+        #todo: check that this is the correct way of doing it
+        return spacing * (np.array(sz[2::])-1) / (np.array(lowResSize[2::])-1)
 
     def _get_low_res_size_from_size(self, sz, factor):
         """

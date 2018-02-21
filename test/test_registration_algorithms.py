@@ -179,12 +179,12 @@ class Test_registration_algorithms(unittest.TestCase):
         mo.set_light_analysis_on(True)
         mo.register()
 
-        # E = [0.0807519], similarityE = [0.07166166], regE = [0.00909024], relF = [0.03879319]
+        # E = [0.08930502], simE = [0.08034889], regE = [0.00895613], optParE = [0.], relF = [0.03883468]
         energy = mo.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.0807519, decimal=4 )
-        npt.assert_almost_equal(energy[1], 0.07166166, decimal=4 )
-        npt.assert_almost_equal(energy[2], 0.00909024, decimal=4 )
+        npt.assert_almost_equal(energy[0], 0.08930502, decimal=4 )
+        npt.assert_almost_equal(energy[1], 0.08034889, decimal=4 )
+        npt.assert_almost_equal(energy[2], 0.00895613, decimal=4 )
 
 
     def test_lddmm_shooting_map_multi_scale(self):
@@ -199,12 +199,12 @@ class Test_registration_algorithms(unittest.TestCase):
         mo.set_light_analysis_on(True)
         mo.register()
 
-        # E = [0.05448951], similarityE = [0.04138736], regE = [0.01310215], relF = [0.0105818]
+        # E = [0.07970674], simE = [0.06657108], regE = [0.01313565], optParE = [0.], relF = [0.02088663]
         energy = mo.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.05448951, decimal=4 )
-        npt.assert_almost_equal(energy[1], 0.04138736, decimal=4 )
-        npt.assert_almost_equal(energy[2], 0.01310215, decimal=4 )
+        npt.assert_almost_equal(energy[0], 0.07970674, decimal=4 )
+        npt.assert_almost_equal(energy[1], 0.06657108, decimal=4 )
+        npt.assert_almost_equal(energy[2], 0.01313565, decimal=4 )
 
     def test_svf_map_single_scale(self):
 
