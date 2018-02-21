@@ -120,7 +120,7 @@ nr_of_batch_iters = 1
 c_filename = get_checkpoint_filename(0, nr_of_batch_iters-1)
 q = torch.load(c_filename)
 #lam_one = Variable( q['model']['state']['lam'], requires_grad=False)
-lam_one = q['model']['state']['lam']
+lam_one = q['model']['parameters']['lam']
 lam_one_sz = lam_one.size()
 batch_size = lam_one_sz[0]
 
@@ -128,7 +128,7 @@ new_size_lam = list(lam_one_sz)
 new_size_lam[0] = sz[0]
 
 import copy
-new_size_phi = copy.deepcopy(sz)
+new_size_phi = list(sz)
 new_size_phi[1] = 2
 
 # get all the lambdas
@@ -139,7 +139,7 @@ Iw = Variable(torch.FloatTensor(*sz).zero_(), requires_grad=False)
 for b in range(nr_of_batches):
     c_filename = get_checkpoint_filename(b, nr_of_batch_iters - 1)
     q = torch.load(c_filename)
-    lam[b*batch_size:min((b+1)*batch_size,sz[0]),...] = q['model']['state']['lam']
+    lam[b*batch_size:min((b+1)*batch_size,sz[0]),...] = q['model']['parameters']['lam']
     Iw[b*batch_size:min((b+1)*batch_size,sz[0]),...] = q['res']['Iw']
     phi[b*batch_size:min((b+1)*batch_size,sz[0]),...] = q['res']['phi']
 
@@ -160,20 +160,21 @@ nr_of_images = sz[0]
 print_figures = True
 
 lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacing, lowResSize[2:])
+lowResI1, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I1, spacing, lowResSize[2:])
 
 # smoother needs to be in the same state as before, so we need to set the parameters correctly
 smoother_params = params['model']['registration_model']['forward_model']
 
 smoother = SF.SmootherFactory(lowResSize[2:],lowResSpacing).create_smoother_by_name('learned_multiGaussianCombination',smoother_params)
 if single_batch:
-    smoother.set_state_dict(d['registration_pars']['registration_pars'][0]['model']['state'])
+    smoother.set_state_dict(d['registration_pars']['registration_pars'][0]['model']['parameters'])
 else:
     smoother.set_state_dict(d['registration_pars']['consensus_state'])
 smoother.set_debug_retain_computed_local_weights(True)
 
 m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam,lowResI0,lowResSize,lowResSpacing)
 
-v = smoother.smooth(m,None,[lowResI0,False])
+v = smoother.smooth(m,None,{'I':lowResI0,'I1':lowResI1})
 
 local_weights = smoother.get_debug_computed_local_weights()
 default_multi_gaussian_weights = smoother.get_default_multi_gaussian_weights()
@@ -303,7 +304,7 @@ if visualize_weights:
 
 if visualize_filters:
     if single_batch:
-        w1 = d['registration_pars']['registration_pars'][0]['model']['state']['weighted_smoothing_net.conv_layers.0.weight']
+        w1 = d['registration_pars']['registration_pars'][0]['model']['parameters']['weighted_smoothing_net.conv_layers.0.weight']
     else:
         w1 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.0.weight']
         b1 = d['registration_pars']['consensus_state']['weighted_smoothing_net.conv_layers.0.bias']
@@ -318,7 +319,7 @@ if visualize_filters:
         for iter in range(0,1):
             c_filename = get_checkpoint_filename(batch,iter)
             cd = torch.load(c_filename)
-            cw1 = cd['model']['state']['weighted_smoothing_net.conv_layers.0.weight']
+            cw1 = cd['model']['parameters']['weighted_smoothing_net.conv_layers.0.weight']
 
             cfname = 'filters_w1_batch_{:05d}.pdf'.format(batch)
 
