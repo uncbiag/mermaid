@@ -606,8 +606,8 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussians')]
         """minimal allowed standard deviation during optimization"""
 
-        self.default_weight_penalty = params[('default_weight_penalty', 1.0, 'factor by which the deviation from the dafault weights is penalized')]
-        """penalty factor for deviation from default weights"""
+        self.omt_weight_penalty = self.params[('omt_weight_penalty', 25.0, 'Penalty for the optimal mass transport')]
+        """penalty factor for the optimal mass transport term"""
 
         self.optimize_over_smoother_stds = params[('optimize_over_smoother_stds', False, 'if set to true the smoother will optimize over standard deviations')]
         """determines if we should optimize over the smoother standard deviations"""
@@ -769,7 +769,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         # also adds a penalty for the network parameters
 
         current_penalty = _compute_omt_penalty_for_weight_vectors(self.get_gaussian_weights(),self.get_gaussian_stds(),self.omt_power)
-        penalty = current_penalty*self.default_weight_penalty
+        penalty = current_penalty*self.omt_weight_penalty
 
         return penalty
 
@@ -821,9 +821,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussians')]
         """minimal allowed standard deviation during optimization"""
 
-        self.default_weight_penalty = params[('default_weight_penalty', 1.0, 'factor by which the deviation from the dafault weights is penalized')]
-        """penalty factor for deviation from default weights"""
-
         self.network_penalty = params[('network_penalty', 0.0, 'factor by which the L2 norm of network weights is penalized')]
         """penalty factor for L2 norm of network weights"""
 
@@ -862,11 +859,14 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.multi_gaussian_stds_optimizer_params = self._create_multi_gaussian_stds_optimization_vector_parameters()
         self.multi_gaussian_weights_optimizer_params = self._create_multi_gaussian_weights_optimization_vector_parameters()
 
-        self.omt_power = params[('omt_power', 2.0, 'Power for the optimal mass transport (i.e., to which power distances are penalized')]
-        """optimal mass transport power"""
-
-        self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,dim=self.dim).create_deep_smoother(params)
+        self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,dim=self.dim,spacing=self.spacing).create_deep_smoother(params)
         """learned mini-network to predict multi-Gaussian smoothing weights"""
+
+        self.omt_weight_penalty = self.ws.get_omt_weight_penalty()
+        """penalty factor for the optimal mass transport term"""
+
+        self.omt_power = self.ws.get_omt_power()
+        """power for the optimal mass transport term"""
 
         self.debug_retain_computed_local_weights = False
         self.debug_computed_local_weights = None
@@ -1013,10 +1013,10 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             current_penalty = _compute_omt_penalty_for_weight_vectors(self.get_gaussian_weights(),
                                                                       self.get_gaussian_stds(), self.omt_power)
 
-            penalty = current_penalty * self.default_weight_penalty*self.spacing.prod()*self.sz.prod()
+            penalty = current_penalty * self.omt_weight_penalty*self.spacing.prod()*self.sz.prod()
         else:
 
-            penalty = self.ws.get_current_penalty()*self.default_weight_penalty*self.spacing.prod()
+            penalty = self.ws.get_current_penalty()
 
             #print('omt penalty = ' + str(penalty.data.cpu().numpy()))
 
