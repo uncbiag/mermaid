@@ -8,6 +8,8 @@ from data_wrapper import USE_CUDA, MyTensor, AdaptVal
 import math
 
 
+batch_norm_momentum_val = 0.1
+
 def compute_omt_penalty(weights, multi_gaussian_stds,desired_power=2.0):
 
     # weights: B x weights x X x Y
@@ -205,12 +207,16 @@ class DeepSmoothingModel(nn.Module):
         """to stores the current penalty (for example OMT) after running through the model"""
 
     def _initialize_weights(self):
+
+        print('WARING: weight initialization disabled')
+        return
+
         for m in self.modules():
             if isinstance(m, DimConv(self.dim)):
                 n = m.out_channels
                 for d in range(self.dim):
                     n *= m.kernel_size[d]
-                m.weight.data.normal_(0, math.sqrt(0.25 / n))
+                m.weight.data.normal_(0, math.sqrt(0.05 / n))
             elif isinstance(m, DimBatchNorm(self.dim)):
                 pass
             elif isinstance(m, nn.Linear):
@@ -291,10 +297,10 @@ class encoder_block_2d(nn.Module):
         self.prelu4 = nn.PReLU()
 
         if use_batch_normalization:
-            self.bn_1 = DimBatchNorm(self.dim)(output_feature)
-            self.bn_2 = DimBatchNorm(self.dim)(output_feature)
-            self.bn_3 = DimBatchNorm(self.dim)(output_feature)
-            self.bn_4 = DimBatchNorm(self.dim)(output_feature)
+            self.bn_1 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
+            self.bn_2 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
+            self.bn_3 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
+            self.bn_4 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
 
         self.use_dropout = use_dropout
         self.use_batch_normalization = use_batch_normalization
@@ -355,11 +361,11 @@ class decoder_block_2d(nn.Module):
         self.prelu4 = nn.PReLU()
 
         if use_batch_normalization:
-            self.bn_1 = DimBatchNorm(self.dim)(input_feature)
-            self.bn_2 = DimBatchNorm(self.dim)(input_feature)
-            self.bn_3 = DimBatchNorm(self.dim)(input_feature)
+            self.bn_1 = DimBatchNorm(self.dim)(input_feature,momentum=batch_norm_momentum_val)
+            self.bn_2 = DimBatchNorm(self.dim)(input_feature,momentum=batch_norm_momentum_val)
+            self.bn_3 = DimBatchNorm(self.dim)(input_feature,momentum=batch_norm_momentum_val)
             if not last_block:
-                self.bn_4 = DimBatchNorm(self.dim)(output_feature)
+                self.bn_4 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
 
         self.use_dropout = use_dropout
         self.use_batch_normalization = use_batch_normalization
@@ -416,10 +422,12 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         self.use_momentum_as_input = self.params[('use_momentum_as_input',True,'If true, uses the image and the momentum as input')]
         use_batch_normalization = self.params[('use_batch_normalization',True,'If true, uses batch normalization between layers')]
         self.use_one_encoder_decoder_block = self.params[('use_one_encoder_decoder_block',True,'If False, using two each as in the quicksilver paper')]
+        self.estimate_around_global_weights = self.params[('estimate_around_global_weights', True, 'If true, a weighted softmax is used so the default output (for input zero) are the global weights')]
 
+        self.use_source_image_as_input = self.params[('use_source_image_as_input',True,'If true, uses the source image as additional input')]
         self.use_target_image_as_input = self.params[('use_target_image_as_input', True, 'If true, uses the target image as additional input')]
 
-        if self.use_momentum_as_input or self.use_target_image_as_input:
+        if self.use_momentum_as_input or self.use_target_image_as_input or self.use_source_image_as_input:
             self.encoder_1 = encoder_block_2d(self.get_number_of_input_channels(nr_of_image_channels,dim), feature_num,
                                               use_dropout, use_batch_normalization)
         else:
@@ -445,6 +453,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
                 self.decoder_1 = decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization)
             self.decoder_2 = decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, use_batch_normalization, last_block=True)  # 3?
 
+        self._initialize_weights()
 
     def get_number_of_input_channels(self, nr_of_image_channels, dim):
         """
@@ -455,6 +464,8 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         add_channels = 0
         if self.use_momentum_as_input:
             add_channels+=dim
+        if self.use_source_image_as_input:
+            add_channels+=1
         if self.use_target_image_as_input:
             add_channels+=1
 
@@ -496,6 +507,8 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         x = I
         if self.use_momentum_as_input:
             x = torch.cat([x,additonal_inputs['m']],dim=1)
+        if self.use_source_image_as_input:
+            x = torch.cat([x, additonal_inputs['I0']], dim=1)
         if self.use_target_image_as_input:
             x = torch.cat([x, additonal_inputs['I1']], dim=1)
 
@@ -526,7 +539,10 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
                 decoder_output = self.decoder_2(self.decoder_1(encoder_output))
 
         # now we are ready for the softmax
-        weights = F.softmax(decoder_output, dim=1)
+        if self.estimate_around_global_weights:
+            weights = weighted_softmax(decoder_output, dim=1, weights=global_multi_gaussian_weights)
+        else:
+            weights = F.softmax(decoder_output, dim=1)
 
         # ends here
 
@@ -572,6 +588,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
 
         self.kernel_sizes = self.params[('kernel_sizes',[7,7],'size of the convolution kernels')]
         self.use_momentum_as_input = self.params[('use_momentum_as_input',True,'If true, uses the momentum as an additional input')]
+        self.use_source_image_as_input = self.params[('use_source_image_as_input',True,'If true, uses the target image as additional input')]
         self.use_target_image_as_input = self.params[('use_target_image_as_input',True,'If true, uses the target image as additional input')]
         self.estimate_around_global_weights = self.params[('estimate_around_global_weights', True, 'If true, a weighted softmax is used so the default output (for input zero) are the global weights')]
         self.use_batch_normalization = self.params[('use_batch_normalization', True, 'If true, uses batch normalization between layers')]
@@ -612,6 +629,8 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             add_channels+=dim
         if self.use_target_image_as_input:
             add_channels+=1
+        if self.use_source_image_as_input:
+            add_channels+=1
 
         return self.nr_of_image_channels + add_channels
 
@@ -649,7 +668,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
 
             batch_normalizations = [None]*(self.nr_of_layers-1) # not on the last layer
             for b in range(self.nr_of_layers-1):
-                batch_normalizations[b] = DimBatchNorm(self.dim)(self.nr_of_features_per_layer[b])
+                batch_normalizations[b] = DimBatchNorm(self.dim)(self.nr_of_features_per_layer[b],momentum=batch_norm_momentum_val)
 
             self.batch_normalizations = nn.ModuleList()
             for b in batch_normalizations:
@@ -687,12 +706,28 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             # create storage; batch x size v x X x Y
             self.computed_weights = torch.FloatTensor(*sz_weight)
 
-        # network input
-        x = I
-        if self.use_momentum_as_input:
-            x = torch.cat([x,additional_inputs['m']],dim=1)
-        if self.use_target_image_as_input:
-            x = torch.cat([x,additional_inputs['I1']],dim=1)
+        do_input_standardization = True
+
+        if do_input_standardization:
+            # network input
+            x = I-I.mean()
+            if self.use_momentum_as_input:
+                # let's not remove the mean from the momentum
+                x = torch.cat([x, additional_inputs['m']], dim=1)
+            if self.use_source_image_as_input:
+                x = torch.cat([x, additional_inputs['I0']-additional_inputs['I0'].mean()], dim=1)
+            if self.use_target_image_as_input:
+                x = torch.cat([x, additional_inputs['I1']-additional_inputs['I1'].mean()], dim=1)
+        else:
+            # network input
+            x = I
+            if self.use_momentum_as_input:
+                x = torch.cat([x,additional_inputs['m']],dim=1)
+            if self.use_source_image_as_input:
+                x = torch.cat([x, additional_inputs['I0']], dim=1)
+            if self.use_target_image_as_input:
+                x = torch.cat([x,additional_inputs['I1']],dim=1)
+
 
         # now let's apply all the convolution layers, until the last
         # (because the last one is not relu-ed

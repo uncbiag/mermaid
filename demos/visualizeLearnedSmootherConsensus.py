@@ -174,7 +174,7 @@ smoother.set_debug_retain_computed_local_weights(True)
 
 m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam,lowResI0,lowResSize,lowResSpacing)
 
-v = smoother.smooth(m,None,{'I':lowResI0,'I1':lowResI1})
+v = smoother.smooth(m,None,{'I':lowResI0,'I0':lowResI0,'I1':lowResI1})
 
 local_weights = smoother.get_debug_computed_local_weights()
 default_multi_gaussian_weights = smoother.get_default_multi_gaussian_weights()

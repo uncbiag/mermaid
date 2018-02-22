@@ -2221,6 +2221,8 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         self.addSimName = None
         self.addSimMeasure = None
 
+        self.iter_offset = None
+
     def _consensus_penalty_loss(self,shared_model_parameters):
         """
         This allows to define additional terms for the loss which are based on parameters that are shared
@@ -2406,7 +2408,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         p = dict()
         p['warped_images'] = []
         for current_batch in range(self.nr_of_batches):
-            current_checkpoint_filename = self._get_checkpoint_filename(current_batch, self.nr_of_epochs - 1)
+            current_checkpoint_filename = self._get_checkpoint_filename(current_batch, self.iter_offset+self.nr_of_epochs - 1)
             dc = torch.load(current_checkpoint_filename)
             p['warped_images'].append(dc['res']['Iw'])
 
@@ -2422,7 +2424,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         p = dict()
         p['phi'] = []
         for current_batch in range(self.nr_of_batches):
-            current_checkpoint_filename = self._get_checkpoint_filename(current_batch, self.nr_of_epochs - 1)
+            current_checkpoint_filename = self._get_checkpoint_filename(current_batch, self.iter_offset+self.nr_of_epochs - 1)
             dc = torch.load(current_checkpoint_filename)
             p['phi'].append(dc['res']['phi'])
 
@@ -2438,7 +2440,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         p['consensus_state'] = self.current_consensus_state
         p['registration_pars'] = []
         for current_batch in range(self.nr_of_batches):
-            current_checkpoint_filename = self._get_checkpoint_filename(current_batch,self.nr_of_epochs-1)
+            current_checkpoint_filename = self._get_checkpoint_filename(current_batch,self.iter_offset+self.nr_of_epochs-1)
             dc = torch.load(current_checkpoint_filename)
             d = dict()
             d['model'] = dc['model']
@@ -2472,13 +2474,13 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         """
 
         if resume_from_iter is not None:
-            iter_offset = resume_from_iter+1
+            self.iter_offset = resume_from_iter+1
             print('Resuming from checkpoint iteration: ' + str(resume_from_iter))
         else:
-            iter_offset = 0
+            self.iter_offset = 0
 
-        for iter_batch in range(iter_offset,self.nr_of_epochs+iter_offset):
-            print('Computing epoch ' + str(iter_batch + 1) + ' of ' + str(iter_offset+self.nr_of_epochs))
+        for iter_batch in range(self.iter_offset,self.nr_of_epochs+self.iter_offset):
+            print('Computing epoch ' + str(iter_batch + 1) + ' of ' + str(self.iter_offset+self.nr_of_epochs))
 
             all_histories = []
             current_batch = 0 # there is only one batch, this one
