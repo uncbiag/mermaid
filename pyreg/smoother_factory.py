@@ -19,6 +19,19 @@ import deep_smoothers
 
 import collections
 
+def get_compatible_state_dict_for_module(state_dict,module_name,target_state_dict):
+
+    res_dict = collections.OrderedDict()
+    for k in target_state_dict.keys():
+        current_parameter_name = module_name + '.' + k
+        if state_dict.has_key(current_parameter_name):
+            res_dict[k] = state_dict[current_parameter_name]
+        else:
+            print('WARNING: needed key ' + k + ' but could not find it. IGNORING it.')
+
+    return res_dict
+
+
 def get_state_dict_for_module(state_dict,module_name):
 
     res_dict = collections.OrderedDict()
@@ -817,14 +830,14 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.encourage_spatial_weight_consistency = params[('encourage_spatial_weight_consistency',True,'If True tries adds an averaging term in the network to make weights spatially consistent')]
         """If set to true predicted weights are first spatially averaged before normalization in network"""
 
-        #self.optimize_over_smoother_stds = params[('optimize_over_smoother_stds', False, 'if set to true the smoother will optimize over standard deviations')]
-        #"""determines if we should optimize over the smoother standard deviations"""
-        self.optimize_over_smoother_stds = False # disabled for now, as this is not being used
+        self.optimize_over_smoother_stds = params[('optimize_over_smoother_stds', False, 'if set to true the smoother will optimize over standard deviations')]
+        """determines if we should optimize over the smoother standard deviations"""
 
-        #self.optimize_over_smoother_weights = params[(
-        #'optimize_over_smoother_weights', False, 'if set to true the smoother will optimize over the *global* weights')]
-        #"""determines if we should optimize over the smoother global weights"""
-        self.optimize_over_smoother_weights = False # disabled for now, as this is not being used
+        self.optimize_over_smoother_weights = params[('optimize_over_smoother_weights', False, 'if set to true the smoother will optimize over the *global* weights')]
+        """determines if we should optimize over the smoother global weights"""
+
+        self.optimize_over_deep_network = params[('optimize_over_deep_network', False, 'if set to true the smoother will optimize over the deep network parameters; otherwise will ignore the deep network')]
+        """determines if we should optimize over the smoother global weights"""
 
         self.start_optimize_over_smoother_parameters_at_iteration = \
             params[('start_optimize_over_smoother_parameters_at_iteration', 0,
@@ -854,8 +867,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,dim=self.dim).create_deep_smoother(params)
         """learned mini-network to predict multi-Gaussian smoothing weights"""
-
-
 
         self.debug_retain_computed_local_weights = False
         self.debug_computed_local_weights = None
@@ -914,7 +925,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             # has not been initialized, we need to initialize it before we can load the dictionary
             nr_of_image_channels = self.ws.get_number_of_image_channels_from_state_dict(state_dict,self.dim)
             self.ws._init(nr_of_image_channels,self.dim)
-        self.ws.load_state_dict(get_state_dict_for_module(state_dict,'weighted_smoothing_net'))
+        self.ws.load_state_dict(get_compatible_state_dict_for_module(state_dict,'weighted_smoothing_net',self.ws.state_dict()))
 
     def _project_parameter_vector_if_necessary(self):
         # all standard deviations need to be positive and the weights need to be non-negative
@@ -1061,18 +1072,21 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         # the input image, which may provide some guidance on where to smooth
 
         # todo: make this more generic later
-        additional_inputs = {'m':v,'I1':pars['I1']}
+        additional_inputs = {'m':v,'I0':pars['I0'],'I1':pars['I1']}
 
         if variables_from_optimizer is not None:
             if self.start_optimize_over_smoother_parameters_at_iteration > variables_from_optimizer['iter']:
                 # just apply the global weights for smoothing
                 self._is_optimizing_over_deep_network = False
-                smoothed_v = torch.zeros_like(vcollection[0,...])
-                for i,w in enumerate(self.get_gaussian_weights()):
-                    smoothed_v += w*vcollection[i,...]
             else:
                 self._is_optimizing_over_deep_network = True
+        else:
+            self._is_optimizing_over_deep_network = True
 
+        if not self.optimize_over_deep_network:
+            self._is_optimizing_over_deep_network = False
+
+        # we are ready to optimize over the deep network and want to optimize over it
         if self._is_optimizing_over_deep_network:
             # here the deep learning model kicks in
             if self.debug_retain_computed_local_weights:
@@ -1081,6 +1095,11 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                 self.debug_computed_local_weights = self.ws.get_computed_weights()
             else:
                 smoothed_v = self.ws(vcollection, I, additional_inputs, self.get_gaussian_weights(), self.encourage_spatial_weight_consistency)
+        else:
+            # just do global weighting here
+            smoothed_v = torch.zeros_like(vcollection[0, ...])
+            for i, w in enumerate(self.get_gaussian_weights()):
+                smoothed_v += w * vcollection[i, ...]
 
         if vout is not None:
             vout[:] = smoothed_v
