@@ -6,11 +6,11 @@ import numpy as np
 from data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
 import math
-
+import pyreg.finite_differences as fd
 
 batch_norm_momentum_val = 0.1
 
-def compute_omt_penalty(weights, multi_gaussian_stds,desired_power=2.0):
+def compute_omt_penalty(weights, multi_gaussian_stds,volume_element,desired_power=2.0):
 
     # weights: B x weights x X x Y
 
@@ -24,6 +24,7 @@ def compute_omt_penalty(weights, multi_gaussian_stds,desired_power=2.0):
         penalty += ((weights[:,i,...]).sum())*((s-max_std)**desired_power)
 
     penalty /= batch_size
+    penalty *= volume_element
 
     return penalty
 
@@ -184,18 +185,33 @@ class DeepSmoothingModel(nn.Module):
 
     """
 
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, nr_of_image_channels=1, omt_power=2.0,params=None):
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=2.0,params=None):
         super(DeepSmoothingModel, self).__init__()
 
         self.nr_of_image_channels = nr_of_image_channels
         self.dim = dim
         self.omt_power = omt_power
+        self.pnorm = 2
+
+        self.spacing = spacing
+        self.fdt = fd.FD_torch(self.spacing)
+        self.volumeElement = self.spacing.prod()
 
         # check that the largest standard deviation is the largest one
         if max(gaussian_stds) > gaussian_stds[-1]:
             raise ValueError('The last standard deviation needs to be the largest')
 
         self.params = params
+
+        self.omt_weight_penalty = self.params[('omt_weight_penalty', 25.0, 'Penalty for the optimal mass transport')]
+        self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 1.0, 'Penalize the total variation of the weights if desired')]
+        self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty',0.0,'Penalized the squared gradient of the weights')]
+
+        self.omt_power = self.params[('omt_power', 2.0, 'Power for the optimal mass transport (i.e., to which power distances are penalized')]
+        """optimal mass transport power"""
+
+        self.do_input_standardization = self.params[('do_input_standardization',True,'if true, subtracts the mean from any image input and leaves momentum as is')]
+        """if true subtracts the mean from all image input before running it through the network"""
 
         self.nr_of_gaussians = nr_of_gaussians
         self.gaussian_stds = gaussian_stds
@@ -206,9 +222,15 @@ class DeepSmoothingModel(nn.Module):
         self.current_penalty = None
         """to stores the current penalty (for example OMT) after running through the model"""
 
+    def get_omt_weight_penalty(self):
+        return self.omt_weight_penalty
+
+    def get_omt_power(self):
+        return self.omt_power
+
     def _initialize_weights(self):
 
-        print('WARING: weight initialization disabled')
+        print('WARNING: weight initialization disabled')
         return
 
         for m in self.modules():
@@ -236,6 +258,81 @@ class DeepSmoothingModel(nn.Module):
 
     def get_computed_weights(self):
         return self.computed_weights
+
+    def compute_diffusion(self, d):
+        # just do the standard component-wise Euclidean squared norm of the gradient
+
+        if self.dim == 1:
+            return self._compute_diffusion_1d(d)
+        elif self.dim == 2:
+            return self._compute_diffusion_2d(d)
+        elif self.dim == 3:
+            return self._compute_diffusion_3d(d)
+        else:
+            raise ValueError('Diffusion computation is currently only supported in dimensions 1 to 3')
+
+    def _compute_diffusion_1d(self, d):
+
+        # need to use torch.abs here to make sure the proper subgradient is computed at zero
+        batch_size = d.size()[0]
+        t0 = (self.fdt.dXc(d))**2
+
+        return (t0).sum() * self.volumeElement / batch_size
+
+    def _compute_diffusion_2d(self, d):
+
+        # need to use torch.norm here to make sure the proper subgradient is computed at zero
+        batch_size = d.size()[0]
+        t0 = self.fdt.dXc(d)**2+self.fdt.dYc(d)**2
+
+        return t0.sum() * self.volumeElement / batch_size
+
+    def _compute_diffusion_3d(self, d):
+
+        # need to use torch.norm here to make sure the proper subgradient is computed at zero
+        batch_size = d.size()[0]
+        t0 = self.fdt.dXc(d)**2 + self.fdt.dYc(d)**2 + self.fdt.dZc(d)**2
+
+        return t0.sum() * self.volumeElement / batch_size
+
+
+    def compute_total_variation(self, d):
+        # just do the standard component-wise Euclidean norm of the gradient
+
+        if self.dim == 1:
+            return self._compute_total_variation_1d(d)
+        elif self.dim == 2:
+            return self._compute_total_variation_2d(d)
+        elif self.dim == 3:
+            return self._compute_total_variation_3d(d)
+        else:
+            raise ValueError('Total variation computation is currently only supported in dimensions 1 to 3')
+
+    def _compute_total_variation_1d(self, d):
+
+        # need to use torch.abs here to make sure the proper subgradient is computed at zero
+        batch_size = d.size()[0]
+        t0 = torch.abs(self.fdt.dXc(d))
+
+        return (t0).sum()*self.volumeElement/batch_size
+
+    def _compute_total_variation_2d(self, d):
+
+        # need to use torch.norm here to make sure the proper subgradient is computed at zero
+        batch_size = d.size()[0]
+        t0 = torch.norm(torch.stack((self.fdt.dXc(d),self.fdt.dYc(d))),self.pnorm,0)
+
+        return t0.sum()*self.volumeElement/batch_size
+
+    def _compute_total_variation_3d(self, d):
+
+        # need to use torch.norm here to make sure the proper subgradient is computed at zero
+        batch_size = d.size()[0]
+        t0 = torch.norm(torch.stack((self.fdt.dXc(d),
+                                     self.fdt.dYc(d),
+                                     self.fdt.dZc(d))), self.pnorm, 0)
+
+        return t0.sum()*self.volumeElement/batch_size
 
     def spatially_average(self, x):
         """
@@ -407,10 +504,11 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
     """
     Similar to the model used in Quicksilver
     """
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, nr_of_image_channels=1, omt_power=2.0, params=None ):
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=2.0, params=None ):
         super(EncoderDecoderSmoothingModel, self).__init__(nr_of_gaussians=nr_of_gaussians,\
                                                                      gaussian_stds=gaussian_stds,\
                                                                      dim=dim,\
+                                                                     spacing=spacing,\
                                                                      nr_of_image_channels=nr_of_image_channels,\
                                                                      omt_power=omt_power,\
                                                                      params=params)
@@ -504,13 +602,25 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             self.computed_weights = torch.FloatTensor(*sz_weight)
 
         # here is the actual network; maybe abstract this out later
-        x = I
-        if self.use_momentum_as_input:
-            x = torch.cat([x,additonal_inputs['m']],dim=1)
-        if self.use_source_image_as_input:
-            x = torch.cat([x, additonal_inputs['I0']], dim=1)
-        if self.use_target_image_as_input:
-            x = torch.cat([x, additonal_inputs['I1']], dim=1)
+        if self.do_input_standardization:
+            # network input
+            x = I - I.mean()
+            if self.use_momentum_as_input:
+                # let's not remove the mean from the momentum
+                x = torch.cat([x, additional_inputs['m']], dim=1)
+            if self.use_source_image_as_input:
+                x = torch.cat([x, additional_inputs['I0'] - additional_inputs['I0'].mean()], dim=1)
+            if self.use_target_image_as_input:
+                x = torch.cat([x, additional_inputs['I1'] - additional_inputs['I1'].mean()], dim=1)
+        else:
+            # network input
+            x = I
+            if self.use_momentum_as_input:
+                x = torch.cat([x, additional_inputs['m']], dim=1)
+            if self.use_source_image_as_input:
+                x = torch.cat([x, additional_inputs['I0']], dim=1)
+            if self.use_target_image_as_input:
+                x = torch.cat([x, additional_inputs['I1']], dim=1)
 
         if self.use_one_encoder_decoder_block:
             encoder_output = self.encoder_1(x)
@@ -544,6 +654,17 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         else:
             weights = F.softmax(decoder_output, dim=1)
 
+        # compute tht total variation penalty
+        total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        if self.total_variation_weight_penalty > 0:
+            for g in range(self.nr_of_gaussians):
+                total_variation_penalty += self.compute_total_variation(weights[:, g, ...])
+
+        diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        if self.diffusion_weight_penalty > 0:
+            for g in range(self.nr_of_gaussians):
+                diffusion_penalty += self.compute_diffusion(weights[:, g, ...])
+
         # ends here
 
         # multiply the velocity fields by the weights and sum over them
@@ -562,7 +683,14 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             yc = torch.sum(roc * weights, dim=1)
             ret[:, n, ...] = yc  # ret is: batch x channels x X x Y
 
-        self.current_penalty = compute_omt_penalty(weights, self.gaussian_stds,self.omt_power)
+        current_omt_penalty = self.omt_weight_penalty * compute_omt_penalty(weights, self.gaussian_stds,
+                                                                            self.volumeElement, self.omt_power)
+        self.current_penalty = current_omt_penalty
+        if self.total_variation_weight_penalty > 0:
+            current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
+            print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
+                  'OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()))
+            self.current_penalty += current_tv_penalty
 
         if retain_weights:
             # todo: change visualization to work with this new format:
@@ -578,10 +706,11 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
     Enforces the same weighting for all the dimensions of the vector field to be smoothed
 
     """
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, nr_of_image_channels=1, omt_power=2.0, params=None ):
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=2.0, params=None ):
         super(SimpleConsistentWeightedSmoothingModel, self).__init__(nr_of_gaussians=nr_of_gaussians,\
                                                                      gaussian_stds=gaussian_stds,\
                                                                      dim=dim,\
+                                                                     spacing=spacing,\
                                                                      nr_of_image_channels=nr_of_image_channels,\
                                                                      omt_power=omt_power,
                                                                      params=params)
@@ -706,9 +835,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             # create storage; batch x size v x X x Y
             self.computed_weights = torch.FloatTensor(*sz_weight)
 
-        do_input_standardization = True
-
-        if do_input_standardization:
+        if self.do_input_standardization:
             # network input
             x = I-I.mean()
             if self.use_momentum_as_input:
@@ -752,6 +879,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
 
         # now do the smoothing if desired
         y = torch.zeros_like(x)
+
         if encourage_spatial_weight_consistency:
             # now we do local averaging for the weights and force the boundaries to zero
             for g in range(self.nr_of_gaussians):
@@ -764,6 +892,17 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             weights = weighted_softmax(y, dim=1, weights=global_multi_gaussian_weights)
         else:
             weights = F.softmax(y, dim=1)
+
+        # compute tht total variation penalty
+        total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        if self.total_variation_weight_penalty > 0:
+            for g in range(self.nr_of_gaussians):
+                total_variation_penalty += self.compute_total_variation(weights[:,g,...])
+
+        diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        if self.diffusion_weight_penalty > 0:
+            for g in range(self.nr_of_gaussians):
+                diffusion_penalty += self.compute_diffusion(weights[:, g, ...])
 
         # multiply the velocity fields by the weights and sum over them
         # this is then the multi-Gaussian output
@@ -781,7 +920,15 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             yc = torch.sum(roc*weights,dim=1)
             ret[:, n, ...] = yc # ret is: batch x channels x X x Y
 
-        self.current_penalty = compute_omt_penalty(weights,self.gaussian_stds,self.omt_power)
+        current_omt_penalty = self.omt_weight_penalty*compute_omt_penalty(weights,self.gaussian_stds,self.volumeElement,self.omt_power)
+        current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
+        current_diffusion_penalty = self.diffusion_weight_penalty * diffusion_penalty
+
+        print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
+              '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \
+              '; diffusion_penalty = ' + str(current_diffusion_penalty.data.cpu().numpy()))
+
+        self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
 
         if retain_weights:
             # todo: change visualization to work with this new format:
@@ -796,7 +943,7 @@ class DeepSmootherFactory(object):
     Factory to quickly create different types of deep smoothers.
     """
 
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, nr_of_image_channels=1 ):
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1 ):
         self.nr_of_gaussians = nr_of_gaussians
         """number of Gaussians as input"""
         self.gaussian_stds = gaussian_stds
@@ -805,6 +952,8 @@ class DeepSmootherFactory(object):
         """dimension of input image"""
         self.nr_of_image_channels = nr_of_image_channels
         """number of channels the image has (currently only one is supported)"""
+        self.spacing = spacing
+        """Spacing of the image"""
 
         if self.nr_of_image_channels!=1:
             raise ValueError('Currently only one image channel supported')
@@ -823,12 +972,14 @@ class DeepSmootherFactory(object):
             return SimpleConsistentWeightedSmoothingModel(nr_of_gaussians=self.nr_of_gaussians,
                                                           gaussian_stds=self.gaussian_stds,
                                                           dim=self.dim,
+                                                          spacing=self.spacing,
                                                           nr_of_image_channels=self.nr_of_image_channels,
                                                           params=cparams)
         elif smootherType=='encoder_decoder':
             return EncoderDecoderSmoothingModel(nr_of_gaussians=self.nr_of_gaussians,
                                                   gaussian_stds=self.gaussian_stds,
                                                   dim=self.dim,
+                                                  spacing=self.spacing,
                                                   nr_of_image_channels=self.nr_of_image_channels,
                                                   params=cparams)
         else:
