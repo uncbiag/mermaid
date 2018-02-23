@@ -74,6 +74,16 @@ class Smoother(object):
         """
         return set()
 
+    def write_parameters_to_settings(self):
+        """
+        If called will take the current parameter state and write it back into the initial setting configuration.
+        This should be called from the model it uses the smoother and will for example allow to write back optimized
+        weitght parameters into the smoother
+        :param module:
+        :return:
+        """
+
+        pass
 
     def get_penalty(self):
         """
@@ -429,6 +439,9 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
     def get_custom_optimizer_values(self):
         return {'smoother_std': self.get_gaussian_std()[0].data.cpu().numpy().copy()}
 
+    def write_parameters_to_settings(self):
+        self.params['gaussian_std'] = self.get_gaussian_sts()[0].data.cpu().numpy()
+
     def get_optimization_parameters(self):
         if self.optimize_over_smoother_parameters:
             return self.optimizer_params
@@ -701,6 +714,13 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         if weight_sum != 1.:
             self.multi_gaussian_weights_optimizer_params.data /= weight_sum
 
+    def write_parameters_to_settings(self):
+        if self.optimize_over_smoother_stds:
+            self.params['multi_gaussian_stds'] = self.get_gaussian_stds().data.cpu().numpy().tolist()
+
+        if self.optimize_over_smoother_weights:
+            self.params['multi_gaussian_weights'] = self.get_gaussian_weights().data.cpu().numpy().tolist()
+
     def _get_gaussian_weights_from_optimizer_params(self):
         # project if needed
         self._project_parameter_vector_if_necessary()
@@ -913,6 +933,13 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         return {'smoother_stds': self.get_gaussian_stds().data.cpu().numpy().copy(),
                 'smoother_weights': self.get_gaussian_weights().data.cpu().numpy().copy(),
                 'smoother_penalty': self.get_penalty().data.cpu().numpy().copy()}
+
+    def write_parameters_to_settings(self):
+        if self.optimize_over_smoother_stds:
+            self.params['multi_gaussian_stds'] = self.get_gaussian_stds().data.cpu().numpy().tolist()
+
+        if self.optimize_over_smoother_weights:
+            self.params['multi_gaussian_weights'] = self.get_gaussian_weights().data.cpu().numpy().tolist()
 
     def set_state_dict(self,state_dict):
 
