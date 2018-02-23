@@ -279,6 +279,10 @@ class RegistrationNet(nn.Module):
         # not defined yet
         return None,None
 
+    def write_parameters_to_settings(self):
+        """To be overwritten to write back optimized parameters to the setting where they came from"""
+        pass
+
 
 class RegistrationNetDisplacement(RegistrationNet):
     """
@@ -488,6 +492,10 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
 
         self.integrator = self.create_integrator()
         """integrator to solve the forward model"""
+
+    def write_parameters_to_settings(self):
+        super(SVFQuasiMomentumNet, self).write_parameters_to_settings()
+        self.smoother.write_parameters_to_settings()
 
     def get_custom_optimizer_output_string(self):
         return self.smoother.get_custom_optimizer_output_string()
@@ -1104,6 +1112,10 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         self.integrator = self.create_integrator()
         """integrator to solve EPDiff variant"""
 
+    def write_parameters_to_settings(self):
+        super(ShootingVectorMomentumNet, self).write_parameters_to_settings()
+        self.smoother.write_parameters_to_settings()
+
     def get_custom_optimizer_output_string(self):
         return self.smoother.get_custom_optimizer_output_string()
 
@@ -1467,6 +1479,10 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
 
         self.integrator = self.create_integrator()
         """integrator to integrate EPDiff and associated equations (for image or map)"""
+
+    def write_parameters_to_settings(self):
+        super(ShootingScalarMomentumNet, self).write_parameters_to_settings()
+        self.smoother.write_parameters_to_settings()
 
     def get_custom_optimizer_output_string(self):
         return self.smoother.get_custom_optimizer_output_string()

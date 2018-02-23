@@ -59,6 +59,14 @@ class SimpleRegistration(object):
         else:
             return None
 
+    def write_parameters_to_settings(self):
+        """
+        Allows currently computed parameters (if they were optimized) to be written back to an output parameter file
+        :return:
+        """
+        if self.optimizer is not None:
+            self.optimizer.write_parameters_to_settings()
+
     @abstractmethod
     def register(self):
         """
@@ -278,6 +286,13 @@ class Optimizer(object):
             Needs to be set before the actual optimization commences; allows to keep track if all parameters have been set
             and for example to delay external parameter settings
         """
+
+    def write_parameters_to_settings(self):
+        """
+        Writes current state of optimized parameters back to the json setting file (for example to keep track of optimized weights)
+        :return:
+        """
+        pass
 
     def turn_iteration_output_on(self):
         self.show_iteration_output = True
@@ -643,6 +658,7 @@ class ImageRegistrationOptimizer(Optimizer):
         self.set_source_image(ISource)
         self.set_target_image(ITarget)
         self.optimize()
+        self.write_parameters_to_settings()
 
     def set_source_image(self, I):
         """
@@ -794,6 +810,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self._sgd_name_to_model_par = None # allows mapping from name to model parameter
         self._sgd_split_shared = None # keeps track if the shared states were split or not
         self._sgd_split_individual = None # keeps track if the individual states were split or not
+
+
+    def write_parameters_to_settings(self):
+        if self.model is not None:
+            self.model.write_parameters_to_settings()
 
     def get_sgd_split_shared(self):
         return self._sgd_split_shared
@@ -1817,6 +1838,10 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.ssOpt = None
 
+    def write_parameters_to_settings(self):
+        if self.ssOpt is not None:
+            self.ssOpt.write_parameters_to_settings()
+
     def add_similarity_measure(self, simName, simMeasure):
         """
         Adds a custom similarity measure
@@ -2223,6 +2248,12 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.iter_offset = None
 
+        self.ssOpt = None
+
+    def write_parameters_to_settings(self):
+        if self.ssOpt is not None:
+            self.ssOpt.write_parameters_to_settings()
+
     def _consensus_penalty_loss(self,shared_model_parameters):
         """
         This allows to define additional terms for the loss which are based on parameters that are shared
@@ -2491,28 +2522,28 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
             # there is not consensus penalty here as this is technically not consensus optimization
             # todo: could ultimately replace the single scale optimizer; here used to write out checkpoints
-            ssOpt = self._create_single_scale_optimizer(current_batch_image_size, consensus_penalty=False)
+            self.ssOpt = self._create_single_scale_optimizer(current_batch_image_size, consensus_penalty=False)
 
             # needs to be set before calling _set_all_still_missing_parameters
-            ssOpt.set_source_image(current_source_batch)
-            ssOpt.set_target_image(current_target_batch)
+            self.ssOpt.set_source_image(current_source_batch)
+            self.ssOpt.set_target_image(current_target_batch)
 
             # to make sure we have the model initialized, force parameter installation
-            ssOpt._set_all_still_missing_parameters()
+            self.ssOpt._set_all_still_missing_parameters()
 
             # this loads the optimizer state and the model state, but here not the self.current_consensus_dual
             if iter_batch>0:
                 previous_checkpoint_filename = self._get_checkpoint_filename(current_batch, iter_batch - 1)
-                self._custom_single_batch_load_checkpoint(ssOpt, previous_checkpoint_filename)
+                self._custom_single_batch_load_checkpoint(self.ssOpt, previous_checkpoint_filename)
 
-            ssOpt.optimize()
+            self.ssOpt.optimize()
 
             if (current_batch == self.nr_of_batches - 1) and (iter_batch == self.nr_of_epochs - 1):
                 # the last time we run this
-                all_histories.append(ssOpt.get_history())
+                all_histories.append(self.ssOpt.get_history())
 
             current_checkpoint_filename = self._get_checkpoint_filename(current_batch, iter_batch)
-            self._custom_save_checkpoint(ssOpt, current_checkpoint_filename)
+            self._custom_save_checkpoint(self.ssOpt, current_checkpoint_filename)
 
             self._add_to_history('batch_history', copy.deepcopy(all_histories))
 
@@ -2555,19 +2586,19 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
                 # create new optimizer
                 if iter_batch==0:
                     # do not apply the penalty the first time around
-                    ssOpt = self._create_single_scale_optimizer(current_batch_image_size,consensus_penalty=False)
+                    self.ssOpt = self._create_single_scale_optimizer(current_batch_image_size,consensus_penalty=False)
                 else:
-                    ssOpt = self._create_single_scale_optimizer(current_batch_image_size,consensus_penalty=True)
+                    self.ssOpt = self._create_single_scale_optimizer(current_batch_image_size,consensus_penalty=True)
 
                 # to make sure we have the model initialized, force parameter installation
-                ssOpt._set_all_still_missing_parameters()
+                self.ssOpt._set_all_still_missing_parameters()
 
                 if iter_batch==0:
                     # in the first round just initialize the shared state with what was computed previously
                     if self.last_shared_state is not None:
-                        ssOpt.set_shared_model_parameters(self.last_shared_state)
+                        self.ssOpt.set_shared_model_parameters(self.last_shared_state)
 
-                self._initialize_consensus_variables_if_needed(ssOpt)
+                self._initialize_consensus_variables_if_needed(self.ssOpt)
 
                 if not next_consensus_initialized:
                     self._set_state_to_zero(self.next_consensus_state)
@@ -2580,33 +2611,33 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
                 else:
                     # this loads the optimizer state and the model state and also self.current_consensus_dual
                     previous_checkpoint_filename = self._get_checkpoint_filename(current_batch, iter_batch-1)
-                    self._custom_load_checkpoint(ssOpt,previous_checkpoint_filename)
+                    self._custom_load_checkpoint(self.ssOpt,previous_checkpoint_filename)
 
                     # first update the dual variable (we do this now that we have the consensus state still
                     self._add_scaled_difference_to_state(self.current_consensus_dual,
-                                                         ssOpt.get_shared_model_parameters(),
+                                                         self.ssOpt.get_shared_model_parameters(),
                                                          self.current_consensus_state,-1.0)
 
 
-                ssOpt.set_source_image(current_source_batch)
-                ssOpt.set_target_image(current_target_batch)
+                self.ssOpt.set_source_image(current_source_batch)
+                self.ssOpt.set_target_image(current_target_batch)
 
-                ssOpt.optimize()
+                self.ssOpt.optimize()
 
-                self._copy_state(self.last_shared_state,ssOpt.get_shared_model_parameters())
+                self._copy_state(self.last_shared_state,self.ssOpt.get_shared_model_parameters())
 
                 if (current_batch==self.nr_of_batches-1) and (iter_batch==self.nr_of_epochs-1):
                     # the last time we run this
-                    all_histories.append( ssOpt.get_history() )
+                    all_histories.append( self.ssOpt.get_history() )
 
                 # update the consensus state (is done via next_consensus_state as
                 # self.current_consensus_state is used as part of the optimization for all optimizations in the batch
                 self._add_scaled_difference_to_state(self.next_consensus_state,
-                                                     ssOpt.get_shared_model_parameters(),
+                                                     self.ssOpt.get_shared_model_parameters(),
                                                      self.current_consensus_dual,float(nr_of_images_in_batch)/float(self.nr_of_images))
 
                 current_checkpoint_filename = self._get_checkpoint_filename(current_batch, iter_batch)
-                self._custom_save_checkpoint(ssOpt,current_checkpoint_filename)
+                self._custom_save_checkpoint(self.ssOpt,current_checkpoint_filename)
 
             self._add_to_history('batch_history', copy.deepcopy(all_histories))
             self._copy_state(self.current_consensus_state, self.next_consensus_state)
@@ -2746,6 +2777,10 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.params['optimizer'][('multi_scale', {}, 'multi scale settings')]
 
+
+    def write_parameters_to_settings(self):
+        if self.ssOpt is not None:
+            self.ssOpt.write_parameters_to_settings()
 
     def add_similarity_measure(self, simName, simMeasure):
         """
