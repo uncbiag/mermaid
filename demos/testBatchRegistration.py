@@ -40,7 +40,7 @@ def get_image_range(im_from,im_to):
 
 symmetrize_images = False
 use_batch_registration = False
-nr_of_image_pairs = 40
+nr_of_image_pairs = 10
 
 I0_filenames = get_image_range(0,nr_of_image_pairs)
 I1_filenames = get_image_range(nr_of_image_pairs,2*nr_of_image_pairs)
@@ -80,8 +80,8 @@ reg = si.RegisterImagePair()
 if use_batch_registration:
     reg.register_images(I0, I1, spacing,
                         model_name='svf_scalar_momentum_map',
-                        nr_of_iterations=50,
-                        visualize_step=20,
+                        nr_of_iterations=5,
+                        visualize_step=None,
                         map_low_res_factor=0.5,
                         rel_ftol=1e-15,
                         json_config_out_filename='testBatchNewerSmoother.json',
@@ -90,7 +90,7 @@ if use_batch_registration:
 else:
     reg.register_images(I0,I1,spacing,
                     model_name='svf_scalar_momentum_map',
-                    nr_of_iterations=10,
+                    nr_of_iterations=1,
                     visualize_step=None,
                     map_low_res_factor=0.5,
                     rel_ftol=1e-15,

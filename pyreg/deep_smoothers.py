@@ -688,8 +688,8 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         self.current_penalty = current_omt_penalty
         if self.total_variation_weight_penalty > 0:
             current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
-            print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
-                  'OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()))
+            #print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
+            #      'OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()))
             self.current_penalty += current_tv_penalty
 
         if retain_weights:
@@ -924,9 +924,9 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
         current_diffusion_penalty = self.diffusion_weight_penalty * diffusion_penalty
 
-        print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
-              '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \
-              '; diffusion_penalty = ' + str(current_diffusion_penalty.data.cpu().numpy()))
+        #print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
+        #      '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \
+        #      '; diffusion_penalty = ' + str(current_diffusion_penalty.data.cpu().numpy()))
 
         self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
 

@@ -16,26 +16,43 @@ I1_filenames = ['./data/m2.nii']
 im_io = FIO.ImageIO()
 map_io = FIO.MapIO()
 
-# load a bunch of images as source
-I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(I0_filenames,intensity_normalize=False)
-# and a bunch of images as target images
-I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(I1_filenames,intensity_normalize=False)
+use_batch_optimization = False
+if use_batch_optimization:
+    I0 = I0_filenames
+    I1 = I1_filenames
+    spacing = None
+else:
+    # load a bunch of images as source
+    I0,hdr,spacing0,_ = im_io.read_batch_to_nc_format(I0_filenames,intensity_normalize=False)
+    # and a bunch of images as target images
+    I1,hdr,spacing1,_ = im_io.read_batch_to_nc_format(I1_filenames,intensity_normalize=False)
 
-spacing = spacing0
+    spacing = spacing0
 
 torch.set_num_threads(mp.cpu_count())
 
 reg = si.RegisterImagePair()
 
-reg.register_images(I0, I1, spacing,
-                    model_name='svf_scalar_momentum_map',
-                    nr_of_iterations=5,
-                    visualize_step=25,
-                    map_low_res_factor=0.25,
-                    rel_ftol=1e-10,
-                    use_consensus_optimization=True,
-                    json_config_out_filename='test3d.json',
-                    params='test3d.json')
+if use_batch_optimization:
+    reg.register_images(I0, I1, spacing,
+                        model_name='svf_scalar_momentum_map',
+                        nr_of_iterations=50,
+                        visualize_step=25,
+                        map_low_res_factor=0.25,
+                        rel_ftol=1e-10,
+                        use_batch_optimization=True,
+                        json_config_out_filename='test3d_batch.json',
+                        params='test3d.json')
+else:
+    reg.register_images(I0, I1, spacing,
+                        model_name='svf_scalar_momentum_map',
+                        nr_of_iterations=50,
+                        visualize_step=25,
+                        map_low_res_factor=0.25,
+                        rel_ftol=1e-10,
+                        use_consensus_optimization=True,
+                        json_config_out_filename='test3d_consensus.json',
+                        params='test3d.json')
 
 h = reg.get_history()
 
