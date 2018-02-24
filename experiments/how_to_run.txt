@@ -1,0 +1,1 @@
+python multi_stage_smoother_learning.py --input_image_directory ../test_data/oasis_2d/ --output_directory test_out --nr_of_epochs 10,5,2 --visualize --config test.json

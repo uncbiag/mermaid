@@ -14,7 +14,8 @@ import os
 import shutil
 
 def do_registration(source_images,target_images,model_name,output_directory,
-                    nr_of_epochs,nr_of_iterations,visualize_step,json_in,json_out,
+                    nr_of_epochs,nr_of_iterations,map_low_res_factor,
+                    visualize_step,json_in,json_out,
                     optimize_over_deep_network=False,
                     optimize_over_weights=False,
                     start_from_previously_saved_parameters=True):
@@ -25,6 +26,9 @@ def do_registration(source_images,target_images,model_name,output_directory,
     params_in = pars.ParameterDict()
     print('Loading settings from file: ' + json_in)
     params_in.load_JSON(json_in)
+
+    if map_low_res_factor is None:
+        map_low_res_factor = params_in['model']['deformation'][('map_low_res_factor',1.0,'low res factor for the map')]
 
     params_in['optimizer']['batch_settings']['nr_of_epochs'] = nr_of_epochs
     params_in['optimizer']['batch_settings']['parameter_output_dir'] = output_directory
@@ -40,6 +44,7 @@ def do_registration(source_images,target_images,model_name,output_directory,
     reg.register_images(source_images, target_images, spacing,
                         model_name=model_name,
                         nr_of_iterations=nr_of_iterations,
+                        map_low_res_factor=map_low_res_factor,
                         visualize_step=visualize_step,
                         json_config_out_filename=json_out,
                         use_batch_optimization=True,
@@ -82,6 +87,7 @@ if __name__ == "__main__":
     parser.add_argument('--input_image_directory', required=True, help='Directory where all the images are')
     parser.add_argument('--output_directory', required=True, help='Where the output is stored')
     parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=20, help='number of image pairs that will be used; if not set all pairs will be used')
+    parser.add_argument('--map_low_res_factor', required=False, type=float, default=None, help='map low res factor')
 
     parser.add_argument('--nr_of_epochs', required=False,type=str, default=None, help='number of epochs for the three stages as a comma separated list')
     parser.add_argument('--nr_of_iterations_per_batch', required=False,type=int, default=5, help='number of iterations per mini-batch')
@@ -130,6 +136,7 @@ if __name__ == "__main__":
         output_directory=args.output_directory,
         nr_of_epochs=nr_of_epochs[0],
         nr_of_iterations=args.nr_of_iterations_per_batch,
+        map_low_res_factor=args.map_low_res_factor,
         visualize_step=visualize_step,
         json_in=in_json,
         json_out=out_json_stage_1,
@@ -156,6 +163,7 @@ if __name__ == "__main__":
         output_directory=args.output_directory,
         nr_of_epochs=nr_of_epochs[1],
         nr_of_iterations=args.nr_of_iterations_per_batch,
+        map_low_res_factor=args.map_low_res_factor,
         visualize_step=visualize_step,
         json_in=in_json,
         json_out=out_json_stage_2,
@@ -183,6 +191,7 @@ if __name__ == "__main__":
         nr_of_epochs=nr_of_epochs[2],
         nr_of_iterations=args.nr_of_iterations_per_batch,
         visualize_step=visualize_step,
+        map_low_res_factor=args.map_low_res_factor,
         json_in=in_json,
         json_out=out_json_stage_3,
         optimize_over_deep_network=True,
