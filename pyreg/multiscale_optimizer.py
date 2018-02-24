@@ -2235,9 +2235,13 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                                 print('INFO: discarding current *individual* optimizer states only')
                             self.ssOpt._remove_state_variables_for_individual_parameters(self.ssOpt.get_sgd_individual_model_parameters_and_optimizer_states())
 
-                if i==0:
-                    # to avoid excessive graphical output
-                    self.ssOpt.turn_visualization_on()
+
+                if self.visualize:
+                    if i==0:
+                        # to avoid excessive graphical output
+                        self.ssOpt.turn_visualization_on()
+                    else:
+                        self.ssOpt.turn_visualization_off()
                 else:
                     self.ssOpt.turn_visualization_off()
 
