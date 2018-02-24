@@ -125,7 +125,7 @@ class RegisterImagePair(object):
     def _get_spacing_and_size_from_image_file(self,filename):
         example_ISource, hdr0, spacing0, normalized_spacing0 = \
             fileio.ImageIO().read_to_nc_format(filename,
-                                               intensity_normalize=self.normalize_intensity,
+                                               intensity_normalize=False,
                                                squeeze_image=self.squeeze_image,
                                                normalize_spacing=self.normalize_spacing)
 
