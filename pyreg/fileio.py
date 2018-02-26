@@ -33,6 +33,18 @@ class FileIO(object):
         self.datatype_conversion = True
         """Automatically convers the datatype to the default_data_type when loading or writing"""
 
+        self.replace_nans_with_zeros = True
+        """If NaNs are detected they are automatically replaced by zeroes"""
+
+    def turn_nan_to_zero_conversion_on(self):
+        self.replace_nans_with_zeros = True
+
+    def turn_nan_to_zero_conversion_off(self):
+        self.replace_nans_with_zeros = False
+
+    def is_turn_nan_to_zero_conversion_on(self):
+        return self.replace_nans_with_zeros
+
     def turn_datatype_conversion_on(self):
         """
         Turns the automatic datatype conversion on
@@ -419,6 +431,9 @@ class ImageIO(FileIO):
             im_itk = itk.imread(filename)
             im, hdr = self._convert_itk_image_to_numpy(im_itk)
 
+        if self.replace_nans_with_zeros:
+            im[np.isnan(im)]=0
+
         if self.datatype_conversion:
             im = im.astype(self.default_datatype)
 
@@ -642,6 +657,8 @@ class GenericIO(FileIO):
         else:
             print('Reading: ' + filename)
             data, data_hdr = nrrd.read(filename)
+            if self.replace_nans_with_zeros:
+                data[np.isnan(data)]=0
             if self.datatype_conversion:
                 data = data.astype(self.default_datatype)
             return data, data_hdr

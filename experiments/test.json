@@ -1,12 +1,12 @@
 {
     "data_loader": {
-        "intensity_normalize": false, 
+        "intensity_normalize": true, 
         "normalize_spacing": true, 
         "squeeze_image": false
     }, 
     "model": {
         "deformation": {
-            "map_low_res_factor": 0.5, 
+            "map_low_res_factor": 0.25, 
             "use_map": true
         }, 
         "registration_model": {
@@ -38,14 +38,14 @@
                     "gaussian_std_min": 0.01, 
                     "gaussian_weight_min": 0.0001, 
                     "multi_gaussian_stds": [
+                        0.01, 
                         0.05, 
-                        0.25, 
-                        0.45
+                        0.1
                     ], 
                     "multi_gaussian_weights": [
-                        0.5, 
+                        0.7, 
                         0.2, 
-                        0.3
+                        0.1
                     ], 
                     "network_penalty": 0.0, 
                     "optimize_over_deep_network": false, 
@@ -70,12 +70,12 @@
     }, 
     "optimizer": {
         "batch_settings": {
-            "batch_size": 2, 
+            "batch_size": 1, 
             "checkpoint_interval": 0, 
             "nr_of_epochs": 10, 
             "num_workers": 4, 
             "parameter_output_dir": "test_out", 
-            "show_sample_optimizer_output": false, 
+            "show_sample_optimizer_output": true, 
             "shuffle": true, 
             "start_from_previously_saved_parameters": false, 
             "verbose_output": false
@@ -90,14 +90,14 @@
             "also_eliminate_shared_state_between_samples_during_first_epoch": false, 
             "individual": {
                 "dampening": 0.0, 
-                "lr": 1e-05, 
+                "lr": 5e-06, 
                 "momentum": 0.9, 
                 "nesterov": true, 
                 "weight_decay": 0.0
             }, 
             "shared": {
                 "dampening": 0.0, 
-                "lr": 1e-05, 
+                "lr": 5e-06, 
                 "momentum": 0.9, 
                 "nesterov": true, 
                 "weight_decay": 0.0

@@ -12,6 +12,12 @@ class IntensityNormalizeImage(object):
         self.default_normalization_mode = 'percentile_normalization'
         """Default intensity normalization method"""
 
+    def max_normalization(self,I):
+        # first zero out negative values
+        np.clip(I, 0, None, out=I)
+        I = I/np.max(I)
+        return I
+
     def percentile_normalization(self,I,perc=99.):
         """
         Linearly normalized image intensities so that the 95-th percentile gets mapped to 0.95; 0 stays 0
@@ -33,6 +39,8 @@ class IntensityNormalizeImage(object):
         """
         if self.default_normalization_mode == 'percentile_normalization':
             return self.percentile_normalization(I)
+        elif self.default_normalization_mode == 'max_normalization':
+            return self.max_normalization(I)
         else:
             print('ERROR: unknown normalization mode: ' + self.default_normalization_mode )
             print('ERROR: returning un-normalized image')
