@@ -253,6 +253,9 @@ class Optimizer(object):
             elif self.mapLowResFactor==1:
                 print('mapLowResFactor = 1: performing computations at original resolution.')
                 self.mapLowResFactor = None
+
+
+
         self.params = params
         """general parameters"""
         self.rel_ftol = 1e-4
@@ -275,6 +278,8 @@ class Optimizer(object):
 
         self.params['model']['deformation']['use_map']= (useMap, '[True|False] either do computations via a map or directly using the image')
         self.params['model']['deformation']['map_low_res_factor'] = (mapLowResFactor, 'Set to a value in (0,1) if a map-based solution should be computed at a lower internal resolution (image matching is still at full resolution')
+
+        self.compute_similarity_measure_at_low_res = self.params['model']['deformation'][('compute_similarity_measure_at_low_res',False,'If set to true map is not upsampled and the entire computations proceeds at low res')]
 
         self.rel_ftol = self.params['optimizer']['single_scale'][('rel_ftol',self.rel_ftol,'relative termination tolerance for optimizer')]
 
@@ -671,7 +676,7 @@ class ImageRegistrationOptimizer(Optimizer):
     def _compute_low_res_image(self,I):
         low_res_image = None
         if self.mapLowResFactor is not None:
-            low_res_image,_ = self.sampler.downsample_image_to_size(self.ISource,self.spacing,self.lowResSize[2::])
+            low_res_image,_ = self.sampler.downsample_image_to_size(I,self.spacing,self.lowResSize[2::])
         return low_res_image
 
     def compute_low_res_image_if_needed(self):
@@ -765,7 +770,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         if (self.mapLowResFactor is not None ):
             # computes model at a lower resolution than the image similarity
-            self.mf = MF.ModelFactory(self.sz, self.spacing, self.lowResSize, self.lowResSpacing )
+            if self.compute_similarity_measure_at_low_res:
+                self.mf = MF.ModelFactory(self.lowResSize, self.lowResSpacing, self.lowResSize, self.lowResSpacing )
+            else:
+                self.mf = MF.ModelFactory(self.sz, self.spacing, self.lowResSize, self.lowResSpacing )
         else:
             # computes model and similarity at the same resolution
             self.mf = MF.ModelFactory(self.sz, self.spacing, self.sz, self.spacing)
@@ -1090,14 +1098,24 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         if self.useMap:
             if self.mapLowResFactor is not None:
-                rec_tmp = self.model(self.lowResIdentityMap, self.lowResISource, opt_variables )
-                # now upsample to correct resolution
-                desiredSz = self.identityMap.size()[2::]
-                self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
+                if self.compute_similarity_measure_at_low_res:
+                    self.rec_phiWarped = self.model(self.lowResIdentityMap, self.lowResISource, opt_variables)
+                else:
+                    rec_tmp = self.model(self.lowResIdentityMap, self.lowResISource, opt_variables )
+                    # now upsample to correct resolution
+                    desiredSz = self.identityMap.size()[2::]
+                    self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
             else:
                 self.rec_phiWarped = self.model(self.identityMap, self.ISource, opt_variables )
 
-            loss_overall_energy,sim_energy,reg_energy = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource,
+            if self.mapLowResFactor is not None and self.compute_similarity_measure_at_low_res:
+                loss_overall_energy, sim_energy, reg_energy = self.criterion(self.lowResIdentityMap, self.rec_phiWarped,
+                                                                             self.lowResISource, self.lowResITarget,
+                                                                             self.lowResISource,
+                                                                             self.model.get_variables_to_transfer_to_loss_function(),
+                                                                             opt_variables)
+            else:
+                loss_overall_energy,sim_energy,reg_energy = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource,
                                   self.model.get_variables_to_transfer_to_loss_function(),
                                   opt_variables )
         else:
@@ -1233,8 +1251,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 else:
                     vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.ISource)
                 if self.useMap:
-                    I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing)
-                    vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
+                    if self.compute_similarity_measure_at_low_res:
+                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing)
+                        vizReg.show_current_images(iter, self.lowResISource, self.lowResITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
+                    else:
+                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing)
+                        vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
                 else:
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
 

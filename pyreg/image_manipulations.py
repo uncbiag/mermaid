@@ -21,7 +21,7 @@ class IntensityNormalizeImage(object):
         """
         # first zero out negative values
         np.clip(I, 0, None, out=I)
-        # then normalize the 95th percentile
+        # then normalize the 99th percentile
         I = I / np.percentile(I, perc) * perc/100.
         return I
 

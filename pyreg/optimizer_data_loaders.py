@@ -22,7 +22,7 @@ class PairwiseRegistrationDataset(Dataset):
 
         self.params[('data_loader', {}, 'data loader settings')]
         cparams = self.params['data_loader']
-        self.intensity_normalize = cparams[('intensity_normalize',False,'intensity normalize images when reading')]
+        self.intensity_normalize = cparams[('intensity_normalize',True,'intensity normalize images when reading')]
         self.squeeze_image = cparams[('squeeze_image',False,'squeezes image first (e.g, from 1x128x128 to 128x128)')]
         self.normalize_spacing = cparams[('normalize_spacing',True,'normalizes the image spacing')]
 
