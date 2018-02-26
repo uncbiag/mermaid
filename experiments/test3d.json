@@ -73,7 +73,7 @@
             "batch_size": 1, 
             "checkpoint_interval": 0, 
             "nr_of_epochs": 10, 
-            "num_workers": 4, 
+            "num_workers": 0, 
             "parameter_output_dir": "test_out", 
             "show_sample_optimizer_output": false, 
             "shuffle": true, 

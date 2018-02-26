@@ -1872,7 +1872,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
         self.shuffle = cparams[('shuffle', True, 'if batches should be shuffled between epochs')]
         """shuffle batches between epochshow many images per batch"""
 
-        self.num_workers = cparams[('num_workers',4,'Number of workers to read the data')]
+        self.num_workers = cparams[('num_workers',0,'Number of workers to read the data. Set it to zero on the GPU or use >0 at your own risk.')]
         """number of workers to read the data"""
 
         self.nr_of_epochs = cparams[('nr_of_epochs', 1,'how many epochs')]
