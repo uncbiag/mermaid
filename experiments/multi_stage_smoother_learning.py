@@ -50,6 +50,10 @@ def do_registration(source_images,target_images,model_name,output_directory,
                         use_batch_optimization=True,
                         params=params_in)
 
+# /Users/mn/data/testdata/CUMC12/for_experiment
+# ../test_data/oasis_2d
+# "learned_multiGaussianCombination"
+
 def get_n_pairwise_image_combinations(input_directory,n=10):
     all_files = glob.glob(os.path.join(input_directory,'*.*'))
     nr_of_files = len(all_files)
