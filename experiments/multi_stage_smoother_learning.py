@@ -179,8 +179,9 @@ if __name__ == "__main__":
 
     # also save it as a text file for easier readability
     f = open(used_image_pairs_filename_txt, 'w')
+    f.write('Image pair id, source id, target id, source file name, target file name\n')
     for i in range(len(source_images)):
-        out_str = ''
+        out_str = str(i) + ', '
         out_str += str(source_ids[i]) + ', '
         out_str += str(target_ids[i]) + ', '
         out_str += str(source_images[i]) + ', '
