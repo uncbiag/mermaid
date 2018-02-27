@@ -11,6 +11,8 @@ import pyreg.module_parameters as pars
 import glob
 import os
 
+import random
+
 import shutil
 
 def do_registration(source_images,target_images,model_name,output_directory,
@@ -50,12 +52,19 @@ def do_registration(source_images,target_images,model_name,output_directory,
                         use_batch_optimization=True,
                         params=params_in)
 
-def get_n_pairwise_image_combinations(input_directory,n=10):
-    all_files = glob.glob(os.path.join(input_directory,'*.*'))
+def get_n_pairwise_image_combinations(input_directory,n=10,no_random_shuffle=False,suffix=None):
+
+    if suffix is None:
+        all_files = glob.glob(os.path.join(input_directory,'*.*'))
+    else:
+        all_files = glob.glob(os.path.join(input_directory,'*.'+suffix))
+
     nr_of_files = len(all_files)
 
     source_files = []
     target_files = []
+    source_ids = []
+    target_ids = []
 
     current_n = 0
     for i in range(nr_of_files):
@@ -63,15 +72,39 @@ def get_n_pairwise_image_combinations(input_directory,n=10):
         for j in range(nr_of_files):
             if i!=j:
                 c_target = all_files[j]
-                print(str(current_n) + ': Source: ' + c_source + ' -> target: ' + c_target)
+                if no_random_shuffle:
+                    print(str(current_n) + ': Source: ' + c_source + ' -> target: ' + c_target)
                 source_files.append(c_source)
                 target_files.append(c_target)
+                source_ids.append(i)
+                target_ids.append(j)
                 current_n += 1
                 if n is not None:
-                    if current_n>=n:
-                        return source_files,target_files
+                    if current_n>=n and no_random_shuffle:
+                        return source_files,target_files,source_ids,target_ids
 
-    return source_files,target_files
+    if n<nr_of_files and not no_random_shuffle:
+        # we now do a random selection
+        ind = range(len(source_ids))
+        random.shuffle(ind)
+
+        source_files_ret = []
+        target_files_ret = []
+        source_ids_ret = []
+        target_ids_ret = []
+
+        for i in range(n):
+            current_ind = ind[i]
+            source_files_ret.append(source_files[current_ind])
+            target_files_ret.append(target_files[current_ind])
+            source_ids_ret.append(source_ids[current_ind])
+            target_ids_ret.append(target_ids[current_ind])
+            print(str(i) + ': Source: ' + source_files[current_ind] + ' -> target: ' + target_files[current_ind])
+
+        return source_files_ret,target_files_ret,source_ids_ret,target_ids_ret
+
+    else:
+        return source_files,target_files,source_ids,target_ids
 
 
 if __name__ == "__main__":
@@ -97,6 +130,10 @@ if __name__ == "__main__":
     parser.add_argument('--visualize', action='store_true', help='visualizes the output')
     parser.add_argument('--visualize_step', required=False, type=int, default=20, help='Number of iterations between visualization output')
 
+    parser.add_argument('--noshuffle', action='store_true', help='Does not use dataset shuffling if using a subset of the images via --nr_of_image_pairs')
+
+    parser.add_argument('--suffix', required=False, default=None, help='Allows setting a suffix for the files to read; e.g., specifiy --suffix nii ant only nii files will be considered')
+
     parser.add_argument('--config', required=True, default=None, help='Configuration file to read in')
 
     args = parser.parse_args()
@@ -119,11 +156,39 @@ if __name__ == "__main__":
     else:
         nr_of_image_pairs = args.nr_of_image_pairs
 
-    source_images,target_images = get_n_pairwise_image_combinations(args.input_image_directory,nr_of_image_pairs)
+    source_images,target_images,source_ids,target_ids = get_n_pairwise_image_combinations(args.input_image_directory,
+                                                                    nr_of_image_pairs,
+                                                                    no_random_shuffle=args.noshuffle,
+                                                                    suffix=args.suffix)
 
     if not os.path.exists(args.output_directory):
         print('Creating output directory: ' + args.output_directory)
         os.makedirs(args.output_directory)
+
+    # first save how the data was created
+    d = dict()
+    d['source_images'] = source_images
+    d['target_images'] = target_images
+    d['source_ids'] = source_ids
+    d['target_ids'] = target_ids
+
+    used_image_pairs_filename_pt = os.path.join(args.output_directory,'used_image_pairs.pt')
+    used_image_pairs_filename_txt = os.path.join(args.output_directory,'used_image_pairs.txt')
+
+    torch.save(d,used_image_pairs_filename_pt)
+
+    # also save it as a text file for easier readability
+    f = open(used_image_pairs_filename_txt, 'w')
+    for i in range(len(source_images)):
+        out_str = ''
+        out_str += str(source_ids[i]) + ', '
+        out_str += str(target_ids[i]) + ', '
+        out_str += str(source_images[i]) + ', '
+        out_str += str(target_images[i])
+        out_str += '\n'
+
+        f.write(out_str)
+    f.close()
 
     print('Running stage 1: optimize only using given weights')
     in_json = args.config
