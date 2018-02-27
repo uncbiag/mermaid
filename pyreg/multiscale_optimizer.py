@@ -367,6 +367,11 @@ class Optimizer(object):
         else:
             lowResSize = np.array(sz)
             lowResSize[2::] = (np.ceil((np.array(sz[2::]) * factor))).astype('int16')
+
+            if lowResSize[-1]%2!=0:
+                lowResSize[-1]-=1
+                print('\n\nWARNING: forcing last dimension to be even: fix properly in the Fourier transform later!\n\n')
+
             return lowResSize
 
     def set_rel_ftol(self, rel_ftol):
