@@ -1,0 +1,1 @@
+python visualize_multi_stage.py --config ./sample_3d_res/test3d_025.json --output_directory ./sample_3d_res/test_out --stage 2
