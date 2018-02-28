@@ -346,9 +346,10 @@ def get_json_and_output_dir_for_stages(json_file,output_dir):
 
     return json_for_stages,output_dir_for_stages
 
-def visualize_weights(I0,I1,Iw,phi,lam,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None):
+def visualize_weights(I0,I1,Iw,phi,lam,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=None):
 
-    osw = compute_overall_std(local_weights[0,...].cpu(), stds.data.cpu())
+    if local_weights is not None:
+        osw = compute_overall_std(local_weights[0,...].cpu(), stds.data.cpu())
 
     plt.clf()
 
@@ -379,45 +380,47 @@ def visualize_weights(I0,I1,Iw,phi,lam,local_weights,stds,spacing,lowResSize,pri
     plt.imshow(lam[0, 0, ...].data.cpu().numpy(), cmap='gray')
     plt.title('lambda')
 
-    plt.subplot(2, 3, 6)
-    cmin = osw.numpy()[lowRes_source_mask == 1].min()
-    cmax = osw.numpy()[lowRes_source_mask == 1].max()
-    plt.imshow(osw.numpy() * lowRes_source_mask, cmap='gray', vmin=cmin, vmax=cmax)
-    plt.title('std')
+    if local_weights is not None:
+        plt.subplot(2, 3, 6)
+        cmin = osw.numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(osw.numpy() * lowRes_source_mask, cmap='gray', vmin=cmin, vmax=cmax)
+        plt.title('std')
 
-    plt.suptitle('Registration result')
+    plt.suptitle('Registration result: pair id {:03d}'.format(print_figure_id))
 
     if print_figure_id is not None:
-        plt.savefig(os.path.join(print_path,'{:0>3d}'.format(print_figure_id) + '_registration.pdf'))
+        plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + '_registration.pdf'))
     else:
         plt.show()
 
-    plt.clf()
+    if local_weights is not None:
+        plt.clf()
 
-    nr_of_gaussians = local_weights.size()[1]
+        nr_of_gaussians = local_weights.size()[1]
 
-    for g in range(nr_of_gaussians):
-        plt.subplot(2, 4, g + 1)
-        clw = local_weights[0, g, ...].numpy()
-        cmin = clw[lowRes_source_mask == 1].min()
-        cmax = clw[lowRes_source_mask == 1].max()
-        plt.imshow((local_weights[0, g, ...]).numpy() * lowRes_source_mask, vmin=cmin, vmax=cmax)
-        plt.title("{:.2f}".format(stds.data.cpu()[g]))
+        for g in range(nr_of_gaussians):
+            plt.subplot(2, 4, g + 1)
+            clw = local_weights[0, g, ...].numpy()
+            cmin = clw[lowRes_source_mask == 1].min()
+            cmax = clw[lowRes_source_mask == 1].max()
+            plt.imshow((local_weights[0, g, ...]).numpy() * lowRes_source_mask, vmin=cmin, vmax=cmax)
+            plt.title("{:.2f}".format(stds.data.cpu()[g]))
+            plt.colorbar()
+
+        plt.subplot(2, 4, 8)
+        osw = compute_overall_std(local_weights[0, ...], stds.data.cpu())
+
+        cmin = osw.numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(osw.numpy() * lowRes_source_mask, vmin=cmin, vmax=cmax)
         plt.colorbar()
+        plt.suptitle('Weights')
 
-    plt.subplot(2, 4, 8)
-    osw = compute_overall_std(local_weights[0, ...], stds.data.cpu())
-
-    cmin = osw.numpy()[lowRes_source_mask == 1].min()
-    cmax = osw.numpy()[lowRes_source_mask == 1].max()
-    plt.imshow(osw.numpy() * lowRes_source_mask, vmin=cmin, vmax=cmax)
-    plt.colorbar()
-    plt.suptitle('Weights')
-
-    if print_figure_id is not None:
-        plt.savefig(os.path.join(print_path,'{:0>3d}'.format(print_figure_id) + '_weights.pdf'))
-    else:
-        plt.show()
+        if print_figure_id is not None:
+            plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + '_weights.pdf'))
+        else:
+            plt.show()
 
 def compute_determinant_of_jacobian(phi,spacing):
     fdt = FD.FD_torch(spacing)
@@ -450,7 +453,7 @@ def compute_determinant_of_jacobian(phi,spacing):
 
 
 def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_proportion_3d=0.5,slice_mode_3d=0,visualize=False,
-                                  print_images=False,write_out_images=True,compute_det_of_jacobian=True):
+                                  print_images=False,write_out_images=True,compute_det_of_jacobian=True,retarget_data_directory=None):
 
     if write_out_images:
         write_out_warped_image = True
@@ -498,6 +501,12 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
     # load the image with given pair number
     current_source_filename = used_pairs['source_images'][pair_nr]
     current_target_filename = used_pairs['target_images'][pair_nr]
+
+    if retarget_data_directory is not None:
+        # map them to a different directory
+        current_source_filename = os.path.join(retarget_data_directory,os.path.split(current_source_filename)[1])
+        current_target_filename = os.path.join(retarget_data_directory,os.path.split(current_target_filename)[1])
+
     ISource,ITarget,hdr,sz,spacing = _load_current_source_and_target_images_as_variables(current_source_filename,current_target_filename,params)
 
     image_dim = len(spacing)
@@ -532,52 +541,63 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
             sz_I = ISource.size()
             sz_lam = model_dict['lam'].size()
 
-            if not slice_mode_3d in [0,1,2]:
+            if not set(slice_mode_3d)<=set([0,1,2]):
                 raise ValueError('slice mode needs to be in {0,1,2}')
 
-            slice_I = (np.ceil(np.array(sz_I[-1-(2-slice_mode_3d)]) * slice_proportion_3d)).astype('int16')
-            slice_lam = (np.ceil(np.array(sz_lam[-1-(2-slice_mode_3d)]) * slice_proportion_3d)).astype('int16')
+            for sm in slice_mode_3d:
 
-            if slice_mode_3d==0:
-                IS_slice = ISource[:, :, slice_I, ...]
-                IT_slice = ITarget[:, :, slice_I, ...]
-                IW_slice = IWarped[:, :, slice_I, ...]
-                phi_slice = phi[:, 1:, slice_I, ...]
-                lam_slice = model_dict['lam'][:, :, slice_lam, ...]
-                lw_slice = model_dict['local_weights'][:, :, slice_lam, ...]
-                spacing_slice = spacing[1:]
-                lowResSize = list(model_dict['lowResSize'])
-                lowResSize_slice = np.array(lowResSize[0:2] + lowResSize[3:])
-            elif slice_mode_3d==1:
-                IS_slice = ISource[:, :, :, slice_I, :]
-                IT_slice = ITarget[:, :, :, slice_I, :]
-                IW_slice = IWarped[:, :, :, slice_I, :]
-                phi_slice = torch.zeros_like(phi[:, 1:, :, slice_I, :])
-                phi_slice[:,0,...] = phi[:,0,:,slice_I,:]
-                phi_slice[:,1,...] = phi[:,2,:,slice_I,:]
-                lam_slice = model_dict['lam'][:, :, :, slice_lam, :]
-                lw_slice = model_dict['local_weights'][:, :, :, slice_lam, :]
-                spacing_slice = np.array([spacing[0],spacing[2]])
-                lowResSize = list(model_dict['lowResSize'])
-                lowResSize_slice = np.array(lowResSize[0:3] + [lowResSize[-1]])
-            elif slice_mode_3d==2:
-                IS_slice = ISource[:,:,:,:,slice_I]
-                IT_slice = ITarget[:,:,:,:,slice_I]
-                IW_slice = IWarped[:,:,:,:,slice_I]
-                phi_slice = phi[:,0:2,:,:,slice_I]
-                lam_slice = model_dict['lam'][:,:,:,:,slice_lam]
-                lw_slice = model_dict['local_weights'][:,:,:,:,slice_lam]
-                spacing_slice = spacing[0:-1]
-                lowResSize_slice = model_dict['lowResSize'][0:-1]
+                slice_I = (np.ceil(np.array(sz_I[-1-(2-slice_mode_3d[sm])]) * slice_proportion_3d[sm])).astype('int16')
+                slice_lam = (np.ceil(np.array(sz_lam[-1-(2-slice_mode_3d[sm])]) * slice_proportion_3d[sm])).astype('int16')
 
-            if print_images:
-                visualize_weights(IS_slice,IT_slice,IW_slice,phi_slice,
-                                  lam_slice,lw_slice,model_dict['stds'],
-                                  spacing_slice,lowResSize_slice,print_output_dir,pair_nr)
-            else:
-                visualize_weights(IS_slice, IT_slice, IW_slice, phi_slice,
-                                  lam_slice, lw_slice, model_dict['stds'],
-                                  spacing_slice, lowResSize_slice)
+                if slice_mode_3d[sm]==0:
+                    IS_slice = ISource[:, :, slice_I, ...]
+                    IT_slice = ITarget[:, :, slice_I, ...]
+                    IW_slice = IWarped[:, :, slice_I, ...]
+                    phi_slice = phi[:, 1:, slice_I, ...]
+                    lam_slice = model_dict['lam'][:, :, slice_lam, ...]
+                    lw_slice = None
+                    if 'local_weights' in model_dict:
+                        if model_dict['local_weights'] is not None:
+                            lw_slice = model_dict['local_weights'][:, :, slice_lam, ...]
+                    spacing_slice = spacing[1:]
+                    lowResSize = list(model_dict['lowResSize'])
+                    lowResSize_slice = np.array(lowResSize[0:2] + lowResSize[3:])
+                elif slice_mode_3d[sm]==1:
+                    IS_slice = ISource[:, :, :, slice_I, :]
+                    IT_slice = ITarget[:, :, :, slice_I, :]
+                    IW_slice = IWarped[:, :, :, slice_I, :]
+                    phi_slice = torch.zeros_like(phi[:, 1:, :, slice_I, :])
+                    phi_slice[:,0,...] = phi[:,0,:,slice_I,:]
+                    phi_slice[:,1,...] = phi[:,2,:,slice_I,:]
+                    lam_slice = model_dict['lam'][:, :, :, slice_lam, :]
+                    lw_slice = None
+                    if 'local_weights' in model_dict:
+                        if model_dict['local_weights'] is not None:
+                            lw_slice = model_dict['local_weights'][:, :, :, slice_lam, :]
+                    spacing_slice = np.array([spacing[0],spacing[2]])
+                    lowResSize = list(model_dict['lowResSize'])
+                    lowResSize_slice = np.array(lowResSize[0:3] + [lowResSize[-1]])
+                elif slice_mode_3d[sm]==2:
+                    IS_slice = ISource[:,:,:,:,slice_I]
+                    IT_slice = ITarget[:,:,:,:,slice_I]
+                    IW_slice = IWarped[:,:,:,:,slice_I]
+                    phi_slice = phi[:,0:2,:,:,slice_I]
+                    lam_slice = model_dict['lam'][:,:,:,:,slice_lam]
+                    lw_slice = None
+                    if 'local_weights' in model_dict:
+                        if model_dict['local_weights'] is not None:
+                            lw_slice = model_dict['local_weights'][:,:,:,:,slice_lam]
+                    spacing_slice = spacing[0:-1]
+                    lowResSize_slice = model_dict['lowResSize'][0:-1]
+
+                if print_images:
+                    visualize_weights(IS_slice,IT_slice,IW_slice,phi_slice,
+                                      lam_slice,lw_slice,model_dict['stds'],
+                                      spacing_slice,lowResSize_slice,print_output_dir,pair_nr,slice_mode_3d[sm])
+                else:
+                    visualize_weights(IS_slice, IT_slice, IW_slice, phi_slice,
+                                      lam_slice, lw_slice, model_dict['stds'],
+                                      spacing_slice, lowResSize_slice)
 
         else:
             raise ValueError('I do not know how to visualize results with dimensions other than 2 or 3')
@@ -631,8 +651,10 @@ if __name__ == "__main__":
     parser.add_argument('--stage_nr', required=True, type=int, help='stage number for which the computations should be performed {0,1,2}; shifted by one')
 
     parser.add_argument('--compute_only_pair_nr', required=False, type=int, default=None, help='When specified only this pair is computed; otherwise all of them')
-    parser.add_argument('--slice_proportion_3d', required=False, type=float, default=0.5, help='Where to slice for 3D visualizations [0,1]')
-    parser.add_argument('--slice_mode_3d', required=False, type=int, default=0, help='Which visualization mode {0,1,2} for 3D')
+    parser.add_argument('--slice_proportion_3d', required=False, type=str, default=None, help='Where to slice for 3D visualizations [0,1] for each mode, as a comma separated list')
+    parser.add_argument('--slice_mode_3d', required=False, type=str, default=None, help='Which visualization mode {0,1,2} as a comma separated list')
+
+    parser.add_argument('--retarget_data_directory', required=False, default=None,help='Looks for the datafiles in this directory')
 
     parser.add_argument('--do_not_visualize', action='store_true', help='visualizes the output otherwise')
     parser.add_argument('--do_not_print_images', action='store_true', help='prints the results otherwise')
@@ -640,6 +662,30 @@ if __name__ == "__main__":
     parser.add_argument('--do_not_write_out_images', action='store_true', help='writes out the map and the warped image otherwise')
 
     args = parser.parse_args()
+
+
+    slice_proportion_3d_was_specified = False
+    if args.slice_proportion_3d is None:
+        slice_proportion_3d = [0.5,0.5,0.5]
+    else:
+        slice_proportion_3d = [float(item) for item in args.slice_proportion_3d.split(',')]
+        slice_proportion_3d_was_specified = True
+
+    slice_mode_3d_was_specified = False
+    if args.slice_mode_3d is None:
+        slice_mode_3d = [0,1,2]
+    else:
+        slice_mode_3d = [int(item) for item in args.slice_mode_3d.split(',')]
+        slice_mode_3d_was_specified = True
+
+    if slice_mode_3d_was_specified and not slice_proportion_3d_was_specified:
+        slice_proportion_3d = [0.5]*len(slice_mode_3d)
+
+    if slice_proportion_3d_was_specified and not slice_mode_3d_was_specified:
+        slice_mode_3d = range(len(slice_proportion_3d))
+
+    if len(slice_mode_3d)!=len(slice_proportion_3d):
+        raise ValueError('There need to be the same number of proportions as there are 3D modes specified')
 
     json_file = args.config
     output_dir = args.output_directory
@@ -656,10 +702,11 @@ if __name__ == "__main__":
         print('Computing pair number: ' + str(pair_nr))
         compute_and_visualize_results(json_file=args.config,output_dir=output_dir,
                                       stage=args.stage_nr,pair_nr=pair_nr,
-                                      slice_proportion_3d=args.slice_proportion_3d,
-                                      slice_mode_3d=args.slice_mode_3d,
+                                      slice_proportion_3d=slice_proportion_3d,
+                                      slice_mode_3d=slice_mode_3d,
                                       visualize=not args.do_not_visualize,
                                       print_images=not args.do_not_print_images,
                                       write_out_images=not args.do_not_write_out_images,
-                                      compute_det_of_jacobian=not args.do_not_compute_det_jac)
+                                      compute_det_of_jacobian=not args.do_not_compute_det_jac,
+                                      retarget_data_directory=args.retarget_data_directory)
 
