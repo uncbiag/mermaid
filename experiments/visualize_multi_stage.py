@@ -335,7 +335,7 @@ def get_json_and_output_dir_for_stages(json_file,output_dir):
     json_for_stages.append(json_stage_2_in)
     json_for_stages.append(json_stage_3_in)
 
-    output_dir_stage_3 = output_dir
+    output_dir_stage_3 = os.path.normpath(output_dir)
     output_dir_stage_2 = output_dir_stage_3 + '_after_stage_2'
     output_dir_stage_1 = output_dir_stage_3 + '_after_stage_1'
 
