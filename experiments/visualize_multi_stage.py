@@ -175,7 +175,10 @@ def individual_parameters_to_model_parameters(ind_pars):
     return model_pars
 
 
-def evaluate_model(ISource,ITarget,sz,spacing,individual_parameters,shared_parameters,params,visualize=True):
+def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared_parameters,params,visualize=True):
+
+    ISource = AdaptVal(ISource_in)
+    ITarget = AdaptVal(ITarget_in)
 
     model_name = params['model']['registration_model']['type']
     use_map = params['model']['deformation']['use_map']
