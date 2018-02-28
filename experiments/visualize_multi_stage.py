@@ -605,6 +605,13 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
         else:
             raise ValueError('I do not know how to visualize results with dimensions other than 2 or 3')
 
+    # if we have pdfjam we create a summary pdf
+    if os.system('which pdfjam')==0:
+        summary_pdf_name = os.path.join(print_output_dir,'summary.pdf')
+        print('Creating summary PDF: ')
+        cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_dir,'*.pdf'),summary_pdf_name)
+        os.system(cmd)
+
     # save the images
     if write_out_warped_image:
         im_io = FIO.ImageIO()
