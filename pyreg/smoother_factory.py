@@ -900,8 +900,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
     def get_debug_computed_local_weights(self):
         return self.debug_computed_local_weights
 
-    def set_debug_retain_computed_local_weights(self,val):
-        self.debug_retain_computed_local_weights = True
+    def set_debug_retain_computed_local_weights(self,val=True):
+        self.debug_retain_computed_local_weights = val
 
     def associate_parameters_with_module(self,module):
         s = set()

@@ -11,6 +11,8 @@ import pyreg.image_manipulations as IM
 import numpy as np
 import glob
 
+import copy
+
 from pyreg.config_parser import USE_FLOAT16
 
 from abc import ABCMeta, abstractmethod
@@ -490,6 +492,7 @@ class ImageIO(FileIO):
         if self.normalize_spacing:
             if not silent_mode:
                 print('INFO: Normalizing the spacing to [0,1] in the largest dimension. (Turn normalize_spacing off if this is not desired.)')
+            hdr['original_spacing'] = spacing
             spacing = self._normalize_spacing(spacing,sz,silent_mode)
             squeezed_spacing = self._normalize_spacing(squeezed_spacing,sz_squeezed,silent_mode)
             hdr['spacing'] = spacing
@@ -637,7 +640,11 @@ class ImageIO(FileIO):
         # now write it out
         print('Writing image: ' + filename)
         if hdr is not None:
-            nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ), hdr)
+            hdr_modified = copy.deepcopy(hdr)
+            if 'original_spacing' in hdr_modified:
+                hdr_modified['spacing'] = hdr_modified['original_spacing']
+                hdr_modified.pop('original_spacing')
+            nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ), hdr_modified)
         else:
             nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ))
 
@@ -670,7 +677,11 @@ class GenericIO(FileIO):
         else:
             print('Writing: ' + filename)
             if hdr is not None:
-                nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ), hdr)
+                hdr_modified = copy.deepcopy(hdr)
+                if 'original_spacing' in hdr_modified:
+                    hdr_modified['spacing'] = hdr_modified['original_spacing']
+                    hdr_modified.pop('original_spacing')
+                nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ), hdr_modified)
             else:
                 nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ) )
 
@@ -681,6 +692,72 @@ class MapIO(GenericIO):
 
     def __init__(self):
         super(MapIO, self).__init__()
+
+    def write(self, filename, data, hdr):
+        if not self._is_nrrd_filename(filename):
+            print('Sorry, currently only nrrd files are supported when writing. Aborting.')
+            return
+        else:
+            if hdr is None:
+                raise ValueError('hdr needs to be specified to keep track of spacing')
+            dim = hdr['dimension']
+
+            data_new = copy.deepcopy(self._convert_data_to_numpy_if_needed(data))
+            sz = data_new.shape
+
+            if len(sz) != dim + 1:
+                raise ValueError('Expected a dim x X x Y x Z format; i.e., cannot write an entire batch at once')
+
+            nr_of_dim = sz[0]
+            if nr_of_dim > 3:
+                raise ValueError(
+                    'Only dimensions up to 3 are supported. Make sure the data is in dim x X x Y x Z format')
+
+            print('Writing: ' + filename)
+            hdr_modified = copy.deepcopy(hdr)
+
+            if 'original_spacing' in hdr_modified:
+                hdr_modified['spacing'] = hdr_modified['original_spacing']
+                hdr_modified.pop('original_spacing')
+
+            # since this is map we need to convert the values so we get [0,szx-1]x[0,szy-1]x[0,szz-1] format
+            for d in range(nr_of_dim):
+                data_new[d, ...] = data_new[d, ...]*hdr['spacing'][d]/hdr['original_spacing'][d]
+
+            nrrd.write(filename, data_new, hdr_modified)
+
+
+    def write_to_validation_map_format(self, filename, data, hdr):
+        if not self._is_nrrd_filename(filename):
+            print('Sorry, currently only nrrd files are supported when writing. Aborting.')
+            return
+        else:
+            if hdr is None:
+                raise ValueError('hdr needs to be specified to keep track of spacing')
+            dim = hdr['dimension']
+
+            data_new = copy.deepcopy(self._convert_data_to_numpy_if_needed(data))
+            sz = data_new.shape
+
+            if len(sz)!=dim+1:
+                raise ValueError('Expected a dim x X x Y x Z format; i.e., cannot write an entire batch at once')
+
+            nr_of_dim = sz[0]
+            if nr_of_dim > 3:
+                raise ValueError(
+                    'Only dimensions up to 3 are supported. Make sure the data is in dim x X x Y x Z format')
+
+            print('Writing: ' + filename)
+            hdr_modified = copy.deepcopy(hdr)
+            if 'original_spacing' in hdr_modified:
+                hdr_modified.pop('original_spacing')
+            hdr_modified['spacing'] = [1]*dim
+
+            # since this is map we need to convert the values so we get [0,szx-1]x[0,szy-1]x[0,szz-1] format
+            for d in range(nr_of_dim):
+                data_new[d,...] = data_new[d,...]/hdr['spacing'][d]
+
+            nrrd.write(filename, data_new, hdr_modified)
 
 
 
