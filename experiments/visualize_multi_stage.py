@@ -465,8 +465,8 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
         write_out_warped_image = False
         write_out_map = False
 
-    image_and_map_output_dir = output_dir + '_model_results_stage_{:d}'.format(stage)
-    print_output_dir = output_dir + '_pdf_stage_{:d}'.format(stage)
+    image_and_map_output_dir = os.path.normpath(output_dir) + '_model_results_stage_{:d}'.format(stage)
+    print_output_dir = os.path.normpath(output_dir) + '_pdf_stage_{:d}'.format(stage)
 
     if write_out_warped_image or write_out_map or compute_det_of_jacobian:
         if not os.path.exists(image_and_map_output_dir):
@@ -605,13 +605,6 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
         else:
             raise ValueError('I do not know how to visualize results with dimensions other than 2 or 3')
 
-    # if we have pdfjam we create a summary pdf
-    if os.system('which pdfjam')==0:
-        summary_pdf_name = os.path.join(print_output_dir,'summary.pdf')
-        print('Creating summary PDF: ')
-        cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_dir,'*.pdf'),summary_pdf_name)
-        os.system(cmd)
-
     # save the images
     if write_out_warped_image:
         im_io = FIO.ImageIO()
@@ -720,3 +713,12 @@ if __name__ == "__main__":
                                       compute_det_of_jacobian=not args.do_not_compute_det_jac,
                                       retarget_data_directory=args.retarget_data_directory)
 
+    if not args.do_not_print_images:
+        print_output_dir = os.path.normpath(output_dir) + '_pdf_stage_{:d}'.format(args.stage_nr)
+
+        # if we have pdfjam we create a summary pdf
+        if os.system('which pdfjam') == 0:
+            summary_pdf_name = os.path.join(print_output_dir, 'summary.pdf')
+            print('Creating summary PDF: ')
+            cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_dir, '*.pdf'), summary_pdf_name)
+            os.system(cmd)
