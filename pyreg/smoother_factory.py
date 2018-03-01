@@ -600,8 +600,18 @@ def _compute_omt_penalty_for_weight_vectors(weights,multi_gaussian_stds,omt_powe
 
     # todo: check that this is properly handled for the learned optimizer (i.e., as a variable for optimization opposed to a constant)
     max_std = torch.max(multi_gaussian_stds)
-    for i, s in enumerate(multi_gaussian_stds):
-        penalty += weights[i] * ((s - max_std) ** omt_power)
+    min_std = torch.min(multi_gaussian_stds)
+
+    if omt_power == 2:
+        for i, s in enumerate(multi_gaussian_stds):
+            penalty += weights[i] * ((s - max_std) ** omt_power)
+
+        penalty /= (max_std - min_std) ** omt_power
+    else:
+        for i, s in enumerate(multi_gaussian_stds):
+            penalty += weights[i] * (torch.abs(s - max_std) ** omt_power)
+
+        penalty /= torch.abs(max_std-min_std)**omt_power
 
     return penalty
 
@@ -1041,11 +1051,14 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                                                                       self.get_gaussian_stds(), self.omt_power)
 
             penalty = current_penalty * self.omt_weight_penalty*self.spacing.prod()*self.sz.prod()
+
+            print('omt penalty = ' + str(penalty.data.cpu().numpy()))
+
         else:
 
             penalty = self.ws.get_current_penalty()
 
-            #print('omt penalty = ' + str(penalty.data.cpu().numpy()))
+            print('omt penalty = ' + str(penalty.data.cpu().numpy()))
 
             total_number_of_parameters = 1
             par_penalty = Variable(MyTensor(1).zero_(),requires_grad=False)

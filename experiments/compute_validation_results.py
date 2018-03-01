@@ -165,6 +165,12 @@ if __name__ == "__main__":
     else:
         save_results = False
 
+    validation_results = dict()
+    validation_results['source_id'] = []
+    validation_results['target_id'] = []
+    validation_results['mean_target_overlap'] = []
+    validation_results['single_results'] = []
+
     for n in range(nr_of_computed_pairs):
         current_source_image = used_pairs['source_images'][n]
         current_target_image = used_pairs['target_images'][n]
@@ -176,9 +182,16 @@ if __name__ == "__main__":
 
         mean_result,single_results = calculate_image_overlap('CUMC', dataset_directory, current_map_filename, source_id, target_id)
 
+        validation_results['source_id'].append(source_id)
+        validation_results['target_id'].append(target_id)
+        validation_results['mean_target_overlap'].append(mean_result)
+        validation_results['single_results'].append(single_results)
+
         print('mean label overlap for ' + str(source_id) + ' -> ' + str(target_id) + ': ' + str(mean_result))
         if save_results:
             res_file.write(str(source_id) + ', ' + str(target_id) + ', ' + str(mean_result) + '\n')
 
     if save_results:
         res_file.close()
+
+    torch.save(validation_results,'val_res.pt')

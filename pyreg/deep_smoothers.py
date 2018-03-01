@@ -20,8 +20,16 @@ def compute_omt_penalty(weights, multi_gaussian_stds,volume_element,desired_powe
     penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
     batch_size = weights.size()[0]
     max_std = max(multi_gaussian_stds)
-    for i,s in enumerate(multi_gaussian_stds):
-        penalty += ((weights[:,i,...]).sum())*((s-max_std)**desired_power)
+    min_std = min(multi_gaussian_stds)
+
+    if desired_power==2:
+        for i, s in enumerate(multi_gaussian_stds):
+            penalty += ((weights[:, i, ...]).sum()) * ((s - max_std) ** desired_power)
+        penalty /= (max_std - min_std)** desired_power
+    else:
+        for i,s in enumerate(multi_gaussian_stds):
+            penalty += ((weights[:,i,...]).sum())*(abs(s-max_std)**desired_power)
+        penalty /= abs(max_std-min_std)**desired_power
 
     penalty /= batch_size
     penalty *= volume_element
