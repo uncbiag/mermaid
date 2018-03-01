@@ -193,7 +193,7 @@ if __name__ == "__main__":
 
     print('Running stage 1: optimize only using given weights')
     in_json = args.config
-    out_json_stage_1 = 'out_stage_1_' + args.config
+    out_json_stage_1 = os.path.join(os.path.split(args.config)[0],'out_stage_1_' + os.path.split(args.config)[1])
 
     do_registration(
         source_images=source_images,
@@ -220,7 +220,7 @@ if __name__ == "__main__":
 
     print('Running stage 2: now continue optimizing, but optimizing over the global weights')
     in_json = out_json_stage_1
-    out_json_stage_2 = 'out_stage_2_' + args.config
+    out_json_stage_2 = os.path.join(os.path.split(args.config)[0],'out_stage_2_' + os.path.split(args.config)[1])
 
     do_registration(
         source_images=source_images,
@@ -247,7 +247,7 @@ if __name__ == "__main__":
 
     print('Running stage 3: now optimize over the network (keeping everything else fixed)')
     in_json = out_json_stage_2
-    out_json_stage_3 = 'out_stage_3_' + args.config
+    out_json_stage_3 = os.path.join(os.path.split(args.config)[0],'out_stage_3_' + os.path.split(args.config)[1])
 
     do_registration(
         source_images=source_images,
