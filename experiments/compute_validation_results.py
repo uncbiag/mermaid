@@ -2,6 +2,11 @@ import set_pyreg_paths
 
 import os
 
+import torch
+from torch.autograd import Variable
+
+import pyreg.utils as utils
+
 import scipy.io as sio
 import numpy as np
 import itk
@@ -11,6 +16,13 @@ import torch
 
 import matplotlib.pyplot as plt
 import matplotlib
+
+def new_warp_image_nn(label_map, phi, spacing):
+
+    lm_t = Variable( torch.from_numpy(label_map),requires_grad=False)
+    lm_t = lm_t.view([1,1]+list(lm_t.size()))
+
+    return utils.get_warped_label_map(lm_t, phi, spacing, sched='nn')
 
 def warp_image_nn(moving, phi):
     """
@@ -91,9 +103,17 @@ def calculate_image_overlap(dataset_name, dataset_dir, phi_path, moving_id, targ
 
     label_from = label_images[moving_id - 1]
     label_to = label_images[target_id - 1]
+
     phi,hdr = nrrd.read(phi_path)
     phi = phi.squeeze()
     warp_result = warp_image_nn(label_from, phi)
+
+    #td = torch.load(phi_path)
+    #phi = td['phi']
+    #spacing = td['spacing']
+    #warp_result = warp_image_nn(label_from,phi,spacing)
+    #warp_result = warp_result.data.cpu().numpy().squeeze()
+
     for label_idx in range(len(Labels['Labels'])):
 
         current_id = Labels['Labels'][label_idx]
@@ -220,13 +240,14 @@ def create_map_filename(id,output_dir,stage):
     stage_output_dir = os.path.normpath(output_dir) + '_model_results_stage_' + str(stage)
 
     map_filename = os.path.join(stage_output_dir,'map_validation_format_{:05d}.nrrd'.format(id))
+    #map_filename = os.path.join(stage_output_dir, 'map_validation_format_{:05d}.pt'.format(id))
     return map_filename,stage_output_dir
 
 def get_result_indices(r,start_id,nr_of_images_in_dataset):
 
     indices = []
     for sid,tid in zip(r['source_id'],r['target_id']):
-        current_indx = (sid-start_id)*nr_of_images_in_dataset + tid
+        current_indx = (sid-start_id)*nr_of_images_in_dataset + (tid-start_id)
         indices.append(current_indx)
 
     return indices
