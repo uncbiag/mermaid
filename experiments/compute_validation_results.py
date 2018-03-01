@@ -9,6 +9,9 @@ import itk
 import nrrd
 import torch
 
+import matplotlib.pyplot as plt
+import matplotlib
+
 def warp_image_nn(moving, phi):
     """
     Warp labels according to deformation field
@@ -114,6 +117,95 @@ def calculate_image_overlap(dataset_name, dataset_dir, phi_path, moving_id, targ
     #print('Averaged overlapping rate')
     #print(result_mean)
 
+
+def overlapping_plot(old_results_filename, new_results, boxplot_filename, visualize=True):
+    """
+    Plot the overlaping results of 14 old appraoch and the proposed appraoch
+    :param old_results_filename: Old results stored in .mat format file
+    :param new_results: Dictionary that contains the new results
+    :return:
+    """
+    old_results = sio.loadmat(old_results_filename)
+
+    # combine old names with proposed method
+    compound_names = []
+    for item in old_results['direc_name']:
+        compound_names.append(str(item[0])[3:-2])
+
+    compound_names.append('Proposed')
+
+    # new results may only have a subset of the results
+
+    old_results_selected = old_results['results'][new_results['ind'],:] # select the desired rows
+
+    # combine data
+    compound_results = np.concatenate((old_results_selected, np.array(new_results['mean_target_overlap']).reshape(-1, 1)), axis=1)
+
+    # create a figure instance
+    fig = plt.figure(1, figsize=(8, 6))
+
+    # create an axes instance
+    ax = fig.add_subplot(111)
+
+    # set axis tick
+    ax.set_axisbelow(True)
+    ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
+    ax.yaxis.set_tick_params(left='on', direction='in', width=1)
+    ax.yaxis.set_tick_params(right='on', direction='in', width=1)
+    ax.xaxis.set_tick_params(top='off', direction='in', width=1)
+    ax.xaxis.set_tick_params(bottom='off', direction='in', width=1)
+
+    # create the boxplot
+    bp = plt.boxplot(compound_results, vert=True, whis=1.5, meanline=True, widths=0.16, showfliers=True,
+                     showcaps=False, patch_artist=True, labels=compound_names)
+
+    # rotate x labels
+    for tick in ax.get_xticklabels():
+        tick.set_rotation(90)
+
+    # set properties of boxes, medians, whiskers, fliers
+    plt.setp(bp['medians'], color='orange')
+    plt.setp(bp['boxes'], color='blue')
+    # plt.setp(bp['caps'], color='b')
+    plt.setp(bp['whiskers'], linestyle='-', color='blue')
+    plt.setp(bp['fliers'], marker='o', markersize=5, markeredgecolor='blue')
+
+    # matplotlib.rcParams['ytick.direction'] = 'in'
+    # matplotlib.rcParams['xtick.direction'] = 'inout'
+
+    # setup font
+    font = {'family': 'normal', 'weight': 'semibold', 'size': 10}
+    matplotlib.rc('font', **font)
+
+    # set the line width of the figure
+    for axis in ['top', 'bottom', 'left', 'right']:
+        ax.spines[axis].set_linewidth(2)
+
+    # set the range of the overlapping rate
+    plt.ylim([0, 0.8])
+
+    # add two lines to represent the lower quartile and upper quartile
+    lower_quartile = np.percentile(compound_results[:, -1], 25)
+    upper_quartile = np.percentile(compound_results[:, -1], 75)
+    ax.axhline(lower_quartile, ls='-', color='r', linewidth=1)
+    ax.axhline(upper_quartile, ls='-', color='r', linewidth=1)
+
+    # set the target box to red color
+    bp['boxes'][-1].set(color='red')
+    bp['boxes'][-1].set(facecolor='red')
+    bp['whiskers'][-1].set(color='red')
+    bp['whiskers'][-2].set(color='red')
+    bp['fliers'][-1].set(color='red', markeredgecolor='red')
+
+    # save figure
+    if boxplot_filename is not None:
+        plt.savefig(boxplot_filename, dpi=1000, bbox_inches='tight')
+
+    # show figure
+    if visualize:
+        plt.show()
+
+
 def extract_id_from_cumc_filename(filename):
     r = os.path.split(filename)
     # these files have the format m1.nii, m12.nii, ...
@@ -128,9 +220,20 @@ def create_map_filename(id,output_dir,stage):
     stage_output_dir = os.path.normpath(output_dir) + '_model_results_stage_' + str(stage)
 
     map_filename = os.path.join(stage_output_dir,'map_validation_format_{:05d}.nrrd'.format(id))
-    return map_filename
+    return map_filename,stage_output_dir
+
+def get_result_indices(r,start_id,nr_of_images_in_dataset):
+
+    indices = []
+    for sid,tid in zip(r['source_id'],r['target_id']):
+        current_indx = (sid-start_id)*nr_of_images_in_dataset + tid
+        indices.append(current_indx)
+
+    return indices
 
 if __name__ == "__main__":
+
+    #todo: THis is currently specific for the CUMC data; make this more generic later
 
     import argparse
 
@@ -142,6 +245,9 @@ if __name__ == "__main__":
                         help='stage number for which the computations should be performed {0,1,2}; shifted by one')
     parser.add_argument('--dataset_directory', required=True,
                         help='Main directory where dataset is stored; this directory should contain the subdirectory label_affine_icbm')
+
+    parser.add_argument('--do_not_visualize', action='store_true', help='visualizes the output otherwise')
+    parser.add_argument('--do_not_print_images', action='store_true', help='prints the results otherwise')
 
     parser.add_argument('--save_overlap_filename', required=False, default=None,help='If specified write the result in this output file')
 
@@ -178,7 +284,7 @@ if __name__ == "__main__":
         source_id = extract_id_from_cumc_filename(current_source_image)
         target_id = extract_id_from_cumc_filename(current_target_image)
 
-        current_map_filename = create_map_filename(n,output_directory,stage)
+        current_map_filename,stage_output_dir = create_map_filename(n,output_directory,stage)
 
         mean_result,single_results = calculate_image_overlap('CUMC', dataset_directory, current_map_filename, source_id, target_id)
 
@@ -194,4 +300,19 @@ if __name__ == "__main__":
     if save_results:
         res_file.close()
 
-    torch.save(validation_results,'val_res.pt')
+    # todo: specific settings for CUMC (has 12 images; starts at image 1); make this more generic later
+    validation_results['ind'] = get_result_indices(validation_results,start_id=1,nr_of_images_in_dataset=12)
+
+    validation_results_filename = os.path.join(stage_output_dir,'validation_results.pt')
+    print('Saving the validation results to: ' + validation_results_filename)
+    torch.save(validation_results,validation_results_filename)
+
+    # now do the boxplot
+    if not args.do_not_visualize:
+        old_results_filename = './validation_mat/quicksilver_results/CUMC_results.mat'
+
+        boxplot_filename = None
+        if not args.do_not_print_images:
+            boxplot_filename = os.path.join(stage_output_dir,'boxplot_results.pdf')
+
+        overlapping_plot(old_results_filename, validation_results,boxplot_filename, not args.do_not_visualize)
