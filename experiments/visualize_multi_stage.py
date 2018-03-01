@@ -612,6 +612,14 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
 
     if write_out_map:
         map_io = FIO.MapIO()
+
+        #mres = dict()
+        #mres['spacing'] = spacing
+        #mres['phi'] = phi
+        #map_output_filename_torch = os.path.join(image_and_map_output_dir, 'map_validation_format_{:05}.pt'.format(pair_nr))
+        #print('Saving: ' + map_output_filename_torch )
+        #torch.save(mres,map_output_filename_torch)
+
         map_io.write_to_validation_map_format(map_output_filename, phi[0,...], hdr)
 
     # compute determinant of Jacobian of map

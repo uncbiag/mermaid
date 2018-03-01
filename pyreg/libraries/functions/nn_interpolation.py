@@ -26,6 +26,7 @@ def get_nn_interpolation(input1, input2, spacing):
     device_c = ffi.new("int *")
 
     map_scaled = map_scale_utils.scale_map(input2,spacing)
+    ndim = len(spacing)
 
     if ndim == 1:
         output = MyTensor(input1.size()[0], input1.size()[1], input2.size()[2]).zero_()
