@@ -46,8 +46,8 @@ if use_batch_optimization:
 else:
     reg.register_images(I0, I1, spacing,
                         model_name='svf_scalar_momentum_map',
-                        nr_of_iterations=50,
-                        visualize_step=25,
+                        nr_of_iterations=40,
+                        visualize_step=10,
                         map_low_res_factor=0.25,
                         rel_ftol=1e-10,
                         use_consensus_optimization=True,
