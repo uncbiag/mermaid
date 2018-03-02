@@ -116,14 +116,14 @@ def calculate_image_overlap(dataset_name, dataset_dir, phi_path, moving_id, targ
 
     for label_idx in range(len(Labels['Labels'])):
 
-        current_id = Labels['Labels'][label_idx]
+        current_id = Labels['Labels'][label_idx][0]
 
-        intersection = float( (np.logical_and(label_to==current_id, warp_result==current_id)).sum() )
         target_vol = float( (label_to==current_id).sum() )
 
-        if target_vol==0:
+        if target_vol==0 or current_id==0:
             result[label_idx] = np.nan
         else:
+            intersection = float((np.logical_and(label_to == current_id, warp_result == current_id)).sum())
             result[label_idx] = intersection/target_vol
 
     single_result = result
@@ -243,14 +243,27 @@ def create_map_filename(id,output_dir,stage):
     #map_filename = os.path.join(stage_output_dir, 'map_validation_format_{:05d}.pt'.format(id))
     return map_filename,stage_output_dir
 
+
 def get_result_indices(r,start_id,nr_of_images_in_dataset):
 
-    indices = []
-    for sid,tid in zip(r['source_id'],r['target_id']):
-        current_indx = (sid-start_id)*nr_of_images_in_dataset + (tid-start_id)
-        indices.append(current_indx)
+   D = {}
+   cnt = 0
+   for src_idx in np.arange(nr_of_images_in_dataset):
+       for dst_idx in np.arange(nr_of_images_in_dataset):
+           if src_idx == dst_idx:
+               continue
+           if (src_idx+1) in D:
+               D[src_idx+1][dst_idx+1]=cnt
+           else:
+               D[src_idx+1]={}
+               D[src_idx+1][dst_idx+1]=cnt
+           cnt += 1
 
-    return indices
+   indices = []
+   for sid,tid in zip(r['source_id'],r['target_id']):
+       indices.append(D[sid][tid])
+   return indices
+
 
 if __name__ == "__main__":
 
@@ -317,6 +330,15 @@ if __name__ == "__main__":
         print('mean label overlap for ' + str(source_id) + ' -> ' + str(target_id) + ': ' + str(mean_result))
         if save_results:
             res_file.write(str(source_id) + ', ' + str(target_id) + ', ' + str(mean_result) + '\n')
+
+
+    mean_target_overlap_results = np.array(validation_results['mean_target_overlap'])
+    print('\nOverall results:')
+    print('min = ' + str(mean_target_overlap_results.min()))
+    print('max = ' + str(mean_target_overlap_results.max()))
+    print('mean = ' + str(mean_target_overlap_results.mean()))
+    print('median = ' + str(np.percentile(mean_target_overlap_results,50)))
+    print('\n')
 
     if save_results:
         res_file.close()
