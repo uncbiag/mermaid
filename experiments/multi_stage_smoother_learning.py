@@ -7,9 +7,11 @@ import multiprocessing as mp
 
 import pyreg.simple_interface as si
 import pyreg.module_parameters as pars
+from pyreg.data_wrapper import USE_CUDA
 
 import glob
 import os
+import ast
 
 import random
 
@@ -20,14 +22,20 @@ def do_registration(source_images,target_images,model_name,output_directory,
                     visualize_step,json_in,json_out,
                     optimize_over_deep_network=False,
                     optimize_over_weights=False,
-                    start_from_previously_saved_parameters=True):
+                    start_from_previously_saved_parameters=True,
+                    args_kvs=None):
 
     reg = si.RegisterImagePair()
 
-    # load the json file and make necessary modifications
-    params_in = pars.ParameterDict()
-    print('Loading settings from file: ' + json_in)
-    params_in.load_JSON(json_in)
+    # load the json file if it is a file and make necessary modifications
+    if type(json_in)==pars.ParameterDict:
+        params_in=json_in
+    else:
+        params_in = pars.ParameterDict()
+        print('Loading settings from file: ' + json_in)
+        params_in.load_JSON(json_in)
+
+    add_key_value_pairs_to_params(params_in, args_kvs)
 
     if map_low_res_factor is None:
         map_low_res_factor = params_in['model']['deformation'][('map_low_res_factor',1.0,'low res factor for the map')]
@@ -107,15 +115,45 @@ def get_n_pairwise_image_combinations(input_directory,n=10,no_random_shuffle=Fal
         return source_files,target_files,source_ids,target_ids
 
 
-if __name__ == "__main__":
+def add_key_value_pairs_to_params(params,kvs):
+    """
+    Allows overwriting values in the parameter structure
+    :param params: ParameterDict object
+    :param kvs: key value pairs string
+    :return: key value pairs will now be part of params
+    """
 
-    torch.set_num_threads(mp.cpu_count())
+    if kvs is not None:
+
+        # first break it up into the different key-value arguments
+        d = dict()
+        for item in kvs.split(','):
+            kv = item.split('=')
+            if len(kv)!=2:
+                print('Cannot parse key value pair ' + item + ' ; expected form key:value, but got more than one ":"; ignoring pair')
+            else:
+                d[kv[0]]=kv[1]
+
+        # now go through the dictionary and create the proper entries for the parameter dict
+
+        for key in d:
+            val = d[key]
+            sub_keys = key.split('.')
+            nr_of_sub_keys = len(sub_keys)
+            current_pars = params
+            for i in range(nr_of_sub_keys-1):
+                current_pars = current_pars[sub_keys[i]]
+            # and now the last one
+            current_pars[sub_keys[-1]] = ast.literal_eval(val)
+
+
+if __name__ == "__main__":
 
     import argparse
 
     parser = argparse.ArgumentParser(description='Registers batches of two images based on OASIS data (for testing)')
 
-    parser.add_argument('--model_name', required=False, default='svf_scalar_momentum_map',help='model that should be used for the registration')
+    parser.add_argument('--model_name', required=False, default='svf_vector_momentum_map',help='model that should be used for the registration')
 
     parser.add_argument('--input_image_directory', required=True, help='Directory where all the images are')
     parser.add_argument('--output_directory', required=True, help='Where the output is stored')
@@ -136,7 +174,17 @@ if __name__ == "__main__":
 
     parser.add_argument('--config', required=True, default=None, help='Configuration file to read in')
 
+    parser.add_argument('--stage_nr', required=False, type=str, default=None, help='Which stages should be run {0,1,2} as a comma separated list')
+
+    parser.add_argument('--config_kvs', required=False, default=None, help='Allows specifying key value pairs that will override json settings; in format k1.k2.k3=val1, k1.k2=val2')
+
     args = parser.parse_args()
+
+    print('Loading settings from file: ' + args.config)
+    params = pars.ParameterDict()
+    params.load_JSON(args.config)
+
+    torch.set_num_threads(mp.cpu_count())
 
     if args.nr_of_epochs is None:
         nr_of_epochs = [1,1,1]
@@ -145,6 +193,11 @@ if __name__ == "__main__":
 
     if len(nr_of_epochs)!=3:
         raise ValueError('Number of epochs needs to be defined for the three different stages')
+
+    if args.stage_nr is None:
+        stage_nr = [0, 1, 2]
+    else:
+        stage_nr = [int(item) for item in args.stage_nr.split(',')]
 
     if args.visualize:
         visualize_step = args.visualize_step
@@ -164,6 +217,11 @@ if __name__ == "__main__":
     if not os.path.exists(args.output_directory):
         print('Creating output directory: ' + args.output_directory)
         os.makedirs(args.output_directory)
+
+    results_output_directory = os.path.join(args.output_directory,'results')
+    if not os.path.exists(results_output_directory):
+        print('Creating results output directory: ' + results_output_directory)
+        os.makedirs(results_output_directory)
 
     # first save how the data was created
     d = dict()
@@ -191,77 +249,89 @@ if __name__ == "__main__":
         f.write(out_str)
     f.close()
 
-    print('Running stage 1: optimize only using given weights')
-    in_json = args.config
+    out_json_stage_0 = os.path.join(os.path.split(args.config)[0], 'out_stage_0_' + os.path.split(args.config)[1])
+
+    if 0 in stage_nr:
+
+        print('Running stage 0: optimize only using given weights')
+        in_json = args.config
+
+        do_registration(
+            source_images=source_images,
+            target_images=target_images,
+            model_name=args.model_name,
+            output_directory=results_output_directory,
+            nr_of_epochs=nr_of_epochs[0],
+            nr_of_iterations=args.nr_of_iterations_per_batch,
+            map_low_res_factor=args.map_low_res_factor,
+            visualize_step=visualize_step,
+            json_in=in_json,
+            json_out=out_json_stage_0,
+            optimize_over_deep_network=False,
+            optimize_over_weights=False,
+            start_from_previously_saved_parameters=False,
+            args_kvs=args.config_kvs
+        )
+
+        if args.retain_intermediate_stage_results:
+            print('Backing up the stage 0 results')
+            backup_dir = os.path.realpath(results_output_directory)+'_after_stage_0'
+            if os.path.exists(backup_dir):
+                shutil.rmtree(backup_dir)
+            shutil.copytree(results_output_directory, backup_dir)
+
     out_json_stage_1 = os.path.join(os.path.split(args.config)[0],'out_stage_1_' + os.path.split(args.config)[1])
 
-    do_registration(
-        source_images=source_images,
-        target_images=target_images,
-        model_name=args.model_name,
-        output_directory=args.output_directory,
-        nr_of_epochs=nr_of_epochs[0],
-        nr_of_iterations=args.nr_of_iterations_per_batch,
-        map_low_res_factor=args.map_low_res_factor,
-        visualize_step=visualize_step,
-        json_in=in_json,
-        json_out=out_json_stage_1,
-        optimize_over_deep_network=False,
-        optimize_over_weights=False,
-        start_from_previously_saved_parameters=False
-    )
+    if 1 in stage_nr:
 
-    if args.retain_intermediate_stage_results:
-        print('Backing up the stage 1 results')
-        backup_dir = os.path.realpath(args.output_directory)+'_after_stage_1'
-        if os.path.exists(backup_dir):
-            shutil.rmtree(backup_dir)
-        shutil.copytree(args.output_directory, backup_dir)
+        print('Running stage 1: now continue optimizing, but optimizing over the global weights')
+        in_json = out_json_stage_0
 
-    print('Running stage 2: now continue optimizing, but optimizing over the global weights')
-    in_json = out_json_stage_1
-    out_json_stage_2 = os.path.join(os.path.split(args.config)[0],'out_stage_2_' + os.path.split(args.config)[1])
+        do_registration(
+            source_images=source_images,
+            target_images=target_images,
+            model_name=args.model_name,
+            output_directory=results_output_directory,
+            nr_of_epochs=nr_of_epochs[1],
+            nr_of_iterations=args.nr_of_iterations_per_batch,
+            map_low_res_factor=args.map_low_res_factor,
+            visualize_step=visualize_step,
+            json_in=in_json,
+            json_out=out_json_stage_1,
+            optimize_over_deep_network=False,
+            optimize_over_weights=True,
+            start_from_previously_saved_parameters=True,
+            args_kvs=args.config_kvs
+        )
 
-    do_registration(
-        source_images=source_images,
-        target_images=target_images,
-        model_name=args.model_name,
-        output_directory=args.output_directory,
-        nr_of_epochs=nr_of_epochs[1],
-        nr_of_iterations=args.nr_of_iterations_per_batch,
-        map_low_res_factor=args.map_low_res_factor,
-        visualize_step=visualize_step,
-        json_in=in_json,
-        json_out=out_json_stage_2,
-        optimize_over_deep_network=False,
-        optimize_over_weights=True,
-        start_from_previously_saved_parameters=True
-    )
+        if args.retain_intermediate_stage_results:
+            print('Backing up the stage 1 results')
+            backup_dir = os.path.realpath(results_output_directory) + '_after_stage_1'
+            if os.path.exists(backup_dir):
+                shutil.rmtree(backup_dir)
+            shutil.copytree(results_output_directory, backup_dir)
 
-    if args.retain_intermediate_stage_results:
-        print('Backing up the stage 2 results')
-        backup_dir = os.path.realpath(args.output_directory) + '_after_stage_2'
-        if os.path.exists(backup_dir):
-            shutil.rmtree(backup_dir)
-        shutil.copytree(args.output_directory, backup_dir)
+    out_json_stage_2 = os.path.join(os.path.split(args.config)[0], 'out_stage_2_' + os.path.split(args.config)[1])
 
-    print('Running stage 3: now optimize over the network (keeping everything else fixed)')
-    in_json = out_json_stage_2
-    out_json_stage_3 = os.path.join(os.path.split(args.config)[0],'out_stage_3_' + os.path.split(args.config)[1])
+    if 2 in stage_nr:
 
-    do_registration(
-        source_images=source_images,
-        target_images=target_images,
-        model_name=args.model_name,
-        output_directory=args.output_directory,
-        nr_of_epochs=nr_of_epochs[2],
-        nr_of_iterations=args.nr_of_iterations_per_batch,
-        visualize_step=visualize_step,
-        map_low_res_factor=args.map_low_res_factor,
-        json_in=in_json,
-        json_out=out_json_stage_3,
-        optimize_over_deep_network=True,
-        optimize_over_weights=False,
-        start_from_previously_saved_parameters=True
-    )
+        print('Running stage 2: now optimize over the network (keeping everything else fixed)')
+        in_json = out_json_stage_1
+
+        do_registration(
+            source_images=source_images,
+            target_images=target_images,
+            model_name=args.model_name,
+            output_directory=results_output_directory,
+            nr_of_epochs=nr_of_epochs[2],
+            nr_of_iterations=args.nr_of_iterations_per_batch,
+            visualize_step=visualize_step,
+            map_low_res_factor=args.map_low_res_factor,
+            json_in=in_json,
+            json_out=out_json_stage_2,
+            optimize_over_deep_network=True,
+            optimize_over_weights=False,
+            start_from_previously_saved_parameters=True,
+            args_kvs=args.config_kvs
+        )
 

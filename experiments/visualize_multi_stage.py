@@ -659,7 +659,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--config', required=True, help='The main json configuration file that was used to create the results')
     parser.add_argument('--output_directory', required=True, help='Where the output was stored (now this will be the input directory)')
-    parser.add_argument('--stage_nr', required=True, type=int, help='stage number for which the computations should be performed {0,1,2}; shifted by one')
+    parser.add_argument('--stage_nr', required=True, type=int, help='stage number for which the computations should be performed {0,1,2}')
 
     parser.add_argument('--compute_only_pair_nr', required=False, type=int, default=None, help='When specified only this pair is computed; otherwise all of them')
     parser.add_argument('--slice_proportion_3d', required=False, type=str, default=None, help='Where to slice for 3D visualizations [0,1] for each mode, as a comma separated list')
