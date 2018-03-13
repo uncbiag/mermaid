@@ -246,7 +246,7 @@ class DeepSmoothingModel(nn.Module):
                 n = m.out_channels
                 for d in range(self.dim):
                     n *= m.kernel_size[d]
-                m.weight.data.normal_(0, math.sqrt(0.05 / n))
+                m.weight.data.normal_(0, math.sqrt(0.01 / n))
             elif isinstance(m, DimBatchNorm(self.dim)):
                 pass
             elif isinstance(m, nn.Linear):

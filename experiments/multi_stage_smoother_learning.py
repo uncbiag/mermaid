@@ -219,9 +219,12 @@ if __name__ == "__main__":
         os.makedirs(args.output_directory)
 
     results_output_directory = os.path.join(args.output_directory,'results')
-    if not os.path.exists(results_output_directory):
-        print('Creating results output directory: ' + results_output_directory)
-        os.makedirs(results_output_directory)
+    if os.path.exists(results_output_directory):
+        print('Removing temporary results in directory ' + results_output_directory)
+        shutil.rmtree(results_output_directory)
+
+    print('Creating results output directory: ' + results_output_directory)
+    os.makedirs(results_output_directory)
 
     # first save how the data was created
     d = dict()
@@ -287,6 +290,12 @@ if __name__ == "__main__":
         print('Running stage 1: now continue optimizing, but optimizing over the global weights')
         in_json = out_json_stage_0
 
+        backup_dir_stage_0 = os.path.realpath(results_output_directory)+'_after_stage_0'
+        if os.path.exists(backup_dir_stage_0):
+            print('Copying ' + backup_dir_stage_0 + ' to ' + results_output_directory)
+            shutil.rmtree(results_output_directory)
+            shutil.copytree(backup_dir_stage_0,results_output_directory)
+
         do_registration(
             source_images=source_images,
             target_images=target_images,
@@ -318,6 +327,12 @@ if __name__ == "__main__":
         print('Running stage 2: now optimize over the network (keeping everything else fixed)')
         in_json = out_json_stage_1
 
+        backup_dir_stage_1 = os.path.realpath(results_output_directory) + '_after_stage_1'
+        if os.path.exists(backup_dir_stage_1):
+            print('Copying ' + backup_dir_stage_1 + ' to ' + results_output_directory)
+            shutil.rmtree(results_output_directory)
+            shutil.copytree(backup_dir_stage_1, results_output_directory)
+
         do_registration(
             source_images=source_images,
             target_images=target_images,
@@ -335,3 +350,14 @@ if __name__ == "__main__":
             args_kvs=args.config_kvs
         )
 
+        if args.retain_intermediate_stage_results:
+            print('Backing up the stage 2 results')
+            backup_dir = os.path.realpath(results_output_directory) + '_after_stage_2'
+            if os.path.exists(backup_dir):
+                shutil.rmtree(backup_dir)
+            shutil.copytree(results_output_directory, backup_dir)
+
+    # now remove temporary results directory
+    if os.path.exists(results_output_directory):
+        print('Removing temporary results in directory ' + results_output_directory)
+        shutil.rmtree(results_output_directory)
