@@ -301,10 +301,13 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     smoother.set_debug_retain_computed_local_weights(True)
 
     model_pars = model.get_registration_parameters()
-    if not 'lam' in model_pars:
-        raise ValueError('Expected a scalar momentum in model (use SVF for example)')
+    if 'lam' in model_pars:
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(model_pars['lam'], lowResISource, lowResSize,lowResSpacing)
+    elif 'm' in model_pars:
+        m = model_pars['m']
+    else:
+        raise ValueError('Expected a scalar or a vector momentum in model (use SVF for example)')
 
-    m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(model_pars['lam'], lowResISource, lowResSize, lowResSpacing)
     v = smoother.smooth(m, None, dictionary_to_pass_to_smoother)
 
     local_weights = smoother.get_debug_computed_local_weights()
@@ -320,7 +323,8 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     model_dict['default_multi_gaussian_weights'] = default_multi_gaussian_weights
     model_dict['stds'] = smoother.get_gaussian_stds()
     model_dict['model'] = model
-    model_dict['lam'] = model_pars['lam']
+    if 'lam' in model_pars:
+        model_dict['lam'] = model_pars['lam']
     model_dict['m'] = m
     model_dict['v'] = v
 
@@ -329,27 +333,28 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
 def get_json_and_output_dir_for_stages(json_file,output_dir):
     json_path, json_filename = os.path.split(json_file)
 
+    json_stage_0_in = os.path.join(json_path, 'out_stage_0_' + json_filename)
     json_stage_1_in = os.path.join(json_path, 'out_stage_1_' + json_filename)
     json_stage_2_in = os.path.join(json_path, 'out_stage_2_' + json_filename)
-    json_stage_3_in = os.path.join(json_path, 'out_stage_3_' + json_filename)
 
     json_for_stages = []
+    json_for_stages.append(json_stage_0_in)
     json_for_stages.append(json_stage_1_in)
     json_for_stages.append(json_stage_2_in)
-    json_for_stages.append(json_stage_3_in)
 
-    output_dir_stage_3 = os.path.normpath(output_dir)
-    output_dir_stage_2 = output_dir_stage_3 + '_after_stage_2'
-    output_dir_stage_1 = output_dir_stage_3 + '_after_stage_1'
+    res_output_dir = os.path.normpath(output_dir)
+    output_dir_stage_2 = os.path.join(res_output_dir, 'results_after_stage_2')
+    output_dir_stage_1 = os.path.join(res_output_dir, 'results_after_stage_1')
+    output_dir_stage_0 = os.path.join(res_output_dir, 'results_after_stage_0')
 
     output_dir_for_stages = []
+    output_dir_for_stages.append(output_dir_stage_0)
     output_dir_for_stages.append(output_dir_stage_1)
     output_dir_for_stages.append(output_dir_stage_2)
-    output_dir_for_stages.append(output_dir_stage_3)
 
     return json_for_stages,output_dir_for_stages
 
-def visualize_weights(I0,I1,Iw,phi,lam,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=None):
+def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=None):
 
     if local_weights is not None:
         osw = compute_overall_std(local_weights[0,...].cpu(), stds.data.cpu())
@@ -380,8 +385,8 @@ def visualize_weights(I0,I1,Iw,phi,lam,local_weights,stds,spacing,lowResSize,pri
     plt.title('warped+grid')
 
     plt.subplot(2, 3, 5)
-    plt.imshow(lam[0, 0, ...].data.cpu().numpy(), cmap='gray')
-    plt.title('lambda')
+    plt.imshow(norm_m[0, 0, ...].data.cpu().numpy(), cmap='gray')
+    plt.title('|m|')
 
     if local_weights is not None:
         plt.subplot(2, 3, 6)
@@ -465,8 +470,8 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
         write_out_warped_image = False
         write_out_map = False
 
-    image_and_map_output_dir = os.path.normpath(output_dir) + '_model_results_stage_{:d}'.format(stage)
-    print_output_dir = os.path.normpath(output_dir) + '_pdf_stage_{:d}'.format(stage)
+    image_and_map_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_{:d}'.format(stage))
+    print_output_dir = os.path.join(os.path.normpath(output_dir),'pdf_stage_{:d}'.format(stage))
 
     if write_out_warped_image or write_out_map or compute_det_of_jacobian:
         if not os.path.exists(image_and_map_output_dir):
@@ -530,19 +535,21 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
     # apply the actual model and get the warped image and the map (if applicable)
     IWarped,phi,model_dict = evaluate_model(ISource,ITarget,sz,spacing,individual_parameters,shared_parameters,params,visualize=False)
 
+    norm_m = ((model_dict['m']**2).sum(dim=1,keepdim=True))**0.5
+
     if visualize:
         if image_dim==2:
             if print_images:
                 visualize_weights(ISource,ITarget,IWarped,phi,
-                                  model_dict['lam'],model_dict['local_weights'],model_dict['stds'],
+                                  norm_m,model_dict['local_weights'],model_dict['stds'],
                                   spacing,model_dict['lowResSize'],print_output_dir,pair_nr)
             else:
                 visualize_weights(ISource,ITarget,IWarped,phi,
-                                  model_dict['lam'],model_dict['local_weights'],model_dict['stds'],
+                                  norm_m,model_dict['local_weights'],model_dict['stds'],
                                   spacing,model_dict['lowResSize'])
         elif image_dim==3:
             sz_I = ISource.size()
-            sz_lam = model_dict['lam'].size()
+            sz_norm_m = norm_m.size()
 
             if not set(slice_mode_3d)<=set([0,1,2]):
                 raise ValueError('slice mode needs to be in {0,1,2}')
@@ -550,18 +557,18 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
             for sm in slice_mode_3d:
 
                 slice_I = (np.ceil(np.array(sz_I[-1-(2-slice_mode_3d[sm])]) * slice_proportion_3d[sm])).astype('int16')
-                slice_lam = (np.ceil(np.array(sz_lam[-1-(2-slice_mode_3d[sm])]) * slice_proportion_3d[sm])).astype('int16')
+                slice_norm_m = (np.ceil(np.array(sz_norm_m[-1-(2-slice_mode_3d[sm])]) * slice_proportion_3d[sm])).astype('int16')
 
                 if slice_mode_3d[sm]==0:
                     IS_slice = ISource[:, :, slice_I, ...]
                     IT_slice = ITarget[:, :, slice_I, ...]
                     IW_slice = IWarped[:, :, slice_I, ...]
                     phi_slice = phi[:, 1:, slice_I, ...]
-                    lam_slice = model_dict['lam'][:, :, slice_lam, ...]
+                    norm_m_slice = norm_m[:, :, slice_norm_m, ...]
                     lw_slice = None
                     if 'local_weights' in model_dict:
                         if model_dict['local_weights'] is not None:
-                            lw_slice = model_dict['local_weights'][:, :, slice_lam, ...]
+                            lw_slice = model_dict['local_weights'][:, :, slice_norm_m, ...]
                     spacing_slice = spacing[1:]
                     lowResSize = list(model_dict['lowResSize'])
                     lowResSize_slice = np.array(lowResSize[0:2] + lowResSize[3:])
@@ -572,11 +579,11 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
                     phi_slice = torch.zeros_like(phi[:, 1:, :, slice_I, :])
                     phi_slice[:,0,...] = phi[:,0,:,slice_I,:]
                     phi_slice[:,1,...] = phi[:,2,:,slice_I,:]
-                    lam_slice = model_dict['lam'][:, :, :, slice_lam, :]
+                    norm_m_slice = norm_m[:, :, :, slice_norm_m, :]
                     lw_slice = None
                     if 'local_weights' in model_dict:
                         if model_dict['local_weights'] is not None:
-                            lw_slice = model_dict['local_weights'][:, :, :, slice_lam, :]
+                            lw_slice = model_dict['local_weights'][:, :, :, slice_norm_m, :]
                     spacing_slice = np.array([spacing[0],spacing[2]])
                     lowResSize = list(model_dict['lowResSize'])
                     lowResSize_slice = np.array(lowResSize[0:3] + [lowResSize[-1]])
@@ -585,21 +592,21 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
                     IT_slice = ITarget[:,:,:,:,slice_I]
                     IW_slice = IWarped[:,:,:,:,slice_I]
                     phi_slice = phi[:,0:2,:,:,slice_I]
-                    lam_slice = model_dict['lam'][:,:,:,:,slice_lam]
+                    norm_m_slice = norm_m[:,:,:,:,slice_norm_m]
                     lw_slice = None
                     if 'local_weights' in model_dict:
                         if model_dict['local_weights'] is not None:
-                            lw_slice = model_dict['local_weights'][:,:,:,:,slice_lam]
+                            lw_slice = model_dict['local_weights'][:,:,:,:,slice_norm_m]
                     spacing_slice = spacing[0:-1]
                     lowResSize_slice = model_dict['lowResSize'][0:-1]
 
                 if print_images:
                     visualize_weights(IS_slice,IT_slice,IW_slice,phi_slice,
-                                      lam_slice,lw_slice,model_dict['stds'],
+                                      norm_m_slice,lw_slice,model_dict['stds'],
                                       spacing_slice,lowResSize_slice,print_output_dir,pair_nr,slice_mode_3d[sm])
                 else:
                     visualize_weights(IS_slice, IT_slice, IW_slice, phi_slice,
-                                      lam_slice, lw_slice, model_dict['stds'],
+                                      norm_m_slice, lw_slice, model_dict['stds'],
                                       spacing_slice, lowResSize_slice)
 
         else:
@@ -722,7 +729,7 @@ if __name__ == "__main__":
                                       retarget_data_directory=args.retarget_data_directory)
 
     if not args.do_not_print_images:
-        print_output_dir = os.path.normpath(output_dir) + '_pdf_stage_{:d}'.format(args.stage_nr)
+        print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_stage_{:d}'.format(args.stage_nr))
 
         # if we have pdfjam we create a summary pdf
         if os.system('which pdfjam') == 0:
