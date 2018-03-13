@@ -237,7 +237,7 @@ def create_map_filename(id,output_dir,stage):
     if not stage in [0,1,2]:
         raise ValueError('stages need to be {0,1,2} mapping to stage 1, 2, and 3 respectively')
 
-    stage_output_dir = os.path.normpath(output_dir) + '_model_results_stage_' + str(stage)
+    stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_' + str(stage))
 
     map_filename = os.path.join(stage_output_dir,'map_validation_format_{:05d}.nrrd'.format(id))
     #map_filename = os.path.join(stage_output_dir, 'map_validation_format_{:05d}.pt'.format(id))

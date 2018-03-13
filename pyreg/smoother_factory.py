@@ -1052,13 +1052,13 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
             penalty = current_penalty * self.omt_weight_penalty*self.spacing.prod()*self.sz.prod()
 
-            print('omt penalty = ' + str(penalty.data.cpu().numpy()))
+            #print('omt penalty = ' + str(penalty.data.cpu().numpy()))
 
         else:
 
             penalty = self.ws.get_current_penalty()
 
-            print('omt penalty = ' + str(penalty.data.cpu().numpy()))
+            #print('omt penalty = ' + str(penalty.data.cpu().numpy()))
 
             total_number_of_parameters = 1
             par_penalty = Variable(MyTensor(1).zero_(),requires_grad=False)
