@@ -208,6 +208,9 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
         mf = MF.ModelFactory(sz, spacing, sz, spacing)
 
     model, criterion = mf.create_registration_model(model_name, params['model'])
+    # set it to evaluation mode
+    model.eval()
+
     print(model)
 
     if use_map:
@@ -331,28 +334,47 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     return rec_IWarped,rec_phiWarped, model_dict
 
 def get_json_and_output_dir_for_stages(json_file,output_dir):
+
+    res_output_dir = os.path.normpath(output_dir)
     json_path, json_filename = os.path.split(json_file)
 
-    json_stage_0_in = os.path.join(json_path, 'out_stage_0_' + json_filename)
-    json_stage_1_in = os.path.join(json_path, 'out_stage_1_' + json_filename)
-    json_stage_2_in = os.path.join(json_path, 'out_stage_2_' + json_filename)
+    json_stage_0_in = os.path.join(res_output_dir, 'out_stage_0_' + json_filename)
+    json_stage_1_in = os.path.join(res_output_dir, 'out_stage_1_' + json_filename)
+    json_stage_2_in = os.path.join(res_output_dir, 'out_stage_2_' + json_filename)
 
     json_for_stages = []
     json_for_stages.append(json_stage_0_in)
     json_for_stages.append(json_stage_1_in)
     json_for_stages.append(json_stage_2_in)
 
-    res_output_dir = os.path.normpath(output_dir)
-    output_dir_stage_2 = os.path.join(res_output_dir, 'results_after_stage_2')
-    output_dir_stage_1 = os.path.join(res_output_dir, 'results_after_stage_1')
+    frozen_json_stage_0_in = os.path.join(res_output_dir, 'frozen_out_stage_0_' + json_filename)
+    frozen_json_stage_1_in = os.path.join(res_output_dir, 'frozen_out_stage_1_' + json_filename)
+    frozen_json_stage_2_in = os.path.join(res_output_dir, 'frozen_out_stage_2_' + json_filename)
+
+    frozen_json_for_stages = []
+    frozen_json_for_stages.append(frozen_json_stage_0_in)
+    frozen_json_for_stages.append(frozen_json_stage_1_in)
+    frozen_json_for_stages.append(frozen_json_stage_2_in)
+
     output_dir_stage_0 = os.path.join(res_output_dir, 'results_after_stage_0')
+    output_dir_stage_1 = os.path.join(res_output_dir, 'results_after_stage_1')
+    output_dir_stage_2 = os.path.join(res_output_dir, 'results_after_stage_2')
 
     output_dir_for_stages = []
     output_dir_for_stages.append(output_dir_stage_0)
     output_dir_for_stages.append(output_dir_stage_1)
     output_dir_for_stages.append(output_dir_stage_2)
 
-    return json_for_stages,output_dir_for_stages
+    frozen_output_dir_stage_0 = os.path.join(res_output_dir, 'results_frozen_after_stage_0')
+    frozen_output_dir_stage_1 = os.path.join(res_output_dir, 'results_frozen_after_stage_1')
+    frozen_output_dir_stage_2 = os.path.join(res_output_dir, 'results_frozen_after_stage_2')
+
+    frozen_output_dir_for_stages = []
+    frozen_output_dir_for_stages.append(frozen_output_dir_stage_0)
+    frozen_output_dir_for_stages.append(frozen_output_dir_stage_1)
+    frozen_output_dir_for_stages.append(frozen_output_dir_stage_2)
+
+    return json_for_stages,frozen_json_for_stages,output_dir_for_stages,frozen_output_dir_for_stages
 
 def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=None):
 
@@ -460,7 +482,7 @@ def compute_determinant_of_jacobian(phi,spacing):
     return det
 
 
-def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_proportion_3d=0.5,slice_mode_3d=0,visualize=False,
+def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen,pair_nr,slice_proportion_3d=0.5,slice_mode_3d=0,visualize=False,
                                   print_images=False,write_out_images=True,compute_det_of_jacobian=True,retarget_data_directory=None):
 
     if write_out_images:
@@ -470,8 +492,16 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
         write_out_warped_image = False
         write_out_map = False
 
-    image_and_map_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_{:d}'.format(stage))
-    print_output_dir = os.path.join(os.path.normpath(output_dir),'pdf_stage_{:d}'.format(stage))
+    # get the used json configuration and the output directories for the different stages
+    json_for_stages, frozen_json_for_stages, output_dir_for_stages, frozen_output_dir_for_stages = get_json_and_output_dir_for_stages(json_file,
+                                                                                                            output_dir)
+
+    if compute_from_frozen:
+        image_and_map_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_frozen_stage_{:d}'.format(stage))
+        print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_frozen_stage_{:d}'.format(stage))
+    else:
+        image_and_map_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_{:d}'.format(stage))
+        print_output_dir = os.path.join(os.path.normpath(output_dir),'pdf_stage_{:d}'.format(stage))
 
     if write_out_warped_image or write_out_map or compute_det_of_jacobian:
         if not os.path.exists(image_and_map_output_dir):
@@ -490,13 +520,16 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
     map_output_filename = os.path.join(image_and_map_output_dir,'map_validation_format_{:05}.nrrd'.format(pair_nr))
     det_of_jacobian_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05}.txt'.format(pair_nr))
 
-    # get the used json configuration and the output directories for the different stages
-    json_for_stages,output_dir_for_stages = get_json_and_output_dir_for_stages(json_file,output_dir)
 
     # current case
-    current_json = json_for_stages[stage]
-    individual_dir = os.path.join(output_dir_for_stages[stage],'individual')
-    shared_dir = os.path.join(output_dir_for_stages[stage],'shared')
+    if compute_from_frozen:
+        current_json = frozen_json_for_stages[stage]
+        individual_dir = os.path.join(frozen_output_dir_for_stages[stage], 'individual')
+        shared_dir = os.path.join(frozen_output_dir_for_stages[stage], 'shared')
+    else:
+        current_json = json_for_stages[stage]
+        individual_dir = os.path.join(output_dir_for_stages[stage],'individual')
+        shared_dir = os.path.join(output_dir_for_stages[stage],'shared')
 
     # load the configuration
     params = pars.ParameterDict()
@@ -672,6 +705,8 @@ if __name__ == "__main__":
     parser.add_argument('--slice_proportion_3d', required=False, type=str, default=None, help='Where to slice for 3D visualizations [0,1] for each mode, as a comma separated list')
     parser.add_argument('--slice_mode_3d', required=False, type=str, default=None, help='Which visualization mode {0,1,2} as a comma separated list')
 
+    parser.add_argument('--compute_from_frozen', action='store_true', help='computes the results from optimization results with frozen parameters')
+
     parser.add_argument('--retarget_data_directory', required=False, default=None,help='Looks for the datafiles in this directory')
 
     parser.add_argument('--do_not_visualize', action='store_true', help='visualizes the output otherwise')
@@ -719,7 +754,9 @@ if __name__ == "__main__":
     for pair_nr in pair_nrs:
         print('Computing pair number: ' + str(pair_nr))
         compute_and_visualize_results(json_file=args.config,output_dir=output_dir,
-                                      stage=args.stage_nr,pair_nr=pair_nr,
+                                      stage=args.stage_nr,
+                                      compute_from_frozen=args.compute_from_frozen,
+                                      pair_nr=pair_nr,
                                       slice_proportion_3d=slice_proportion_3d,
                                       slice_mode_3d=slice_mode_3d,
                                       visualize=not args.do_not_visualize,
@@ -729,11 +766,18 @@ if __name__ == "__main__":
                                       retarget_data_directory=args.retarget_data_directory)
 
     if not args.do_not_print_images:
-        print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_stage_{:d}'.format(args.stage_nr))
+        if args.compute_from_frozen:
+            print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_frozen_stage_{:d}'.format(args.stage_nr))
+        else:
+            print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_stage_{:d}'.format(args.stage_nr))
 
         # if we have pdfjam we create a summary pdf
         if os.system('which pdfjam') == 0:
             summary_pdf_name = os.path.join(print_output_dir, 'summary.pdf')
+
+            if os.path.isfile(summary_pdf_name):
+                os.remove(summary_pdf_name)
+
             print('Creating summary PDF: ')
             cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_dir, '*.pdf'), summary_pdf_name)
             os.system(cmd)
