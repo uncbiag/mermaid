@@ -1529,7 +1529,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         # first deal with the individual parameters
         pl_ind, par_to_name_ind = utils.get_parameter_list_and_par_to_name_dict_from_parameter_dict(individual_pars)
-        cd = {'params': pl_ind}
+        #cd = {'params': pl_ind}
+        cd = {'params': filter(lambda p: p.requires_grad, pl_ind)}
         cd.update(settings_individual)
         par_list.append(cd)
         # add all the names
@@ -1539,7 +1540,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         # now deal with the shared parameters
         pl_shared, par_to_name_shared = utils.get_parameter_list_and_par_to_name_dict_from_parameter_dict(shared_pars)
-        cd = {'params': pl_shared}
+        #cd = {'params': pl_shared}
+        cd = {'params': filter(lambda p: p.requires_grad, pl_shared)}
         cd.update(settings_shared)
         par_list.append(cd)
         for current_par, key in zip(pl_shared, par_to_name_shared):

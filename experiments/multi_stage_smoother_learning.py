@@ -22,6 +22,7 @@ def do_registration(source_images,target_images,model_name,output_directory,
                     visualize_step,json_in,json_out,
                     optimize_over_deep_network=False,
                     optimize_over_weights=False,
+                    freeze_parameters=False,
                     start_from_previously_saved_parameters=True,
                     args_kvs=None):
 
@@ -49,6 +50,7 @@ def do_registration(source_images,target_images,model_name,output_directory,
     params_in['model']['registration_model']['forward_model']['smoother']['optimize_over_smoother_stds'] = False
     params_in['model']['registration_model']['forward_model']['smoother']['optimize_over_smoother_weights'] = optimize_over_weights
     params_in['model']['registration_model']['forward_model']['smoother']['start_optimize_over_smoother_parameters_at_iteration'] = 0
+    params_in['model']['registration_model']['forward_model']['smoother']['freeze_parameters'] = freeze_parameters
 
     spacing = None
     reg.register_images(source_images, target_images, spacing,
@@ -176,6 +178,9 @@ if __name__ == "__main__":
 
     parser.add_argument('--stage_nr', required=False, type=str, default=None, help='Which stages should be run {0,1,2} as a comma separated list')
 
+    parser.add_argument('--frozen_nr_of_epochs', required=False,type=str, default=None, help='number of epochs to run the three stages with frozen parameters (for refinement)')
+    parser.add_argument('--only_compute_frozen_epochs', action='store_true', help='if specified will not redo the optimization, but will only compute the frozen results based on previous optimizatin results')
+
     parser.add_argument('--config_kvs', required=False, default=None, help='Allows specifying key value pairs that will override json settings; in format k1.k2.k3=val1, k1.k2=val2')
 
     args = parser.parse_args()
@@ -198,6 +203,14 @@ if __name__ == "__main__":
         stage_nr = [0, 1, 2]
     else:
         stage_nr = [int(item) for item in args.stage_nr.split(',')]
+
+    compute_frozen_epochs = False
+    if args.frozen_nr_of_epochs is None:
+        frozen_nr_of_epochs = [0,0,0]
+    else:
+        compute_frozen_epochs = True
+        frozen_nr_of_epochs = [int(item) for item in args.frozen_nr_of_epochs.split(',')]
+
 
     if args.visualize:
         visualize_step = args.visualize_step
@@ -252,110 +265,265 @@ if __name__ == "__main__":
         f.write(out_str)
     f.close()
 
-    out_json_stage_0 = os.path.join(os.path.split(args.config)[0], 'out_stage_0_' + os.path.split(args.config)[1])
+    #
+    # Stage 0 (fixed weights) starts here
+    #
+
+    out_json_stage_0 = os.path.join(args.output_directory, 'out_stage_0_' + os.path.split(args.config)[1])
 
     if 0 in stage_nr:
 
-        print('Running stage 0: optimize only using given weights')
-        in_json = args.config
+        if not args.only_compute_frozen_epochs:
 
-        do_registration(
-            source_images=source_images,
-            target_images=target_images,
-            model_name=args.model_name,
-            output_directory=results_output_directory,
-            nr_of_epochs=nr_of_epochs[0],
-            nr_of_iterations=args.nr_of_iterations_per_batch,
-            map_low_res_factor=args.map_low_res_factor,
-            visualize_step=visualize_step,
-            json_in=in_json,
-            json_out=out_json_stage_0,
-            optimize_over_deep_network=False,
-            optimize_over_weights=False,
-            start_from_previously_saved_parameters=False,
-            args_kvs=args.config_kvs
-        )
+            print('Running stage 0: optimize only using given weights')
+            in_json = args.config
 
-        if args.retain_intermediate_stage_results:
-            print('Backing up the stage 0 results')
-            backup_dir = os.path.realpath(results_output_directory)+'_after_stage_0'
-            if os.path.exists(backup_dir):
-                shutil.rmtree(backup_dir)
-            shutil.copytree(results_output_directory, backup_dir)
+            do_registration(
+                source_images=source_images,
+                target_images=target_images,
+                model_name=args.model_name,
+                output_directory=results_output_directory,
+                nr_of_epochs=nr_of_epochs[0],
+                nr_of_iterations=args.nr_of_iterations_per_batch,
+                map_low_res_factor=args.map_low_res_factor,
+                visualize_step=visualize_step,
+                json_in=in_json,
+                json_out=out_json_stage_0,
+                optimize_over_deep_network=False,
+                optimize_over_weights=False,
+                freeze_parameters=False,
+                start_from_previously_saved_parameters=False,
+                args_kvs=args.config_kvs
+            )
 
-    out_json_stage_1 = os.path.join(os.path.split(args.config)[0],'out_stage_1_' + os.path.split(args.config)[1])
+            if args.retain_intermediate_stage_results:
+                print('Backing up the stage 0 results')
+                backup_dir = os.path.realpath(results_output_directory)+'_after_stage_0'
+                if os.path.exists(backup_dir):
+                    shutil.rmtree(backup_dir)
+                shutil.copytree(results_output_directory, backup_dir)
+
+        if compute_frozen_epochs:
+
+            print('Computing {:} frozen epochs for stage 0'.format(frozen_nr_of_epochs[0]))
+            in_json = out_json_stage_0
+            frozen_out_json_stage_0 = os.path.join(args.output_directory, 'frozen_out_stage_0_' + os.path.split(args.config)[1])
+
+            if args.only_compute_frozen_epochs:
+                # copy the earlier results of stage 0 into the current results directory
+                # (otherwise they are already in this directory and we can continue from there)
+                print('Restoring stage 0 results for continuation')
+                if os.path.exists(results_output_directory):
+                    shutil.rmtree(results_output_directory)
+                backup_dir = os.path.realpath(results_output_directory) + '_after_stage_0'
+                if os.path.exists(backup_dir):
+                    shutil.copytree(backup_dir,results_output_directory)
+                else:
+                    raise ValueError('could not restore stage 0 results')
+
+            do_registration(
+                source_images=source_images,
+                target_images=target_images,
+                model_name=args.model_name,
+                output_directory=results_output_directory,
+                nr_of_epochs=frozen_nr_of_epochs[0],
+                nr_of_iterations=args.nr_of_iterations_per_batch,
+                map_low_res_factor=args.map_low_res_factor,
+                visualize_step=visualize_step,
+                json_in=in_json,
+                json_out=frozen_out_json_stage_0,
+                optimize_over_deep_network=False,
+                optimize_over_weights=False,
+                freeze_parameters=True,
+                start_from_previously_saved_parameters=True,
+                args_kvs=args.config_kvs
+            )
+
+            if args.retain_intermediate_stage_results:
+                print('Backing up the frozen stage 0 results')
+                backup_dir = os.path.realpath(results_output_directory) + '_frozen_after_stage_0'
+                if os.path.exists(backup_dir):
+                    shutil.rmtree(backup_dir)
+                shutil.copytree(results_output_directory, backup_dir)
+
+    #
+    # Stage 1 (optimizing over global weights) starts here
+    #
+
+    out_json_stage_1 = os.path.join(args.output_directory,'out_stage_1_' + os.path.split(args.config)[1])
 
     if 1 in stage_nr:
 
-        print('Running stage 1: now continue optimizing, but optimizing over the global weights')
-        in_json = out_json_stage_0
+        if not args.only_compute_frozen_epochs:
 
-        backup_dir_stage_0 = os.path.realpath(results_output_directory)+'_after_stage_0'
-        if os.path.exists(backup_dir_stage_0):
-            print('Copying ' + backup_dir_stage_0 + ' to ' + results_output_directory)
-            shutil.rmtree(results_output_directory)
-            shutil.copytree(backup_dir_stage_0,results_output_directory)
+            print('Running stage 1: now continue optimizing, but optimizing over the global weights')
+            in_json = out_json_stage_0
 
-        do_registration(
-            source_images=source_images,
-            target_images=target_images,
-            model_name=args.model_name,
-            output_directory=results_output_directory,
-            nr_of_epochs=nr_of_epochs[1],
-            nr_of_iterations=args.nr_of_iterations_per_batch,
-            map_low_res_factor=args.map_low_res_factor,
-            visualize_step=visualize_step,
-            json_in=in_json,
-            json_out=out_json_stage_1,
-            optimize_over_deep_network=False,
-            optimize_over_weights=True,
-            start_from_previously_saved_parameters=True,
-            args_kvs=args.config_kvs
-        )
+            backup_dir_stage_0 = os.path.realpath(results_output_directory)+'_after_stage_0'
+            if os.path.exists(backup_dir_stage_0):
+                print('Copying ' + backup_dir_stage_0 + ' to ' + results_output_directory)
+                shutil.rmtree(results_output_directory)
+                shutil.copytree(backup_dir_stage_0,results_output_directory)
 
-        if args.retain_intermediate_stage_results:
-            print('Backing up the stage 1 results')
-            backup_dir = os.path.realpath(results_output_directory) + '_after_stage_1'
-            if os.path.exists(backup_dir):
-                shutil.rmtree(backup_dir)
-            shutil.copytree(results_output_directory, backup_dir)
+            do_registration(
+                source_images=source_images,
+                target_images=target_images,
+                model_name=args.model_name,
+                output_directory=results_output_directory,
+                nr_of_epochs=nr_of_epochs[1],
+                nr_of_iterations=args.nr_of_iterations_per_batch,
+                map_low_res_factor=args.map_low_res_factor,
+                visualize_step=visualize_step,
+                json_in=in_json,
+                json_out=out_json_stage_1,
+                optimize_over_deep_network=False,
+                optimize_over_weights=True,
+                freeze_parameters=False,
+                start_from_previously_saved_parameters=True,
+                args_kvs=args.config_kvs
+            )
 
-    out_json_stage_2 = os.path.join(os.path.split(args.config)[0], 'out_stage_2_' + os.path.split(args.config)[1])
+            if args.retain_intermediate_stage_results:
+                print('Backing up the stage 1 results')
+                backup_dir = os.path.realpath(results_output_directory) + '_after_stage_1'
+                if os.path.exists(backup_dir):
+                    shutil.rmtree(backup_dir)
+                shutil.copytree(results_output_directory, backup_dir)
+
+        if compute_frozen_epochs:
+
+            print('Computing {:} frozen epochs for stage 1'.format(frozen_nr_of_epochs[1]))
+            in_json = out_json_stage_1
+            frozen_out_json_stage_1 = os.path.join(args.output_directory,
+                                                   'frozen_out_stage_1_' + os.path.split(args.config)[1])
+
+            if args.only_compute_frozen_epochs:
+                # copy the earlier results of stage 0 into the current results directory
+                # (otherwise they are already in this directory and we can continue from there)
+                print('Restoring stage 1 results for continuation')
+                if os.path.exists(results_output_directory):
+                    shutil.rmtree(results_output_directory)
+                backup_dir = os.path.realpath(results_output_directory) + '_after_stage_1'
+                if os.path.exists(backup_dir):
+                    shutil.copytree(backup_dir, results_output_directory)
+                else:
+                    raise ValueError('could not restore stage 1 results')
+
+            do_registration(
+                source_images=source_images,
+                target_images=target_images,
+                model_name=args.model_name,
+                output_directory=results_output_directory,
+                nr_of_epochs=frozen_nr_of_epochs[1],
+                nr_of_iterations=args.nr_of_iterations_per_batch,
+                map_low_res_factor=args.map_low_res_factor,
+                visualize_step=visualize_step,
+                json_in=in_json,
+                json_out=frozen_out_json_stage_1,
+                optimize_over_deep_network=False,
+                optimize_over_weights=True,
+                freeze_parameters=True,
+                start_from_previously_saved_parameters=True,
+                args_kvs=args.config_kvs
+            )
+
+            if args.retain_intermediate_stage_results:
+                print('Backing up the frozen stage 1 results')
+                backup_dir = os.path.realpath(results_output_directory) + '_frozen_after_stage_1'
+                if os.path.exists(backup_dir):
+                    shutil.rmtree(backup_dir)
+                shutil.copytree(results_output_directory, backup_dir)
+
+    #
+    # Stage 2 (optimizing over NN weights) starts here
+    #
+
+    out_json_stage_2 = os.path.join(args.output_directory, 'out_stage_2_' + os.path.split(args.config)[1])
 
     if 2 in stage_nr:
 
-        print('Running stage 2: now optimize over the network (keeping everything else fixed)')
-        in_json = out_json_stage_1
+        if not args.only_compute_frozen_epochs:
 
-        backup_dir_stage_1 = os.path.realpath(results_output_directory) + '_after_stage_1'
-        if os.path.exists(backup_dir_stage_1):
-            print('Copying ' + backup_dir_stage_1 + ' to ' + results_output_directory)
-            shutil.rmtree(results_output_directory)
-            shutil.copytree(backup_dir_stage_1, results_output_directory)
+            print('Running stage 2: now optimize over the network (keeping everything else fixed)')
+            in_json = out_json_stage_1
 
-        do_registration(
-            source_images=source_images,
-            target_images=target_images,
-            model_name=args.model_name,
-            output_directory=results_output_directory,
-            nr_of_epochs=nr_of_epochs[2],
-            nr_of_iterations=args.nr_of_iterations_per_batch,
-            visualize_step=visualize_step,
-            map_low_res_factor=args.map_low_res_factor,
-            json_in=in_json,
-            json_out=out_json_stage_2,
-            optimize_over_deep_network=True,
-            optimize_over_weights=False,
-            start_from_previously_saved_parameters=True,
-            args_kvs=args.config_kvs
-        )
+            backup_dir_stage_1 = os.path.realpath(results_output_directory) + '_after_stage_1'
+            if os.path.exists(backup_dir_stage_1):
+                print('Copying ' + backup_dir_stage_1 + ' to ' + results_output_directory)
+                shutil.rmtree(results_output_directory)
+                shutil.copytree(backup_dir_stage_1, results_output_directory)
 
-        if args.retain_intermediate_stage_results:
-            print('Backing up the stage 2 results')
-            backup_dir = os.path.realpath(results_output_directory) + '_after_stage_2'
-            if os.path.exists(backup_dir):
-                shutil.rmtree(backup_dir)
-            shutil.copytree(results_output_directory, backup_dir)
+            do_registration(
+                source_images=source_images,
+                target_images=target_images,
+                model_name=args.model_name,
+                output_directory=results_output_directory,
+                nr_of_epochs=nr_of_epochs[2],
+                nr_of_iterations=args.nr_of_iterations_per_batch,
+                visualize_step=visualize_step,
+                map_low_res_factor=args.map_low_res_factor,
+                json_in=in_json,
+                json_out=out_json_stage_2,
+                optimize_over_deep_network=True,
+                optimize_over_weights=False,
+                freeze_parameters=False,
+                start_from_previously_saved_parameters=True,
+                args_kvs=args.config_kvs
+            )
+
+            if args.retain_intermediate_stage_results:
+                print('Backing up the stage 2 results')
+                backup_dir = os.path.realpath(results_output_directory) + '_after_stage_2'
+                if os.path.exists(backup_dir):
+                    shutil.rmtree(backup_dir)
+                shutil.copytree(results_output_directory, backup_dir)
+
+        if compute_frozen_epochs:
+
+            print('Computing {:} frozen epochs for stage 2'.format(frozen_nr_of_epochs[2]))
+            in_json = out_json_stage_2
+            frozen_out_json_stage_2 = os.path.join(args.output_directory,
+                                                   'frozen_out_stage_2_' + os.path.split(args.config)[1])
+
+            if args.only_compute_frozen_epochs:
+                # copy the earlier results of stage 0 into the current results directory
+                # (otherwise they are already in this directory and we can continue from there)
+                print('Restoring stage 2 results for continuation')
+                if os.path.exists(results_output_directory):
+                    shutil.rmtree(results_output_directory)
+                backup_dir = os.path.realpath(results_output_directory) + '_after_stage_2'
+                if os.path.exists(backup_dir):
+                    shutil.copytree(backup_dir, results_output_directory)
+                else:
+                    raise ValueError('could not restore stage 2 results')
+
+            do_registration(
+                source_images=source_images,
+                target_images=target_images,
+                model_name=args.model_name,
+                output_directory=results_output_directory,
+                nr_of_epochs=frozen_nr_of_epochs[2],
+                nr_of_iterations=args.nr_of_iterations_per_batch,
+                map_low_res_factor=args.map_low_res_factor,
+                visualize_step=visualize_step,
+                json_in=in_json,
+                json_out=frozen_out_json_stage_2,
+                optimize_over_deep_network=True,
+                optimize_over_weights=False,
+                freeze_parameters=True,
+                start_from_previously_saved_parameters=True,
+                args_kvs=args.config_kvs
+            )
+
+            if args.retain_intermediate_stage_results:
+                print('Backing up the frozen stage 2 results')
+                backup_dir = os.path.realpath(results_output_directory) + '_frozen_after_stage_2'
+                if os.path.exists(backup_dir):
+                    shutil.rmtree(backup_dir)
+                shutil.copytree(results_output_directory, backup_dir)
+
+
+    # Do cleanup
 
     # now remove temporary results directory
     if os.path.exists(results_output_directory):
