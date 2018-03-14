@@ -232,12 +232,15 @@ def extract_id_from_cumc_filename(filename):
     nr = int(r[1][1:-4])
     return nr
 
-def create_map_filename(id,output_dir,stage):
+def create_map_filename(id,output_dir,stage,compute_from_frozen=False):
 
     if not stage in [0,1,2]:
-        raise ValueError('stages need to be {0,1,2} mapping to stage 1, 2, and 3 respectively')
+        raise ValueError('stages need to be {0,1,2}')
 
-    stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_' + str(stage))
+    if compute_from_frozen:
+        stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_frozen_stage_' + str(stage))
+    else:
+        stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_' + str(stage))
 
     map_filename = os.path.join(stage_output_dir,'map_validation_format_{:05d}.nrrd'.format(id))
     #map_filename = os.path.join(stage_output_dir, 'map_validation_format_{:05d}.pt'.format(id))
@@ -280,6 +283,8 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_directory', required=True,
                         help='Main directory where dataset is stored; this directory should contain the subdirectory label_affine_icbm')
 
+    parser.add_argument('--compute_from_frozen', action='store_true', help='computes the results from optimization results with frozen parameters')
+
     parser.add_argument('--do_not_visualize', action='store_true', help='visualizes the output otherwise')
     parser.add_argument('--do_not_print_images', action='store_true', help='prints the results otherwise')
 
@@ -318,7 +323,7 @@ if __name__ == "__main__":
         source_id = extract_id_from_cumc_filename(current_source_image)
         target_id = extract_id_from_cumc_filename(current_target_image)
 
-        current_map_filename,stage_output_dir = create_map_filename(n,output_directory,stage)
+        current_map_filename,stage_output_dir = create_map_filename(n,output_directory,stage,args.compute_from_frozen)
 
         mean_result,single_results = calculate_image_overlap('CUMC', dataset_directory, current_map_filename, source_id, target_id)
 
