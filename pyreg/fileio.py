@@ -101,6 +101,18 @@ class FileIO(object):
     def _convert_itk_matrix_to_numpy(self,M):
         return itk.GetArrayFromVnlMatrix(M.GetVnlMatrix().as_matrix())
 
+    def _convert_numpy_vector_to_itk(self,v):
+        v_itk = itk.Vector[itk.D, len(v)]()
+        vnl_vec = itk.PyVnl[itk.D].GetVnlVectorFromArray(v.astype('float64'))
+        v_itk.SetVnlVector(vnl_vec)
+        return v_itk
+
+    def _convert_numpy_matrix_to_itk(self,M):
+        s = M.shape
+        vnl_mat = itk.PyVnl[itk.D].GetVnlMatrixFromArray(M.astype('float64'))
+        m_itk = itk.Matrix[itk.D,s[0],s[1]](vnl_mat)
+        return m_itk
+
     def _convert_data_to_numpy_if_needed(self,data):
         if ( type( data ) == torch.autograd.variable.Variable ) or \
                 (type(data) == torch.torch.nn.parameter.Parameter) or \
@@ -166,6 +178,24 @@ class ImageIO(FileIO):
         """ padding the img to favorable size default img.shape%adaptive_padding = 0"""
         self.normalize_spacing = True
         """normalized spacing so that the aspect ratio remains and the largest extent is in [0,1]"""
+        self.scale_vectors_on_read_and_write = True
+        """
+        When writing vector fields (for example maps), the vectors in the field are scaled back to original world coordinates.
+        When reading they are scaled if the spacing is being normalized. Should be turned off when trying to read or write 
+        vector-valued images that do not represent maps or displacement fields.
+        """
+
+    def turn_scale_vectors_on_read_and_write_on(self):
+        self.scale_vectors_on_read_and_write = True
+
+    def turn_scale_vectors_on_read_and_write_off(self):
+        self.scale_vectors_on_read_and_write = False
+
+    def set_scale_vectors_on_read_and_write(self,val):
+        self.scale_vectors_on_read_and_write = val
+
+    def get_scale_vectors_on_read_and_write(self):
+        return self.scale_vectors_on_read_and_write
 
     def turn_normalize_spacing_on(self):
         """
@@ -361,18 +391,126 @@ class ImageIO(FileIO):
                         return False
         return True
 
+    def _get_scalar_itk_image_from_numpy(self,np_im,hdr=None):
+        im = itk.GetImageFromArray(np_im)
+        if hdr is not None:
+            if 'original_spacing' in hdr:
+                im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['original_spacing']))
+            else:
+                im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['spacing']))
+            im.SetOrigin(self._convert_numpy_vector_to_itk(hdr['space origin']))
+            im.SetDirection(self._convert_numpy_matrix_to_itk(hdr['space directions']))
+
+        return im
+
+    def _get_vector_itk_image_from_numpy(self,np_vec_im_in,hdr=None):
+        s = np_vec_im_in.shape
+
+        if hdr is not None:
+            if 'dimension' in hdr:
+                dim = hdr['dimension']
+            else:
+                dim = len(s)-1
+        else:
+            dim = len(s)-1
+
+        if self.scale_vectors_on_read_and_write:
+            # scale it so that we have the original spacing
+            print_warning = True
+            if hdr is not None:
+                if 'vector_was_scaled' in hdr:
+                    print_warning = not hdr['vector_was_scaled']
+            if print_warning:
+                print('WARNING: scaling vector image that may not have been scaled when reading')
+
+            scaling = np.array(hdr['original_spacing']) / np.array(hdr['spacing'])
+
+            np_vec_im = np.copy(np_vec_im_in)
+            for d in range(dim):
+                np_vec_im[d, ...] *= scaling[d]
+
+        else:
+            # just keep it as is
+            np_vec_im = np_vec_im_in
+
+        nv_vec_im_rf = np.moveaxis(np_vec_im, 0, -1)
+
+        VectorType = itk.Vector[itk.F, dim]
+        FieldType = itk.Image[VectorType, dim]
+
+        size = itk.Size[dim]()
+        reverse_shape = list(nv_vec_im_rf.shape[0:-1])
+        reverse_shape.reverse()
+
+        for d in range(dim):
+            size[d] = reverse_shape[d]
+
+        region = itk.ImageRegion[dim](size)
+
+        vec_im = FieldType.New()
+        vec_im.SetRegions(region)
+        vec_im.Allocate()
+
+        vec_view_np = itk.GetArrayViewFromImage(vec_im)
+        vec_view_np[:] = nv_vec_im_rf
+
+        if 'original_spacing' in hdr:
+            vec_im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['original_spacing']))
+        else:
+            vec_im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['spacing']))
+
+        vec_im.SetOrigin(self._convert_numpy_vector_to_itk(hdr['space origin']))
+        vec_im.SetDirection(self._convert_numpy_matrix_to_itk(hdr['space directions']))
+
+        return vec_im
+
+    def _get_itk_image_from_numpy(self,np_im, hdr=None):
+
+        if hdr is not None:
+            if 'dimension' in hdr:
+                dim = hdr['dimension']
+            else:
+                dim = len(np_im.shape)
+
+        if len(np_im.shape)>dim:
+            treat_as_scalar_image = False
+        else:
+            treat_as_scalar_image = True
+
+        if treat_as_scalar_image:
+            return self._get_scalar_itk_image_from_numpy(np_im,hdr)
+        else:
+            return self._get_vector_itk_image_from_numpy(np_im,hdr)
+
     def _convert_itk_image_to_numpy(self,I0_itk):
         if self.datatype_conversion:
             I0 = itk.GetArrayViewFromImage(I0_itk).astype(self.default_datatype)
         else:
             I0 = itk.GetArrayViewFromImage(I0_itk)
+
+        if len(I0.shape)>I0_itk.GetImageDimension():
+            is_vector_image = True
+            # itk has a different convention, there the vector component is the last dimension, so we need to swap it
+            I0 = np.moveaxis(I0,-1,0)
+        else:
+            is_vector_image = False
+
         image_meta_data = dict()
         image_meta_data['space origin'] = self._convert_itk_vector_to_numpy(I0_itk.GetOrigin())
         image_meta_data['spacing'] = self._convert_itk_vector_to_numpy(I0_itk.GetSpacing())
         image_meta_data['space directions'] = self._convert_itk_matrix_to_numpy(I0_itk.GetDirection())
-        image_meta_data['sizes'] = I0.shape
+
         image_meta_data['dimension'] = I0_itk.GetImageDimension()
         image_meta_data['space'] = 'left-posterior-superior'
+
+        image_meta_data['is_vector_image'] = is_vector_image
+
+        if is_vector_image:
+            image_meta_data['sizes'] = I0.shape[1:] # first dimension is vector dimension here
+        else:
+            image_meta_data['sizes'] = I0.shape
+
+
         """
         NRRD format
         {u'dimension': 3,
@@ -425,13 +563,9 @@ class ImageIO(FileIO):
         if verbose and not silent_mode:
             print('Reading image: ' + filename)
 
-        if self._is_nrrd_filename(filename):
-            # load with the dedicated nrrd reader (can also read higher dimensional files)
-            im, hdr = nrrd.read(filename)
-        else:
-            # read with the itk reader (can also read other file formats)
-            im_itk = itk.imread(filename)
-            im, hdr = self._convert_itk_image_to_numpy(im_itk)
+        # read with the itk reader (can also read other file formats)
+        im_itk = itk.imread(filename)
+        im, hdr = self._convert_itk_image_to_numpy(im_itk)
 
         if self.replace_nans_with_zeros:
             im[np.isnan(im)]=0
@@ -483,7 +617,6 @@ class ImageIO(FileIO):
             if not silent_mode:
                 print('INFO: Image WAS intensity normalized when loading:' \
                       + ' [' + str(im.min()) + ',' + str(im.max()) + ']')
-
         else:
             if not silent_mode:
                 print('WARNING: Image was NOT intensity normalized when loading:' \
@@ -496,6 +629,16 @@ class ImageIO(FileIO):
             spacing = self._normalize_spacing(spacing,sz,silent_mode)
             squeezed_spacing = self._normalize_spacing(squeezed_spacing,sz_squeezed,silent_mode)
             hdr['spacing'] = spacing
+
+            if hdr['is_vector_image']:
+                if self.scale_vectors_on_read_and_write:
+                    hdr['vector_image_was_scaled'] = True
+                    if not silent_mode:
+                        print('Scaling the vector image to conform to the scaled spacing')
+                    # we also need to normalize the vector components in this case
+                    vector_scaling = np.array(hdr['spacing']) / np.array(hdr['original_spacing'])
+                    for d in range(dim):
+                        im[d, ...] *= vector_scaling[d]
 
         return im,hdr,spacing,squeezed_spacing
 
@@ -616,8 +759,6 @@ class ImageIO(FileIO):
         sz = npd.shape
         nr_of_images = sz[0]
         nr_of_channels = sz[1]
-        if nr_of_channels!=1:
-            raise ValueError('Only one intensity channel is currently supported')
 
         if type(filenames)==list:
             nr_of_filenames = len(filenames)
@@ -625,33 +766,32 @@ class ImageIO(FileIO):
                 raise ValueError('Error: a filename needs to be specified for each image in the batch')
             # filenames were specified separately
             for counter,filename in enumerate(filenames):
-                self.write(filename,npd[counter,0,...].squeeze(),hdr)
+                if nr_of_channels==1: # this is a scalar image
+                    self.write(filename,npd[counter,0,...].squeeze(),hdr)
+                else: # this is a vector image
+                    self.write(filename, npd[counter, ...], hdr)
         else:
             # there is one filename specified as a pattern
             filenamepattern, file_extension = os.path.splitext(filenames)
             for counter in range(nr_of_images):
                 current_filename = filenamepattern + '_' + str(counter).zfill(4) + file_extension
-                self.write(current_filename,npd[counter,0,...].squeeze(),hdr)
+                if nr_of_channels==1: # this is a scalar image
+                    self.write(current_filename,npd[counter,0,...].squeeze(),hdr)
+                else: # this is a vector image
+                    self.write(current_filename,npd[counter,...].squeeze(),hdr)
 
     def write(self, filename, data, hdr=None):
-        if not self._is_nrrd_filename(filename):
-            print('Sorry, currently only nrrd files are supported as output. Aborting.')
-            return
-        # now write it out
-        print('Writing image: ' + filename)
-        if hdr is not None:
-            hdr_modified = copy.deepcopy(hdr)
-            if 'original_spacing' in hdr_modified:
-                hdr_modified['spacing'] = hdr_modified['original_spacing']
-                hdr_modified.pop('original_spacing')
-            nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ), hdr_modified)
-        else:
-            nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ))
+
+       # now write it out
+        print('Writing: ' + filename)
+        npd = self._convert_data_to_numpy_if_needed(data)
+        data_itk = self._get_itk_image_from_numpy(npd, hdr)
+        itk.imwrite(data_itk, filename)
 
 
 class GenericIO(FileIO):
     """
-    Generic class to read nrrd images. Can be used for example to write out registration parameters.
+    Generic class to read nrrd images. More or less legacy. Use should be avoided if at all possible
     """
 
     def __init__(self):
@@ -681,84 +821,91 @@ class GenericIO(FileIO):
                 if 'original_spacing' in hdr_modified:
                     hdr_modified['spacing'] = hdr_modified['original_spacing']
                     hdr_modified.pop('original_spacing')
+                    if 'is_vector_image' in hdr_modified:
+                        hdr_modified.pop('is_vector_image')
+                    if 'vector_image_was_scaled' in hdr_modified:
+                        hdr_modified.pop('vector_image_was_scaled')
                 nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ), hdr_modified)
             else:
                 nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ) )
 
-class MapIO(GenericIO):
+class MapIO(ImageIO):
     """
-    Generic class to read and write maps as nrrd files. Trivially derived from GenericIO.
+    To read and write maps or displacement fields.
     """
 
     def __init__(self):
         super(MapIO, self).__init__()
 
+    def read_from_validation_map_format(self, filename):
+        current_scale_mode = self.get_scale_vectors_on_read_and_write()
+        self.turn_scale_vectors_on_read_and_write_off()
+
+        # now that we are sure this is a map (or dispalcement field), let's write it with the standard image IO
+        im, hdr, spacing, squeezed_spacing = super(MapIO, self).read(filename,silent_mode=True)
+
+        self.set_scale_vectors_on_read_and_write(current_scale_mode)
+
+        return im, hdr, spacing, squeezed_spacing
+
+
     def write(self, filename, data, hdr):
-        if not self._is_nrrd_filename(filename):
-            print('Sorry, currently only nrrd files are supported when writing. Aborting.')
-            return
-        else:
-            if hdr is None:
-                raise ValueError('hdr needs to be specified to keep track of spacing')
-            dim = hdr['dimension']
 
-            data_new = copy.deepcopy(self._convert_data_to_numpy_if_needed(data))
-            sz = data_new.shape
+        if hdr is None:
+            raise ValueError('hdr needs to be specified to keep track of spacing')
 
-            if len(sz) != dim + 1:
-                raise ValueError('Expected a dim x X x Y x Z format; i.e., cannot write an entire batch at once')
+        dim = hdr['dimension']
 
-            nr_of_dim = sz[0]
-            if nr_of_dim > 3:
-                raise ValueError(
-                    'Only dimensions up to 3 are supported. Make sure the data is in dim x X x Y x Z format')
+        data_new = copy.deepcopy(self._convert_data_to_numpy_if_needed(data))
+        sz = data_new.shape
 
-            print('Writing: ' + filename)
-            hdr_modified = copy.deepcopy(hdr)
+        if len(sz) != dim + 1:
+            raise ValueError('Expected a dim x X x Y x Z format; i.e., cannot write an entire batch at once')
 
-            if 'original_spacing' in hdr_modified:
-                hdr_modified['spacing'] = hdr_modified['original_spacing']
-                hdr_modified.pop('original_spacing')
+        nr_of_dim = sz[0]
+        if nr_of_dim > 3:
+            raise ValueError(
+                'Only dimensions up to 3 are supported. Make sure the data is in dim x X x Y x Z format')
 
-            # since this is map we need to convert the values so we get [0,szx-1]x[0,szy-1]x[0,szz-1] format
-            for d in range(nr_of_dim):
-                data_new[d, ...] = data_new[d, ...]*hdr['spacing'][d]/hdr['original_spacing'][d]
-
-            nrrd.write(filename, data_new, hdr_modified)
-
+        # now that we are sure this is a map (or dispalcement field), let's write it with the standard image IO
+        super(MapIO, self).write(filename,data,hdr)
 
     def write_to_validation_map_format(self, filename, data, hdr):
-        if not self._is_nrrd_filename(filename):
-            print('Sorry, currently only nrrd files are supported when writing. Aborting.')
-            return
-        else:
-            if hdr is None:
-                raise ValueError('hdr needs to be specified to keep track of spacing')
-            dim = hdr['dimension']
 
-            data_new = copy.deepcopy(self._convert_data_to_numpy_if_needed(data))
-            sz = data_new.shape
+        if hdr is None:
+            raise ValueError('hdr needs to be specified to keep track of spacing')
+        dim = hdr['dimension']
 
-            if len(sz)!=dim+1:
-                raise ValueError('Expected a dim x X x Y x Z format; i.e., cannot write an entire batch at once')
+        data_new = copy.deepcopy(self._convert_data_to_numpy_if_needed(data))
+        sz = data_new.shape
 
-            nr_of_dim = sz[0]
-            if nr_of_dim > 3:
-                raise ValueError(
-                    'Only dimensions up to 3 are supported. Make sure the data is in dim x X x Y x Z format')
+        if len(sz)!=dim+1:
+            raise ValueError('Expected a dim x X x Y x Z format; i.e., cannot write an entire batch at once')
 
-            print('Writing: ' + filename)
-            hdr_modified = copy.deepcopy(hdr)
-            if 'original_spacing' in hdr_modified:
-                hdr_modified.pop('original_spacing')
-            hdr_modified['spacing'] = [1]*dim
+        nr_of_dim = sz[0]
+        if nr_of_dim > 3:
+            raise ValueError(
+                'Only dimensions up to 3 are supported. Make sure the data is in dim x X x Y x Z format')
 
-            # since this is map we need to convert the values so we get [0,szx-1]x[0,szy-1]x[0,szz-1] format
-            for d in range(nr_of_dim):
-                data_new[d,...] = data_new[d,...]/hdr['spacing'][d]
+        # since this is map we need to convert the values so we get [0,szx-1]x[0,szy-1]x[0,szz-1] format
+        for d in range(nr_of_dim):
+            data_new[d, ...] = data_new[d, ...] / hdr['spacing'][d]
 
-            nrrd.write(filename, data_new, hdr_modified)
+        hdr_modified = copy.deepcopy(hdr)
+        if 'original_spacing' in hdr_modified:
+            hdr_modified.pop('original_spacing')
+        if 'is_vector_image' in hdr_modified:
+            hdr_modified.pop('is_vector_image')
+        if 'vector_image_was_scaled' in hdr_modified:
+            hdr_modified.pop('vector_image_was_scaled')
 
+        #hdr_modified['spacing'] = [1] * dim # keep the original spacing; just need to be aware of the convention
 
+        current_scale_mode = self.get_scale_vectors_on_read_and_write()
+        self.turn_scale_vectors_on_read_and_write_off()
 
+        # now that we are sure this is a map (or dispalcement field), let's write it with the standard image IO
+        super(MapIO, self).write(filename, data_new, hdr_modified)
+
+        self.set_scale_vectors_on_read_and_write(current_scale_mode)
 

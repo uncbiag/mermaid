@@ -330,6 +330,11 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
         model_dict['lam'] = model_pars['lam']
     model_dict['m'] = m
     model_dict['v'] = v
+    if use_map:
+        model_dict['id'] = identityMap
+    if map_low_res_factor is not None:
+        model_dict['map_low_res_factor'] = map_low_res_factor
+        model_dict['low_res_id'] = lowResIdentityMap
 
     return rec_IWarped,rec_phiWarped, model_dict
 
@@ -483,7 +488,9 @@ def compute_determinant_of_jacobian(phi,spacing):
 
 
 def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen,pair_nr,slice_proportion_3d=0.5,slice_mode_3d=0,visualize=False,
-                                  print_images=False,write_out_images=True,compute_det_of_jacobian=True,retarget_data_directory=None):
+                                  print_images=False,write_out_images=True,
+                                  write_out_source_image=False,write_out_target_image=False,
+                                  compute_det_of_jacobian=True,retarget_data_directory=None):
 
     if write_out_images:
         write_out_warped_image = True
@@ -516,10 +523,14 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
             print('Creating output directory: ' + print_output_dir)
             os.makedirs(print_output_dir)
 
-    warped_output_filename = os.path.join(image_and_map_output_dir,'warped_{:05d}.nrrd'.format(pair_nr))
+    warped_output_filename = os.path.join(image_and_map_output_dir,'warped_image_{:05d}.nrrd'.format(pair_nr))
     map_output_filename = os.path.join(image_and_map_output_dir,'map_validation_format_{:05}.nrrd'.format(pair_nr))
-    det_of_jacobian_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05}.txt'.format(pair_nr))
+    det_jac_output_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05}.nrrd'.format(pair_nr))
+    displacement_output_filename = os.path.join(image_and_map_output_dir,'displacement_{:05}.nrrd'.format(pair_nr))
+    det_of_jacobian_txt_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05}.txt'.format(pair_nr))
 
+    source_image_output_filename = os.path.join(image_and_map_output_dir,'source_image_{:05d}.nrrd'.format(pair_nr))
+    target_image_output_filename = os.path.join(image_and_map_output_dir,'target_image_{:05d}.nrrd'.format(pair_nr))
 
     # current case
     if compute_from_frozen:
@@ -645,6 +656,7 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
         else:
             raise ValueError('I do not know how to visualize results with dimensions other than 2 or 3')
 
+
     # save the images
     if write_out_warped_image:
         im_io = FIO.ImageIO()
@@ -652,19 +664,26 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
 
     if write_out_map:
         map_io = FIO.MapIO()
-
-        #mres = dict()
-        #mres['spacing'] = spacing
-        #mres['phi'] = phi
-        #map_output_filename_torch = os.path.join(image_and_map_output_dir, 'map_validation_format_{:05}.pt'.format(pair_nr))
-        #print('Saving: ' + map_output_filename_torch )
-        #torch.save(mres,map_output_filename_torch)
-
         map_io.write_to_validation_map_format(map_output_filename, phi[0,...], hdr)
+
+        if 'id' in model_dict:
+            displacement = phi[0,...]-model_dict['id'][0,...]
+            map_io.write(displacement_output_filename, displacement, hdr)
+
+    if write_out_source_image:
+        im_io = FIO.ImageIO()
+        im_io.write(source_image_output_filename, ISource[0,0,...], hdr)
+
+    if write_out_target_image:
+        im_io = FIO.ImageIO()
+        im_io.write(target_image_output_filename, ITarget[0, 0, ...], hdr)
 
     # compute determinant of Jacobian of map
     if compute_det_of_jacobian:
         det = compute_determinant_of_jacobian(phi,spacing)
+
+        im_io = FIO.ImageIO()
+        im_io.write(det_jac_output_filename, det, hdr)
 
         det_min = np.min(det)
         det_max = np.max(det)
@@ -675,7 +694,7 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
         det_95_perc = np.percentile(det,95)
         det_99_perc = np.percentile(det,99)
 
-        f = open(det_of_jacobian_filename, 'w')
+        f = open(det_of_jacobian_txt_filename, 'w')
         f.write('min, max, mean, median, 1p, 5p, 95p, 99p\n')
         out_str = str(det_min) + ', '
         out_str += str(det_max) + ', '
@@ -706,6 +725,9 @@ if __name__ == "__main__":
     parser.add_argument('--slice_mode_3d', required=False, type=str, default=None, help='Which visualization mode {0,1,2} as a comma separated list')
 
     parser.add_argument('--compute_from_frozen', action='store_true', help='computes the results from optimization results with frozen parameters')
+
+    parser.add_argument('--do_not_write_source_image', action='store_true', help='otherwise also writes the source image for easy visualization')
+    parser.add_argument('--do_not_write_target_image', action='store_true', help='otherwise also writes the target image for easy visualization')
 
     parser.add_argument('--retarget_data_directory', required=False, default=None,help='Looks for the datafiles in this directory')
 
@@ -762,6 +784,8 @@ if __name__ == "__main__":
                                       visualize=not args.do_not_visualize,
                                       print_images=not args.do_not_print_images,
                                       write_out_images=not args.do_not_write_out_images,
+                                      write_out_source_image=not args.do_not_write_source_image,
+                                      write_out_target_image=not args.do_not_write_target_image,
                                       compute_det_of_jacobian=not args.do_not_compute_det_jac,
                                       retarget_data_directory=args.retarget_data_directory)
 
