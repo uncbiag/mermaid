@@ -1,0 +1,109 @@
+Running experiments is based on two python scripts which need to be run consecutively:
+
+1)  multi_stage_smoother_learning.py: This is the main optimization script, which as three stages (0,1,2) and which allows refinement with frozen parameters for all stages (though it really only makes sense for stages 1 and 2).
+
+2)  visualize_multi_stage.py: This runs the models based on the parameters obtained in 1) and outputs the warped map and also the warped image. It also creates a summary PDF of the registrations
+
+3) compute_validation_results.py: This script takes the output of 2) and computes label overlaps (currently only the CUMC12 dataset is supported). The final result is a boxplot comparing the results to the results in the Klein registration paper.
+
+
+What follows is an example on how to run through all the stages. But they can also be run independently as long as the data a particular stage depends on is available.
+
+To keep everything clean we assume that in the experiments directory we have a main json master file called: test3d_025.json
+The output (including all computed images, results, and json files) will be put into an output directory. The json master file can be one level above. This allows running multiple experiments with just one json master file.
+
+We assume our output goes into the subdirectory test_out. All directories will automatically be created if they do not exist yet.
+
+We also assume that all the image files are in subdirectory cumc12_experiment. Create one with symbolic links to the original data if you only want to consider a subset of the data for example.
+
+To run on a particular GPU we simply put CUDA_VISIBLE_DEVICES=2 in front of the python commands (here to run on GPU 2 ).
+
+1) multi_stage_smoother_learning.py
+-----------------------------------
+
+There are three stages here:
+stage 0: optimizes using a multi-Gaussian kernel with fixed weights.
+stage 1: Starts from stage 1, but now also optimizes over the weights of the mult-Gaussian kernel.
+stage 2: starts from 1, used the learned global weights, but keeps them fixed. Only the local weights based on the NN parameterization are learned.
+
+The default registration model is now svf_vector_momentum_map (though other models could also be used).
+
+
+CUDA_VISIBLE_DEVICES=2 python multi_stage_smoother_learning.py --input_image_directory ./cumc12_experiment --nr_of_image_pairs 10 --output_directory ./test_out --nr_of_epochs 20,10,5 --config ./test3d_025.json
+
+
+Optionally one can specify parameters such as:
+ --noshuffle  (then there is no random shuffling of image pairs to form the pairs)
+
+It is possible to specify custom key/value pairs on the command line 
+--config_kvs optimizer.sgd.individual.lr=1e-3,optimizer.sgd.shared.lr=2e-3
+
+The dots simply indicate the subdivsions in the json tree hierachy. And number of key-value pairs can be specified like this (comma separated). However, settings that are accessible via parameters of the script have priority over the key-value pairs. E.g., the number of iterations per batch can only be controlled via the command line parameter. If one sets it via a key-value pair, this key-value pair will be subsequently overwritten.
+
+If --nr_of_image_pairs is not specified all possible pairwise combinations are used.
+
+If it is desired to have different settings for different stages one can run the program stage-by-stage, e.g.,  using --stage_nr 0
+
+So to run all of them independently (which then allows specifying independent key-value pairs) one would execute
+
+CUDA_VISIBLE_DEVICES=2 python multi_stage_smoother_learning.py --input_image_directory ./cumc12_experiment --nr_of_image_pairs 10 --output_directory ./test_out --nr_of_epochs 20,10,5 --config ./test3d_025.json --stage_nr 0
+
+CUDA_VISIBLE_DEVICES=2 python multi_stage_smoother_learning.py --input_image_directory ./cumc12_experiment --nr_of_image_pairs 10 --output_directory ./test_out --nr_of_epochs 20,10,5 --config ./test3d_025.json --stage_nr 1
+
+CUDA_VISIBLE_DEVICES=2 python multi_stage_smoother_learning.py --input_image_directory ./cumc12_experiment --nr_of_image_pairs 10 --output_directory ./test_out --nr_of_epochs 20,10,5 --config ./test3d_025.json --stage_nr 2
+
+Even when --noshuffle is not used the stages will use consistent image pairs, as the image pairs are saved the first time they are created and then they are used in all subsequent calls.
+
+
+Sometime, one would like to run separate iterations with the parameters of a certain stage fixed (to refine registration results for a given parameterization of the smoother). This can be done by running
+
+
+CUDA_VISIBLE_DEVICES=2 python multi_stage_smoother_learning.py --input_image_directory ./cumc12_experiment --nr_of_image_pairs 10 --output_directory ./test_out --frozen_nr_of_epochs 2,2,2 --only_compute_frozen_epochs --config ./test3d_025.json
+
+
+It is also possible to compute the standard stages and the frozen refinements all at once. For this one simply also specified --frozen_nr_of_epochs 2,2,2 during the initial optimization run.
+
+20,10,5 for the epochs is just an example. I assume this is not the best possible setting. In particular, I assume that more iterations will be useful for stage 2.
+
+
+2) visualize_multi_stage.py
+---------------------------
+
+This step uses the optimized parameters from 1) to create the map and warped image. It also creates a PDF summary for all the computed registration results.
+
+CUDA_VISIBLE_DEVICES=2 python visualize_multi_stage.py --config ./test3d_025.json --output_directory  ./test_out --stage_nr 0
+CUDA_VISIBLE_DEVICES=2 python visualize_multi_stage.py --config ./test3d_025.json --output_directory  ./test_out --stage_nr 1
+CUDA_VISIBLE_DEVICES=2 python visualize_multi_stage.py --config ./test3d_025.json --output_directory  ./test_out --stage_nr 2
+
+And to generate the output from the frozen iterations (should they have been computed)
+
+CUDA_VISIBLE_DEVICES=2 python visualize_multi_stage.py --compute_from_frozen --config ./test3d_025.json --output_directory  ./test_out --stage_nr 0
+CUDA_VISIBLE_DEVICES=2 python visualize_multi_stage.py --compute_from_frozen --config ./test3d_025.json --output_directory  ./test_out --stage_nr 1
+CUDA_VISIBLE_DEVICES=2 python visualize_multi_stage.py --compute_from_frozen --config ./test3d_025.json --output_directory  ./test_out --stage_nr 2
+
+
+3) compute_validation_results.py
+--------------------------------
+
+The last step is to use the registration maps of 2) to compute results for the CUMC12 dataset.
+
+This is done by executing:
+
+CUDA_VISIBLE_DEVICES=2 python compute_validation_results.py --output_directory ./test_out --stage_nr 0 --dataset_directory /playpen/data/quicksilver_data/testdata/CUMC12
+CUDA_VISIBLE_DEVICES=2 python compute_validation_results.py --output_directory ./test_out --stage_nr 1 --dataset_directory /playpen/data/quicksilver_data/testdata/CUMC12
+CUDA_VISIBLE_DEVICES=2 python compute_validation_results.py --output_directory ./test_out --stage_nr 2 --dataset_directory /playpen/data/quicksilver_data/testdata/CUMC12
+
+Here, the dataset directory points to the directory that contains the label data in subdirectory label_affine_icbm
+
+As in 2) we can also compute the results for the frozen runs
+
+CUDA_VISIBLE_DEVICES=2 python compute_validation_results.py --compute_from_frozen --output_directory ./test_out --stage_nr 0 --dataset_directory /playpen/data/quicksilver_data/testdata/CUMC12
+CUDA_VISIBLE_DEVICES=2 python compute_validation_results.py --compute_from_frozen --output_directory ./test_out --stage_nr 1 --dataset_directory /playpen/data/quicksilver_data/testdata/CUMC12
+CUDA_VISIBLE_DEVICES=2 python compute_validation_results.py --compute_from_frozen --output_directory ./test_out --stage_nr 2 --dataset_directory /playpen/data/quicksilver_data/testdata/CUMC12
+
+
+Generated files:
+----------------
+
+A lot of different files will be generated during these runs. If this is too much some of them can be disabled (there are corrsponding command line arguments). Here is what is created with the default settings as used in the examples above:
+

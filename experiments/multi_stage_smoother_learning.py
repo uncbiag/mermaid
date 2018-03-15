@@ -178,6 +178,8 @@ if __name__ == "__main__":
 
     parser.add_argument('--stage_nr', required=False, type=str, default=None, help='Which stages should be run {0,1,2} as a comma separated list')
 
+    parser.add_argument('--do_not_read_used_images_from_file', action='store_true', help='If set the image pairs are recomputed. Use with EXTREME care as stage/frozen results may become inconsistent')
+
     parser.add_argument('--frozen_nr_of_epochs', required=False,type=str, default=None, help='number of epochs to run the three stages with frozen parameters (for refinement)')
     parser.add_argument('--only_compute_frozen_epochs', action='store_true', help='if specified will not redo the optimization, but will only compute the frozen results based on previous optimizatin results')
 
@@ -222,16 +224,11 @@ if __name__ == "__main__":
     else:
         nr_of_image_pairs = args.nr_of_image_pairs
 
-    source_images,target_images,source_ids,target_ids = get_n_pairwise_image_combinations(args.input_image_directory,
-                                                                    nr_of_image_pairs,
-                                                                    no_random_shuffle=args.noshuffle,
-                                                                    suffix=args.suffix)
-
     if not os.path.exists(args.output_directory):
         print('Creating output directory: ' + args.output_directory)
         os.makedirs(args.output_directory)
 
-    results_output_directory = os.path.join(args.output_directory,'results')
+    results_output_directory = os.path.join(args.output_directory, 'results')
     if os.path.exists(results_output_directory):
         print('Removing temporary results in directory ' + results_output_directory)
         shutil.rmtree(results_output_directory)
@@ -239,31 +236,62 @@ if __name__ == "__main__":
     print('Creating results output directory: ' + results_output_directory)
     os.makedirs(results_output_directory)
 
-    # first save how the data was created
-    d = dict()
-    d['source_images'] = source_images
-    d['target_images'] = target_images
-    d['source_ids'] = source_ids
-    d['target_ids'] = target_ids
+    used_image_pairs_filename_pt = os.path.join(args.output_directory, 'used_image_pairs.pt')
+    used_image_pairs_filename_txt = os.path.join(args.output_directory, 'used_image_pairs.txt')
 
-    used_image_pairs_filename_pt = os.path.join(args.output_directory,'used_image_pairs.pt')
-    used_image_pairs_filename_txt = os.path.join(args.output_directory,'used_image_pairs.txt')
+    create_new_image_pairs = False
 
-    torch.save(d,used_image_pairs_filename_pt)
+    if args.do_not_read_used_images_from_file:
+        if os.path.isfile(used_image_pairs_filename_pt):
+            print('WARNING! WARNING! image pair file ' + used_image_pairs_filename_pt + ' exists, but will not be used')
 
-    # also save it as a text file for easier readability
-    f = open(used_image_pairs_filename_txt, 'w')
-    f.write('Image pair id, source id, target id, source file name, target file name\n')
-    for i in range(len(source_images)):
-        out_str = str(i) + ', '
-        out_str += str(source_ids[i]) + ', '
-        out_str += str(target_ids[i]) + ', '
-        out_str += str(source_images[i]) + ', '
-        out_str += str(target_images[i])
-        out_str += '\n'
+        create_new_image_pairs = True
 
-        f.write(out_str)
-    f.close()
+    else:
+        if os.path.isfile(used_image_pairs_filename_pt):
+
+            print('INFO: Loading image pair configuration from: ' + used_image_pairs_filename_pt)
+
+            up = torch.load(used_image_pairs_filename_pt)
+            source_images = up['source_images']
+            target_images = up['target_images']
+            source_ids = up['source_ids']
+            target_ids = up['target_ids']
+        else:
+            create_new_image_pairs = True
+
+    if create_new_image_pairs:
+
+        print('INFO: creating new image pairs')
+
+        source_images, target_images, source_ids, target_ids = get_n_pairwise_image_combinations(
+            args.input_image_directory,
+            nr_of_image_pairs,
+            no_random_shuffle=args.noshuffle,
+            suffix=args.suffix)
+
+        # now save how the data was created
+        d = dict()
+        d['source_images'] = source_images
+        d['target_images'] = target_images
+        d['source_ids'] = source_ids
+        d['target_ids'] = target_ids
+
+        torch.save(d,used_image_pairs_filename_pt)
+
+        # also save it as a text file for easier readability
+        f = open(used_image_pairs_filename_txt, 'w')
+        f.write('Image pair id, source id, target id, source file name, target file name\n')
+        for i in range(len(source_images)):
+            out_str = str(i) + ', '
+            out_str += str(source_ids[i]) + ', '
+            out_str += str(target_ids[i]) + ', '
+            out_str += str(source_images[i]) + ', '
+            out_str += str(target_images[i])
+            out_str += '\n'
+
+            f.write(out_str)
+        f.close()
 
     #
     # Stage 0 (fixed weights) starts here
