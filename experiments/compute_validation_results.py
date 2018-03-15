@@ -59,7 +59,7 @@ def warp_image_nn(moving, phi):
     return result
 
 def calculate_image_overlap(dataset_name, dataset_dir, phi_path, source_labelmap_path, target_labelmap_path,
-                            warped_labelmap_path,moving_id, target_id):
+                            warped_labelmap_path,moving_id, target_id, use_sym_links=True):
     """
     Calculate the overlapping rate of a specified case
     :param dataset_name: 'LPBA', 'IBSR', 'CUMC' or 'MGH'
@@ -119,10 +119,16 @@ def calculate_image_overlap(dataset_name, dataset_dir, phi_path, source_labelmap
     im_io.write(warped_labelmap_path,warp_result,hdr)
 
     if source_labelmap_path is not None:
-        im_io.write(source_labelmap_path,label_from,hdr)
+        if use_sym_links:
+            utils.create_symlink_with_correct_ext(label_from_filename,source_labelmap_path)
+        else:
+            im_io.write(source_labelmap_path,label_from,hdr)
 
     if target_labelmap_path is not None:
-        im_io.write(target_labelmap_path,label_to,hdr)
+        if use_sym_links:
+            utils.create_symlink_with_correct_ext(label_to_filename,target_labelmap_path)
+        else:
+            im_io.write(target_labelmap_path,label_to,hdr)
 
 
     for label_idx in range(len(Labels['Labels'])):
@@ -302,6 +308,7 @@ if __name__ == "__main__":
     parser.add_argument('--do_not_write_target_labelmap', action='store_true', help='otherwise also writes the target labelmap again for easy visualization')
     parser.add_argument('--do_not_write_source_labelmap', action='store_true', help='otherwise also writes the source labelmap again for easy visualization')
 
+    parser.add_argument('--do_not_use_symlinks', action='store_true', help='For source and target labelmaps, by default symbolic links are created, otherwise files are copied')
 
     parser.add_argument('--do_not_visualize', action='store_true', help='visualizes the output otherwise')
     parser.add_argument('--do_not_print_images', action='store_true', help='prints the results otherwise')
@@ -350,8 +357,14 @@ if __name__ == "__main__":
         if args.do_not_write_source_labelmap:
             current_source_labelmap_filename = None
 
+        print('current_map_filename: ' + current_map_filename)
+            
         mean_result,single_results = calculate_image_overlap('CUMC', dataset_directory, current_map_filename,
-                                                             current_source_labelmap_filename, current_target_labelmap_filename, current_warped_labelmap_filename, source_id, target_id)
+                                                             current_source_labelmap_filename,
+                                                             current_target_labelmap_filename,
+                                                             current_warped_labelmap_filename,
+                                                             source_id, target_id,
+                                                             use_sym_links=not args.do_not_use_symlinks)
 
         validation_results['source_id'].append(source_id)
         validation_results['target_id'].append(target_id)

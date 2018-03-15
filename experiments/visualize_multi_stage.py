@@ -16,6 +16,8 @@ from pyreg.data_wrapper import USE_CUDA, AdaptVal, MyTensor
 import pyreg.fileio as FIO
 import pyreg.visualize_registration_results as vizReg
 
+import pyreg.utils as utils
+
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -490,7 +492,8 @@ def compute_determinant_of_jacobian(phi,spacing):
 def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen,pair_nr,slice_proportion_3d=0.5,slice_mode_3d=0,visualize=False,
                                   print_images=False,write_out_images=True,
                                   write_out_source_image=False,write_out_target_image=False,
-                                  compute_det_of_jacobian=True,retarget_data_directory=None):
+                                  compute_det_of_jacobian=True,retarget_data_directory=None,
+                                  use_sym_links=True):
 
     if write_out_images:
         write_out_warped_image = True
@@ -671,12 +674,18 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
             map_io.write(displacement_output_filename, displacement, hdr)
 
     if write_out_source_image:
-        im_io = FIO.ImageIO()
-        im_io.write(source_image_output_filename, ISource[0,0,...], hdr)
+        if use_sym_links:
+            utils.create_symlink_with_correct_ext(current_source_filename,source_image_output_filename)
+        else:
+            im_io = FIO.ImageIO()
+            im_io.write(source_image_output_filename, ISource[0,0,...], hdr)
 
     if write_out_target_image:
-        im_io = FIO.ImageIO()
-        im_io.write(target_image_output_filename, ITarget[0, 0, ...], hdr)
+        if use_sym_links:
+            utils.create_symlink_with_correct_ext(current_target_filename,target_image_output_filename)
+        else:
+            im_io = FIO.ImageIO()
+            im_io.write(target_image_output_filename, ITarget[0, 0, ...], hdr)
 
     # compute determinant of Jacobian of map
     if compute_det_of_jacobian:
@@ -728,6 +737,8 @@ if __name__ == "__main__":
 
     parser.add_argument('--do_not_write_source_image', action='store_true', help='otherwise also writes the source image for easy visualization')
     parser.add_argument('--do_not_write_target_image', action='store_true', help='otherwise also writes the target image for easy visualization')
+
+    parser.add_argument('--do_not_use_symlinks', action='store_true', help='For source and target images, by default symbolic links are created, otherwise files are copied')
 
     parser.add_argument('--retarget_data_directory', required=False, default=None,help='Looks for the datafiles in this directory')
 
