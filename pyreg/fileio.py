@@ -487,20 +487,29 @@ class ImageIO(FileIO):
             I0 = itk.GetArrayViewFromImage(I0_itk).astype(self.default_datatype)
         else:
             I0 = itk.GetArrayViewFromImage(I0_itk)
+
+        if len(I0.shape)>I0_itk.GetImageDimension():
+            is_vector_image = True
+            # itk has a different convention, there the vector component is the last dimension, so we need to swap it
+            I0 = np.moveaxis(I0,-1,0)
+        else:
+            is_vector_image = False
+
         image_meta_data = dict()
         image_meta_data['space origin'] = self._convert_itk_vector_to_numpy(I0_itk.GetOrigin())
         image_meta_data['spacing'] = self._convert_itk_vector_to_numpy(I0_itk.GetSpacing())
         image_meta_data['space directions'] = self._convert_itk_matrix_to_numpy(I0_itk.GetDirection())
-        image_meta_data['sizes'] = I0.shape
+
         image_meta_data['dimension'] = I0_itk.GetImageDimension()
         image_meta_data['space'] = 'left-posterior-superior'
 
-        if len(I0.shape)>I0_itk.GetImageDimension():
-            is_vector_image = True
-        else:
-            is_vector_image = False
-
         image_meta_data['is_vector_image'] = is_vector_image
+
+        if is_vector_image:
+            image_meta_data['sizes'] = I0.shape[1:] # first dimension is vector dimension here
+        else:
+            image_meta_data['sizes'] = I0.shape
+
 
         """
         NRRD format
@@ -775,7 +784,8 @@ class ImageIO(FileIO):
 
        # now write it out
         print('Writing: ' + filename)
-        data_itk = self._get_itk_image_from_numpy(data, hdr)
+        npd = self._convert_data_to_numpy_if_needed(data)
+        data_itk = self._get_itk_image_from_numpy(npd, hdr)
         itk.imwrite(data_itk, filename)
 
 
@@ -826,6 +836,18 @@ class MapIO(ImageIO):
 
     def __init__(self):
         super(MapIO, self).__init__()
+
+    def read_from_validation_map_format(self, filename):
+        current_scale_mode = self.get_scale_vectors_on_read_and_write()
+        self.turn_scale_vectors_on_read_and_write_off()
+
+        # now that we are sure this is a map (or dispalcement field), let's write it with the standard image IO
+        im, hdr, spacing, squeezed_spacing = super(MapIO, self).read(filename,silent_mode=True)
+
+        self.set_scale_vectors_on_read_and_write(current_scale_mode)
+
+        return im, hdr, spacing, squeezed_spacing
+
 
     def write(self, filename, data, hdr):
 

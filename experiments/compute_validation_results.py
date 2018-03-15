@@ -6,6 +6,7 @@ import torch
 from torch.autograd import Variable
 
 import pyreg.utils as utils
+import pyreg.fileio as fio
 
 import scipy.io as sio
 import numpy as np
@@ -57,7 +58,8 @@ def warp_image_nn(moving, phi):
     result = np.reshape(result, (dim1, dim2, dim3))
     return result
 
-def calculate_image_overlap(dataset_name, dataset_dir, phi_path, moving_id, target_id):
+def calculate_image_overlap(dataset_name, dataset_dir, phi_path, source_labelmap_path, target_labelmap_path,
+                            warped_labelmap_path,moving_id, target_id):
     """
     Calculate the overlapping rate of a specified case
     :param dataset_name: 'LPBA', 'IBSR', 'CUMC' or 'MGH'
@@ -96,23 +98,32 @@ def calculate_image_overlap(dataset_name, dataset_dir, phi_path, moving_id, targ
 
     label_images = [None] * dataset_size
 
-    # todo: there should be no need to load all the label files here
-    for i in range(dataset_size):
-        label_images[i] = itk.GetArrayFromImage(
-            itk.imread(label_files_dir + label_prefix + str(i + 1) + '.nii')).squeeze()
+    # todo: not sure why these are floats, but okay for now
 
-    label_from = label_images[moving_id - 1]
-    label_to = label_images[target_id - 1]
+    im_io = fio.ImageIO()
+    label_from_id = moving_id-1
+    label_to_id = target_id-1
 
-    phi,hdr = nrrd.read(phi_path)
+    label_from_filename = label_files_dir + label_prefix + str(label_from_id + 1) + '.nii'
+    label_from, hdr, _, _ = im_io.read(label_from_filename, silent_mode=True)
+
+    label_to_filename = label_files_dir + label_prefix + str(label_to_id + 1) + '.nii'
+    label_to, hdr, _, _ = im_io.read(label_to_filename, silent_mode=True)
+
+    map_io = fio.MapIO()
+
+    phi,_,_,_ = map_io.read_from_validation_map_format(phi_path)
     phi = phi.squeeze()
     warp_result = warp_image_nn(label_from, phi)
 
-    #td = torch.load(phi_path)
-    #phi = td['phi']
-    #spacing = td['spacing']
-    #warp_result = warp_image_nn(label_from,phi,spacing)
-    #warp_result = warp_result.data.cpu().numpy().squeeze()
+    im_io.write(warped_labelmap_path,warp_result,hdr)
+
+    if source_labelmap_path is not None:
+        im_io.write(source_labelmap_path,label_from,hdr)
+
+    if target_labelmap_path is not None:
+        im_io.write(target_labelmap_path,label_to,hdr)
+
 
     for label_idx in range(len(Labels['Labels'])):
 
@@ -232,7 +243,7 @@ def extract_id_from_cumc_filename(filename):
     nr = int(r[1][1:-4])
     return nr
 
-def create_map_filename(id,output_dir,stage,compute_from_frozen=False):
+def create_filenames(id,output_dir,stage,compute_from_frozen=False):
 
     if not stage in [0,1,2]:
         raise ValueError('stages need to be {0,1,2}')
@@ -243,8 +254,11 @@ def create_map_filename(id,output_dir,stage,compute_from_frozen=False):
         stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_' + str(stage))
 
     map_filename = os.path.join(stage_output_dir,'map_validation_format_{:05d}.nrrd'.format(id))
-    #map_filename = os.path.join(stage_output_dir, 'map_validation_format_{:05d}.pt'.format(id))
-    return map_filename,stage_output_dir
+    warped_labelmap_filename = os.path.join(stage_output_dir,'warped_labelmap_{:05d}.nrrd'.format(id))
+    source_labelmap_filename = os.path.join(stage_output_dir,'source_labelmap_{:05d}.nrrd'.format(id))
+    target_labelmap_filename = os.path.join(stage_output_dir,'target_labelmap_{:05d}.nrrd'.format(id))
+
+    return map_filename,source_labelmap_filename,target_labelmap_filename,warped_labelmap_filename,stage_output_dir
 
 
 def get_result_indices(r,start_id,nr_of_images_in_dataset):
@@ -285,6 +299,10 @@ if __name__ == "__main__":
 
     parser.add_argument('--compute_from_frozen', action='store_true', help='computes the results from optimization results with frozen parameters')
 
+    parser.add_argument('--do_not_write_target_labelmap', action='store_true', help='otherwise also writes the target labelmap again for easy visualization')
+    parser.add_argument('--do_not_write_source_labelmap', action='store_true', help='otherwise also writes the source labelmap again for easy visualization')
+
+
     parser.add_argument('--do_not_visualize', action='store_true', help='visualizes the output otherwise')
     parser.add_argument('--do_not_print_images', action='store_true', help='prints the results otherwise')
 
@@ -323,9 +341,17 @@ if __name__ == "__main__":
         source_id = extract_id_from_cumc_filename(current_source_image)
         target_id = extract_id_from_cumc_filename(current_target_image)
 
-        current_map_filename,stage_output_dir = create_map_filename(n,output_directory,stage,args.compute_from_frozen)
+        current_map_filename,current_source_labelmap_filename,current_target_labelmap_filename,current_warped_labelmap_filename,stage_output_dir = \
+            create_filenames(n,output_directory,stage,args.compute_from_frozen)
 
-        mean_result,single_results = calculate_image_overlap('CUMC', dataset_directory, current_map_filename, source_id, target_id)
+        if args.do_not_write_target_labelmap:
+            current_target_labelmap_filename = None
+
+        if args.do_not_write_source_labelmap:
+            current_source_labelmap_filename = None
+
+        mean_result,single_results = calculate_image_overlap('CUMC', dataset_directory, current_map_filename,
+                                                             current_source_labelmap_filename, current_target_labelmap_filename, current_warped_labelmap_filename, source_id, target_id)
 
         validation_results['source_id'].append(source_id)
         validation_results['target_id'].append(target_id)
