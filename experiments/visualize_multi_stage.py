@@ -16,6 +16,8 @@ from pyreg.data_wrapper import USE_CUDA, AdaptVal, MyTensor
 import pyreg.fileio as FIO
 import pyreg.visualize_registration_results as vizReg
 
+import pyreg.utils as utils
+
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -673,14 +675,14 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
 
     if write_out_source_image:
         if use_sym_links:
-            os.symlink(current_source_filename,source_image_output_filename)
+            utils.create_symlink_with_correct_ext(current_source_filename,source_image_output_filename)
         else:
             im_io = FIO.ImageIO()
             im_io.write(source_image_output_filename, ISource[0,0,...], hdr)
 
     if write_out_target_image:
         if use_sym_links:
-            os.symlink(current_target_filename,target_image_output_filename)
+            utils.create_symlink_with_correct_ext(current_target_filename,target_image_output_filename)
         else:
             im_io = FIO.ImageIO()
             im_io.write(target_image_output_filename, ITarget[0, 0, ...], hdr)

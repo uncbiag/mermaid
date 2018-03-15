@@ -17,11 +17,34 @@ import finite_differences as fd
 import torch.nn as nn
 import torch.nn.init as init
 
+import os
+
 try:
     from libraries.functions.nn_interpolation import get_nn_interpolation
 except ImportError:
     print('WARNING: nn_interpolation could not be imported (only supported in CUDA at the moment), some functionality may not be available.')
 
+
+def create_symlink_with_correct_ext(sf,tf):
+    abs_s = os.path.abspath(sf)
+    ext_s = os.path.splitext(abs_s)[1]
+
+    abs_t = os.path.abspath(tf)
+    root_t,ext_t = os.path.splitext(abs_t)
+
+    abs_t_with_right_ext = root_t + ext_s
+
+    if os.path.isfile(abs_t_with_right_ext):
+        if os.path.samefile(abs_s,abs_t_with_right_ext):
+            # nothing to do here, these are already the same file
+            return
+        else:
+            os.remove(abs_t_with_right_ext)
+
+    # now we can do the symlink
+    os.symlink(abs_s,abs_t_with_right_ext)
+
+    
 def combine_dict(d1,d2):
     """
     Creates a dictionary which has entries from both of them

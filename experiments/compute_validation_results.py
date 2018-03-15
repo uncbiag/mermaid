@@ -120,13 +120,13 @@ def calculate_image_overlap(dataset_name, dataset_dir, phi_path, source_labelmap
 
     if source_labelmap_path is not None:
         if use_sym_links:
-            os.symlink(label_from_filename,source_labelmap_path)
+            utils.create_symlink_with_correct_ext(label_from_filename,source_labelmap_path)
         else:
             im_io.write(source_labelmap_path,label_from,hdr)
 
     if target_labelmap_path is not None:
         if use_sym_links:
-            os.symlink(label_to_filename,target_labelmap_path)
+            utils.create_symlink_with_correct_ext(label_to_filename,target_labelmap_path)
         else:
             im_io.write(target_labelmap_path,label_to,hdr)
 
