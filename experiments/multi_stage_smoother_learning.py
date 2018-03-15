@@ -249,6 +249,9 @@ if __name__ == "__main__":
 
     else:
         if os.path.isfile(used_image_pairs_filename_pt):
+
+            print('INFO: Loading image pair configuration from: ' + used_image_pairs_filename_pt)
+
             up = torch.load(used_image_pairs_filename_pt)
             source_images = up['source_images']
             target_images = up['target_images']
