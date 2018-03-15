@@ -383,12 +383,20 @@ def get_json_and_output_dir_for_stages(json_file,output_dir):
 
     return json_for_stages,frozen_json_for_stages,output_dir_for_stages,frozen_output_dir_for_stages
 
-def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=None):
+def cond_flip(v,f):
+    if f:
+        return np.flipud(v)
+    else:
+        return v
+
+def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=None,flip_axes=False):
 
     if local_weights is not None:
         osw = compute_overall_std(local_weights[0,...].cpu(), stds.data.cpu())
 
     plt.clf()
+
+
 
     source_mask = compute_mask(I0[:, 0:1, ...].data.cpu().numpy())
     lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(
@@ -396,32 +404,32 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
     lowRes_source_mask = lowRes_source_mask_v.data.cpu().numpy()[0, 0, ...]
 
     plt.subplot(2, 3, 1)
-    plt.imshow(I0[0, 0, ...].data.cpu().numpy(), cmap='gray')
+    plt.imshow(cond_flip(I0[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
     plt.title('source')
 
     plt.subplot(2, 3, 2)
-    plt.imshow(I1[0, 0, ...].data.cpu().numpy(), cmap='gray')
+    plt.imshow(cond_flip(I1[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
     plt.title('target')
 
     plt.subplot(2, 3, 3)
-    plt.imshow(Iw[0, 0, ...].data.cpu().numpy(), cmap='gray')
+    plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
     plt.title('warped')
 
     plt.subplot(2, 3, 4)
-    plt.imshow(Iw[0, 0, ...].data.cpu().numpy(), cmap='gray')
-    plt.contour(phi[0, 0, ...].data.cpu().numpy(), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
-    plt.contour(phi[0, 1, ...].data.cpu().numpy(), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+    plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
+    plt.contour(cond_flip(phi[0, 0, ...].data.cpu().numpy(),flip_axes), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+    plt.contour(cond_flip(phi[0, 1, ...].data.cpu().numpy(),flip_axes), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
     plt.title('warped+grid')
 
     plt.subplot(2, 3, 5)
-    plt.imshow(norm_m[0, 0, ...].data.cpu().numpy(), cmap='gray')
+    plt.imshow(cond_flip(norm_m[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
     plt.title('|m|')
 
     if local_weights is not None:
         plt.subplot(2, 3, 6)
         cmin = osw.numpy()[lowRes_source_mask == 1].min()
         cmax = osw.numpy()[lowRes_source_mask == 1].max()
-        plt.imshow(osw.numpy() * lowRes_source_mask, cmap='gray', vmin=cmin, vmax=cmax)
+        plt.imshow(cond_flip(osw.numpy() * lowRes_source_mask,flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
         plt.title('std')
 
     plt.suptitle('Registration result: pair id {:03d}'.format(print_figure_id))
@@ -441,7 +449,7 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
             clw = local_weights[0, g, ...].numpy()
             cmin = clw[lowRes_source_mask == 1].min()
             cmax = clw[lowRes_source_mask == 1].max()
-            plt.imshow((local_weights[0, g, ...]).numpy() * lowRes_source_mask, vmin=cmin, vmax=cmax)
+            plt.imshow(cond_flip((local_weights[0, g, ...]).numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
             plt.title("{:.2f}".format(stds.data.cpu()[g]))
             plt.colorbar()
 
@@ -450,7 +458,7 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
 
         cmin = osw.numpy()[lowRes_source_mask == 1].min()
         cmax = osw.numpy()[lowRes_source_mask == 1].max()
-        plt.imshow(osw.numpy() * lowRes_source_mask, vmin=cmin, vmax=cmax)
+        plt.imshow(cond_flip(osw.numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
         plt.colorbar()
         plt.suptitle('Weights')
 
@@ -494,6 +502,10 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
                                   write_out_source_image=False,write_out_target_image=False,
                                   compute_det_of_jacobian=True,retarget_data_directory=None,
                                   use_sym_links=True):
+
+    # todo: make this data-adaptive
+    flip_axes_3d = [False,True,True]
+
 
     if write_out_images:
         write_out_warped_image = True
@@ -650,11 +662,11 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
                 if print_images:
                     visualize_weights(IS_slice,IT_slice,IW_slice,phi_slice,
                                       norm_m_slice,lw_slice,model_dict['stds'],
-                                      spacing_slice,lowResSize_slice,print_output_dir,pair_nr,slice_mode_3d[sm])
+                                      spacing_slice,lowResSize_slice,print_output_dir,pair_nr,slice_mode_3d[sm],flip_axes_3d[sm])
                 else:
                     visualize_weights(IS_slice, IT_slice, IW_slice, phi_slice,
                                       norm_m_slice, lw_slice, model_dict['stds'],
-                                      spacing_slice, lowResSize_slice)
+                                      spacing_slice, lowResSize_slice,flip_axes=flip_axes_3d[sm])
 
         else:
             raise ValueError('I do not know how to visualize results with dimensions other than 2 or 3')
