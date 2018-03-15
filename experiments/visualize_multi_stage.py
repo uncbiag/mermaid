@@ -449,7 +449,7 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
             clw = local_weights[0, g, ...].numpy()
             cmin = clw[lowRes_source_mask == 1].min()
             cmax = clw[lowRes_source_mask == 1].max()
-            plt.imshow(con_flip((local_weights[0, g, ...]).numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
+            plt.imshow(cond_flip((local_weights[0, g, ...]).numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
             plt.title("{:.2f}".format(stds.data.cpu()[g]))
             plt.colorbar()
 
