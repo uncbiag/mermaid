@@ -350,6 +350,8 @@ if __name__ == "__main__":
         if args.do_not_write_source_labelmap:
             current_source_labelmap_filename = None
 
+        print('current_map_filename: ' + current_map_filename)
+            
         mean_result,single_results = calculate_image_overlap('CUMC', dataset_directory, current_map_filename,
                                                              current_source_labelmap_filename, current_target_labelmap_filename, current_warped_labelmap_filename, source_id, target_id)
 
