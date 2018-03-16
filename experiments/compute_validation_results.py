@@ -236,6 +236,7 @@ def overlapping_plot(old_results_filename, new_results, boxplot_filename, visual
 
     # save figure
     if boxplot_filename is not None:
+        print('Saving boxplot to : ' + boxplot_filename )
         plt.savefig(boxplot_filename, dpi=1000, bbox_inches='tight')
 
     # show figure
@@ -249,8 +250,7 @@ def extract_id_from_cumc_filename(filename):
     nr = int(r[1][1:-4])
     return nr
 
-def create_filenames(id,output_dir,stage,compute_from_frozen=False):
-
+def create_stage_output_dir(output_dir,stage,compute_from_frozen=False):
     if not stage in [0,1,2]:
         raise ValueError('stages need to be {0,1,2}')
 
@@ -259,6 +259,15 @@ def create_filenames(id,output_dir,stage,compute_from_frozen=False):
     else:
         stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_' + str(stage))
 
+    return stage_output_dir
+
+def create_filenames(id,output_dir,stage,compute_from_frozen=False):
+
+    if not stage in [0,1,2]:
+        raise ValueError('stages need to be {0,1,2}')
+
+    stage_output_dir = create_stage_output_dir(output_dir,stage,compute_from_frozen)
+    
     map_filename = os.path.join(stage_output_dir,'map_validation_format_{:05d}.nrrd'.format(id))
     warped_labelmap_filename = os.path.join(stage_output_dir,'warped_labelmap_{:05d}.nrrd'.format(id))
     source_labelmap_filename = os.path.join(stage_output_dir,'source_labelmap_{:05d}.nrrd'.format(id))
@@ -330,7 +339,14 @@ if __name__ == "__main__":
 
     if args.save_overlap_filename is not None:
         save_results = True
-        res_file = open(args.save_overlap_filename, 'w')
+
+        stage_output_dir = create_stage_output_dir(output_directory,stage,args.compute_from_frozen)
+        base_overlap_filename = os.path.split(args.save_overlap_filename)[1]
+
+        effective_overlap_filename = os.path.join(stage_output_dir,base_overlap_filename)
+        print('Writing overlap results to: ' + effective_overlap_filename )
+        
+        res_file = open(effective_overlap_filename, 'w')
         res_file.write('source_id,target_id,mean overlap ratio\n')
     else:
         save_results = False
@@ -395,11 +411,10 @@ if __name__ == "__main__":
     torch.save(validation_results,validation_results_filename)
 
     # now do the boxplot
-    if not args.do_not_visualize:
-        old_results_filename = './validation_mat/quicksilver_results/CUMC_results.mat'
+    old_results_filename = './validation_mat/quicksilver_results/CUMC_results.mat'
 
-        boxplot_filename = None
-        if not args.do_not_print_images:
-            boxplot_filename = os.path.join(stage_output_dir,'boxplot_results.pdf')
+    boxplot_filename = None
+    if not args.do_not_print_images:
+        boxplot_filename = os.path.join(stage_output_dir,'boxplot_results.pdf')
 
-        overlapping_plot(old_results_filename, validation_results,boxplot_filename, not args.do_not_visualize)
+    overlapping_plot(old_results_filename, validation_results,boxplot_filename, not args.do_not_visualize)
