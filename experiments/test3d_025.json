@@ -70,7 +70,7 @@
     }, 
     "optimizer": {
         "batch_settings": {
-            "batch_size": 1, 
+            "batch_size": 2, 
             "checkpoint_interval": 0, 
             "nr_of_epochs": 10, 
             "num_workers": 0, 
