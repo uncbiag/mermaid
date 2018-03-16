@@ -38,6 +38,10 @@ Optionally one can specify parameters such as:
 It is possible to specify custom key/value pairs on the command line 
 --config_kvs optimizer.sgd.individual.lr=1e-3;optimizer.sgd.shared.lr=2e-3
 
+Your shell will likely not like the semi-colons like this. So they may need to be escaped, i.e.,
+
+--config_kvs optimizer.sgd.individual.lr=1e-3\;optimizer.sgd.shared.lr=2e-3
+
 To specify the multi-Gaussian weights in this way one would write:
 
 --config_kvs model.registration_model.forward_model.smoother.multi_gaussian_weights=[0.3,0.3,0.4]
