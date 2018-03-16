@@ -178,6 +178,8 @@ if __name__ == "__main__":
 
     parser.add_argument('--stage_nr', required=False, type=str, default=None, help='Which stages should be run {0,1,2} as a comma separated list')
 
+    parser.add_argument('--seed', required=False, type=int, default=None, help='Sets the random seed which affects data shuffling')
+
     parser.add_argument('--do_not_read_used_images_from_file', action='store_true', help='If set the image pairs are recomputed. Use with EXTREME care as stage/frozen results may become inconsistent')
 
     parser.add_argument('--frozen_nr_of_epochs', required=False,type=str, default=None, help='number of epochs to run the three stages with frozen parameters (for refinement)')
@@ -186,6 +188,10 @@ if __name__ == "__main__":
     parser.add_argument('--config_kvs', required=False, default=None, help='Allows specifying key value pairs that will override json settings; in format k1.k2.k3=val1, k1.k2=val2')
 
     args = parser.parse_args()
+
+    if args.seed is not None:
+        print('Setting the random seed to {:}'.format(args.seed))
+        random.seed(args.seed)
 
     print('Loading settings from file: ' + args.config)
     params = pars.ParameterDict()
