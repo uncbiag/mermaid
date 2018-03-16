@@ -31,9 +31,9 @@ The default registration model is now svf_vector_momentum_map (though other mode
 
 CUDA_VISIBLE_DEVICES=2 python multi_stage_smoother_learning.py --input_image_directory ./cumc12_experiment --nr_of_image_pairs 10 --output_directory ./test_out --nr_of_epochs 20,10,5 --config ./test3d_025.json
 
-
 Optionally one can specify parameters such as:
  --noshuffle  (then there is no random shuffling of image pairs to form the pairs)
+ --seed 1234 (to specify a random seed affecting the shuffling)
 
 It is possible to specify custom key/value pairs on the command line 
 --config_kvs optimizer.sgd.individual.lr=1e-3,optimizer.sgd.shared.lr=2e-3
