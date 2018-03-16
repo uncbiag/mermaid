@@ -36,9 +36,19 @@ Optionally one can specify parameters such as:
  --seed 1234 (to specify a random seed affecting the shuffling)
 
 It is possible to specify custom key/value pairs on the command line 
---config_kvs optimizer.sgd.individual.lr=1e-3,optimizer.sgd.shared.lr=2e-3
+--config_kvs optimizer.sgd.individual.lr=1e-3;optimizer.sgd.shared.lr=2e-3
 
-The dots simply indicate the subdivsions in the json tree hierachy. Any number of key-value pairs can be specified like this (comma separated). However, settings that are accessible via parameters of the script have priority over the key-value pairs. E.g., the number of iterations per batch can only be controlled via the command line parameter. If one sets it via a key-value pair, this key-value pair will be subsequently overwritten.
+To specify the multi-Gaussian weights in this way one would write:
+
+--config_kvs model.registration_model.forward_model.smoother.multi_gaussian_weights=[0.3,0.3,0.4]
+
+(Weights need to sum to one, otherwise they will be auto-normalized)
+
+So let's say you only want to run stage 0, with a fixed seed, and specified weights, you can run:
+
+python multi_stage_smoother_learning.py --input_image_directory ./cumc12_experiment --nr_of_image_pairs 10 --output_directory ./test_out --nr_of_epochs 20,10,5 --config ./test3d_025.json --seed 1234 --stage_nr 0 --config_kvs model.registration_model.forward_model.smoother.multi_gaussian_weights=[0.3,0.3,0.4]
+
+The dots simply indicate the subdivsions in the json tree hierachy. Any number of key-value pairs can be specified like this (separated by a *semi-colon*). However, settings that are accessible via parameters of the script have priority over the key-value pairs. E.g., the number of iterations per batch can only be controlled via the command line parameter. If one sets it via a key-value pair, this key-value pair will be subsequently overwritten.
 
 If --nr_of_image_pairs is not specified all possible pairwise combinations are used. (There may be a lot, so use this with care.)
 

@@ -129,10 +129,10 @@ def add_key_value_pairs_to_params(params,kvs):
 
         # first break it up into the different key-value arguments
         d = dict()
-        for item in kvs.split(','):
+        for item in kvs.split(';'):
             kv = item.split('=')
             if len(kv)!=2:
-                print('Cannot parse key value pair ' + item + ' ; expected form key:value, but got more than one ":"; ignoring pair')
+                print('Cannot parse key value pair ' + item + ' ; expected form key=value, but got more than one "="; ignoring pair')
             else:
                 d[kv[0]]=kv[1]
 
@@ -147,7 +147,6 @@ def add_key_value_pairs_to_params(params,kvs):
                 current_pars = current_pars[sub_keys[i]]
             # and now the last one
             current_pars[sub_keys[-1]] = ast.literal_eval(val)
-
 
 if __name__ == "__main__":
 
