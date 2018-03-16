@@ -18,18 +18,18 @@ class OTSimilarityHelper(Function):
                    """
     @staticmethod
     def forward(ctx, phi,I0,I1,multiplier0,multiplier1,spacing,nr_iterations_sinkhorn,std_sink):
-        shape = numpy_shape(I0.numpy())
+        shape = numpy_shape(AdaptVal(I0).cpu().numpy())
         simil = OTSimilarityGradient(spacing,shape,sinkhorn_iterations = nr_iterations_sinkhorn[0],std_dev = std_sink[0])
         result,other = simil.compute_similarity(Variable(I0),Variable(I1))
-        multiplier0.copy_(simil.multiplier0.data)
-        multiplier1.copy_(simil.multiplier1.data)
+        multiplier0.copy_(AdaptVal(simil.multiplier0.data))
+        multiplier1.copy_(AdaptVal(simil.multiplier1.data))
         ctx.save_for_backward(phi,I0,I1,multiplier0,multiplier1,spacing,nr_iterations_sinkhorn,std_sink)
         return result.data
 
     @staticmethod
     def backward(ctx, grad_output):
         phi,I0,I1,multiplier0,multiplier1,spacing,nr_iterations_sinkhorn,std_sink = ctx.saved_variables
-        shape = numpy_shape(I0.data.numpy())
+        shape = numpy_shape(AdaptVal(I0.data).cpu().numpy())
         simil = OTSimilarityGradient(spacing.data,shape,sinkhorn_iterations = nr_iterations_sinkhorn.data[0],std_dev = std_sink.data[0])
         grad_input = simil.compute_gradient(I0,I1,multiplier0,multiplier1)
         fm = FM.RHSLibrary(spacing.data.numpy())
@@ -131,15 +131,15 @@ class OTSimilarityGradient(object):
 
         elif self.dim == 3:
             ### multiplication along the first axis
-            temp = torch.matmul(self.gibbs[0], multiplier.permute(2, 0, 1))
+            temp = torch.matmul(AdaptVal(self.gibbs[0]), AdaptVal(multiplier.permute(2, 0, 1)))
             temp = temp.permute(1, 2, 0)
 
             ### multiplication along the second axis
-            temp = torch.matmul(self.gibbs[1], temp)
+            temp = torch.matmul(AdaptVal(self.gibbs[1]), temp)
 
             ### multiplication along the third axis
             temp = temp.permute(0, 2, 1)  # z,x,y
-            temp = torch.matmul(self.gibbs[2], temp)
+            temp = torch.matmul(AdaptVal(self.gibbs[2]), temp)
 
             temp = temp.permute(0, 2, 1)
 
@@ -215,8 +215,8 @@ class OTSimilarityGradient(object):
             multiplier0 = torch.div(I0rescaled, self.kernel_multiplication(multiplier1))
             multiplier1 = torch.div(I1rescaled, self.kernel_multiplication(multiplier0))
             convergence.append(log(
-                self.my_sum(torch.abs(I0rescaled - multiplier0 * self.kernel_multiplication(multiplier1))).data.numpy()[
-                    0]))
+                AdaptVal(self.my_sum(torch.abs(I0rescaled - multiplier0 * self.kernel_multiplication(multiplier1))).data)
+                    .cpu().numpy()[0]))
         temp = self.my_dot(torch.log(multiplier0), I0rescaled) + self.my_dot(torch.log(multiplier1),
                                                                              I1rescaled) - self.my_dot(
             multiplier0, self.kernel_multiplication(multiplier1))

@@ -135,6 +135,7 @@ class RegisterImagePair(object):
                                    nr_of_iterations=None,
                                    similarity_measure_type=None,
                                    similarity_measure_sigma=None,
+                                   compute_similarity_measure_at_low_res=None,
                                    map_low_res_factor=None,
                                    rel_ftol=None,
                                    smoother_type=None,
@@ -157,6 +158,7 @@ class RegisterImagePair(object):
         :param nr_of_iterations: nr of iterations
         :param similarity_measure_type: type of similarity measure ('ssd' or 'ncc')
         :param similarity_measure_sigma: similarity measures are weighted by 1/sigma^2
+        :param compute_similarity_measure_at_low_res: allows computation of similarity measure at lower resolution, specified by map_low_res_factor
         :param map_low_res_factor: allows for parameterization of the registration at lower resolution than the image (0,1]
         :param rel_ftol: relative function tolerance for optimizer
         :param smoother_type: type of smoother (e.g., 'gaussian' or 'multiGaussian')
@@ -209,6 +211,7 @@ class RegisterImagePair(object):
                       nr_of_iterations=nr_of_iterations,
                       similarity_measure_type=similarity_measure_type,
                       similarity_measure_sigma=similarity_measure_sigma,
+                      compute_similarity_measure_at_low_res=compute_similarity_measure_at_low_res,
                       map_low_res_factor=map_low_res_factor,
                       rel_ftol=rel_ftol,
                       smoother_type=smoother_type,
@@ -226,6 +229,7 @@ class RegisterImagePair(object):
                         nr_of_iterations=None,
                         similarity_measure_type=None,
                         similarity_measure_sigma=None,
+                        compute_similarity_measure_at_low_res=None,
                         map_low_res_factor=None,
                         rel_ftol=None,
                         smoother_type=None,
@@ -249,6 +253,7 @@ class RegisterImagePair(object):
         :param nr_of_iterations: nr of iterations
         :param similarity_measure_type: type of similarity measure ('ssd' or 'ncc')
         :param similarity_measure_sigma: similarity measures are weighted by 1/sigma^2
+        :param compute_similarity_measure_at_low_res: allows computation of similarity measure at lower resolution, specified by map_low_res_factor
         :param map_low_res_factor: allows for parameterization of the registration at lower resolution than the image (0,1]
         :param rel_ftol: relative function tolerance for optimizer
         :param smoother_type: type of smoother (e.g., 'gaussian' or 'multiGaussian')
@@ -329,6 +334,9 @@ class RegisterImagePair(object):
 
             if similarity_measure_type is not None:
                 self.params['model']['registration_model']['similarity_measure']['type'] = similarity_measure_type
+
+            if compute_similarity_measure_at_low_res is not None:
+                self.params['model']['deformation']['compute_similarity_measure_at_low_res'] = compute_similarity_measure_at_low_res
 
             if map_low_res_factor is not None:
                 self.params['model']['deformation']['map_low_res_factor'] = map_low_res_factor
