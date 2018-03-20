@@ -471,6 +471,8 @@ class ImageIO(FileIO):
                 dim = hdr['dimension']
             else:
                 dim = len(np_im.shape)
+        else:
+            dim = len(np_im.shape)
 
         if len(np_im.shape)>dim:
             treat_as_scalar_image = False
