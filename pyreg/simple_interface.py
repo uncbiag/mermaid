@@ -114,7 +114,12 @@ class RegisterImagePair(object):
 
         p = self.get_model_parameters()
         if p is not None:
-            print('Hello')
+            for key in p:
+                val = p[key]
+                if torch.is_tensor(val):
+                    val.zero_()
+                elif type(val)==torch.nn.parameter.Parameter or type(val)==torch.autograd.variable.Variable:
+                    val.data.zero_()
 
     def set_model_parameters(self,p):
         """

@@ -90,7 +90,7 @@ if use_batch_registration:
 else:
     reg.register_images(I0,I1,spacing,
                     model_name='svf_vector_momentum_map',
-                    nr_of_iterations=50,
+                    nr_of_iterations=1,
                     visualize_step=10,
                     map_low_res_factor=0.5,
                     rel_ftol=1e-15,
@@ -110,8 +110,6 @@ if False:
 h = reg.get_history()
 
 pars = reg.get_model_parameters()
-
-reg.set_model_parameters_to_zero()
 
 Iw = reg.get_warped_image()
 phi = reg.get_map()
