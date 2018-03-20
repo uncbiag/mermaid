@@ -39,7 +39,7 @@ def get_image_range(im_from,im_to):
     return f
 
 symmetrize_images = False
-use_batch_registration = True
+use_batch_registration = False
 nr_of_image_pairs = 5
 
 I0_filenames = get_image_range(0,nr_of_image_pairs)
@@ -95,7 +95,7 @@ else:
                     map_low_res_factor=0.5,
                     rel_ftol=1e-15,
                     json_config_out_filename='testBatchNewerSmoother.json',
-                    use_consensus_optimization=True,
+                    use_consensus_optimization=False,
                     params='testBatchNewerSmoother.json')
 
 if False:

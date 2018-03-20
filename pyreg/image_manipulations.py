@@ -28,8 +28,13 @@ class IntensityNormalizeImage(object):
         # first zero out negative values
         np.clip(I, 0, None, out=I)
         # then normalize the 99th percentile
-        I = I / np.percentile(I, perc) * perc/100.
-        return I
+        percI = np.percentile(I, perc)
+        if percI == 0:
+            print('Cannot normalize based on percentile; as 99-th percentile is 0. Ignoring normalization')
+            return I
+        else:
+            I = I / percI * perc/100.
+            return I
 
     def defaultIntensityNormalization(self,I):
         """

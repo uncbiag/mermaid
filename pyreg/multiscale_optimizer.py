@@ -2367,7 +2367,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.nr_of_epochs = cparams[('nr_of_epochs', 1, 'how many iterations for consensus; i.e., how often to iterate over the entire dataset')]
         """how many iterations for consensus; i.e., how often to iterate over the entire dataset"""
-        self.batch_size = cparams[('batch_size',100,'how many images per batch (if set larger or equal to the number of images, it will be processed as one batch')]
+        self.batch_size = cparams[('batch_size',1,'how many images per batch (if set larger or equal to the number of images, it will be processed as one batch')]
         """how many images per batch"""
         self.save_intermediate_checkpoints = cparams[('save_intermediate_checkpoints',False,'when set to True checkpoints are retained for each batch iterations')]
         """when set to True checkpoints are retained for each batch iterations"""
