@@ -107,6 +107,20 @@ class RegisterImagePair(object):
         else:
             return None
 
+    def set_model_parameters_to_zero(self):
+        """
+        Sets the model parameters to zero; typically not needed, but may be useful in certain scenarios.
+        """
+
+        p = self.get_model_parameters()
+        if p is not None:
+            for key in p:
+                val = p[key]
+                if torch.is_tensor(val):
+                    val.zero_()
+                elif type(val)==torch.nn.parameter.Parameter or type(val)==torch.autograd.variable.Variable:
+                    val.data.zero_()
+
     def set_model_parameters(self,p):
         """
         Sets the model parameters
