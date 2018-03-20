@@ -382,6 +382,41 @@ class RegistrationNetTimeIntegration(RegistrationNet):
         self.tTo = 1.
         """time to solve a model to"""
 
+    def set_integration_tfrom(self,tFrom):
+        """
+        Sets the starging time for integration
+        :param tFrom: starting time
+        :return: n/a
+        """
+
+        self.tFrom = tFrom
+
+    def get_integraton_tfrom(self):
+        """
+        Gets the starting integration time (typically 0)
+        :return: starting integration time
+        """
+
+        return self.tFrom
+
+    def set_integration_tto(self, tTo):
+        """
+        Sets the time up to which to integrate
+        :param tTo: time to integrate to
+        :return: n/a
+        """
+
+        self.tTo = tTo
+
+    def get_integraton_tto(self):
+        """
+        Gets the time to integrate to (typically 1)
+        :return: time to integrate to
+        """
+
+        return self.tTo
+
+
     @abstractmethod
     def create_integrator(self):
         """
