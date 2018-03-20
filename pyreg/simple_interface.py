@@ -107,6 +107,15 @@ class RegisterImagePair(object):
         else:
             return None
 
+    def set_model_parameters_to_zero(self):
+        """
+        Sets the model parameters to zero; typically not needed, but may be useful in certain scenarios.
+        """
+
+        p = self.get_model_parameters()
+        if p is not None:
+            print('Hello')
+
     def set_model_parameters(self,p):
         """
         Sets the model parameters
