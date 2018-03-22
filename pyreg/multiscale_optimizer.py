@@ -102,6 +102,31 @@ class SimpleRegistration(object):
         else:
             return None
 
+    def set_initial_map(self,map0):
+        """
+        Sets the initial map for the registrations; by default (w/o setting anything) this will be the identity
+        map, but by setting it to a different initial condition one can concatenate transformations.
+
+        :param map0:
+        :return: n/a
+        """
+        if self.optimizer is not None:
+            self.optimizer.set_initial_map(map0)
+
+    def get_initial_map(self):
+        """
+        Returns the initial map; this will typically be the identity map, but can be set to a different initial
+        condition using set_initial_map
+
+        :return: returns the initial map (if applicable)
+        """
+
+        if self.optimizer is not None:
+            return self.optimizer.get_initial_map()
+        else:
+            return None
+
+
     def get_map(self):
         """
         Returns the deformation map
@@ -789,10 +814,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.criterion = None
         """the loss function"""
 
-        self.identityMap = None
-        """identity map, will be needed for map-based solutions"""
-        self.lowResIdentityMap = None
-        """low res identity map, will be needed for map-based solutions which are computed at lower resolution"""
+        self.initialMap = None
+        """initial map, will be needed for map-based solutions; by default this will be the identity map, but can be set to something different externally"""
+        self.map0_external = None
+        """intial map, set externally"""
+        self.lowResInitialMap = None
+        """low res initila map, by default the identity map, will be needed for map-based solutions which are computed at lower resolution"""
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
@@ -912,6 +939,21 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         self.n_scale = n_scale
 
+
+    def _create_initial_maps(self):
+        if self.useMap:
+            # create the identity map [-1,1]^d, since we will use a map-based implementation
+            if self.map0_external is not None:
+                self.initialMap = self.map0_external
+            else:
+                id = utils.identity_map_multiN(self.sz, self.spacing)
+                self.initialMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
+
+            if self.mapLowResFactor is not None:
+                # create a lower resolution map for the computations
+                lowres_id = utils.identity_map_multiN(self.lowResSize, self.lowResSpacing)
+                self.lowResInitialMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=False))
+
     def set_model(self, modelName):
         """
         Sets the model that should be solved
@@ -924,14 +966,36 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.model, self.criterion = self.mf.create_registration_model(modelName, self.params['model'])
         print(self.model)
 
-        if self.useMap:
-            # create the identity map [-1,1]^d, since we will use a map-based implementation
-            id = utils.identity_map_multiN(self.sz,self.spacing)
-            self.identityMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
-            if self.mapLowResFactor is not None:
-                # create a lower resolution map for the computations
-                lowres_id = utils.identity_map_multiN(self.lowResSize,self.lowResSpacing)
-                self.lowResIdentityMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=False))
+        self._create_initial_maps()
+
+
+    def set_initial_map(self,map0):
+        """
+        Sets the initial map (overwrites the default identity map)
+        :param map0: intial map
+        :return: n/a
+        """
+
+        self.map0_external = map0
+
+        if self.initialMap is not None:
+            # was already set, so let's modify it
+            self._create_initial_maps()
+
+    def get_initial_map(self):
+        """
+        Returns the initial map
+
+        :return: initial map
+        """
+
+        if self.initialMap is not None:
+            return self.initialMap
+        elif self.map0_external is not None:
+            return self.map0_external
+        else:
+            return None
+
 
     def add_similarity_measure(self, simName, simMeasure):
         """
@@ -1104,25 +1168,25 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.useMap:
             if self.mapLowResFactor is not None:
                 if self.compute_similarity_measure_at_low_res:
-                    self.rec_phiWarped = self.model(self.lowResIdentityMap, self.lowResISource, opt_variables)
+                    self.rec_phiWarped = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
                 else:
-                    rec_tmp = self.model(self.lowResIdentityMap, self.lowResISource, opt_variables )
+                    rec_tmp = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
                     # now upsample to correct resolution
-                    desiredSz = self.identityMap.size()[2::]
+                    desiredSz = self.initialMap.size()[2::]
                     self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
             else:
-                self.rec_phiWarped = self.model(self.identityMap, self.ISource, opt_variables )
+                self.rec_phiWarped = self.model(self.initialMap, self.ISource, opt_variables)
 
             if self.mapLowResFactor is not None and self.compute_similarity_measure_at_low_res:
-                loss_overall_energy, sim_energy, reg_energy = self.criterion(self.lowResIdentityMap, self.rec_phiWarped,
+                loss_overall_energy, sim_energy, reg_energy = self.criterion(self.lowResInitialMap, self.rec_phiWarped,
                                                                              self.lowResISource, self.lowResITarget,
                                                                              self.lowResISource,
                                                                              self.model.get_variables_to_transfer_to_loss_function(),
                                                                              opt_variables)
             else:
-                loss_overall_energy,sim_energy,reg_energy = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource,
-                                  self.model.get_variables_to_transfer_to_loss_function(),
-                                  opt_variables )
+                loss_overall_energy,sim_energy,reg_energy = self.criterion(self.initialMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource,
+                                                                           self.model.get_variables_to_transfer_to_loss_function(),
+                                                                           opt_variables)
         else:
             self.rec_IWarped = self.model(self.ISource, opt_variables )
             loss_overall_energy,sim_energy,reg_energy = self.criterion(self.rec_IWarped, self.ISource, self.ITarget,
