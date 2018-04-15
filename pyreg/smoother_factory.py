@@ -1200,7 +1200,7 @@ class AdaptiveSmoother(Smoother):
         :return:
         """
         if using_map:
-            I = utils.compute_warped_image_multiNC(self.moving, phi, self.spacing)
+            I = utils.compute_warped_image_multiNC(self.moving, phi, self.spacing,self.params)
         else:
             I = None
         v = self.smoother(m, I.detach())

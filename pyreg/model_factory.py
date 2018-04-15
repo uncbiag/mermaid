@@ -120,7 +120,7 @@ def run_model(model_name, model_parameters, I0, sz_sim,spacing_sim,sz_model,spac
 
                 rec_tmp = model(lowResIdentityMap, lowResISource)
                 # now upsample to correct resolution
-                phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing_model, spacing_sim)
+                phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing_model, spacing_sim, params)
 
             else:
                 phiWarped = model(identityMap, I0 )

@@ -331,7 +331,7 @@ class RegistrationNetDisplacement(RegistrationNet):
         """
         sampler = IS.ResampleImage()
         ustate = self.state_dict().copy()
-        upsampled_d, upsampled_spacing = sampler.upsample_image_to_size(self.d, self.spacing, desiredSz)
+        upsampled_d, upsampled_spacing = sampler.upsample_image_to_size(self.d, self.spacing, desiredSz, self.params)
         ustate['d'] = upsampled_d.data
 
         return ustate, upsampled_spacing
@@ -346,7 +346,7 @@ class RegistrationNetDisplacement(RegistrationNet):
         """
         sampler = IS.ResampleImage()
         dstate = self.state_dict().copy()
-        dstate['d'], downsampled_spacing = sampler.downsample_image_to_size(self.d, self.spacing, desiredSz)
+        dstate['d'], downsampled_spacing = sampler.downsample_image_to_size(self.d, self.spacing, desiredSz,self.params)
         return dstate, downsampled_spacing
 
     def forward(self, phi, I0_source, variables_from_optimizer=None):
@@ -462,7 +462,7 @@ class SVFNet(RegistrationNetTimeIntegration):
         """
         sampler = IS.ResampleImage()
         ustate = self.state_dict().copy()
-        upsampled_v,upsampled_spacing=sampler.upsample_image_to_size(self.v,self.spacing,desiredSz)
+        upsampled_v,upsampled_spacing=sampler.upsample_image_to_size(self.v,self.spacing,desiredSz,self.params)
         ustate['v'] = upsampled_v.data
 
         return ustate,upsampled_spacing
@@ -476,7 +476,7 @@ class SVFNet(RegistrationNetTimeIntegration):
         """
         sampler = IS.ResampleImage()
         dstate = self.state_dict().copy()
-        dstate['v'],downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz)
+        dstate['v'],downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz,self.params)
         return dstate,downsampled_spacing
 
 class SVFImageNet(SVFNet):
@@ -559,7 +559,7 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
     def upsample_registration_parameters(self, desiredSz):
         sampler = IS.ResampleImage()
         ustate = self.state_dict().copy()
-        upsampled_m,upsampled_spacing=sampler.upsample_image_to_size(self.m,self.spacing,desiredSz)
+        upsampled_m,upsampled_spacing=sampler.upsample_image_to_size(self.m,self.spacing,desiredSz,self.params)
         ustate['m'] = upsampled_m.data
 
         return ustate,upsampled_spacing
@@ -567,7 +567,7 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
     def downsample_registration_parameters(self, desiredSz):
         sampler = IS.ResampleImage()
         dstate = self.state_dict().copy()
-        dstate['m'],downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz)
+        dstate['m'],downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz,self.params)
         return dstate,downsampled_spacing
 
 class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
@@ -762,7 +762,7 @@ class RegistrationMapLoss(RegistrationLoss):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: registration energy
         """
-        I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1, self.spacing_sim)
+        I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1, self.spacing_sim,self.params)
         sim = self.compute_similarity_energy(I1_warped, I1_target, I0_source, phi1, variables_from_forward_model, variables_from_optimizer)
         if lowres_I0 is not None:
             reg = self.compute_regularization_energy(lowres_I0, variables_from_forward_model, variables_from_optimizer)
@@ -1190,7 +1190,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
 
         ustate = self.state_dict().copy()
         sampler = IS.ResampleImage()
-        upsampled_m, upsampled_spacing = sampler.upsample_image_to_size(self.m, self.spacing, desiredSz)
+        upsampled_m, upsampled_spacing = sampler.upsample_image_to_size(self.m, self.spacing, desiredSz,self.params)
         ustate['m'] = upsampled_m.data
 
         return ustate,upsampled_spacing
@@ -1205,7 +1205,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
 
         dstate = self.state_dict().copy()
         sampler = IS.ResampleImage()
-        dstate['m'],downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz)
+        dstate['m'],downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz,self.params)
 
         return dstate, downsampled_spacing
 
@@ -1563,7 +1563,7 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
 
         ustate = self.state_dict().copy()
         sampler = IS.ResampleImage()
-        upsampled_lam, upsampled_spacing = sampler.upsample_image_to_size(self.lam, self.spacing, desiredSz)
+        upsampled_lam, upsampled_spacing = sampler.upsample_image_to_size(self.lam, self.spacing, desiredSz, self.params)
         ustate['lam'] = upsampled_lam.data
 
         return ustate,upsampled_spacing
@@ -1578,7 +1578,7 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
 
         dstate = self.state_dict().copy()
         sampler = IS.ResampleImage()
-        dstate['lam'],downsampled_spacing=sampler.downsample_image_to_size(self.lam,self.spacing,desiredSz)
+        dstate['lam'],downsampled_spacing=sampler.downsample_image_to_size(self.lam,self.spacing,desiredSz,self.params)
 
         return dstate, downsampled_spacing
 

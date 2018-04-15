@@ -17,6 +17,10 @@ import finite_differences as fd
 import torch.nn as nn
 import torch.nn.init as init
 
+import pyreg.module_parameters as pars
+
+from pyreg.spline_interpolation import SplineInterpolation_ND_BCXYZ
+
 import os
 
 try:
@@ -264,56 +268,65 @@ def compute_normalized_gaussian(X, mu, sig):
         raise ValueError('Can only compute Gaussians in dimensions 1-3')
 
 
-'''
-def computeWarpedImage_1d( I0, phi):
-    stn = STN_ND(1)
-    sz = I0.size()
-    I0_stn = I0.view(torch.Size([1, sz[0], 1]))
-    phi_stn = Variable( torch.zeros([1,sz[0],1]), requires_grad=False )
-    phi_stn[0,:,0] = phi
-    I1_warped = stn(I0_stn, phi_stn)
-    return I1_warped[0,:,0]
+def _compute_warped_image_multiNC_1d(I0, phi, spacing,params):
 
-def computeWarpedImage_2d(I0, phi):
-    stn = STN_ND(2)
-    sz = I0.size()
-    I0_stn = I0.view(torch.Size([1, sz[0], sz[1], 1]))
-    phi_stn = Variable( torch.zeros([1,sz[0],sz[1],2]), requires_grad=False )
-    phi_stn[0,:,:,0]=phi[0,:,:]
-    phi_stn[0,:,:,1]=phi[1,:,:]
-    I1_warped = stn(I0_stn, phi_stn)
-    return I1_warped[0, :, :, 0]
+    if params is None:
+        params = pars.ParameterDict()
 
-def computeWarpedImage_3d(I0, phi):
-    stn = STN_ND(3)
-    sz = I0.size()
-    I0_stn = I0.view(torch.Size([1, sz[0], sz[1], sz[2], 1]))
-    phi_stn = Variable( torch.zeros([1,sz[0],sz[1],sz[2],3]), requires_grad=False )
-    phi_stn[0,:,:,:,0] = phi[0,:,:,:]
-    phi_stn[0,:,:,:,1] = phi[1,:,:,:]
-    phi_stn[0,:,:,:,2] = phi[2,:,:,:]
-    I1_warped = stn(I0_stn, phi_stn)
-    return I1_warped[0, :, :, :, 0]
-'''
+    spline_order = params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
 
-def _compute_warped_image_multiNC_1d(I0, phi, spacing):
+    if spline_order not in [1,2,3,4,5,6,7,8,9]:
+        raise ValueError('Currently only orders 1 to 9 are supported')
 
-    stn = STN_ND_BCXYZ(spacing)
+    if spline_order==1:
+        stn = STN_ND_BCXYZ(spacing)
+    else:
+        stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
+
     I1_warped = stn(I0, phi)
+
     return I1_warped
 
-def _compute_warped_image_multiNC_2d(I0, phi, spacing):
-    stn = STN_ND_BCXYZ(spacing)
+def _compute_warped_image_multiNC_2d(I0, phi, spacing,params):
+
+    if params is None:
+        params = pars.ParameterDict()
+
+    spline_order = params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+
+    if spline_order not in [1,2,3,4,5,6,7,8,9]:
+        raise ValueError('Currently only orders 1 to 9 are supported')
+
+    if spline_order==1:
+        stn = STN_ND_BCXYZ(spacing)
+    else:
+        stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
+
     I1_warped = stn(I0, phi)
+
     return I1_warped
 
-def _compute_warped_image_multiNC_3d(I0, phi, spacing):
-    stn = STN_ND_BCXYZ(spacing)
+def _compute_warped_image_multiNC_3d(I0, phi, spacing,params):
+
+    if params is None:
+        params = pars.ParameterDict()
+
+    spline_order = params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+
+    if spline_order not in [1,2,3,4,5,6,7,8,9]:
+        raise ValueError('Currently only orders 1 to 9 are supported')
+
+    if spline_order==1:
+        stn = STN_ND_BCXYZ(spacing)
+    else:
+        stn = SplineInterpolation_ND_BCXYZ(spacing,spline_order)
+
     I1_warped = stn(I0, phi)
+
     return I1_warped
 
 
-def compute_warped_image(I0,phi,spacing):
+def compute_warped_image(I0,phi,spacing,params=None):
     """
     Warps image.
 
@@ -323,12 +336,18 @@ def compute_warped_image(I0,phi,spacing):
     :return: returns the warped image of size XxYxZ
     """
 
+    if params is None:
+        params = pars.ParameterDict()
+
+    params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+
+
     # implements this by creating a different view (effectively adding dimensions)
     Iw = compute_warped_image_multiNC(I0.view(torch.Size([1, 1]+ list(I0.size()))),
-                                        phi.view(torch.Size([1]+ list(phi.size()))),spacing)
+                                        phi.view(torch.Size([1]+ list(phi.size()))),spacing,params)
     return Iw.view(I0.size())
 
-def compute_warped_image_multiNC(I0, phi, spacing):
+def compute_warped_image_multiNC(I0, phi, spacing, params=None):
     """
     Warps image.
     
@@ -337,28 +356,22 @@ def compute_warped_image_multiNC(I0, phi, spacing):
     :param spacing: image spacing [dx,dy,dz]
     :return: returns the warped image of size BxCxXxYxZ
     """
+
+    if params is None:
+        params = pars.ParameterDict()
+
+    params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+
     dim = I0.dim()-2
     if dim == 1:
-        return _compute_warped_image_multiNC_1d(I0, phi, spacing)
+        return _compute_warped_image_multiNC_1d(I0, phi, spacing,params)
     elif dim == 2:
-        return _compute_warped_image_multiNC_2d(I0, phi, spacing)
+        return _compute_warped_image_multiNC_2d(I0, phi, spacing,params)
     elif dim == 3:
-        return _compute_warped_image_multiNC_3d(I0, phi, spacing)
+        return _compute_warped_image_multiNC_3d(I0, phi, spacing,params)
     else:
         raise ValueError('Images can only be warped in dimensions 1 to 3')
 
-'''
-def computeWarpedImage(I0, phi):
-    dim = I0.dim()
-    if dim == 1:
-        return computeWarpedImage_1d(I0, phi)
-    elif dim == 2:
-        return computeWarpedImage_2d(I0, phi)
-    elif dim == 3:
-        return computeWarpedImage_3d(I0, phi)
-    else:
-        raise ValueError('Images can only be warped in dimensions 1 to 3')
-'''
 
 def compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, sz, spacing):
     """

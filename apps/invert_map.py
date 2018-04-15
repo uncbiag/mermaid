@@ -66,6 +66,8 @@ if __name__ == "__main__":
 
     import argparse
 
+    print('WARNING: TODO: need to add support for different spline orders for image warping!! (I.e., support for params for compute_warped_image_multiNC')
+
     parser = argparse.ArgumentParser(description='Invert map')
 
     required = parser.add_argument_group('required arguments')

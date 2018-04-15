@@ -255,7 +255,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
                 # now upsample to correct resolution
                 desiredSz = identityMap.size()[2::]
                 sampler = IS.ResampleImage()
-                rec_phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing, desiredSz)
+                rec_phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing, desiredSz,params)
         else:
             rec_phiWarped = model(identityMap, ISource)
 
@@ -263,7 +263,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
         rec_IWarped = model(ISource)
 
     if use_map:
-        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing)
+        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing,params)
 
     if use_map and map_low_res_factor is not None:
         vizImage, vizName = model.get_parameter_image_and_name_to_visualize(lowResISource)
@@ -281,11 +281,11 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
 
     if use_map:
         if compute_similarity_measure_at_low_res:
-            I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing)
+            I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing, params)
             vizReg.show_current_images(iter, lowResISource, lowResITarget, I1Warped, vizImage, vizName,
                                        phi_or_warped_image, visual_param)
         else:
-            I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing)
+            I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing, params)
             vizReg.show_current_images(iter, ISource, ITarget, I1Warped, vizImage, vizName,
                                        phi_or_warped_image, visual_param)
     else:
