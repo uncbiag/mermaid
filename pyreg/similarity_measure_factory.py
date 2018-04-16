@@ -170,6 +170,8 @@ class OptimalMassTransportSimilarity(SimilarityMeasure):
         self.std_sinkhorn = std_sinkhorn
         self.sinkhorn_iterations = sinkhorn_iterations
 
+        self.spline_order = params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+        """order of spline for interpolation (if needed)"""
 
     def compute_similarity(self, I0, I1, I0Source, phi):
         """
@@ -191,7 +193,7 @@ class OptimalMassTransportSimilarity(SimilarityMeasure):
 
         # warp the source image (would be more efficient if we process a batch of images at once;
         # but okay for now and no overhead if you only use one image pair at a time)
-        I1_warped = utils.compute_warped_image(I0Source, phi, self.spacing,self.params)
+        I1_warped = utils.compute_warped_image(I0Source, phi, self.spacing,self.spline_order)
 
         # Encapsulate the data in tensor Variables
         multiplier0 = Variable(torch.zeros(I0.size()))

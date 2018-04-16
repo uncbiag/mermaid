@@ -90,9 +90,9 @@ if use_batch_registration:
 else:
     reg.register_images(I0,I1,spacing,
                     model_name='svf_vector_momentum_map',
-                    nr_of_iterations=200,
-                    visualize_step=40,
-                    map_low_res_factor=0.1,
+                    nr_of_iterations=100,
+                    visualize_step=20,
+                    map_low_res_factor=0.5,
                     rel_ftol=1e-15,
                     json_config_out_filename='testBatchNewerSmoother.json',
                     use_consensus_optimization=False,

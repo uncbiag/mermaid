@@ -5,7 +5,10 @@ import torch
 from torch.autograd import Variable
 
 from torch.nn.modules.module import Module
-from torch.autograd import Function
+
+from data_wrapper import MyTensor
+from data_wrapper import MyLongTensor
+
 
 class SplineInterpolation_ND_BCXYZ(Module):
     """
@@ -274,8 +277,9 @@ class SplineInterpolation_ND_BCXYZ(Module):
         sz = x.size()
         dim = sz[1]
 
-        index = torch.LongTensor(*([self.n+1]+list(x.size())))
-        weight = Variable(torch.zeros(*([self.n+1]+list(x.size()))), requires_grad=False)
+        index = MyLongTensor(*([self.n+1]+list(x.size())))
+        #weight = Variable(torch.zeros(*([self.n+1]+list(x.size()))), requires_grad=False)
+        weight = Variable(MyTensor(*([self.n+1]+list(x.size()))).zero_(), requires_grad=False)
 
         # compute the interpolation indexes
         # todo: can likely be simplified (without loop over dimension)
@@ -475,7 +479,8 @@ class SplineInterpolation_ND_BCXYZ(Module):
         sz_weight = weight.size()
         batch_size = c.size()[0]
         nr_of_channels = c.size()[1]
-        w = Variable(torch.zeros([batch_size,nr_of_channels] + list(sz_weight[3:])), requires_grad=False)
+        #w = Variable(torch.zeros([batch_size,nr_of_channels] + list(sz_weight[3:])), requires_grad=False)
+        w = Variable(MyTensor(*([batch_size, nr_of_channels] + list(sz_weight[3:]))).zero_(), requires_grad=False)
 
         if dim==1:
             for b in range(0,batch_size):
@@ -530,6 +535,8 @@ class SplineInterpolation_ND_BCXYZ(Module):
         return interpolated_values
 
 # for testing
+
+# todo: convert the following code into real tests
 
 def test_me(test_dim=1):
 

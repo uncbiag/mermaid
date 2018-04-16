@@ -106,9 +106,9 @@ def compute_mask(im):
     return mask
 
 
-def _compute_low_res_image(I,spacing,low_res_size,params):
+def _compute_low_res_image(I,spacing,low_res_size,spline_order):
     sampler = IS.ResampleImage()
-    low_res_image, _ = sampler.downsample_image_to_size(I, spacing, low_res_size[2::],params['model']['registration_model'])
+    low_res_image, _ = sampler.downsample_image_to_size(I, spacing, low_res_size[2::],spline_order)
     return low_res_image
 
 def _get_low_res_size_from_size(sz, factor):
@@ -188,6 +188,8 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     compute_similarity_measure_at_low_res = params['model']['deformation'][
         ('compute_similarity_measure_at_low_res', False, 'to compute Sim at lower resolution')]
 
+    spline_order = params['model']['registration_model'][('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+
     lowResSize = None
     lowResSpacing = None
 
@@ -195,9 +197,9 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
         lowResSize = _get_low_res_size_from_size(sz, map_low_res_factor)
         lowResSpacing = _get_low_res_spacing_from_spacing(spacing, sz, lowResSize)
 
-        lowResISource = _compute_low_res_image(ISource, spacing, lowResSize,params)
+        lowResISource = _compute_low_res_image(ISource, spacing, lowResSize,spline_order)
         # todo: can be removed to save memory; is more experimental at this point
-        lowResITarget = _compute_low_res_image(ITarget, spacing, lowResSize,params)
+        lowResITarget = _compute_low_res_image(ITarget, spacing, lowResSize,spline_order)
 
     if map_low_res_factor is not None:
         # computes model at a lower resolution than the image similarity
@@ -255,7 +257,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
                 # now upsample to correct resolution
                 desiredSz = identityMap.size()[2::]
                 sampler = IS.ResampleImage()
-                rec_phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing, desiredSz,params['model']['registration_model'])
+                rec_phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing, desiredSz,spline_order)
         else:
             rec_phiWarped = model(identityMap, ISource)
 
@@ -263,7 +265,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
         rec_IWarped = model(ISource)
 
     if use_map:
-        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing,params['model']['registration_model'])
+        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing,spline_order)
 
     if use_map and map_low_res_factor is not None:
         vizImage, vizName = model.get_parameter_image_and_name_to_visualize(lowResISource)
@@ -281,11 +283,11 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
 
     if use_map:
         if compute_similarity_measure_at_low_res:
-            I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing, params['model']['registration_model'])
+            I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing, spline_order)
             vizReg.show_current_images(iter, lowResISource, lowResITarget, I1Warped, vizImage, vizName,
                                        phi_or_warped_image, visual_param)
         else:
-            I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing, params['model']['registration_model'])
+            I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing, spline_order)
             vizReg.show_current_images(iter, ISource, ITarget, I1Warped, vizImage, vizName,
                                        phi_or_warped_image, visual_param)
     else:
@@ -396,9 +398,11 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
 
     plt.clf()
 
+    spline_order = params['model']['registration_model'][('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+
     source_mask = compute_mask(I0[:, 0:1, ...].data.cpu().numpy())
     lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(
-        Variable(torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:],params['model']['registration_model'])
+        Variable(torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:],spline_order)
     lowRes_source_mask = lowRes_source_mask_v.data.cpu().numpy()[0, 0, ...]
 
     plt.subplot(2, 3, 1)
