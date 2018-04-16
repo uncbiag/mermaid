@@ -255,7 +255,8 @@ class SplineInterpolation_ND_BCXYZ(Module):
         if dim not in [1,2,3]:
             raise ValueError('Signal needs to be of dimensions 1, 2, or 3 and in format B x C x X x Y x Z')
 
-        c = torch.zeros_like(s)
+        #c = torch.zeros_like(s)
+        c = Variable( MyTensor(*(list(s.size()))).zero_(), requires_grad=False )
         c[:] = s
 
         self.Ns = list(s.size()[2:])
@@ -496,6 +497,7 @@ class SplineInterpolation_ND_BCXYZ(Module):
                                             + weight[k1, b, 0, ...] * weight[k2,b,1,...] \
                                             * c[b, ch, ...][(index[k1, b, 0, ...]),(index[k2,b,1,...])]
         elif dim ==3:
+            print('Computing 3D spline interpolation')
             for b in range(0, batch_size):
                 for ch in range(0, nr_of_channels):
                     for k1 in range(0, self.n + 1):
