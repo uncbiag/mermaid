@@ -17,71 +17,56 @@ class SplineInterpolation_ND_BCXYZ(Module):
         """spatial dimension"""
         self.spline_order = spline_order
         """spline order"""
-        self.f = SplineInterpolationFunction_ND_BCXYZ( self.spline_order )
-        """spatial transform function"""
 
-    def _scale_map_to_ijk(map, spacing):
+        self.n = spline_order
+        self.Ns = None
+
+        if self.n not in [2, 3, 4, 5, 6, 7, 8, 9]:
+            raise ValueError('Unknown spline order')
+
+        self.poles = dict()
+        self.poles[2] = torch.from_numpy(np.array([np.sqrt(8.) - 3.]))
+        self.poles[3] = torch.from_numpy(np.array([np.sqrt(3.) - 2.]))
+        self.poles[4] = torch.from_numpy(np.array([np.sqrt(664.0 - np.sqrt(438976.0)) + np.sqrt(304.0) - 19.0,
+                                                   np.sqrt(664.0 + np.sqrt(438976.0)) - np.sqrt(304.0) - 19.0]))
+        self.poles[5] = torch.from_numpy(
+            np.array([np.sqrt(135.0 / 2.0 - np.sqrt(17745.0 / 4.0)) + np.sqrt(105.0 / 4.0) - 13.0 / 2.0,
+                      np.sqrt(135.0 / 2.0 + np.sqrt(17745.0 / 4.0)) - np.sqrt(105.0 / 4.0) - 13.0 / 2.0]))
+        self.poles[6] = torch.from_numpy(np.array([-0.48829458930304475513011803888378906211227916123938,
+                                                   -0.081679271076237512597937765737059080653379610398148,
+                                                   -0.0014141518083258177510872439765585925278641690553467]))
+        self.poles[7] = torch.from_numpy(np.array([-0.53528043079643816554240378168164607183392315234269,
+                                                   -0.12255461519232669051527226435935734360548654942730,
+                                                   -0.0091486948096082769285930216516478534156925639545994]))
+        self.poles[8] = torch.from_numpy(np.array([-0.57468690924876543053013930412874542429066157804125,
+                                                   -0.16303526929728093524055189686073705223476814550830,
+                                                   -0.023632294694844850023403919296361320612665920854629,
+                                                   -0.00015382131064169091173935253018402160762964054070043]))
+        self.poles[9] = torch.from_numpy(np.array([-0.60799738916862577900772082395428976943963471853991,
+                                                   -0.20175052019315323879606468505597043468089886575747,
+                                                   -0.043222608540481752133321142979429688265852380231497,
+                                                   -0.0021213069031808184203048965578486234220548560988624]))
+
+    def _scale_map_to_ijk(self, phi, spacing, sz_image):
         """
         Scales the map to the [0,i-1]x[0,j-1]x[0,k-1] format
 
         :param map: map in BxCxXxYxZ format
         :param spacing: spacing in XxYxZ format
+        :param ijk-size of image that needs to be interpolated
         :return: returns the scaled map
         """
-        sz = map.size()
-        map_scaled = torch.zeros_like(map)
+        sz = phi.size()
+
+        scaling = np.array(list(sz_image[2:])).astype('float64')/np.array(list(sz[2:])).astype('float64') # to account for different number of pixels/voxels ijk coordinates (only physical coordinates are consistent)
+
+        phi_scaled = torch.zeros_like(phi)
         ndim = len(spacing)
 
         for d in range(ndim):
-            map_scaled[:, d, ...] = map[:, d, ...]/spacing[d]
+            phi_scaled[:, d, ...] = phi[:, d, ...]*(scaling[d]/spacing[d])
 
-        return map_scaled
-
-    def forward(self, input1, input2):
-        """
-       Simply returns the transformed input
-
-       :param input1: image in BCXYZ format
-       :param input2: map in BdimXYZ format
-       :return: returns the transformed image
-       """
-        return self.f(input1, self._scale_map_to_ijk(input2,self.spacing))
-
-
-
-class SplineInterpolationFunction_ND_BCXYZ(Function):
-
-    def __init__(self,spline_order=3):
-
-        super(SplineInterpolationFunction_ND_BCXYZ, self).__init__()
-
-        self.n = spline_order
-        self.Ns = None
-
-        if self.n not in [2,3,4,5,6,7,8,9]:
-            raise ValueError('Unknown spline order')
-
-        self.poles = dict()
-        self.poles[2] = torch.from_numpy(np.array([np.sqrt(8.)-3.]))
-        self.poles[3] = torch.from_numpy(np.array([np.sqrt(3.)-2.]))
-        self.poles[4] = torch.from_numpy(np.array([np.sqrt(664.0 - np.sqrt(438976.0)) + np.sqrt(304.0) - 19.0,
-                                  np.sqrt(664.0 + np.sqrt(438976.0)) - np.sqrt(304.0) - 19.0]))
-        self.poles[5] = torch.from_numpy(np.array([np.sqrt(135.0 / 2.0 - np.sqrt(17745.0 / 4.0)) + np.sqrt(105.0 / 4.0) - 13.0 / 2.0,
-                                  np.sqrt(135.0 / 2.0 + np.sqrt(17745.0 / 4.0)) - np.sqrt(105.0 / 4.0)- 13.0 / 2.0]))
-        self.poles[6] = torch.from_numpy(np.array([-0.48829458930304475513011803888378906211227916123938,
-                                  -0.081679271076237512597937765737059080653379610398148,
-                                  -0.0014141518083258177510872439765585925278641690553467]))
-        self.poles[7] = torch.from_numpy(np.array([-0.53528043079643816554240378168164607183392315234269,
-                                  -0.12255461519232669051527226435935734360548654942730,
-                                  -0.0091486948096082769285930216516478534156925639545994]))
-        self.poles[8] = torch.from_numpy(np.array([-0.57468690924876543053013930412874542429066157804125,
-                                  -0.16303526929728093524055189686073705223476814550830,
-                                  -0.023632294694844850023403919296361320612665920854629,
-                                  -0.00015382131064169091173935253018402160762964054070043]))
-        self.poles[9] = torch.from_numpy(np.array([-0.60799738916862577900772082395428976943963471853991,
-                                  -0.20175052019315323879606468505597043468089886575747,
-                                  -0.043222608540481752133321142979429688265852380231497,
-                                  -0.0021213069031808184203048965578486234220548560988624]))
+        return phi_scaled
 
     def _slice_dim(self,val,idx,dim):
 
@@ -536,9 +521,11 @@ class SplineInterpolationFunction_ND_BCXYZ(Function):
         :return: spatially transformed image in BCXYZ format
         """
 
+        print('Computing spline interpolation')
+
         # compute interpolation coefficients
         c = self.get_interpolation_coefficients(input1)
-        interpolated_values = self.interpolate(c, input2)
+        interpolated_values = self.interpolate(c, self._scale_map_to_ijk(input2,self.spacing,input1.size()))
 
         return interpolated_values
 
@@ -553,6 +540,7 @@ def test_me(test_dim=1):
     if testDim==1:
         #s = np.array([20,-15,10,-5,5,-12,12,-20,20,-30,30,-7,7,-3,3,-20,20,-1,1,-5,5,3,2,1])
         s = np.array([1.,1.,1.,1.,1.,1.])
+        spacing = np.array([1.])
         #s = np.tile(s,2)
         x = np.arange(0,len(s))
         #
@@ -585,6 +573,8 @@ def test_me(test_dim=1):
         xi = utils.identity_map_multiN([1,1,20,20],[0.5,0.5])
         #xi = xi*10
 
+        spacing = np.array([1.,1.])
+
         s_torch_orig = Variable(torch.from_numpy(s.astype('float32')), requires_grad=True)
         s_torch = s_torch_orig.view(torch.Size([1, 1] + list(s_torch_orig.size())))
         xi_torch = Variable(torch.from_numpy(xi.astype('float32')), requires_grad=True)
@@ -595,7 +585,7 @@ def test_me(test_dim=1):
 
     # do the interpolation
 
-    si = SplineInterpolationFunction_ND_BCXYZ()
+    si = SplineInterpolation_ND_BCXYZ(spacing,spline_order=3)
 
     ctst = si.get_interpolation_coefficients(s_torch)
     si_tst = si.interpolate(ctst,xi_torch)

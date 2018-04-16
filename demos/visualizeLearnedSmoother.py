@@ -132,7 +132,7 @@ if visualize_filters:
     visualize_filter(w2,'w2',print_figures)
 
 
-lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacing, lowResSize[2:])
+lowResI0, lowResSpacing = IS.ResampleImage().downsample_image_to_size(I0, spacing, lowResSize[2:], params['model']['registration_model'])
 
 # smoother needs to be in the same state as before, so we need to set the parameters correctly
 smoother_params = params['model']['registration_model']['forward_model']
@@ -206,7 +206,7 @@ if visualize_weights:
         plt.clf()
 
         source_mask = compute_mask(I0[n:n+1,0:1,...].data.numpy())
-        lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(Variable( torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:])
+        lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(Variable( torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:],params['model']['registration_model'])
         lowRes_source_mask = lowRes_source_mask_v.data.numpy()[0,0,...]
 
         plt.subplot(2,3,1)

@@ -106,9 +106,9 @@ def compute_mask(im):
     return mask
 
 
-def _compute_low_res_image(I,spacing,low_res_size):
+def _compute_low_res_image(I,spacing,low_res_size,params):
     sampler = IS.ResampleImage()
-    low_res_image, _ = sampler.downsample_image_to_size(I, spacing, low_res_size[2::])
+    low_res_image, _ = sampler.downsample_image_to_size(I, spacing, low_res_size[2::],params['model']['registration_model'])
     return low_res_image
 
 def _get_low_res_size_from_size(sz, factor):
@@ -195,9 +195,9 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
         lowResSize = _get_low_res_size_from_size(sz, map_low_res_factor)
         lowResSpacing = _get_low_res_spacing_from_spacing(spacing, sz, lowResSize)
 
-        lowResISource = _compute_low_res_image(ISource, spacing, lowResSize)
+        lowResISource = _compute_low_res_image(ISource, spacing, lowResSize,params)
         # todo: can be removed to save memory; is more experimental at this point
-        lowResITarget = _compute_low_res_image(ITarget, spacing, lowResSize)
+        lowResITarget = _compute_low_res_image(ITarget, spacing, lowResSize,params)
 
     if map_low_res_factor is not None:
         # computes model at a lower resolution than the image similarity
@@ -255,7 +255,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
                 # now upsample to correct resolution
                 desiredSz = identityMap.size()[2::]
                 sampler = IS.ResampleImage()
-                rec_phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing, desiredSz,params)
+                rec_phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing, desiredSz,params['model']['registration_model'])
         else:
             rec_phiWarped = model(identityMap, ISource)
 
@@ -263,7 +263,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
         rec_IWarped = model(ISource)
 
     if use_map:
-        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing,params)
+        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing,params['model']['registration_model'])
 
     if use_map and map_low_res_factor is not None:
         vizImage, vizName = model.get_parameter_image_and_name_to_visualize(lowResISource)
@@ -281,11 +281,11 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
 
     if use_map:
         if compute_similarity_measure_at_low_res:
-            I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing, params)
+            I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing, params['model']['registration_model'])
             vizReg.show_current_images(iter, lowResISource, lowResITarget, I1Warped, vizImage, vizName,
                                        phi_or_warped_image, visual_param)
         else:
-            I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing, params)
+            I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing, params['model']['registration_model'])
             vizReg.show_current_images(iter, ISource, ITarget, I1Warped, vizImage, vizName,
                                        phi_or_warped_image, visual_param)
     else:
@@ -389,18 +389,16 @@ def cond_flip(v,f):
     else:
         return v
 
-def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=None,flip_axes=False):
+def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=None,flip_axes=False,params=None):
 
     if local_weights is not None:
         osw = compute_overall_std(local_weights[0,...].cpu(), stds.data.cpu())
 
     plt.clf()
 
-
-
     source_mask = compute_mask(I0[:, 0:1, ...].data.cpu().numpy())
     lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(
-        Variable(torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:])
+        Variable(torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:],params['model']['registration_model'])
     lowRes_source_mask = lowRes_source_mask_v.data.cpu().numpy()[0, 0, ...]
 
     plt.subplot(2, 3, 1)
@@ -601,11 +599,11 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
             if print_images:
                 visualize_weights(ISource,ITarget,IWarped,phi,
                                   norm_m,model_dict['local_weights'],model_dict['stds'],
-                                  spacing,model_dict['lowResSize'],print_output_dir,pair_nr)
+                                  spacing,model_dict['lowResSize'],print_output_dir,pair_nr,params=params)
             else:
                 visualize_weights(ISource,ITarget,IWarped,phi,
                                   norm_m,model_dict['local_weights'],model_dict['stds'],
-                                  spacing,model_dict['lowResSize'])
+                                  spacing,model_dict['lowResSize'],params=params)
         elif image_dim==3:
             sz_I = ISource.size()
             sz_norm_m = norm_m.size()

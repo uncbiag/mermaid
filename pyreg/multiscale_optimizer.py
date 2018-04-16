@@ -703,18 +703,18 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         self.ISource = I
 
-    def _compute_low_res_image(self,I):
+    def _compute_low_res_image(self,I,params):
         low_res_image = None
         if self.mapLowResFactor is not None:
-            low_res_image,_ = self.sampler.downsample_image_to_size(I,self.spacing,self.lowResSize[2::])
+            low_res_image,_ = self.sampler.downsample_image_to_size(I,self.spacing,self.lowResSize[2::],params['model']['registration_model'])
         return low_res_image
 
     def compute_low_res_image_if_needed(self):
         """To be called before the optimization starts"""
         if self.mapLowResFactor is not None:
-            self.lowResISource = self._compute_low_res_image(self.ISource)
+            self.lowResISource = self._compute_low_res_image(self.ISource,self.params)
             # todo: can be removed to save memory; is more experimental at this point
-            self.lowResITarget = self._compute_low_res_image(self.ITarget)
+            self.lowResITarget = self._compute_low_res_image(self.ITarget,self.params)
 
     def set_source_label(self, LSource):
         """
@@ -919,7 +919,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.useMap:
             cmap = self.get_map()
             # and now warp it
-            return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing, self.params)
+            return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing, self.params['model']['registration_model'])
         else:
             return self.rec_IWarped
 
@@ -1321,10 +1321,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.ISource)
                 if self.useMap:
                     if self.compute_similarity_measure_at_low_res:
-                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing, self.params)
+                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing, self.params['model']['registration_model'])
                         vizReg.show_current_images(iter, self.lowResISource, self.lowResITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
                     else:
-                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.params)
+                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.params['model']['registration_model'])
                         vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
                 else:
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
@@ -3190,8 +3190,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             currentNrOfIteratons = reverseIterations[currentScaleNumber]
 
-            ISourceC, spacingC = self.sampler.downsample_image_to_size(self.ISource, self.spacing, currentDesiredSz[2::])
-            ITargetC, spacingC = self.sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz[2::])
+            ISourceC, spacingC = self.sampler.downsample_image_to_size(self.ISource, self.spacing, currentDesiredSz[2::],self.params['model']['registration_model'])
+            ITargetC, spacingC = self.sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz[2::],self.params['model']['registration_model'])
 
             szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
 

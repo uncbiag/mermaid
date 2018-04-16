@@ -30,7 +30,7 @@ class SimilarityMeasure(object):
         self.params = params
         """external parameters"""
 
-        self.sigma = params[('sigma', 0.1, '1/sigma^2 is the weight in front of the similarity measure')]
+        self.sigma = params['similarity_measure'][('sigma', 0.1, '1/sigma^2 is the weight in front of the similarity measure')]
         """1/sigma^2 is a balancing constant"""
 
     def compute_similarity_multiNC(self, I0, I1, I0Source=None, phi=None):
@@ -114,7 +114,7 @@ class SimilarityMeasure(object):
         :param sigma: balancing constant
         """
         self.sigma = sigma
-        self.params['sigma']=sigma
+        self.params['similarity_measure']['sigma']=sigma
 
     def get_sigma(self):
         """
@@ -165,7 +165,7 @@ class OptimalMassTransportSimilarity(SimilarityMeasure):
     def __init__(self, spacing, params,sinkhorn_iterations = 200,std_sinkhorn = 0.08):
         super(OptimalMassTransportSimilarity, self).__init__(spacing, params)
         self.spacing = spacing
-        self.params = params
+        #self.params = params
         self.std_dev = self.sigma
         self.std_sinkhorn = std_sinkhorn
         self.sinkhorn_iterations = sinkhorn_iterations
@@ -191,7 +191,7 @@ class OptimalMassTransportSimilarity(SimilarityMeasure):
 
         # warp the source image (would be more efficient if we process a batch of images at once;
         # but okay for now and no overhead if you only use one image pair at a time)
-        I1_warped = utils.compute_warped_image(I0Source, phi, self.spacing)
+        I1_warped = utils.compute_warped_image(I0Source, phi, self.spacing,self.params)
 
         # Encapsulate the data in tensor Variables
         multiplier0 = Variable(torch.zeros(I0.size()))
@@ -246,7 +246,7 @@ class LocalizedNCCSimilarity(SimilarityMeasure):
     def __init__(self, spacing, params):
         super(LocalizedNCCSimilarity,self).__init__(spacing,params)
         #todo: maybe add some form of Gaussian weighing and tie it to the real image dimensions
-        self.gaussian_std = params[('gaussian_std', 0.025, 'standard deviation of Gaussian that will be used for local NCC computations')]
+        self.gaussian_std = params['similarity_measure'][('gaussian_std', 0.025, 'standard deviation of Gaussian that will be used for local NCC computations')]
         """half the side length of the cube over which lNCC is computed"""
 
         self.nr_of_elements_in_direction = None
@@ -529,6 +529,6 @@ class SimilarityMeasureFactory(object):
 
         if self.simMeasures.has_key( similarityMeasureType ):
             print('Using ' + similarityMeasureType + ' similarity measure')
-            return self.simMeasures[similarityMeasureType](self.spacing,cparams)
+            return self.simMeasures[similarityMeasureType](self.spacing,params)
         else:
             raise ValueError( 'Similarity measure: ' + similarityMeasureType + ' not known')

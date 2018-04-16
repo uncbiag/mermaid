@@ -116,11 +116,11 @@ def run_model(model_name, model_parameters, I0, sz_sim,spacing_sim,sz_model,spac
             if not np.all(spacing_sim==spacing_model):
                 lowres_id = utils.identity_map_multiN(sz_model, spacing_model)
                 lowResIdentityMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=False))
-                lowResISource,_ = sampler.downsample_image_to_size(I0, spacing_sim, sz_model)
+                lowResISource,_ = sampler.downsample_image_to_size(I0, spacing_sim, sz_model, params['model']['registration_model'])
 
                 rec_tmp = model(lowResIdentityMap, lowResISource)
                 # now upsample to correct resolution
-                phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing_model, spacing_sim, params)
+                phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing_model, spacing_sim, params['model']['registration_model'])
 
             else:
                 phiWarped = model(identityMap, I0 )
