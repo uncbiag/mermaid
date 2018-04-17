@@ -402,7 +402,7 @@ def create_ND_vector_field_variable_multiN(sz, nrOfI=1):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
-    return AdaptVal(Variable(torch.zeros(csz.tolist()), requires_grad=False))
+    return Variable(MyTensor(*(csz.tolist())).zero_(), requires_grad=False)
 
 def create_ND_vector_field_variable(sz):
     """
@@ -414,7 +414,7 @@ def create_ND_vector_field_variable(sz):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([dim]+list(csz))
-    return AdaptVal(Variable(torch.zeros(csz.tolist()), requires_grad=False))
+    return Variable(MyTensor(*(csz.tolist())).zero_(), requires_grad=False)
 
 def create_vector_parameter(nr_of_elements):
     """
@@ -422,7 +422,7 @@ def create_vector_parameter(nr_of_elements):
     :param nr_of_elements: number of vector elements
     :return: returns the parameter vector
     """
-    return Parameter(AdaptVal(torch.zeros(nr_of_elements)))
+    return Parameter(MyTensor(nr_of_elements).zero_())
 
 def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
     """
@@ -435,7 +435,7 @@ def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
-    return Parameter(AdaptVal(torch.zeros(csz.tolist())))
+    return Parameter(MyTensor(*(csz.tolist())).zero_())
 
 def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
     """
@@ -449,8 +449,7 @@ def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
 
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,nrOfC]+list(csz))
-    return Parameter(AdaptVal(torch.zeros(csz.tolist())))
-
+    return Parameter(MyTensor(*(csz.tolist())).zero_())
 
 def centered_identity_map_multiN(sz, spacing, dtype='float32'):
     """

@@ -12,7 +12,7 @@ from torch.autograd import Function
 from torch.autograd import Variable
 import numpy as np
 from torch.autograd import gradcheck
-from data_wrapper import USE_CUDA, FFTVal,AdaptVal
+from data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor
 if USE_CUDA:
     import pytorch_fft.fft as fft
 
@@ -1078,7 +1078,7 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
         sz = input.size()
         new_sz = [self.nr_of_gaussians] + list(sz)
 
-        ret = AdaptVal(torch.FloatTensor(*new_sz))
+        ret = AdaptVal(MyTensor(*new_sz))
 
         for i in range(self.nr_of_gaussians):
             if USE_CUDA:
