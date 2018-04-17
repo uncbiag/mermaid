@@ -3,30 +3,50 @@ import matplotlib.pyplot as plt
 
 import torch
 from torch.autograd import Variable
+from torch.autograd import Function
+
+from torch.autograd import gradcheck
 
 from torch.nn.modules.module import Module
 
 from data_wrapper import MyTensor
 from data_wrapper import MyLongTensor
 
-
 class SplineInterpolation_ND_BCXYZ(Module):
     """
-    Spline transform code for nD spatial transforms. Uses the BCXYZ image format.
+    Spline transform code for nD (1D, 2D, and 3D) spatial spline transforms. Uses the BCXYZ image format.
+    Spline orders 3 to 9 are supported. Only order 3 is currently well tested.
+
+    The code is a generalization (and pyTorch-ification) of the 2D spline code by Philippe Thevenaz:
+    http://bigwww.epfl.ch/thevenaz/interpolation/
+
+    The main difference is that the code supports 1D, 2D, and 3D images in pyTorch format (i.e., the first
+    two dimensions are the batch size and the number of channels. Furthermore, great care has been taken to
+    avoid loops over pixels to obtain a reasonably high performance interpolation.
+
     """
     def __init__(self, spacing, spline_order):
+        """
+        Constructor for spline interpolation
+
+        :param spacing: spacing of the map which will be used for interpolation (this is NOT the spacing of the image data from which to compute the interpolation coefficient)
+        :param spline_order: desired order of the spline: [3,4,5,6,7,8,9]
+        """
         super(SplineInterpolation_ND_BCXYZ, self).__init__()
+
         self.spacing = spacing
-        """spatial dimension"""
+        """spatial spacing; IMPORTANT: needs to be the spacing of the map at which locations the interpolation should be performed 
+        (NOT the spacing of the image from which the coefficient are computed)"""
         self.spline_order = spline_order
         """spline order"""
 
-        self.n = spline_order
-        self.Ns = None
+        self.n = spline_order # convenience short-hand for the spline order
+        self.Ns = None # image dimension
 
         if self.n not in [2, 3, 4, 5, 6, 7, 8, 9]:
             raise ValueError('Unknown spline order')
 
+        # Poles for the different spline orders
         self.poles = dict()
         self.poles[2] = torch.from_numpy(np.array([np.sqrt(8.) - 3.]))
         self.poles[3] = torch.from_numpy(np.array([np.sqrt(3.) - 2.]))
@@ -52,16 +72,16 @@ class SplineInterpolation_ND_BCXYZ(Module):
 
     def _scale_map_to_ijk(self, phi, spacing, sz_image):
         """
-        Scales the map to the [0,i-1]x[0,j-1]x[0,k-1] format
+        Scales the map to the [0,i-1]x[0,j-1]x[0,k-1] format from the standard mermaid format which assumes the spacing has been taken into account
 
         :param map: map in BxCxXxYxZ format
-        :param spacing: spacing in XxYxZ format
+        :param spacing: spacing in XxYxZ format (of the map which hold the interpolation corrdinates)
         :param ijk-size of image that needs to be interpolated
         :return: returns the scaled map
         """
         sz = phi.size()
 
-        scaling = np.array(list(sz_image[2:])).astype('float64')/np.array(list(sz[2:])).astype('float64') # to account for different number of pixels/voxels ijk coordinates (only physical coordinates are consistent)
+        scaling = (np.array(list(sz_image[2:])).astype('float64')-1.)/(np.array(list(sz[2:])).astype('float64')-1.) # to account for different number of pixels/voxels ijk coordinates (only physical coordinates are consistent)
 
         phi_scaled = torch.zeros_like(phi)
         ndim = len(spacing)
@@ -72,6 +92,14 @@ class SplineInterpolation_ND_BCXYZ(Module):
         return phi_scaled
 
     def _slice_dim(self,val,idx,dim):
+        """
+        Conveninece function to allow slicing an array at a particular index of a dimension
+
+        :param val: array
+        :param idx: index
+        :param dim: dimension along which to slice
+        :return: returns the sliced array
+        """
 
         if dim==1:
             return val[:,:,idx,...]
@@ -84,11 +112,12 @@ class SplineInterpolation_ND_BCXYZ(Module):
 
     def _initial_causal_coefficient(self,c,z,tol,dim=1):
         """
+        Computes the initial causal coefficient for the spline filter.
 
-        :param c: coefficient (numpy array)
+        :param c: coefficient array
         :param z: pole
         :param tol: tolerance
-        :return:
+        :return: returns the intial causal coefficient
         """
 
         if self.Ns is None:
@@ -126,10 +155,11 @@ class SplineInterpolation_ND_BCXYZ(Module):
 
     def _initial_anti_causal_coefficient(self,c,z,dim=1):
         """
+        Computes the intial anti causal coefficient for spline interpolation (i.e., for the filter that runs backward)
 
         :param c: coefficients
         :param z: pole
-        :return:
+        :return: anti-causal coefficient
         """
 
         if self.Ns is None:
@@ -141,6 +171,14 @@ class SplineInterpolation_ND_BCXYZ(Module):
     # todo: not clear (to me) how to avoid this without in-place operations which are not permitted by pyTorch
 
     def _convert_to_interpolation_cofficients_in_dim_1(self,c,z,tol):
+        """
+        Converts cofficients (or initialy the signal) into interpolation coefficients along dimension 1.
+
+        :param c: coefficient array (on first use this should contain the signal itself)
+        :param z: pole
+        :param tol: tolerance
+        :return: returns c itself with was modified in place
+        """
 
         dim = 1
 
@@ -170,6 +208,14 @@ class SplineInterpolation_ND_BCXYZ(Module):
         return c
 
     def _convert_to_interpolation_cofficients_in_dim_2(self,c,z,tol):
+        """
+        Converts cofficients (or initialy the signal) into interpolation coefficients along dimension 2.
+
+        :param c: coefficient array (on first use this should contain the signal itself)
+        :param z: pole
+        :param tol: tolerance
+        :return: returns c itself with was modified in place
+        """
 
         dim = 2
 
@@ -199,6 +245,14 @@ class SplineInterpolation_ND_BCXYZ(Module):
         return c
 
     def _convert_to_interpolation_cofficients_in_dim_3(self,c,z,tol):
+        """
+        Converts cofficients (or initialy the signal) into interpolation coefficients along dimension 3.
+
+        :param c: coefficient array (on first use this should contain the signal itself)
+        :param z: pole
+        :param tol: tolerance
+        :return: returns c itself with was modified in place
+        """
 
         dim = 3
 
@@ -228,6 +282,15 @@ class SplineInterpolation_ND_BCXYZ(Module):
         return c
 
     def _convert_to_interpolation_cofficients_in_dim(self,c,z,tol,dim=1):
+        """
+        Converts cofficients (or initialy the signal) into interpolation coefficients along desired dimension.
+
+        :param c: coefficient array (on first use this should contain the signal itself)
+        :param z: pole
+        :param tol: tolerance
+        :param dim: dimension along which to filter the coefficients
+        :return: returns c itself with was modified in place
+        """
 
         if dim==1:
             cr = self._convert_to_interpolation_cofficients_in_dim_1(c,z,tol)
@@ -243,11 +306,12 @@ class SplineInterpolation_ND_BCXYZ(Module):
 
     def _convert_to_interpolation_coefficients(self,s,z,tol):
         """
+        Converts the input signal, s, into a set of filter coefficients. Makes use of the separability of spline interpolation.
 
         :param s: input signal
         :param z: poles
         :param tol: tolerance
-        :return:
+        :return: returns the computed coefficients c
         """
 
         sz = s.size()
@@ -255,7 +319,6 @@ class SplineInterpolation_ND_BCXYZ(Module):
         if dim not in [1,2,3]:
             raise ValueError('Signal needs to be of dimensions 1, 2, or 3 and in format B x C x X x Y x Z')
 
-        #c = torch.zeros_like(s)
         c = Variable( MyTensor(*(list(s.size()))).zero_(), requires_grad=False )
         c[:] = s
 
@@ -269,17 +332,29 @@ class SplineInterpolation_ND_BCXYZ(Module):
 
         return c
 
-    def get_interpolation_coefficients(self,s,tol=0):
+    def _get_interpolation_coefficients(self,s,tol=0):
+        """
+        Obtains the interpolation coefficients for a given signal s.
+
+        :param s: signal
+        :param tol: tolerance
+        :return: interpolation coefficients c
+        """
 
         return self._convert_to_interpolation_coefficients(s,self.poles[self.n],tol)
 
     def _compute_interpolation_weights(self,x):
+        """
+        Compute the interpolation weights at coordinates x
+
+        :param x: coordinates in i,j,k format (will have to be converted to this format from map coordinates first)
+        :return: returns a two-tuple of (index,weight) holding the interpolation indices and weights
+        """
 
         sz = x.size()
         dim = sz[1]
 
         index = MyLongTensor(*([self.n+1]+list(x.size())))
-        #weight = Variable(torch.zeros(*([self.n+1]+list(x.size()))), requires_grad=False)
         weight = Variable(MyTensor(*([self.n+1]+list(x.size()))).zero_(), requires_grad=False)
 
         # compute the interpolation indexes
@@ -450,7 +525,14 @@ class SplineInterpolation_ND_BCXYZ(Module):
 
         return index,weight
 
-    def _interpolate_values(self,c,x):
+    def _interpolate(self,c,x):
+        """
+        Given the computed interpolation coefficients c and the map coordinates x (in ijk format) compute the interpolated values
+
+        :param c: interpolation coefficients
+        :param x: map coordinates
+        :return: interpolated values
+        """
 
         sz = c.size()
         dim = x.size()[1]
@@ -475,66 +557,240 @@ class SplineInterpolation_ND_BCXYZ(Module):
             ge_w = (index[:,:,d,...]>=width)
             index[:,:,d,...][ge_w] = width2 - index[:,:,d,...][ge_w]
 
-        # perform interpolation
+        # perform interpolation (using a helper function to avoid large memory consumption of autograd)
+        w = perform_spline_interpolation_helper(c,weight,index)
 
-        sz_weight = weight.size()
-        batch_size = c.size()[0]
-        nr_of_channels = c.size()[1]
-        #w = Variable(torch.zeros([batch_size,nr_of_channels] + list(sz_weight[3:])), requires_grad=False)
-        w = Variable(MyTensor(*([batch_size, nr_of_channels] + list(sz_weight[3:]))).zero_(), requires_grad=False)
+        return w
 
-        if dim==1:
-            for b in range(0,batch_size):
-                for ch in range(0,nr_of_channels):
-                    for k1 in range(0,self.n+1):
-                        w[b,ch,...] = w[b,ch,...] + weight[k1,b,0,...] * c[b,ch,...][(index[k1,b,0,...])]
-        elif dim==2:
-            for b in range(0, batch_size):
-                for ch in range(0, nr_of_channels):
-                    for k1 in range(0, self.n + 1):
-                        for k2 in range(0, self.n+1):
-                            w[b, ch, ...] = w[b, ch, ...] \
-                                            + weight[k1, b, 0, ...] * weight[k2,b,1,...] \
-                                            * c[b, ch, ...][(index[k1, b, 0, ...]),(index[k2,b,1,...])]
-        elif dim ==3:
-            print('Computing 3D spline interpolation')
-            for b in range(0, batch_size):
-                for ch in range(0, nr_of_channels):
-                    for k1 in range(0, self.n + 1):
-                        for k2 in range(0, self.n + 1):
-                            for k3 in range(0, self.n+1):
-                                w[b, ch, ...] = w[b, ch, ...] \
-                                                + weight[k1, b, 0, ...] * weight[k2, b, 1, ...] * weight[k3,b,2,...] \
-                                                * c[b, ch, ...][(index[k1, b, 0, ...]), (index[k2, b, 1, ...]), (index[k3, b, 2, ...])]
-        else:
-            raise ValueError('Dimension needs to be 1, 2, or 3.')
-
-        interpolated = w
-
-        return interpolated
-
-    def interpolate(self,c,xs):
-
-        r = self._interpolate_values(c,xs)
-
-        return r
-
-    def forward(self, input1, input2):
+    def forward(self, im, phi):
         """
         Perform the actual spatial transform
 
-        :param input1: image in BCXYZ format
-        :param input2: spatial transform in BdimXYZ format
+        :param im: image in BCXYZ format
+        :param phi: spatial transform in BdimXYZ format (assumes that phi makes use of the spacing defined when contructing the object)
         :return: spatially transformed image in BCXYZ format
         """
 
-        print('Computing spline interpolation')
+        #print('Computing spline interpolation')
 
         # compute interpolation coefficients
-        c = self.get_interpolation_coefficients(input1)
-        interpolated_values = self.interpolate(c, self._scale_map_to_ijk(input2,self.spacing,input1.size()))
+        c = self._get_interpolation_coefficients(im)
+        interpolated_values = self._interpolate(c, self._scale_map_to_ijk(phi,self.spacing,im.size()))
 
         return interpolated_values
+
+# functionals to avoid excessive memory consumption
+
+
+class PerformSplineInterpolationHelper(Function):
+    """
+    Performs spline interpolation, given weights, indices, and coefficients.
+    This is simply a convenience class which avoids computing the gradient of the actual interpolation via automatic differentiation
+    (as this would be very memory intensive).
+    """
+
+    def __init__(self,index):
+        """
+        Constructor
+
+        :param index: index array for interpolation (as computed from _compute_interpolation_weights)
+        """
+        super(PerformSplineInterpolationHelper, self).__init__()
+        self.index = index
+
+    def forward(self, c, weight):
+        """
+        Performs the interpolation for given coefficients and weights (we do not compute the gradient wrt. the indices)
+
+        :param c: interpolation coefficients
+        :param weight: interpolation weights
+        :return: interpolated signal
+        """
+
+        # perform interpolation
+
+        sz_weight = weight.size()
+        self.batch_size = c.size()[0]
+        self.nr_of_channels = c.size()[1]
+        self.n = sz_weight[0]-1
+        self.dim = sz_weight[2]
+
+        self.c = c
+        self.weight = weight
+
+        w = MyTensor(*([self.batch_size, self.nr_of_channels] + list(sz_weight[3:]))).zero_()
+
+        if self.dim==1:
+            for b in range(0,self.batch_size):
+                b_ind = MyLongTensor(*(list(self.index.size()[3:]))).fill_(b)
+                for ch in range(0,self.nr_of_channels):
+                    ch_ind = MyLongTensor(*(list(self.index.size()[3:]))).fill_(ch)
+                    for k1 in range(0,self.n+1):
+                        w[b,ch,...] += weight[k1,b,0,...] * c[b_ind,ch_ind,self.index[k1,b,0,...]]
+        elif self.dim==2:
+            for b in range(0, self.batch_size):
+                b_ind = MyLongTensor(*(list(self.index.size()[3:]))).fill_(b)
+                for ch in range(0, self.nr_of_channels):
+                    ch_ind = MyLongTensor(*(list(self.index.size()[3:]))).fill_(ch)
+                    for k1 in range(0, self.n + 1):
+                        for k2 in range(0, self.n+1):
+                            w[b, ch, ...] += weight[k1, b, 0, ...] * weight[k2,b,1,...] \
+                                            * c[b_ind, ch_ind, self.index[k1, b, 0, ...],(self.index[k2,b,1,...])]
+        elif self.dim ==3:
+            for b in range(0, self.batch_size):
+                b_ind = MyLongTensor(*(list(self.index.size()[3:]))).fill_(b)
+                for ch in range(0, self.nr_of_channels):
+                    ch_ind = MyLongTensor(*(list(self.index.size()[3:]))).fill_(ch)
+                    for k1 in range(0, self.n + 1):
+                        for k2 in range(0, self.n + 1):
+                            for k3 in range(0, self.n+1):
+                                w[b,ch,...] +=  weight[k1, b, 0, ...] * weight[k2, b, 1, ...] * weight[k3,b,2,...] \
+                                                * c[b_ind, ch_ind, self.index[k1, b, 0, ...], self.index[k2, b, 1, ...], self.index[k3, b, 2, ...]]
+        else:
+            raise ValueError('Dimension needs to be 1, 2, or 3.')
+
+        return w
+
+    def _get_linear_view(self,t):
+        """
+        Takes a tensor and converts it to a linear view (needed for fast accumulation via put_)
+
+        :param t: tensor
+        :return: linearized view
+        """
+
+        lt = t.view(t.nelement())
+        return lt
+
+    def _sub2ind(self,indices,target_sz):
+        """
+        Similar to matlab's sub2ind. Converts ijk indices to a linear index
+
+        :param indices: ijk indices (as a list)
+        :param target_sz: target size to which these indices belong
+        :return: linearized indices
+        """
+
+        aug_t_sz = list(target_sz) + [1] # augment one here, so we can easily compute the strides via products
+        dim = len(indices) # this is stored in a list
+        l_indices = MyLongTensor(indices[0].nelement()).zero_()
+        for d in range(dim):
+            l_indices += self._get_linear_view(indices[d])*np.prod(aug_t_sz[d+1:])
+        return l_indices
+
+    def _accumulate(self,vals,indices,target_sz):
+        """
+        Necessary to compute the adjoint to the indexing into the coefficient array. Here we add entries based on where
+        they were mapped from (via indexing).
+
+        :param vals: Values
+        :param indices: indices
+        :param target_sz: target size
+        :return: Returns accumulated values
+        """
+
+        acc_res = MyTensor(target_sz).zero_()
+
+        l_acc_res = self._get_linear_view(acc_res)
+        l_vals = self._get_linear_view(vals)
+        l_indices = self._sub2ind(indices,target_sz)
+
+        l_acc_res.put_(l_indices,l_vals,accumulate=True)
+
+        return acc_res
+
+    def backward(self, grad_output):
+        """
+        Computes the gradient with respect to the coefficent array and the weights
+
+        :param grad_output: grad output from previous "layer"
+        :return: gradient
+        """
+
+        grad_c = MyTensor(self.c.size()).zero_()
+        grad_weight = MyTensor(self.weight.size()).zero_()
+
+        if self.dim==1:
+            # first compute the gradient with respect to the weight
+            for b in range(0, self.batch_size):
+                for k1 in range(0, self.n + 1):
+                    for ch in range(0, self.nr_of_channels):
+                        grad_weight[k1,b,0,...] += grad_output[b,ch,...]*self.c[b, ch, ...][(self.index[k1, b, 0, ...])]
+
+
+            # now compute the gradient with respect to the coefficients c
+            for b in range(0, self.batch_size):
+                for ch in range(0, self.nr_of_channels):
+                    for k1 in range(0, self.n + 1):
+                        grad_c[b, ch, ...] += self._accumulate(self.weight[k1,b,0,...]*grad_output[b, ch,...], [self.index[k1, b, 0, ...]], self.c.size()[2:])
+
+        elif self.dim==2:
+            # first compute the gradient with respect to the weight
+            for b in range(0, self.batch_size):
+                for k1 in range(0, self.n + 1):
+                    for k2 in range(0, self.n+1):
+                        for ch in range(0, self.nr_of_channels):
+                            grad_weight[k1, b, 0, ...] += grad_output[b, ch, ...] \
+                                                          * self.weight[k2,b,1,...]\
+                                                          * self.c[b, ch, ...][(self.index[k1, b, 0, ...]),(self.index[k2, b, 1, ...])]
+                            grad_weight[k2, b, 1, ...] += grad_output[b, ch, ...] \
+                                                          * self.weight[k1, b, 0, ...] \
+                                                          * self.c[b, ch, ...][(self.index[k1, b, 0, ...]), (self.index[k2, b, 1, ...])]
+
+            # now compute the gradient with respect to the coefficients c
+            for b in range(0, self.batch_size):
+                for ch in range(0, self.nr_of_channels):
+                    for k1 in range(0, self.n + 1):
+                        for k2 in range(0, self.n + 1):
+                            grad_c[b, ch, ...] += self._accumulate(self.weight[k1, b, 0, ...] * self.weight[k2,b,1,...] * grad_output[b, ch, ...],
+                                                                   [self.index[k1, b, 0, ...],self.index[k2,b,1,...]], self.c.size()[2:])
+
+        elif self.dim==3:
+            # first compute the gradient with respect to the weight
+            for b in range(0, self.batch_size):
+                for k1 in range(0, self.n + 1):
+                    for k2 in range(0, self.n + 1):
+                        for k3 in range(0, self.n + 1):
+                            for ch in range(0, self.nr_of_channels):
+                                grad_weight[k1, b, 0, ...] += grad_output[b, ch, ...] \
+                                                              * self.weight[k2, b, 1, ...] * self.weight[k3, b, 2, ...] \
+                                                              * self.c[b, ch, ...][
+                                                                  (self.index[k1, b, 0, ...]), (self.index[k2, b, 1, ...]), (self.index[k3, b, 2, ...])]
+                                grad_weight[k2, b, 1, ...] += grad_output[b, ch, ...] \
+                                                              * self.weight[k1, b, 0, ...] * self.weight[k3, b, 2, ...]\
+                                                              * self.c[b, ch, ...][
+                                                                  (self.index[k1, b, 0, ...]), (self.index[k2, b, 1, ...]), (self.index[k3, b, 2, ...])]
+                                grad_weight[k3, b, 2, ...] += grad_output[b, ch, ...] \
+                                                              * self.weight[k1, b, 0, ...] * self.weight[k2, b, 1, ...] \
+                                                              * self.c[b, ch, ...][
+                                                                  (self.index[k1, b, 0, ...]), (self.index[k2, b, 1, ...]), (self.index[k3, b, 2, ...])]
+
+            # now compute the gradient with respect to the coefficients c
+            for b in range(0, self.batch_size):
+                for ch in range(0, self.nr_of_channels):
+                    for k1 in range(0, self.n + 1):
+                        for k2 in range(0, self.n + 1):
+                            for k3 in range(0, self.n + 1):
+                                grad_c[b, ch, ...] += self._accumulate(
+                                    self.weight[k1, b, 0, ...] * self.weight[k2, b, 1, ...] * self.weight[k3,b,2,...] * grad_output[b, ch, ...],
+                                    [self.index[k1, b, 0, ...], self.index[k2, b, 1, ...], self.index[k3, b, 2, ...]], self.c.size()[2:])
+
+        else:
+            raise ValueError('Dimension needs to be 1, 2, or 3.')
+
+        return grad_c, grad_weight
+
+def perform_spline_interpolation_helper(c,weight,index):
+    """
+    Helper function to instantiate the spline interpolation helper (for a more efficent gradient computation w/o automatic differentiation)
+
+    :param c: interpolation coefficients
+    :param weight: interpolation weights
+    :param index: interpolation indices
+    :return: interpolated signal
+    """
+
+    return PerformSplineInterpolationHelper(index)(c,weight)
 
 # for testing
 
@@ -547,13 +803,15 @@ def test_me(test_dim=1):
     testDim = test_dim
 
     if testDim==1:
-        #s = np.array([20,-15,10,-5,5,-12,12,-20,20,-30,30,-7,7,-3,3,-20,20,-1,1,-5,5,3,2,1])
-        s = np.array([1.,1.,1.,1.,1.,1.])
-        spacing = np.array([1.])
+        s = np.array([20,-15,10,-5,5,-12,12]) #,-20,20,-30,30,-7,7,-3,3,-20,20,-1,1,-5,5,3,2,1])
+        #s = np.array([1.,1.,1.,1.,1.,1.])
+        spacingOrig = np.array([1./(len(s)-1)])
         #s = np.tile(s,2)
-        x = np.arange(0,len(s))
+        x = np.arange(0,len(s))*spacingOrig
         #
-        xi = np.arange(0,len(s),0.1)
+        xi = np.arange(0,len(s)-1+0.1,0.1)*spacingOrig
+
+        spacing = spacingOrig*0.1
 
         s_torch_orig = Variable(torch.from_numpy(s.astype('float32')), requires_grad=True)
         xi_torch_orig = Variable(torch.from_numpy(xi.astype('float32')), requires_grad=True)
@@ -580,9 +838,8 @@ def test_me(test_dim=1):
 
         x = utils.identity_map_multiN([1,1,10,10],[1,1])
         xi = utils.identity_map_multiN([1,1,20,20],[0.5,0.5])
-        #xi = xi*10
 
-        spacing = np.array([1.,1.])
+        spacing = np.array([0.5,0.5])
 
         s_torch_orig = Variable(torch.from_numpy(s.astype('float32')), requires_grad=True)
         s_torch = s_torch_orig.view(torch.Size([1, 1] + list(s_torch_orig.size())))
@@ -595,12 +852,27 @@ def test_me(test_dim=1):
     # do the interpolation
 
     si = SplineInterpolation_ND_BCXYZ(spacing,spline_order=3)
+    si_tst = si(s_torch,xi_torch)
 
-    ctst = si.get_interpolation_coefficients(s_torch)
-    si_tst = si.interpolate(ctst,xi_torch)
+    #vals = torch.load('grad_output.pt')
+    #grad_output = MyTensor(1,1,61).fill_(1.)
+    #
+    #sif = PerformSplineInterpolationHelper(vals['index'])
+    #sif.forward(vals['c'],vals['weight'])
+    #sif.backward(grad_output)
 
-    val = (si_tst*si_tst).sum()
-    val.backward()
+    #test = gradcheck(PerformSplineInterpolationHelper(vals['index']), (Variable(vals['c'],requires_grad=True),Variable(vals['weight'],requires_grad=True)), eps=1e-2, atol=1e-4)
+    #print(test)
+
+    # ctst = si.get_interpolation_coefficients(s_torch)
+    # si_tst = si.interpolate(ctst,xi_torch)
+    #
+    # val = (si_tst*si_tst).sum()
+    # val.backward()
+    #
+    # #test = gradcheck(SplineInterpolation_ND_BCXYZ(spacing,spline_order=3), (s_torch,xi_torch),eps=1e-6, atol=1e-4)
+    # #print(test)
+    #
 
     # do the plotting
 
@@ -623,4 +895,5 @@ def test_me(test_dim=1):
         raise ValueError('Unsupported dimension')
 
 
+#test_me(1)
 #test_me(2)

@@ -8,7 +8,7 @@ d = torch.load('test_data_upsample.pt')
 
 sampler = IS.ResampleImage()
 
-sf = 1
+sf = 4
 
 tst_phi_lr = d['phi_lr'][:,:,0:-1:sf,0:-1:sf,0:-1:sf]
 spacing = d['spacing']*sf

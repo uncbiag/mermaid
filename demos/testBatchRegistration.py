@@ -92,7 +92,7 @@ else:
                     model_name='svf_vector_momentum_map',
                     nr_of_iterations=100,
                     visualize_step=20,
-                    map_low_res_factor=0.5,
+                    map_low_res_factor=1.0,
                     rel_ftol=1e-15,
                     json_config_out_filename='testBatchNewerSmoother.json',
                     use_consensus_optimization=False,

@@ -391,7 +391,7 @@ class Optimizer(object):
         """
         if (factor is None) or (factor>=1):
             print('WARNING: Could not compute low_res_size as factor was ' + str( factor ))
-            return sz
+            return np.array(sz)
         else:
             lowResSize = np.array(sz)
             lowResSize[2::] = (np.ceil((np.array(sz[2::]) * factor))).astype('int16')
