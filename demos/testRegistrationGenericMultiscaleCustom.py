@@ -119,12 +119,12 @@ class MySVFNet(RN.RegistrationNet):
 
     def upsample_registration_parameters(self, desiredSz):
         sampler = IS.ResampleImage()
-        vUpsampled,upsampled_spacing=sampler.upsample_image_to_size(self.v,self.spacing,desiredSz)
+        vUpsampled,upsampled_spacing=sampler.upsample_image_to_size(self.v,self.spacing,desiredSz,spline_order=1)
         return vUpsampled,upsampled_spacing
 
     def downsample_registration_parameters(self, desiredSz):
         sampler = IS.ResampleImage()
-        vDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz)
+        vDownsampled,downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz,spline_order=1)
         return vDownsampled,downsampled_spacing
 
 class MySVFImageLoss(RN.RegistrationImageLoss):

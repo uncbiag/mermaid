@@ -16,7 +16,7 @@ I1_filenames = ['./data/m2.nii']
 im_io = FIO.ImageIO()
 map_io = FIO.MapIO()
 
-use_batch_optimization = False
+use_batch_optimization = True
 if use_batch_optimization:
     I0 = I0_filenames
     I1 = I1_filenames
@@ -36,7 +36,7 @@ reg = si.RegisterImagePair()
 if use_batch_optimization:
     reg.register_images(I0, I1, spacing,
                         model_name='svf_scalar_momentum_map',
-                        nr_of_iterations=50,
+                        nr_of_iterations=1,
                         visualize_step=25,
                         map_low_res_factor=0.25,
                         rel_ftol=1e-10,
@@ -46,11 +46,11 @@ if use_batch_optimization:
 else:
     reg.register_images(I0, I1, spacing,
                         model_name='svf_scalar_momentum_map',
-                        nr_of_iterations=40,
+                        nr_of_iterations=1,
                         visualize_step=10,
                         map_low_res_factor=0.25,
                         rel_ftol=1e-10,
-                        use_consensus_optimization=True,
+                        use_consensus_optimization=False,
                         json_config_out_filename='test3d_consensus.json',
                         params='test3d.json')
 
@@ -64,7 +64,7 @@ phis = reg.get_map()
 #map_io.write('phi3d.nrrd',phis['phi'][0],hdr)
 #im_io.write('I0_warped.nrrd',Iw,hdr)
 
-save_me = True
+save_me = False
 if save_me:
     d = dict()
     d['pars'] = pars

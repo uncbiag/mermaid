@@ -308,6 +308,9 @@ class Optimizer(object):
 
         self.rel_ftol = self.params['optimizer']['single_scale'][('rel_ftol',self.rel_ftol,'relative termination tolerance for optimizer')]
 
+        self.spline_order = params['model']['registration_model'][('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+        """order of the spline for interpolations"""
+
         self.show_iteration_output = True
         self.history = dict()
 
@@ -388,7 +391,7 @@ class Optimizer(object):
         """
         if (factor is None) or (factor>=1):
             print('WARNING: Could not compute low_res_size as factor was ' + str( factor ))
-            return sz
+            return np.array(sz)
         else:
             lowResSize = np.array(sz)
             lowResSize[2::] = (np.ceil((np.array(sz[2::]) * factor))).astype('int16')
@@ -703,18 +706,18 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         self.ISource = I
 
-    def _compute_low_res_image(self,I):
+    def _compute_low_res_image(self,I,params):
         low_res_image = None
         if self.mapLowResFactor is not None:
-            low_res_image,_ = self.sampler.downsample_image_to_size(I,self.spacing,self.lowResSize[2::])
+            low_res_image,_ = self.sampler.downsample_image_to_size(I,self.spacing,self.lowResSize[2::],self.spline_order)
         return low_res_image
 
     def compute_low_res_image_if_needed(self):
         """To be called before the optimization starts"""
         if self.mapLowResFactor is not None:
-            self.lowResISource = self._compute_low_res_image(self.ISource)
+            self.lowResISource = self._compute_low_res_image(self.ISource,self.params)
             # todo: can be removed to save memory; is more experimental at this point
-            self.lowResITarget = self._compute_low_res_image(self.ITarget)
+            self.lowResITarget = self._compute_low_res_image(self.ITarget,self.params)
 
     def set_source_label(self, LSource):
         """
@@ -919,7 +922,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.useMap:
             cmap = self.get_map()
             # and now warp it
-            return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing)
+            return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing, self.spline_order)
         else:
             return self.rec_IWarped
 
@@ -1173,7 +1176,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     rec_tmp = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
                     # now upsample to correct resolution
                     desiredSz = self.initialMap.size()[2::]
-                    self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
+                    self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz, self.spline_order)
             else:
                 self.rec_phiWarped = self.model(self.initialMap, self.ISource, opt_variables)
 
@@ -1321,10 +1324,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.ISource)
                 if self.useMap:
                     if self.compute_similarity_measure_at_low_res:
-                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing)
+                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing, self.spline_order)
                         vizReg.show_current_images(iter, self.lowResISource, self.lowResITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
                     else:
-                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing)
+                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.spline_order)
                         vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
                 else:
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
@@ -3190,8 +3193,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             currentNrOfIteratons = reverseIterations[currentScaleNumber]
 
-            ISourceC, spacingC = self.sampler.downsample_image_to_size(self.ISource, self.spacing, currentDesiredSz[2::])
-            ITargetC, spacingC = self.sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz[2::])
+            ISourceC, spacingC = self.sampler.downsample_image_to_size(self.ISource, self.spacing, currentDesiredSz[2::],self.spline_order)
+            ITargetC, spacingC = self.sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz[2::],self.spline_order)
 
             szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
 

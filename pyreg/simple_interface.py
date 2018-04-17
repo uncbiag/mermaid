@@ -340,7 +340,7 @@ class RegisterImagePair(object):
         else:
             if self.sz is None:
                 if type(ISource)==np.ndarray:
-                    self.sz = ISource.shape
+                    self.sz = np.array(ISource.shape)
                 else:
                     raise ValueError('Input image needs to be a numpy array')
 
