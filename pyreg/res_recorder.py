@@ -144,7 +144,7 @@ class XlsxRecorder(object):
             self.xlsx_writer.close()
             self.summary_writer.close()
         else:
-            raise ValueError, "saving method not implemented"
+            raise ValueError("saving method not implemented")
 
 
     def saving_label_averaged_results(self, results):

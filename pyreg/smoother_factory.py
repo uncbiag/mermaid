@@ -1,6 +1,8 @@
 """
 This package implements various types of smoothers.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
 
@@ -9,13 +11,13 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
-from data_wrapper import USE_CUDA, MyTensor, AdaptVal
+from .data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
-import finite_differences as fd
-import utils
-import custom_pytorch_extensions as ce
-import module_parameters as pars
-import deep_smoothers
+from . import finite_differences as fd
+from . import utils
+from . import custom_pytorch_extensions as ce
+from . import module_parameters as pars
+from . import deep_smoothers
 
 import collections
 
@@ -24,7 +26,7 @@ def get_compatible_state_dict_for_module(state_dict,module_name,target_state_dic
     res_dict = collections.OrderedDict()
     for k in target_state_dict.keys():
         current_parameter_name = module_name + '.' + k
-        if state_dict.has_key(current_parameter_name):
+        if current_parameter_name in state_dict:
             res_dict[k] = state_dict[current_parameter_name]
         else:
             print('WARNING: needed key ' + k + ' but could not find it. IGNORING it.')
@@ -704,9 +706,9 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
 
     def set_state_dict(self, state_dict):
 
-        if state_dict.has_key('multi_gaussian_stds'):
+        if 'multi_gaussian_stds' in state_dict:
             self.multi_gaussian_stds_optimizer_params.data[:] = state_dict['multi_gaussian_stds']
-        if state_dict.has_key('multi_gaussian_weights'):
+        if 'multi_gaussian_weights' in state_dict:
             self.multi_gaussian_weights_optimizer_params.data[:] = state_dict['multi_gaussian_weights']
 
     def _project_parameter_vector_if_necessary(self):
@@ -969,9 +971,9 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
     def set_state_dict(self,state_dict):
 
-        if state_dict.has_key('multi_gaussian_stds'):
+        if 'multi_gaussian_stds' in state_dict:
             self.multi_gaussian_stds_optimizer_params.data[:] = state_dict['multi_gaussian_stds']
-        if state_dict.has_key('multi_gaussian_weights'):
+        if 'multi_gaussian_weights' in state_dict:
             self.multi_gaussian_weights_optimizer_params.data[:] = state_dict['multi_gaussian_weights']
         # first check if the learned smoother has already been initialized
         if len(self.ws.state_dict())==0:
@@ -1114,10 +1116,10 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         # we now use a small neural net to learn the weighting
 
         # needs an image as its input
-        if not pars.has_key('I'):
+        if 'I' not in pars:
             raise ValueError('Smoother requires an image as an input')
 
-        is_map = pars.has_key('phi')
+        is_map = 'phi' in pars
         if is_map:
             # todo: for a map input we simply create the input image by applying the map
             raise ValueError('Only implemented for image input at the moment')
@@ -1324,7 +1326,7 @@ class SmootherFactory(object):
         smootherType = cparams[('type', self.default_smoother_type,
                                           'type of smoother (diffusion|gaussian|adaptive_gaussian|multiGaussian|adaptive_multiGaussian|gaussianSpatial|adaptiveNet)' )]
 
-        if self.smoothers.has_key(smootherType):
+        if smootherType in self.smoothers:
             return self.smoothers[smootherType][0](self.sz,self.spacing,cparams)
         else:
             self.print_available_smoothers()

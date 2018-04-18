@@ -1,3 +1,4 @@
+from __future__ import print_function
 # This is a simple atlas builder
 # To be used (for now) to create training data for the learned smoother
 

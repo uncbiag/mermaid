@@ -1,11 +1,13 @@
 """
 Helper functions to take care of all the file IO
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 import itk
 import os
 import nrrd
-import utils
+from . import utils
 import torch
 import pyreg.image_manipulations as IM
 import numpy as np
@@ -256,7 +258,7 @@ class ImageIO(FileIO):
         :return: n/a
         """
         if adaptive_padding<4 and adaptive_padding != -1:
-            raise ValueError,"may confused with channel, adaptive padding must bigger than 4"
+            raise ValueError("may confused with channel, adaptive padding must bigger than 4")
         self.adaptive_padding = adaptive_padding
 
     def get_intensity_normalization(self):
@@ -575,10 +577,10 @@ class ImageIO(FileIO):
         if self.datatype_conversion:
             im = im.astype(self.default_datatype)
 
-        if not hdr.has_key('spacing'):
+        if 'spacing' not in hdr:
             if not silent_mode:
                 print('Image does not seem to have spacing information.')
-            if hdr.has_key('sizes'):
+            if 'sizes' in hdr:
                 dim_guess = len( hdr['sizes'] )
             else:
                 dim_guess = len( im.shape )

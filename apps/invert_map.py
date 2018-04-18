@@ -4,6 +4,7 @@ Computes the inverse of a map
 Contributors:
   Marc Niethammer: mn@cs.unc.edu
 """
+from __future__ import print_function
 
 import set_pyreg_paths
 import torch

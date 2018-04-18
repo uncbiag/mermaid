@@ -1,25 +1,27 @@
 """
 This package enables easy single-scale and multi-scale optimization support.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
 import os
 import time
 import copy
-import utils
-import visualize_registration_results as vizReg
-import custom_optimizers as CO
+from . import utils
+from . import visualize_registration_results as vizReg
+from . import custom_optimizers as CO
 import numpy as np
 import torch
 from torch.autograd import Variable
-from data_wrapper import USE_CUDA, AdaptVal, MyTensor
-import model_factory as MF
-import image_sampling as IS
-from metrics import get_multi_metric
-from res_recorder import XlsxRecorder
+from .data_wrapper import USE_CUDA, AdaptVal, MyTensor
+from . import model_factory as MF
+from . import image_sampling as IS
+from .metrics import get_multi_metric
+from .res_recorder import XlsxRecorder
 
 from torch.utils.data import Dataset, DataLoader
-import optimizer_data_loaders as OD
+from . import optimizer_data_loaders as OD
 
 from collections import defaultdict
 
@@ -349,7 +351,7 @@ class Optimizer(object):
         :param value: value that is associated with it
         :return: n/a
         """
-        if not self.history.has_key(key):
+        if key not in self.history:
             self.history[key]=[value]
         else:
             self.history[key].append(value)
@@ -1926,7 +1928,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.iter_count = iter+1
 
         if self.show_iteration_output:
-            print('time:', time.time() - start)
+            print(('time:', time.time() - start))
 
 
 class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
@@ -2042,7 +2044,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
     def load_checkpoint_dict(self, d, load_optimizer_state=False):
         super(SingleScaleBatchRegistrationOptimizer, self).load_checkpoint_dict(d)
-        if d.has_key('shared_parameters'):
+        if 'shared_parameters' in d:
             if self.ssOpt is not None:
                 self.ssOpt.set_shared_model_parameters(d['shared_parameters'])
         else:
@@ -2301,7 +2303,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                 last_batch_size = batch_size
 
                 if iter_epoch!=0 or load_individual_parameters_during_first_epoch: # only load the individual parameters after the first epoch
-                    if sample.has_key('individual_parameter'):
+                    if 'individual_parameter' in sample:
                         current_individual_parameters = sample['individual_parameter']
                         if current_individual_parameters is not None:
                             if self.verbose_output:
@@ -2600,7 +2602,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
     def load_checkpoint_dict(self, d, load_optimizer_state=False):
         super(SingleScaleConsensusRegistrationOptimizer, self).load_checkpoint_dict(d)
-        if d.has_key('consensus_dual'):
+        if 'consensus_dual' in d:
             self.current_consensus_dual = d['consensus_dual']
         else:
             raise ValueError('checkpoint does not contain: consensus_dual')
@@ -2632,7 +2634,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
     def _copy_state(self,state_to,state_from):
 
         for key in state_to:
-            if state_from.has_key(key):
+            if key in state_from:
                 state_to[key].copy_(state_from[key])
             else:
                 raise ValueError('Could not copy key ' + key)

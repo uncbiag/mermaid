@@ -1,9 +1,10 @@
+from __future__ import absolute_import
 from pyreg.data_wrapper import USE_CUDA, MyTensor, AdaptVal
 from cffi import FFI
 import torch
 from torch.autograd import Variable
 from pyreg.libraries._ext import my_lib_nn
-import map_scale_utils
+from . import map_scale_utils
 
 ffi = FFI()
 

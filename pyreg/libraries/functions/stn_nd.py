@@ -4,6 +4,7 @@ Spatial transform functions in 1D, 2D, and 3D.
 .. todo::
     Add CUDA implementation. Could be based of the existing 2D CUDA implementation.
 """
+from __future__ import absolute_import
 
 import torch
 from torch.autograd import Function
@@ -13,7 +14,7 @@ if USE_CUDA:
     from pyreg.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
 from pyreg.libraries._ext import my_lib_nd
 
-import map_scale_utils
+from . import map_scale_utils
 
 ffi = FFI()
 

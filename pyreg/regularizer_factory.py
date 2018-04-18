@@ -1,14 +1,15 @@
 '''
 Package implementing general purpose regularizers.
 '''
+from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
 
 import torch
 from torch.autograd import Variable
 
-import finite_differences as fd
-from data_wrapper import MyTensor
+from . import finite_differences as fd
+from .data_wrapper import MyTensor
 
 class Regularizer(object):
     """

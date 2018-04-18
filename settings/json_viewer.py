@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from __future__ import print_function
 __author__ = "Ashwin Nanjappa"
 
 # GUI viewer to view JSON data as tree.

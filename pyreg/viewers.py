@@ -1,6 +1,7 @@
 """
 Implements various viewers to display 3D data
 """
+from __future__ import print_function
 
 from abc import ABCMeta, abstractmethod
 
@@ -102,7 +103,7 @@ class FigureEventHandler(object):
         self.fig.canvas.mpl_disconnect(self._on_key_release)
 
     def _event_is_registered(self, eventname, ax):
-        if self.ax_events.has_key(eventname):
+        if eventname in self.ax_events:
             registeredEvents = self.ax_events[eventname]
             for e in registeredEvents:
                 if e[0] is ax:
@@ -135,7 +136,7 @@ class FigureEventHandler(object):
         """
         if self._is_supported_event(eventname):
             _print_debug('Removing an event ... ')
-            if self.ax_events.has_key(eventname):
+            if eventname in self.ax_events:
                 registeredEvents = self.ax_events[eventname]
                 for e in registeredEvents:
                     if e[0] is ax:
@@ -165,7 +166,7 @@ class FigureEventHandler(object):
                     _print_debug('Dispatching event')
                     e[1](event)
 
-                    if self.sync_d.has_key(e[0]) and e[2] is not None:
+                    if e[0] in self.sync_d and e[2] is not None:
                         _print_debug('Broadcasting')
                         syncInfo = e[2]()
                         self._broadcast(self.sync_d[e[0]], syncInfo, 'button_press_event')

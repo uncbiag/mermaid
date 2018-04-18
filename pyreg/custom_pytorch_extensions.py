@@ -5,6 +5,8 @@ While this may not be relevant for GPU-implementations, convolutions in the spat
 .. todo::
   Create a CUDA version of these convolutions functions. There is already a CUDA based FFT implementation available which could be built upon. Alternatively, spatial smoothing may be sufficiently fast on the GPU.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 # TODO
 
 import torch
@@ -12,11 +14,11 @@ from torch.autograd import Function
 from torch.autograd import Variable
 import numpy as np
 from torch.autograd import gradcheck
-from data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor
+from .data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor
 if USE_CUDA:
     import pytorch_fft.fft as fft
 
-import utils
+from . import utils
 
 def _symmetrize_filter_center_at_zero_1D(filter):
     sz = filter.shape

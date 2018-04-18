@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -9,8 +10,8 @@ from torch.autograd import gradcheck
 
 from torch.nn.modules.module import Module
 
-from data_wrapper import MyTensor
-from data_wrapper import MyLongTensor
+from .data_wrapper import MyTensor
+from .data_wrapper import MyLongTensor
 
 class SplineInterpolation_ND_BCXYZ(Module):
     """
@@ -798,7 +799,7 @@ def perform_spline_interpolation_helper(c,weight,index):
 
 def test_me(test_dim=1):
 
-    import utils
+    from . import utils
 
     testDim = test_dim
 

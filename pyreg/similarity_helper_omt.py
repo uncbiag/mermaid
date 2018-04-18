@@ -1,16 +1,17 @@
 """
 Similarity measures for the registration methods and factory to create similarity measures.
 """
+from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
 import torch
 from torch.autograd import Variable,Function
-from data_wrapper import AdaptVal
-import utils
+from .data_wrapper import AdaptVal
+from . import utils
 from math import floor
 from numpy import log
 from numpy import shape as numpy_shape
-import forward_models as FM
+from . import forward_models as FM
 
 class OTSimilarityHelper(Function):
     """

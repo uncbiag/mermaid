@@ -19,12 +19,14 @@ Futhermore the following (RHSs) are provided
     #. Scalar conservation law
     #. EPDiff
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
 import numpy as np
-import finite_differences as fd
-import utils
-from data_wrapper import MyTensor
+from . import finite_differences as fd
+from . import utils
+from .data_wrapper import MyTensor
 from torch.autograd import Variable
 
 class RHSLibrary(object):
@@ -445,7 +447,7 @@ class EPDiffMap(ForwardModel):
             print("flag phi: {},".format(x[2]))
             print("flag new_m: {},".format(x[3]))
             print("flag new_phi: {},".format(x[4]))
-            raise ValueError, "nan error"
+            raise ValueError("nan error")
 
     def f(self,t, x, u, pars, variables_from_optimizer=None):
         """

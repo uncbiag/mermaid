@@ -4,12 +4,13 @@
 The package supports first and second order derivatives and Neumann and linear extrapolation
 boundary conditions (though the latter have not been tested extensively yet).
 """
+from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
 
 import torch
 from torch.autograd import Variable
-from data_wrapper import MyTensor
+from .data_wrapper import MyTensor
 import numpy as np
 
 class FD(object):

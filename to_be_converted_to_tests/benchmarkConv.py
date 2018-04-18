@@ -1,3 +1,4 @@
+from __future__ import print_function
 import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
@@ -23,7 +24,7 @@ if dim==-1: # test nd version via fft
         # print( 'Iteration: ' + str(iter))
         #np.fft.fftn(np.fft.fftn(A)*F)
         fconvFilter(A)
-    print('time:', time.time() - start)
+    print(('time:', time.time() - start))
 
 
 elif dim==2:
@@ -34,7 +35,7 @@ elif dim==2:
     for iter in range(1000):
         # print( 'Iteration: ' + str(iter))
         F.conv2d(inputs, filters)
-    print('time:', time.time() - start)
+    print(('time:', time.time() - start))
 
 elif dim==3:
     filters = Variable(torch.randn(1, 1, 10, 10, 10))
@@ -44,4 +45,4 @@ elif dim==3:
     for iter in range(100):
         #print( 'Iteration: ' + str(iter))
         F.conv3d(inputs, filters)
-    print('time:', time.time() - start)
+    print(('time:', time.time() - start))

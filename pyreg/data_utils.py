@@ -1,3 +1,4 @@
+from __future__ import print_function
 from os import listdir
 from os.path import isfile, join
 from glob import glob
@@ -168,8 +169,8 @@ def divide_data_set(root_path, pair_name_list, ratio):
     sub_path = {x:os.path.join(root_path,x) for x in ['train', 'val', 'test']}
     nt = [make_dir(sub_path[key]) for key in sub_path]
     if sum(nt):
-        raise ValueError, "the data has already exist, due to randomly assignment schedule, the program block\n" \
-                          "manually delete the folder to reprepare the data"
+        raise ValueError("the data has already exist, due to randomly assignment schedule, the program block\n" \
+                          "manually delete the folder to reprepare the data")
     train_num = int(train_ratio * pair_num)
     val_num = int(val_ratio*pair_num)
     pair_name_sub_list={}
@@ -287,7 +288,7 @@ def file_io_read_img_slice(path, slicing, axis, is_label, normalize_spacing=True
         slice = im[:,:,slicing]
         slicing_spacing = spacing[:2]
     else:
-        raise ValueError, "slicing axis exceed, should be 1-3"
+        raise ValueError("slicing axis exceed, should be 1-3")
     info = { 'spacing':slicing_spacing, 'img_size': slice.shape}
     return slice, info
 

@@ -1,11 +1,12 @@
 """
 Package to create example images to test the image registration algorithms
 """
+from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
 import numpy as np
-import utils
-import fileio
+from . import utils
+from . import fileio
 
 class CreateExample(object):
     """

@@ -3,6 +3,7 @@ Building an atlas from given images.
 Contributors:
   Marc Niethammer: mn@cs.unc.edu
 """
+from __future__ import print_function
 
 import set_pyreg_paths
 

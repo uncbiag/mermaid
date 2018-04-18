@@ -13,24 +13,26 @@ Currently implemented:
     * LDDMMShootingScalarMomentumImageNet: image-based LDDMM using the scalar-momentum parameterization
     * LDDMMShootingScalarMomentumImageNet: map-based LDDMM using the scalar-momentum parameterization
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
 import torch
 import torch.nn as nn
 from torch.autograd.variable import Variable
 from torch.nn.parameter import Parameter
 
-import rungekutta_integrators as RK
-import forward_models as FM
-from data_wrapper import AdaptVal
-import regularizer_factory as RF
-import similarity_measure_factory as SM
+from . import rungekutta_integrators as RK
+from . import forward_models as FM
+from .data_wrapper import AdaptVal
+from . import regularizer_factory as RF
+from . import similarity_measure_factory as SM
 
-import smoother_factory as SF
-import image_sampling as IS
+from . import smoother_factory as SF
+from . import image_sampling as IS
 
-from data_wrapper import MyTensor
+from .data_wrapper import MyTensor
 
-import utils
+from . import utils
 import collections
 import numpy as np
 
@@ -204,7 +206,7 @@ class RegistrationNet(nn.Module):
         cs = self.state_dict()
 
         for key in pars:
-            if cs.has_key(key):
+            if key in cs:
                 if torch.is_tensor(pars[key]):
                     cs[key].copy_(pars[key])
                 else: #is a parameter
@@ -225,7 +227,7 @@ class RegistrationNet(nn.Module):
         cs = self.state_dict()
 
         for key in pars:
-            if cs.has_key(key) and not self._shared_parameters.issuperset({key}):
+            if key in cs and not self._shared_parameters.issuperset({key}):
                 if torch.is_tensor(pars[key]):
                     cs[key].copy_(pars[key])
                 else: # is a parameter
@@ -242,7 +244,7 @@ class RegistrationNet(nn.Module):
         cs = self.state_dict()
 
         for key in pars:
-            if cs.has_key(key) and self._shared_parameters.issuperset({key}):
+            if key in cs and self._shared_parameters.issuperset({key}):
                 if torch.is_tensor(pars[key]):
                     cs[key].copy_(pars[key])
                 else: # is a parameter

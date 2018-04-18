@@ -146,7 +146,7 @@ class RK4(RKIntegrator):
             print("find nan at {} step".format(t))
             print("flag m: {}, location k{}".format(x[0],k))
             print("flag phi: {}, location k{}".format(x[1],k))
-            raise ValueError, "nan error"
+            raise ValueError("nan error")
 
     def solve_one_step(self, x, t, dt, vo=None):
         """

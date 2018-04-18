@@ -1,4 +1,5 @@
 from __future__ import print_function, division
+from __future__ import absolute_import
 import os
 import torch
 from skimage import io, transform
@@ -6,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
-from data_utils import *
+from .data_utils import *
 from time import time
 
 
