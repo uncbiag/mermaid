@@ -778,7 +778,7 @@ class ConvBnRel(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, active_unit='relu', same_padding=False,
                  bn=False, reverse=False, bias=False):
         super(ConvBnRel, self).__init__()
-        padding = int((kernel_size - 1) / 2) if same_padding else 0
+        padding = int((kernel_size - 1) // 2) if same_padding else 0
         if not reverse:
             self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding=padding, bias=bias)
         else:

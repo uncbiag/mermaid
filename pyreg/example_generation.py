@@ -56,10 +56,10 @@ class CreateSquares(CreateExample):
 
         # create a new category if it does not exist
         params[('square_example_images', {}, 'Controlling the size of a nD cube')]
-        len_s = params['square_example_images'][('len_s',sz.min()/6,'Mimimum side-length of square')]
-        len_l = params['square_example_images'][('len_l',sz.max()/4,'Maximum side-length of square')]
+        len_s = params['square_example_images'][('len_s',sz.min()//6,'Mimimum side-length of square')]
+        len_l = params['square_example_images'][('len_l',sz.max()//4,'Maximum side-length of square')]
 
-        c = sz/2 # center coordinates
+        c = sz//2 # center coordinates
         # create small and large squares
         if self.dim==1:
             I0[c[0]-len_s:c[0]+len_s]=1

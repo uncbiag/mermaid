@@ -362,12 +362,12 @@ class SplineInterpolation_ND_BCXYZ(Module):
         # todo: can likely be simplified (without loop over dimension)
         if self.n%2==0: # even
             for d in range(dim):
-                i = (torch.floor(x[:,d,...].data + 0.5) - self.n/2)
+                i = (torch.floor(x[:,d,...].data + 0.5) - self.n//2)
                 for k in range(0,self.n+1):
                     index[k,:,d,...] = i+k
         else:
             for d in range(dim):
-                i = (torch.floor(x[:,d,...].data)-self.n/2)
+                i = (torch.floor(x[:,d,...].data)-self.n//2)
                 for k in range(0,self.n+1):
                     index[k,:,d,...] = i+k
 

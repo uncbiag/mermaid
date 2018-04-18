@@ -289,7 +289,7 @@ class GaussianSpatialSmoother(GaussianSmoother):
             self.k_sz = self.k_sz_h * 2 + 1  # this is to assure that the kernel is odd size
 
         self.smoothingKernel = self._create_smoothing_kernel(self.k_sz)
-        self.required_padding = (self.k_sz-1)/2
+        self.required_padding = (self.k_sz-1)//2
 
         if self.dim==1:
             self.filter =AdaptVal(Variable(torch.from_numpy(self.smoothingKernel)))

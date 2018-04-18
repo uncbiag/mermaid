@@ -25,8 +25,8 @@ dim = 2
 sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
 
 params = dict()
-params['len_s'] = sz.min()/5
-params['len_l'] = sz.min()/4
+params['len_s'] = sz.min()//5
+params['len_l'] = sz.min()//4
 
 # create a default image size with two sample squares
 cs = eg.CreateSquares(sz)
