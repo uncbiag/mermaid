@@ -16,6 +16,7 @@ A basic installation requires the installation of a few python packages. Most of
   * conda install matplotlib
   * conda install scipy
   * conda install openpyxl
+  * conda install -c anaconda cython
   * pip install pytorch-fft
   * pip install pynrrd
 
