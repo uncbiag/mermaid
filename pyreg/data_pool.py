@@ -1,6 +1,6 @@
 from __future__ import print_function
 from builtins import object
-import progressbar as pb
+#import progressbar as pb
 
 from torch.utils.data import Dataset
 
@@ -116,7 +116,7 @@ class UnlabeledDataSet(BaseDataSet):
         saving_path_list = divide_data_set(self.output_path, self.pair_name_list, self.divided_ratio)
         img_size = ()
         info = None
-        pbar = pb.ProgressBar(widgets=[pb.Percentage(), pb.Bar(), pb.ETA()], maxval=len(self.pair_path_list)).start()
+        #pbar = pb.ProgressBar(widgets=[pb.Percentage(), pb.Bar(), pb.ETA()], maxval=len(self.pair_path_list)).start()
         for i, pair in enumerate(self.pair_path_list):
             img1, info1 = self.read_file(pair[0])
             img2, info2 = self.read_file(pair[1])
@@ -170,7 +170,7 @@ class LabeledDataSet(BaseDataSet):
         saving_path_list = divide_data_set(self.output_path, self.pair_name_list, self.divided_ratio)
         img_size = ()
         info = None
-        pbar = pb.ProgressBar(widgets=[pb.Percentage(), pb.Bar(), pb.ETA()], maxval=len(self.pair_path_list)).start()
+        #pbar = pb.ProgressBar(widgets=[pb.Percentage(), pb.Bar(), pb.ETA()], maxval=len(self.pair_path_list)).start()
         for i, pair in enumerate(self.pair_path_list):
             img1, info1 = self.read_file(pair[0])
             img2, info2 = self.read_file(pair[1])
