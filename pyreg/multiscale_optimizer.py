@@ -4,6 +4,10 @@ This package enables easy single-scale and multi-scale optimization support.
 from __future__ import print_function
 from __future__ import absolute_import
 
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
 from abc import ABCMeta, abstractmethod
 import os
 import time
@@ -24,13 +28,13 @@ from torch.utils.data import Dataset, DataLoader
 from . import optimizer_data_loaders as OD
 
 from collections import defaultdict
+from future.utils import with_metaclass
 
 # add some convenience functionality
-class SimpleRegistration(object):
+class SimpleRegistration(with_metaclass(ABCMeta, object)):
     """
            Abstract optimizer base class.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self,ISource,ITarget,spacing,sz,params):
         """
@@ -245,11 +249,10 @@ class SimpleMultiScaleRegistration(SimpleRegistration):
 
 
 
-class Optimizer(object):
+class Optimizer(with_metaclass(ABCMeta, object)):
     """
        Abstract optimizer base class.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
         """
@@ -1599,7 +1602,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # first deal with the individual parameters
         pl_ind, par_to_name_ind = utils.get_parameter_list_and_par_to_name_dict_from_parameter_dict(individual_pars)
         #cd = {'params': pl_ind}
-        cd = {'params': filter(lambda p: p.requires_grad, pl_ind)}
+        cd = {'params': [p for p in pl_ind if p.requires_grad]}
         cd.update(settings_individual)
         par_list.append(cd)
         # add all the names
@@ -1610,7 +1613,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # now deal with the shared parameters
         pl_shared, par_to_name_shared = utils.get_parameter_list_and_par_to_name_dict_from_parameter_dict(shared_pars)
         #cd = {'params': pl_shared}
-        cd = {'params': filter(lambda p: p.requires_grad, pl_shared)}
+        cd = {'params': [p for p in pl_shared if p.requires_grad]}
         cd.update(settings_shared)
         par_list.append(cd)
         for current_par, key in zip(pl_shared, par_to_name_shared):

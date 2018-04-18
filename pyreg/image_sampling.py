@@ -9,6 +9,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 # TODO
 
+from builtins import range
+from builtins import object
 from scipy import ndimage as nd
 import torch
 from torch.autograd import Variable

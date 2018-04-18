@@ -1,4 +1,5 @@
 from __future__ import print_function
+from builtins import str
 import matplotlib.pyplot as plt
 import numpy as np
 import smoother_factory as sf

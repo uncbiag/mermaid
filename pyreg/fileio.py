@@ -4,6 +4,9 @@ Helper functions to take care of all the file IO
 from __future__ import print_function
 from __future__ import absolute_import
 
+from builtins import str
+from builtins import range
+from builtins import object
 import itk
 import os
 import nrrd
@@ -18,12 +21,12 @@ import copy
 from pyreg.config_parser import USE_FLOAT16
 
 from abc import ABCMeta, abstractmethod
+from future.utils import with_metaclass
 
-class FileIO(object):
+class FileIO(with_metaclass(ABCMeta, object)):
     """
     Abstract base class for file i/o.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self):
         """
@@ -743,7 +746,7 @@ class ImageIO(FileIO):
                 print(im.shape)
                 print('Map dimension:')
                 print(map.shape)
-                return None,None.None,None
+                return None,None,None,None
             else:
                 im = im_fixed
 

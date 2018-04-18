@@ -10,6 +10,9 @@ from __future__ import print_function
 from __future__ import absolute_import
 #TODO
 
+from builtins import zip
+from builtins import str
+from builtins import range
 import torch
 from functools import reduce
 from torch.optim import Optimizer

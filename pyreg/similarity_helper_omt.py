@@ -3,6 +3,8 @@ Similarity measures for the registration methods and factory to create similarit
 """
 from __future__ import absolute_import
 
+from builtins import range
+from builtins import object
 from abc import ABCMeta, abstractmethod
 import torch
 from torch.autograd import Variable,Function

@@ -6,20 +6,21 @@ boundary conditions (though the latter have not been tested extensively yet).
 """
 from __future__ import absolute_import
 
+from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import torch
 from torch.autograd import Variable
 from .data_wrapper import MyTensor
 import numpy as np
+from future.utils import with_metaclass
 
-class FD(object):
+class FD(with_metaclass(ABCMeta, object)):
     """
     *FD* is the abstract class for finite differences. It includes most of the actual finite difference code, 
     but requires the definition (in a derived class) of the methods *get_dimension*, *create_zero_array*, and *get_size_of_array*.
     In this way the numpy and pytorch versions can easily be derived.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, spacing, bcNeumannZero=True):
         """

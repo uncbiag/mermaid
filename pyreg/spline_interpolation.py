@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from builtins import range
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -676,7 +677,7 @@ class PerformSplineInterpolationHelper(Function):
         dim = len(indices) # this is stored in a list
         l_indices = MyLongTensor(indices[0].nelement()).zero_()
         for d in range(dim):
-            l_indices += self._get_linear_view(indices[d])*np.prod(aug_t_sz[d+1:])
+            l_indices += self._get_linear_view(indices[d])*int(np.prod(aug_t_sz[d+1:]))
         return l_indices
 
     def _accumulate(self,vals,indices,target_sz):

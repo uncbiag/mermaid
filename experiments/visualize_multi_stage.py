@@ -1,4 +1,6 @@
 from __future__ import print_function
+from builtins import str
+from builtins import range
 import set_pyreg_paths
 import multiprocessing as mp
 
@@ -783,7 +785,7 @@ if __name__ == "__main__":
         slice_proportion_3d = [0.5]*len(slice_mode_3d)
 
     if slice_proportion_3d_was_specified and not slice_mode_3d_was_specified:
-        slice_mode_3d = range(len(slice_proportion_3d))
+        slice_mode_3d = list(range(len(slice_proportion_3d)))
 
     if len(slice_mode_3d)!=len(slice_proportion_3d):
         raise ValueError('There need to be the same number of proportions as there are 3D modes specified')
@@ -797,7 +799,7 @@ if __name__ == "__main__":
     if args.compute_only_pair_nr is not None:
         pair_nrs = [args.compute_only_pair_nr]
     else:
-        pair_nrs = range(nr_of_computed_pairs)
+        pair_nrs = list(range(nr_of_computed_pairs))
 
     for pair_nr in pair_nrs:
         print('Computing pair number: ' + str(pair_nr))

@@ -1,5 +1,6 @@
 # first do the torch imports
 from __future__ import print_function
+from builtins import str
 import torch
 from torch.autograd import Variable
 import time

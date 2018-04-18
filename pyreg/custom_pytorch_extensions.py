@@ -9,6 +9,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 # TODO
 
+from builtins import range
+from builtins import object
 import torch
 from torch.autograd import Function
 from torch.autograd import Variable
@@ -138,7 +140,7 @@ def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True, m
                     raise ValueError('Cannot enforce max symmetry as maximum is not unique')
 
         spatial_filter_max_at_zero = np.roll(spatial_filter, -np.array(maxIndex),
-                                             range(len(spatial_filter.shape)))
+                                             list(range(len(spatial_filter.shape))))
 
         symmetrize_filter_center_at_zero(spatial_filter_max_at_zero,renormalize=renormalize)
 

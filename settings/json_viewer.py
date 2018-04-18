@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 from __future__ import print_function
+from builtins import str
+from builtins import object
 __author__ = "Ashwin Nanjappa"
 
 # GUI viewer to view JSON data as tree.
@@ -18,7 +20,7 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
-class TextToTreeItem:
+class TextToTreeItem(object):
 
     def __init__(self):
         self.text_list = []
@@ -126,7 +128,7 @@ class JsonView(QtWidgets.QWidget):
     def recurse_jdata(self, jdata, tree_widget):
 
         if isinstance(jdata, dict):
-            for key, val in jdata.items():
+            for key, val in list(jdata.items()):
                 self.tree_add_row(key, val, tree_widget)
         elif isinstance(jdata, list):
             for i, val in enumerate(jdata):

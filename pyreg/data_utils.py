@@ -1,4 +1,5 @@
 from __future__ import print_function
+from builtins import range
 from os import listdir
 from os.path import isfile, join
 from glob import glob
@@ -341,7 +342,7 @@ def write_file(path, dic, type='h5py'):
         f.create_dataset('data',data=dic['data'])
         if dic['label'] is not None:
             f.create_dataset('label', data= dic['label'] )
-        for key, value in dic['info'].items():
+        for key, value in list(dic['info'].items()):
             f.attrs[key] = value
         #asciiList = [[path.encode("ascii", "ignore") for path in pair] for pair in dic['pair_path']]
         asciiList = [path.encode("ascii", "ignore") for path in dic['pair_path']]

@@ -8,6 +8,8 @@ from __future__ import print_function
 from __future__ import absolute_import
 # TODO
 
+from builtins import str
+from builtins import range
 import torch
 from torch.nn.parameter import Parameter
 from torch.autograd import Variable

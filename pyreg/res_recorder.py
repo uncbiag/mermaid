@@ -1,4 +1,6 @@
 from __future__ import print_function
+from builtins import str
+from builtins import object
 import pandas as pd
 from openpyxl import load_workbook
 import numpy as np
@@ -106,7 +108,7 @@ class XlsxRecorder(object):
         # return: dic: {iter_info1:{ metric1: nFile x 1 , metric2:...}, iter_info2:....}
         """
         metric_avg_dic={}
-        for iter_info,avg_list in self.avg_buffer.items():
+        for iter_info,avg_list in list(self.avg_buffer.items()):
             metric_results_tmp = {metric: [result[metric] for result in avg_list] for metric in
                                   self.measures}
             metric_avg_dic[iter_info] = {metric: np.concatenate(metric_results_tmp[metric], 0) for metric in metric_results_tmp}

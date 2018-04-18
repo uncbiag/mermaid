@@ -4,6 +4,8 @@ Similarity measures for the registration methods and factory to create similarit
 from __future__ import print_function
 from __future__ import absolute_import
 
+from builtins import range
+from builtins import object
 from abc import ABCMeta, abstractmethod
 import torch
 from torch.autograd import Variable
@@ -14,12 +16,12 @@ from math import floor
 from .similarity_helper_omt import *
 
 import numpy as np
+from future.utils import with_metaclass
 
-class SimilarityMeasure(object):
+class SimilarityMeasure(with_metaclass(ABCMeta, object)):
     """
     Abstract base class for a similarity measure
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, spacing, params):
         self.spacing = spacing

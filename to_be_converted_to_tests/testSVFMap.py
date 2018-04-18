@@ -8,6 +8,8 @@ Contributors:
 
 # first do the torch imports
 from __future__ import print_function
+from builtins import str
+from builtins import range
 import torch
 from torch.autograd import Variable
 import time

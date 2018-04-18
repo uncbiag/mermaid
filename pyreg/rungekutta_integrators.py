@@ -3,19 +3,21 @@ Simple (explicit) Runge-Kutta integrators to forward integrate dynamic forward m
 """
 from __future__ import print_function
 
+from builtins import zip
+from builtins import range
+from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import torch
 from torch.autograd import Variable
 import pyreg.utils as utils
 import numpy as np
+from future.utils import with_metaclass
 
-class RKIntegrator(object):
+class RKIntegrator(with_metaclass(ABCMeta, object)):
     """
     Abstract base class for Runge-Kutta integration: x' = f(x(t),u(t),t)
     """
-
-    __metaclass__ = ABCMeta
 
     def __init__(self,f,u,pars,params):
         """

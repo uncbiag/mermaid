@@ -1,4 +1,6 @@
 from __future__ import print_function
+from builtins import str
+from builtins import range
 import set_pyreg_paths
 import pyreg.config_parser as cp
 
@@ -96,7 +98,7 @@ def get_n_pairwise_image_combinations(input_directory,n=10,no_random_shuffle=Fal
 
     if n<nr_of_files and not no_random_shuffle:
         # we now do a random selection
-        ind = range(len(source_ids))
+        ind = list(range(len(source_ids)))
         random.shuffle(ind)
 
         source_files_ret = []

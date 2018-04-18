@@ -1,5 +1,6 @@
 from __future__ import print_function, division
 from __future__ import absolute_import
+from builtins import object
 import os
 import torch
 from skimage import io, transform

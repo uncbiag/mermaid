@@ -3,11 +3,15 @@ Implements various viewers to display 3D data
 """
 from __future__ import print_function
 
+from builtins import str
+from builtins import range
+from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from future.utils import with_metaclass
 
 def _create_some_test_data():
     a = np.sin(np.linspace(0, np.pi, 20))
@@ -184,11 +188,10 @@ class FigureEventHandler(object):
         pass
 
 
-class ImageViewer(object):
+class ImageViewer(with_metaclass(ABCMeta, object)):
     """
     Abstract class for an image viewer.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, ax, data ):
         """
@@ -214,12 +217,10 @@ class ImageViewer(object):
         """
         pass
 
-class ImageViewer3D(ImageViewer):
+class ImageViewer3D(with_metaclass(ABCMeta, ImageViewer)):
     """
     Abstract class for a 3D image viewer.
     """
-
-    __metaclass__ = ABCMeta
 
     def __init__(self, ax, data ):
         super(ImageViewer3D,self).__init__(ax,data)

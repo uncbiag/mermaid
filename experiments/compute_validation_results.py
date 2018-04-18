@@ -1,4 +1,7 @@
 from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
 import set_pyreg_paths
 
 import os
@@ -347,7 +350,7 @@ if __name__ == "__main__":
         print('INFO: Assuming that dataset is CUMC; if this is not the case, use the --dataset option')
         validation_dataset_name = 'CUMC'
     else:
-        if args.dataset in validation_datasets.keys():
+        if args.dataset in list(validation_datasets.keys()):
             validation_dataset_name = args.dataset
         else:
             raise ValueError('Dataset needs to be [CUMC|MGH|LPBA|IBSR], but got ' + args.dataset)

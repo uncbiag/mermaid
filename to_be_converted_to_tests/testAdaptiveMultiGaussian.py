@@ -1,4 +1,6 @@
 from __future__ import print_function
+from builtins import zip
+from builtins import range
 import set_pyreg_paths
 
 #import testMultiGaussianExtension as ce
@@ -165,7 +167,7 @@ def mygradcheck(func, inputs, eps=1e-6, atol=1e-5, rtol=1e-3, raise_exception=Tr
     output = _differentiable_outputs(func(*inputs))
     if any([o.requires_grad for o in output]):
         torch.autograd.backward(output, [o.data.new(o.size()).zero_() for o in output], create_graph=True)
-        var_inputs = list(filter(lambda i: isinstance(i, Variable), inputs))
+        var_inputs = list([i for i in inputs if isinstance(i, Variable)])
         if not var_inputs:
             raise RuntimeError("no Variables found in input")
         for i in var_inputs:

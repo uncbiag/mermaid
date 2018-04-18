@@ -5,6 +5,8 @@ Contributors:
 """
 from __future__ import print_function
 
+from builtins import str
+from builtins import range
 import set_pyreg_paths
 
 # first do the torch imports

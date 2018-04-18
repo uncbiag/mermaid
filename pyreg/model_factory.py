@@ -4,6 +4,7 @@ Package to quickly instantiate registration models by name.
 from __future__ import print_function
 from __future__ import absolute_import
 
+from builtins import object
 from . import registration_networks as RN
 import pyreg.utils as utils
 import pyreg.image_sampling as IS

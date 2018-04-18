@@ -4,6 +4,9 @@ This package implements various types of smoothers.
 from __future__ import print_function
 from __future__ import absolute_import
 
+from builtins import str
+from builtins import range
+from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import torch
@@ -20,11 +23,12 @@ from . import module_parameters as pars
 from . import deep_smoothers
 
 import collections
+from future.utils import with_metaclass
 
 def get_compatible_state_dict_for_module(state_dict,module_name,target_state_dict):
 
     res_dict = collections.OrderedDict()
-    for k in target_state_dict.keys():
+    for k in list(target_state_dict.keys()):
         current_parameter_name = module_name + '.' + k
         if current_parameter_name in state_dict:
             res_dict[k] = state_dict[current_parameter_name]
@@ -37,17 +41,16 @@ def get_compatible_state_dict_for_module(state_dict,module_name,target_state_dic
 def get_state_dict_for_module(state_dict,module_name):
 
     res_dict = collections.OrderedDict()
-    for k in state_dict.keys():
+    for k in list(state_dict.keys()):
         if k.startswith(module_name + '.'):
             adapted_key = k[len(module_name)+1:]
             res_dict[adapted_key] = state_dict[k]
     return res_dict
 
-class Smoother(object):
+class Smoother(with_metaclass(ABCMeta, object)):
     """
     Abstract base class defining the general smoother interface.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, sz, spacing, params):
         self.sz = sz
@@ -365,13 +368,11 @@ class GaussianSpatialSmoother(GaussianSmoother):
 
 
 
-class GaussianFourierSmoother(GaussianSmoother):
+class GaussianFourierSmoother(with_metaclass(ABCMeta, GaussianSmoother)):
     """
     Performs Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
     than spatial Gaussian smoothing on the CPU in large dimensions.
     """
-
-    __metaclass__ = ABCMeta
 
     def __init__(self, sz, spacing, params):
         super(GaussianFourierSmoother, self).__init__(sz, spacing, params)
@@ -1068,7 +1069,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             current_penalty = _compute_omt_penalty_for_weight_vectors(self.get_gaussian_weights(),
                                                                       self.get_gaussian_stds(), self.omt_power)
 
-            penalty = current_penalty * self.omt_weight_penalty*self.spacing.prod()*self.sz.prod()
+            penalty = current_penalty * self.omt_weight_penalty*self.spacing.prod()*float(self.sz.prod())
 
             #print('omt penalty = ' + str(penalty.data.cpu().numpy()))
 

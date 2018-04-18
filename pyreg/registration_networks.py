@@ -16,6 +16,7 @@ Currently implemented:
 from __future__ import print_function
 from __future__ import absolute_import
 
+from builtins import str
 import torch
 import torch.nn as nn
 from torch.autograd.variable import Variable
@@ -37,12 +38,12 @@ import collections
 import numpy as np
 
 from abc import ABCMeta, abstractmethod
+from future.utils import with_metaclass
 
-class RegistrationNet(nn.Module):
+class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
     """
     Abstract base-class for all the registration networks
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, sz, spacing, params):
         """
@@ -365,11 +366,10 @@ class RegistrationNetDisplacement(RegistrationNet):
         return (phi-self.d)
 
 
-class RegistrationNetTimeIntegration(RegistrationNet):
+class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
     """
         Abstract base-class for all the registration networks with time-integration
         """
-    __metaclass__ = ABCMeta
 
     def __init__(self, sz, spacing, params):
         """
@@ -609,11 +609,10 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
         I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
         return I1[0]
 
-class RegistrationLoss(nn.Module):
+class RegistrationLoss(with_metaclass(ABCMeta, nn.Module)):
     """
     Abstract base class to define a loss function for image registration
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self,sz_sim,spacing_sim,sz_model,spacing_model,params):
         """

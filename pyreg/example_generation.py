@@ -3,16 +3,17 @@ Package to create example images to test the image registration algorithms
 """
 from __future__ import absolute_import
 
+from builtins import object
 from abc import ABCMeta, abstractmethod
 import numpy as np
 from . import utils
 from . import fileio
+from future.utils import with_metaclass
 
-class CreateExample(object):
+class CreateExample(with_metaclass(ABCMeta, object)):
     """
     Abstract base class.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self,dim):
         """
