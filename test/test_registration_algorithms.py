@@ -356,7 +356,7 @@ def run_test_by_name( testName ):
     runner = unittest.TextTestRunner()
     runner.run(suite)
 
-#run_test_by_name('test_svf_scalar_momentum_image_single_scale')
+#run_test_by_name('test_svf_vector_momentum_image_single_scale')
 
 
 if __name__ == '__main__':

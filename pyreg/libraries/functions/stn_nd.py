@@ -6,13 +6,21 @@ Spatial transform functions in 1D, 2D, and 3D.
 """
 from __future__ import absolute_import
 
+import sys
+
 import torch
 from torch.autograd import Function
 from cffi import FFI
 from pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
-if USE_CUDA:
-    from pyreg.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
-from pyreg.libraries._ext import my_lib_nd
+
+if sys.version_info >= (3, 0):
+    if USE_CUDA:
+        from pyreg.libraries._ext_p3 import my_lib_1D, my_lib_2D, my_lib_3D
+    from pyreg.libraries._ext_p3 import my_lib_nd
+else:
+    if USE_CUDA:
+        from pyreg.libraries._ext_p2 import my_lib_1D, my_lib_2D, my_lib_3D
+    from pyreg.libraries._ext_p2 import my_lib_nd
 
 from . import map_scale_utils
 
