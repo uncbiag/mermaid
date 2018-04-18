@@ -729,6 +729,10 @@ class RegistrationImageLoss(RegistrationLoss):
         sim = self.compute_similarity_energy(I1_warped, I1_target, I0_source, None, variables_from_forward_model, variables_from_optimizer)
         reg = self.compute_regularization_energy(I0_source, variables_from_forward_model, variables_from_optimizer)
         energy = sim + reg
+
+        # saveguard against infinity
+        energy = utils.remove_infs_from_variable(energy)
+
         return energy, sim, reg
 
     def forward(self, I1_warped, I0_source, I1_target, variables_from_forward_model=None, variables_from_optimizer=None):
