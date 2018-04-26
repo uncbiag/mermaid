@@ -148,6 +148,34 @@ def add_key_value_pairs_to_params(params,kvs):
             # and now the last one
             current_pars[sub_keys[-1]] = ast.literal_eval(val)
 
+
+def translate_to_current_image_directory(image_names,input_image_directory):
+    # takes a list of image names and used a new input directory for them
+    # this is to allow reading config files from other machines and to retarget them
+    retargeted_image_names = []
+    for n in image_names:
+        c_name = os.path.join(input_image_directory,os.path.basename(n))
+        retargeted_image_names.append(c_name)
+
+    return retargeted_image_names
+
+def load_image_pair_configuration( filename_pt, input_image_directory ):
+
+        if os.path.isfile(filename_pt):
+
+            print('INFO: Loading image pair configuration from: ' + filename_pt)
+
+            up = torch.load(filename_pt)
+            source_images = translate_to_current_image_directory(up['source_images'],input_image_directory)
+            target_images = translate_to_current_image_directory(up['target_images'],input_image_directory)
+            source_ids = up['source_ids']
+            target_ids = up['target_ids']
+
+            return source_images,target_images,source_ids,target_ids
+        else:
+            raise ValueError('File not found: ' + filename_pt)
+
+
 if __name__ == "__main__":
 
     import argparse
@@ -180,6 +208,8 @@ if __name__ == "__main__":
     parser.add_argument('--seed', required=False, type=int, default=None, help='Sets the random seed which affects data shuffling')
 
     parser.add_argument('--do_not_read_used_images_from_file', action='store_true', help='If set the image pairs are recomputed. Use with EXTREME care as stage/frozen results may become inconsistent')
+
+    parser.add_argument('--image_pair_config_pt', required=False, default=None, help='If specified then the image-pairs are determined based on the information in this file; can simply point to a previous configuration.pt file')
 
     parser.add_argument('--frozen_nr_of_epochs', required=False,type=str, default=None, help='number of epochs to run the three stages with frozen parameters (for refinement)')
     parser.add_argument('--only_compute_frozen_epochs', action='store_true', help='if specified will not redo the optimization, but will only compute the frozen results based on previous optimizatin results')
@@ -245,25 +275,29 @@ if __name__ == "__main__":
     used_image_pairs_filename_txt = os.path.join(args.output_directory, 'used_image_pairs.txt')
 
     create_new_image_pairs = False
+    save_new_image_pairs = False
 
-    if args.do_not_read_used_images_from_file:
-        if os.path.isfile(used_image_pairs_filename_pt):
-            print('WARNING! WARNING! image pair file ' + used_image_pairs_filename_pt + ' exists, but will not be used')
-
-        create_new_image_pairs = True
+    if args.image_pair_config_pt is not None:
+        # first see if this file exists
+        if os.path.isfile(args.image_pair_config_pt):
+            source_images, target_images, source_ids, target_ids = load_image_pair_configuration(args.image_pair_config_pt,args.input_image_directory)
+            save_new_image_pairs = True # save what we read so that it is available by default for the subsequent runs
+        else:
+            raise ValueError('Could not open image pair configuration file: ' + args.image_pair_config_pt)
 
     else:
-        if os.path.isfile(used_image_pairs_filename_pt):
+        # image_pair_config was not specified, so we see go back to the default behavior
+        if args.do_not_read_used_images_from_file:
+            if os.path.isfile(used_image_pairs_filename_pt):
+                print('WARNING! WARNING! image pair file ' + used_image_pairs_filename_pt + ' exists, but will not be used')
 
-            print('INFO: Loading image pair configuration from: ' + used_image_pairs_filename_pt)
-
-            up = torch.load(used_image_pairs_filename_pt)
-            source_images = up['source_images']
-            target_images = up['target_images']
-            source_ids = up['source_ids']
-            target_ids = up['target_ids']
-        else:
             create_new_image_pairs = True
+
+        else:
+            if os.path.isfile(used_image_pairs_filename_pt):
+                source_images,target_images,source_ids,target_ids = load_image_pair_configuration(used_image_pairs_filename_pt,args.input_image_directory)
+            else:
+                create_new_image_pairs = True
 
     if create_new_image_pairs:
 
@@ -275,7 +309,11 @@ if __name__ == "__main__":
             no_random_shuffle=args.noshuffle,
             suffix=args.suffix)
 
-        # now save how the data was created
+        save_new_image_pairs = True
+
+
+    if save_new_image_pairs:
+        # now save how the data was created or loaded
         d = dict()
         d['source_images'] = source_images
         d['target_images'] = target_images
