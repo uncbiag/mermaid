@@ -664,11 +664,11 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
                 if print_images:
                     visualize_weights(IS_slice,IT_slice,IW_slice,phi_slice,
                                       norm_m_slice,lw_slice,model_dict['stds'],
-                                      spacing_slice,lowResSize_slice,print_output_dir,pair_nr,slice_mode_3d[sm],flip_axes_3d[sm])
+                                      spacing_slice,lowResSize_slice,print_output_dir,pair_nr,slice_mode_3d[sm],flip_axes_3d[sm],params=params)
                 else:
                     visualize_weights(IS_slice, IT_slice, IW_slice, phi_slice,
                                       norm_m_slice, lw_slice, model_dict['stds'],
-                                      spacing_slice, lowResSize_slice,flip_axes=flip_axes_3d[sm])
+                                      spacing_slice, lowResSize_slice,flip_axes=flip_axes_3d[sm],params=params)
 
         else:
             raise ValueError('I do not know how to visualize results with dimensions other than 2 or 3')
