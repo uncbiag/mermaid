@@ -150,18 +150,18 @@ def _get_low_res_spacing_from_spacing(spacing, sz, lowResSize):
 
 def _load_current_source_and_target_images_as_variables(current_source_filename,current_target_filename,params):
     # now load them
-    intensity_normalize = params['model']['data_loader'][('intensity_normalize', True, 'normalized image intensities')]
-    normalize_spacing = params['model']['data_loader'][('normalize_spacing', True, 'normalized image spacing')]
-    squeeze_image = params['model']['data_loader'][('squeeze_image', False, 'squeeze image dimensions')]
+    intensity_normalize = params['data_loader'][('intensity_normalize', True, 'normalized image intensities')]
+    normalize_spacing = params['data_loader'][('normalize_spacing', True, 'normalized image spacing')]
+    squeeze_image = params['data_loader'][('squeeze_image', False, 'squeeze image dimensions')]
 
     im_io = FIO.ImageIO()
 
-    ISource, hdr, spacing, _ = im_io.read_batch_to_nc_format([current_source_filename],
+    ISource, hdr, spacing, normalized_spacing_ = im_io.read_batch_to_nc_format([current_source_filename],
                                                              intensity_normalize=intensity_normalize,
                                                              squeeze_image=squeeze_image,
                                                              normalize_spacing=normalize_spacing,
                                                              silent_mode=True)
-    ITarget, hdr, spacing, _ = im_io.read_batch_to_nc_format([current_target_filename],
+    ITarget, hdr, spacing, normalized_spacing = im_io.read_batch_to_nc_format([current_target_filename],
                                                              intensity_normalize=intensity_normalize,
                                                              squeeze_image=squeeze_image,
                                                              normalize_spacing=normalize_spacing,
@@ -172,7 +172,7 @@ def _load_current_source_and_target_images_as_variables(current_source_filename,
     ISource = Variable(torch.from_numpy(ISource), requires_grad=False)
     ITarget = Variable(torch.from_numpy(ITarget), requires_grad=False)
 
-    return ISource,ITarget,hdr,sz,spacing
+    return ISource,ITarget,hdr,sz,normalized_spacing
 
 def individual_parameters_to_model_parameters(ind_pars):
     model_pars = dict()
@@ -396,7 +396,7 @@ def cond_flip(v,f):
     else:
         return v
 
-def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=None,flip_axes=False,params=None):
+def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=0,flip_axes=False,params=None):
 
     if local_weights is not None:
         osw = compute_overall_std(local_weights[0,...].cpu(), stds.data.cpu())

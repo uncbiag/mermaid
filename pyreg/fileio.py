@@ -392,14 +392,19 @@ class ImageIO(FileIO):
         return True
 
     def _get_scalar_itk_image_from_numpy(self,np_im,hdr=None):
-        im = itk.GetImageFromArray(np_im)
         if hdr is not None:
+            if 'sizes' not in hdr:
+                raise ValueError('Expected size information in header')
+            im = itk.GetImageFromArray(np_im.view().reshape(list(hdr['sizes'])))
+
             if 'original_spacing' in hdr:
                 im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['original_spacing']))
             else:
                 im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['spacing']))
             im.SetOrigin(self._convert_numpy_vector_to_itk(hdr['space origin']))
             im.SetDirection(self._convert_numpy_matrix_to_itk(hdr['space directions']))
+        else:
+            im = itk.GetImageFromArray(np_im)
 
         return im
 
@@ -411,8 +416,13 @@ class ImageIO(FileIO):
                 dim = hdr['dimension']
             else:
                 dim = len(s)-1
+            if 'squeezed_dim' in hdr:
+                squeezed_dim = hdr['squeezed_dim']
+            else:
+                squeezed_dim = dim
         else:
             dim = len(s)-1
+            squeezed_dim = dim
 
         if self.scale_vectors_on_read_and_write:
             # scale it so that we have the original spacing
@@ -426,7 +436,7 @@ class ImageIO(FileIO):
             scaling = np.array(hdr['original_spacing']) / np.array(hdr['spacing'])
 
             np_vec_im = np.copy(np_vec_im_in)
-            for d in range(dim):
+            for d in range(squeezed_dim):
                 np_vec_im[d, ...] *= scaling[d]
 
         else:
@@ -442,8 +452,15 @@ class ImageIO(FileIO):
         reverse_shape = list(nv_vec_im_rf.shape[0:-1])
         reverse_shape.reverse()
 
-        for d in range(dim):
-            size[d] = reverse_shape[d]
+        if 'sizes' in hdr:
+            for d in range(dim):
+                size[d] = hdr['sizes'][d]
+        else:
+            for d in range(squeezed_dim):
+                size[d] = reverse_shape[d]
+            if squeezed_dim<dim:
+                for d in range(squeezed_dim,dim):
+                    size[d]=1
 
         region = itk.ImageRegion[dim](size)
 
@@ -452,7 +469,11 @@ class ImageIO(FileIO):
         vec_im.Allocate()
 
         vec_view_np = itk.GetArrayViewFromImage(vec_im)
-        vec_view_np[:] = nv_vec_im_rf
+        for d in range(squeezed_dim):
+            vec_view_np[...,d] = nv_vec_im_rf[...,d]
+            #vec_view_np[:] = nv_vec_im_rf
+        for d in range(squeezed_dim,dim):
+            vec_view_np[...,d]=0
 
         if 'original_spacing' in hdr:
             vec_im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['original_spacing']))
@@ -467,7 +488,9 @@ class ImageIO(FileIO):
     def _get_itk_image_from_numpy(self,np_im, hdr=None):
 
         if hdr is not None:
-            if 'dimension' in hdr:
+            if 'squeezed_dim' in hdr:
+                dim = hdr['squeezed_dim']
+            elif 'dimension' in hdr:
                 dim = hdr['dimension']
             else:
                 dim = len(np_im.shape)
@@ -597,19 +620,36 @@ class ImageIO(FileIO):
         if self.squeeze_image==True:
             if verbose and not silent_mode:
                 print('Squeezing image')
-            dim = len(im.shape)
+            if hdr['is_vector_image']:
+                dim = len(im.shape[1:])
+            else:
+                dim = len(im.shape)
+
             im = im.squeeze()
-            dimSqueezed = len(im.shape)
+
+            if hdr['is_vector_image']:
+                dimSqueezed = len(im.shape[1:])
+            else:
+                dimSqueezed = len(im.shape)
+
+            hdr['squeezed_dim'] = dimSqueezed
+
             sz_squeezed = im.shape
             if dim!=dimSqueezed:
                 if verbose and not silent_mode:
                     print('Squeezing changed dimension from ' + str(dim) + ' -> ' + str(dimSqueezed))
-            squeezed_spacing = self._compute_squeezed_spacing(spacing,dim,sz,dimSqueezed)
+
+            if hdr['is_vector_image']:
+                squeezed_spacing = self._compute_squeezed_spacing(spacing, dim, sz[1:], dimSqueezed)
+            else:
+                squeezed_spacing = self._compute_squeezed_spacing(spacing,dim,sz,dimSqueezed)
+
             if verbose and not silent_mode:
                 print( 'squeezed_spacing = ' + str(squeezed_spacing))
-            squeezed_spacing = squeezed_spacing / (np.array(sz_squeezed) - 1)
-            if verbose and not silent_mode:
-                print('Normalized spacing = ' + str(squeezed_spacing))
+
+            #squeezed_spacing = squeezed_spacing / (np.array(sz_squeezed) - 1)
+            #if verbose and not silent_mode:
+            #    print('Normalized spacing = ' + str(squeezed_spacing))
 
         if adaptive_padding>0:
             im = self._do_adaptive_padding(im)
@@ -628,9 +668,19 @@ class ImageIO(FileIO):
             if not silent_mode:
                 print('INFO: Normalizing the spacing to [0,1] in the largest dimension. (Turn normalize_spacing off if this is not desired.)')
             hdr['original_spacing'] = spacing
-            spacing = self._normalize_spacing(spacing,sz,silent_mode)
-            squeezed_spacing = self._normalize_spacing(squeezed_spacing,sz_squeezed,silent_mode)
+
+            if hdr['is_vector_image']:
+                spacing = self._normalize_spacing(spacing, sz[1:], silent_mode)
+                squeezed_spacing = self._normalize_spacing(squeezed_spacing, sz_squeezed[1:], silent_mode)
+            else:
+                spacing = self._normalize_spacing(spacing,sz,silent_mode)
+                squeezed_spacing = self._normalize_spacing(squeezed_spacing,sz_squeezed,silent_mode)
+
             hdr['spacing'] = spacing
+
+            if verbose and not silent_mode:
+                print('Normalized spacing = ' + str(spacing))
+                print('Normalized squeezed spacing = ' + str(squeezed_spacing))
 
             if hdr['is_vector_image']:
                 if self.scale_vectors_on_read_and_write:
@@ -827,6 +877,8 @@ class GenericIO(FileIO):
                         hdr_modified.pop('is_vector_image')
                     if 'vector_image_was_scaled' in hdr_modified:
                         hdr_modified.pop('vector_image_was_scaled')
+                if 'squeezed_dim' in hdr_modified:
+                    hdr_modified.pop('squeezed_dim')
                 nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ), hdr_modified)
             else:
                 nrrd.write(filename, self._convert_data_to_numpy_if_needed( data ) )
@@ -844,7 +896,7 @@ class MapIO(ImageIO):
         self.turn_scale_vectors_on_read_and_write_off()
 
         # now that we are sure this is a map (or dispalcement field), let's write it with the standard image IO
-        im, hdr, spacing, squeezed_spacing = super(MapIO, self).read(filename,silent_mode=True)
+        im, hdr, spacing, squeezed_spacing = super(MapIO, self).read(filename,silent_mode=True,squeeze_image=True)
 
         self.set_scale_vectors_on_read_and_write(current_scale_mode)
 
@@ -856,7 +908,10 @@ class MapIO(ImageIO):
         if hdr is None:
             raise ValueError('hdr needs to be specified to keep track of spacing')
 
-        dim = hdr['dimension']
+        if 'squeezed_dim' in hdr:
+            dim = hdr['squeezed_dim']
+        else:
+            dim = hdr['dimension']
 
         data_new = copy.deepcopy(self._convert_data_to_numpy_if_needed(data))
         sz = data_new.shape
@@ -876,7 +931,11 @@ class MapIO(ImageIO):
 
         if hdr is None:
             raise ValueError('hdr needs to be specified to keep track of spacing')
-        dim = hdr['dimension']
+
+        if 'squeezed_dim' in hdr:
+            dim = hdr['squeezed_dim']
+        else:
+            dim = hdr['dimension']
 
         data_new = copy.deepcopy(self._convert_data_to_numpy_if_needed(data))
         sz = data_new.shape

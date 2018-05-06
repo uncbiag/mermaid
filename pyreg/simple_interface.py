@@ -178,7 +178,7 @@ class RegisterImagePair(object):
                                                squeeze_image=self.squeeze_image,
                                                normalize_spacing=self.normalize_spacing)
 
-        return spacing0,np.array(example_ISource.shape)
+        return normalized_spacing0,np.array(example_ISource.shape)
 
     def register_images_from_files(self,source_filename,target_filename,model_name,
                                    nr_of_iterations=None,

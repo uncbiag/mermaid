@@ -10,8 +10,8 @@ filenames_labels = glob.glob(os.path.join(dataroot,'label_affine_icbm','*.nii'))
 
 outdataroot = 'cumc12_2d'
 
-outdir_intensity = os.path.join(outdataroot,'brain_affine_icbm_2d')
-outdir_labels = os.path.join(outdataroot,'label_affine_icbm_2d')
+outdir_intensity = os.path.join(outdataroot,'brain_affine_icbm')
+outdir_labels = os.path.join(outdataroot,'label_affine_icbm')
 
 if not os.path.isdir(outdataroot):
     print('Creating directory: ' + outdataroot)
