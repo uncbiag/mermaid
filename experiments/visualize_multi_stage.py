@@ -1,5 +1,9 @@
+
 import set_pyreg_paths
 import multiprocessing as mp
+
+# needs to be imported before matplotlib to assure proper plotting
+import pyreg.visualize_registration_results as vizReg
 
 import torch
 from torch.autograd import Variable
@@ -14,11 +18,12 @@ import pyreg.module_parameters as pars
 from pyreg.data_wrapper import USE_CUDA, AdaptVal, MyTensor
 
 import pyreg.fileio as FIO
-import pyreg.visualize_registration_results as vizReg
+
 
 import pyreg.utils as utils
 
 import numpy as np
+
 
 import matplotlib.pyplot as plt
 

@@ -1,5 +1,8 @@
 import set_pyreg_paths
 
+# needs to be imported before matplotlib to assure proper plotting
+import pyreg.visualize_registration_results as vizReg
+
 import os
 
 import torch
