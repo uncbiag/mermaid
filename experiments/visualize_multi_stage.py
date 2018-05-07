@@ -434,9 +434,9 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
 
     if local_weights is not None:
         plt.subplot(2, 3, 6)
-        cmin = osw.numpy()[lowRes_source_mask == 1].min()
-        cmax = osw.numpy()[lowRes_source_mask == 1].max()
-        plt.imshow(cond_flip(osw.numpy() * lowRes_source_mask,flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
+        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
         plt.title('std')
 
     plt.suptitle('Registration result: pair id {:03d}'.format(print_figure_id))
@@ -453,19 +453,19 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            clw = local_weights[0, g, ...].numpy()
+            clw = local_weights[0, g, ...].cpu().numpy()
             cmin = clw[lowRes_source_mask == 1].min()
             cmax = clw[lowRes_source_mask == 1].max()
-            plt.imshow(cond_flip((local_weights[0, g, ...]).numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
+            plt.imshow(cond_flip((local_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
             plt.title("{:.2f}".format(stds.data.cpu()[g]))
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
-        osw = compute_overall_std(local_weights[0, ...], stds.data.cpu())
+        osw = compute_overall_std(local_weights[0, ...].cpu(), stds.data.cpu())
 
-        cmin = osw.numpy()[lowRes_source_mask == 1].min()
-        cmax = osw.numpy()[lowRes_source_mask == 1].max()
-        plt.imshow(cond_flip(osw.numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
+        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
         plt.colorbar()
         plt.suptitle('Weights')
 
