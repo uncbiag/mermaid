@@ -497,6 +497,17 @@ class ImageIO(FileIO):
             squeezed_spacing = self._normalize_spacing(squeezed_spacing,sz_squeezed,silent_mode)
             hdr['spacing'] = spacing
 
+            if hdr['is_vector_image']:
+                if self.scale_vectors_on_read_and_write:
+                    hdr['vector_image_was_scaled'] = True
+                    if not silent_mode:
+                        print('Scaling the vector image to conform to the scaled spacing')
+                    # we also need to normalize the vector components in this case
+                    vector_scaling = np.array(hdr['spacing']) / np.array(hdr['original_spacing'])
+                    dim = im.shape[0]
+                    for d in range(dim):
+                        im[d, ...] *= vector_scaling[d]
+
         return im,hdr,spacing,squeezed_spacing
 
     def read_batch_to_nc_format(self,filenames,intensity_normalize=False,squeeze_image=False, normalize_spacing=True, silent_mode=False ):
@@ -596,7 +607,7 @@ class ImageIO(FileIO):
                 print(im.shape)
                 print('Map dimension:')
                 print(map.shape)
-                return None,None.None,None
+                return None,None,None,None
             else:
                 im = im_fixed
 

@@ -243,6 +243,7 @@ def _show_current_images_2d(iS, iT, iW, iter, vizImage, vizName, phiWarped, visu
 
 
 def _show_current_images_3d(iS, iT, iW, iter, vizImage, vizName, phiWarped, visual_param=None, i=0):
+    vizImage = None
 
     if (phiWarped is not None) and (vizImage is not None):
         fig, ax = plt.subplots(5,3)

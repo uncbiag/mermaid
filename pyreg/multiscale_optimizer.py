@@ -102,6 +102,40 @@ class SimpleRegistration(object):
         else:
             return None
 
+    def get_full_warped_image(self):
+        """
+        Returns the warped image
+        :return: the warped image
+        """
+        if self.optimizer is not None:
+            return self.optimizer.get_full_warped_image()
+        else:
+            return None
+
+    def set_initial_map(self,map0):
+        """
+        Sets the initial map for the registrations; by default (w/o setting anything) this will be the identity
+        map, but by setting it to a different initial condition one can concatenate transformations.
+
+        :param map0:
+        :return: n/a
+        """
+        if self.optimizer is not None:
+            self.optimizer.set_initial_map(map0)
+
+    def get_initial_map(self):
+        """
+        Returns the initial map; this will typically be the identity map, but can be set to a different initial
+        condition using set_initial_map
+
+        :return: returns the initial map (if applicable)
+        """
+
+        if self.optimizer is not None:
+            return self.optimizer.get_initial_map()
+        else:
+            return None
+
     def get_map(self):
         """
         Returns the deformation map
@@ -922,6 +956,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.params['model']['registration_model']['type'] = ( modelName, "['svf'|'svf_quasi_momentum'|'svf_scalar_momentum'|'svf_vector_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with '_map' or '_image' suffix" )
 
         self.model, self.criterion = self.mf.create_registration_model(modelName, self.params['model'])
+
+        # if self.delayed_model_parameters_still_to_be_set:
+        #     self.optimizer_has_been_initialized = True
+        #     self.set_model_parameters(self.delayed_model_parameters)
+        #     self.delayed_model_parameters_still_to_be_set = False
         print(self.model)
 
         if self.useMap:
@@ -930,8 +969,56 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.identityMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
             if self.mapLowResFactor is not None:
                 # create a lower resolution map for the computations
-                lowres_id = utils.identity_map_multiN(self.lowResSize,self.lowResSpacing)
-                self.lowResIdentityMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=False))
+                lowres_id = utils.identity_map_multiN(self.lowResSize, self.lowResSpacing)
+                self.lowResInitialMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=False))
+
+    def set_model(self, modelName):
+        """
+        Sets the model that should be solved
+
+        :param modelName: name of the model that should be solved (string)
+        """
+
+        self.params['model']['registration_model']['type'] = ( modelName, "['svf'|'svf_quasi_momentum'|'svf_scalar_momentum'|'svf_vector_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with '_map' or '_image' suffix" )
+
+        self.model, self.criterion = self.mf.create_registration_model(modelName, self.params['model'])
+
+        # if self.delayed_model_parameters_still_to_be_set:
+        #     self.optimizer_has_been_initialized = True
+        #     self.set_model_parameters(self.delayed_model_parameters)
+        #     self.delayed_model_parameters_still_to_be_set = False
+        print(self.model)
+
+        self._create_initial_maps()
+
+
+    def set_initial_map(self,map0):
+        """
+        Sets the initial map (overwrites the default identity map)
+        :param map0: intial map
+        :return: n/a
+        """
+
+        self.map0_external = map0
+
+        if self.initialMap is not None:
+            # was already set, so let's modify it
+            self._create_initial_maps()
+
+    def get_initial_map(self):
+        """
+        Returns the initial map
+
+        :return: initial map
+        """
+
+        if self.initialMap is not None:
+            return self.initialMap
+        elif self.map0_external is not None:
+            return self.map0_external
+        else:
+            return None
+
 
     def add_similarity_measure(self, simName, simMeasure):
         """

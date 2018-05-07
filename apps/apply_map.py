@@ -16,7 +16,7 @@ def read_image_and_map_and_apply_map(image_filename,map_filename):
     Reads an image and a map and applies the map to an image
     :param image_filename: input image filename
     :param map_filename: input map filename
-    :return: the warped image and its image header as a tupe (im,hdr)
+    :return: the warped image and its image header as a tuple (im,hdr)
     """
 
     im_warped = None

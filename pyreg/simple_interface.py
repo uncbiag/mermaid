@@ -40,6 +40,9 @@ class RegisterImagePair(object):
         self.delayed_model_parameters = None
         self.delayed_model_parameters_still_to_be_set = False
 
+        self.delayed_initial_map = None
+        self.delayed_initial_map_still_to_be_set = False
+
         self.optimizer_has_been_initialized = False
 
     def get_params(self):
@@ -82,9 +85,21 @@ class RegisterImagePair(object):
     def get_warped_image(self):
         """
         Returns the warped image
+
         :return: the warped image
         """
-        return self.opt.get_warped_image()
+
+        if self.opt is not None:
+            return self.opt.get_warped_image()
+        else:
+            return None
+
+    def get_full_warped_image(self):
+        """
+        Returns the warped image upsampled to full size
+        :return: the warped image
+        """
+        return self.opt.get_full_warped_image()
 
     def get_map(self):
         """
@@ -93,6 +108,33 @@ class RegisterImagePair(object):
         """
         if self.opt is not None:
             return self.opt.get_map()
+        else:
+            return None
+
+    def set_initial_map(self,map0):
+        """
+        Sets the map that will be used as initial condition. By default this is the identity, but this can be
+        overwritten with this method to for example allow concatenating multiple transforms.
+
+        :param map0: initial map
+        :return:  n/a
+        """
+
+        if self.opt is not None:
+            self.opt.set_initial_map(map0)
+            self.delayed_initial_map_still_to_be_set = False
+        else:
+            self.delayed_initial_map_still_to_be_set = True
+            self.delayed_initial_map = map0
+
+    def get_initial_map(self):
+        """
+        Returns the map that is used as initial condition (is typically identity)
+
+        :return: returns the initial map
+        """
+        if self.opt is not None:
+            return self.opt.get_initial_map()
         else:
             return None
 
@@ -107,6 +149,20 @@ class RegisterImagePair(object):
         else:
             return None
 
+    def set_model_parameters_to_zero(self):
+        """
+        Sets the model parameters to zero; typically not needed, but may be useful in certain scenarios.
+        """
+
+        p = self.get_model_parameters()
+        if p is not None:
+            for key in p:
+                val = p[key]
+                if torch.is_tensor(val):
+                    val.zero_()
+                elif type(val)==torch.nn.parameter.Parameter or type(val)==torch.autograd.variable.Variable:
+                    val.data.zero_()
+
     def set_model_parameters(self,p):
         """
         Sets the model parameters
@@ -117,7 +173,7 @@ class RegisterImagePair(object):
 
         if self.opt is not None:
             self.opt.set_model_parameters(p)
-            self.delayed_model_parameters_still_to_be_set = False
+            #self.delayed_model_parameters_still_to_be_set = False
         else:
             self.delayed_model_parameters_still_to_be_set = True
             self.delayed_model_parameters = p
@@ -375,8 +431,14 @@ class RegisterImagePair(object):
             self.opt.set_light_analysis_on(True)
 
             self.optimizer_has_been_initialized = True
+            # MO.SingleScaleRegistrationOptimizer(self.sz, self.spacing, self.useMap, 1.0, self.params).self.optimizer_has_been_initialized = True
+            # self.opt.optimizer.optimizer_has_been_initialized = True
+
             if self.delayed_model_parameters_still_to_be_set:
                 self.set_model_parameters(self.delayed_model_parameters)
+
+            if self.delayed_initial_map_still_to_be_set:
+                self.set_initial_map(self.delayed_initial_map)
 
             self.opt.register()
 
