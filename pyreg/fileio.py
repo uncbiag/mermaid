@@ -451,25 +451,17 @@ class ImageIO(FileIO):
         size = itk.Size[dim]()
 
         if squeezed_dim!=dim:
-            if 'sized' in hdr:
-                reverse_shape = list(hdr['sizes'])
+            if 'sizes' in hdr:
+                current_shape = list(hdr['sizes'])
+                nv_vec_im_rf = nv_vec_im_rf.view().reshape(current_shape+[squeezed_dim])
             else:
-                raise ValueError('Expectes sizes filed in header')
-        else:   
-            reverse_shape = list(nv_vec_im_rf.shape[0:-1])
-            
+                raise ValueError('Expected sizes filed in header')
+
+        reverse_shape = list(nv_vec_im_rf.shape[0:-1])
         reverse_shape.reverse()
 
-        #if 'sizes' in hdr:
-        #    for d in range(dim):
-        #        size[d] = hdr['sizes'][d]
-        #else:
         for d in range(dim):
             size[d] = reverse_shape[d]
-
-        #if squeezed_dim<dim:
-        #    for d in range(squeezed_dim,dim):
-        #        size[d]=1
 
         region = itk.ImageRegion[dim](size)
 
@@ -479,14 +471,8 @@ class ImageIO(FileIO):
 
         vec_view_np = itk.GetArrayViewFromImage(vec_im)
 
-        # todo: check this; the first case is the default; the second is there to handle volumes with one or multiple trivial dimensions
-        #if squeezed_dim==dim:
-        #    vec_view_np[:] = nv_vec_im_rf
-        #else:
-        #    print('WARNING: check that this case works; may create issues with dimensions axbxdim versus bxaxdim')
         for d in range(squeezed_dim):
             vec_view_np[...,d] = nv_vec_im_rf[...,d]
-            #vec_view_np[:] = nv_vec_im_rf
         for d in range(squeezed_dim,dim):
             vec_view_np[...,d]=0
 
