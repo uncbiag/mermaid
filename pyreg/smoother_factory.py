@@ -866,6 +866,9 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.optimize_over_deep_network = params[('optimize_over_deep_network', False, 'if set to true the smoother will optimize over the deep network parameters; otherwise will ignore the deep network')]
         """determines if we should optimize over the smoother global weights"""
 
+        self.freeze_parameters = params[('freeze_parameters', False, 'if set to true then all the parameters that are optimized over are frozen (but they still influence the optimization indirectly; they just do not change themselves)')]
+        """Freezes parameters; this, for example, allows optimizing for a few extra steps without changing their current value"""
+
         self.start_optimize_over_smoother_parameters_at_iteration = \
             params[('start_optimize_over_smoother_parameters_at_iteration', 0,
                     'Does not optimize the parameters before this iteration')]
@@ -915,12 +918,25 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
     def associate_parameters_with_module(self,module):
         s = set()
+
         if self.optimize_over_smoother_stds:
+
+            self.multi_gaussian_stds_optimizer_params.requires_grad = not self.freeze_parameters
+
             module.register_parameter('multi_gaussian_stds',self.multi_gaussian_stds_optimizer_params)
             s.add('multi_gaussian_stds')
         if self.optimize_over_smoother_weights:
+
+            self.multi_gaussian_weights_optimizer_params.requires_grad = not self.freeze_parameters
+
             module.register_parameter('multi_gaussian_weights', self.multi_gaussian_weights_optimizer_params)
             s.add('multi_gaussian_weights')
+
+        # freeze parameters if needed
+        for child in self.ws.children():
+            for cur_param in child.parameters():
+                cur_param.requires_grad = not self.freeze_parameters
+
         module.add_module('weighted_smoothing_net',self.ws)
         sd = self.ws.state_dict()
         for key in sd:
@@ -1052,13 +1068,13 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
             penalty = current_penalty * self.omt_weight_penalty*self.spacing.prod()*self.sz.prod()
 
-            print('omt penalty = ' + str(penalty.data.cpu().numpy()))
+            #print('omt penalty = ' + str(penalty.data.cpu().numpy()))
 
         else:
 
             penalty = self.ws.get_current_penalty()
 
-            print('omt penalty = ' + str(penalty.data.cpu().numpy()))
+            #print('omt penalty = ' + str(penalty.data.cpu().numpy()))
 
             total_number_of_parameters = 1
             par_penalty = Variable(MyTensor(1).zero_(),requires_grad=False)
@@ -1184,7 +1200,7 @@ class AdaptiveSmoother(Smoother):
         :return:
         """
         if using_map:
-            I = utils.compute_warped_image_multiNC(self.moving, phi, self.spacing)
+            I = utils.compute_warped_image_multiNC(self.moving, phi, self.spacing,spline_order=1)
         else:
             I = None
         v = self.smoother(m, I.detach())

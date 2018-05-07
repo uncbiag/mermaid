@@ -102,16 +102,6 @@ class SimpleRegistration(object):
         else:
             return None
 
-    def get_full_warped_image(self):
-        """
-        Returns the warped image
-        :return: the warped image
-        """
-        if self.optimizer is not None:
-            return self.optimizer.get_full_warped_image()
-        else:
-            return None
-
     def set_initial_map(self,map0):
         """
         Sets the initial map for the registrations; by default (w/o setting anything) this will be the identity
@@ -135,6 +125,7 @@ class SimpleRegistration(object):
             return self.optimizer.get_initial_map()
         else:
             return None
+
 
     def get_map(self):
         """
@@ -317,6 +308,9 @@ class Optimizer(object):
 
         self.rel_ftol = self.params['optimizer']['single_scale'][('rel_ftol',self.rel_ftol,'relative termination tolerance for optimizer')]
 
+        self.spline_order = params['model']['registration_model'][('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+        """order of the spline for interpolations"""
+
         self.show_iteration_output = True
         self.history = dict()
 
@@ -397,7 +391,7 @@ class Optimizer(object):
         """
         if (factor is None) or (factor>=1):
             print('WARNING: Could not compute low_res_size as factor was ' + str( factor ))
-            return sz
+            return np.array(sz)
         else:
             lowResSize = np.array(sz)
             lowResSize[2::] = (np.ceil((np.array(sz[2::]) * factor))).astype('int16')
@@ -712,18 +706,18 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         self.ISource = I
 
-    def _compute_low_res_image(self,I):
+    def _compute_low_res_image(self,I,params):
         low_res_image = None
         if self.mapLowResFactor is not None:
-            low_res_image,_ = self.sampler.downsample_image_to_size(I,self.spacing,self.lowResSize[2::])
+            low_res_image,_ = self.sampler.downsample_image_to_size(I,self.spacing,self.lowResSize[2::],self.spline_order)
         return low_res_image
 
     def compute_low_res_image_if_needed(self):
         """To be called before the optimization starts"""
         if self.mapLowResFactor is not None:
-            self.lowResISource = self._compute_low_res_image(self.ISource)
+            self.lowResISource = self._compute_low_res_image(self.ISource,self.params)
             # todo: can be removed to save memory; is more experimental at this point
-            self.lowResITarget = self._compute_low_res_image(self.ITarget)
+            self.lowResITarget = self._compute_low_res_image(self.ITarget,self.params)
 
     def set_source_label(self, LSource):
         """
@@ -823,10 +817,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.criterion = None
         """the loss function"""
 
-        self.identityMap = None
-        """identity map, will be needed for map-based solutions"""
-        self.lowResIdentityMap = None
-        """low res identity map, will be needed for map-based solutions which are computed at lower resolution"""
+        self.initialMap = None
+        """initial map, will be needed for map-based solutions; by default this will be the identity map, but can be set to something different externally"""
+        self.map0_external = None
+        """intial map, set externally"""
+        self.lowResInitialMap = None
+        """low res initila map, by default the identity map, will be needed for map-based solutions which are computed at lower resolution"""
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
@@ -926,7 +922,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.useMap:
             cmap = self.get_map()
             # and now warp it
-            return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing)
+            return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing, self.spline_order)
         else:
             return self.rec_IWarped
 
@@ -946,27 +942,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         self.n_scale = n_scale
 
-    def set_model(self, modelName):
-        """
-        Sets the model that should be solved
 
-        :param modelName: name of the model that should be solved (string)
-        """
-
-        self.params['model']['registration_model']['type'] = ( modelName, "['svf'|'svf_quasi_momentum'|'svf_scalar_momentum'|'svf_vector_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with '_map' or '_image' suffix" )
-
-        self.model, self.criterion = self.mf.create_registration_model(modelName, self.params['model'])
-
-        # if self.delayed_model_parameters_still_to_be_set:
-        #     self.optimizer_has_been_initialized = True
-        #     self.set_model_parameters(self.delayed_model_parameters)
-        #     self.delayed_model_parameters_still_to_be_set = False
-        print(self.model)
-
+    def _create_initial_maps(self):
         if self.useMap:
             # create the identity map [-1,1]^d, since we will use a map-based implementation
-            id = utils.identity_map_multiN(self.sz,self.spacing)
-            self.identityMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
+            if self.map0_external is not None:
+                self.initialMap = self.map0_external
+            else:
+                id = utils.identity_map_multiN(self.sz, self.spacing)
+                self.initialMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
+
             if self.mapLowResFactor is not None:
                 # create a lower resolution map for the computations
                 lowres_id = utils.identity_map_multiN(self.lowResSize, self.lowResSpacing)
@@ -982,11 +967,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.params['model']['registration_model']['type'] = ( modelName, "['svf'|'svf_quasi_momentum'|'svf_scalar_momentum'|'svf_vector_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with '_map' or '_image' suffix" )
 
         self.model, self.criterion = self.mf.create_registration_model(modelName, self.params['model'])
-
-        # if self.delayed_model_parameters_still_to_be_set:
-        #     self.optimizer_has_been_initialized = True
-        #     self.set_model_parameters(self.delayed_model_parameters)
-        #     self.delayed_model_parameters_still_to_be_set = False
         print(self.model)
 
         self._create_initial_maps()
@@ -1191,25 +1171,25 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.useMap:
             if self.mapLowResFactor is not None:
                 if self.compute_similarity_measure_at_low_res:
-                    self.rec_phiWarped = self.model(self.lowResIdentityMap, self.lowResISource, opt_variables)
+                    self.rec_phiWarped = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
                 else:
-                    rec_tmp = self.model(self.lowResIdentityMap, self.lowResISource, opt_variables )
+                    rec_tmp = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
                     # now upsample to correct resolution
-                    desiredSz = self.identityMap.size()[2::]
-                    self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz)
+                    desiredSz = self.initialMap.size()[2::]
+                    self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz, self.spline_order)
             else:
-                self.rec_phiWarped = self.model(self.identityMap, self.ISource, opt_variables )
+                self.rec_phiWarped = self.model(self.initialMap, self.ISource, opt_variables)
 
             if self.mapLowResFactor is not None and self.compute_similarity_measure_at_low_res:
-                loss_overall_energy, sim_energy, reg_energy = self.criterion(self.lowResIdentityMap, self.rec_phiWarped,
+                loss_overall_energy, sim_energy, reg_energy = self.criterion(self.lowResInitialMap, self.rec_phiWarped,
                                                                              self.lowResISource, self.lowResITarget,
                                                                              self.lowResISource,
                                                                              self.model.get_variables_to_transfer_to_loss_function(),
                                                                              opt_variables)
             else:
-                loss_overall_energy,sim_energy,reg_energy = self.criterion(self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource,
-                                  self.model.get_variables_to_transfer_to_loss_function(),
-                                  opt_variables )
+                loss_overall_energy,sim_energy,reg_energy = self.criterion(self.initialMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource,
+                                                                           self.model.get_variables_to_transfer_to_loss_function(),
+                                                                           opt_variables)
         else:
             self.rec_IWarped = self.model(self.ISource, opt_variables )
             loss_overall_energy,sim_energy,reg_energy = self.criterion(self.rec_IWarped, self.ISource, self.ITarget,
@@ -1344,10 +1324,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.ISource)
                 if self.useMap:
                     if self.compute_similarity_measure_at_low_res:
-                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing)
+                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing, self.spline_order)
                         vizReg.show_current_images(iter, self.lowResISource, self.lowResITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
                     else:
-                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing)
+                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.spline_order)
                         vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
                 else:
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
@@ -1616,7 +1596,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         # first deal with the individual parameters
         pl_ind, par_to_name_ind = utils.get_parameter_list_and_par_to_name_dict_from_parameter_dict(individual_pars)
-        cd = {'params': pl_ind}
+        #cd = {'params': pl_ind}
+        cd = {'params': filter(lambda p: p.requires_grad, pl_ind)}
         cd.update(settings_individual)
         par_list.append(cd)
         # add all the names
@@ -1626,7 +1607,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         # now deal with the shared parameters
         pl_shared, par_to_name_shared = utils.get_parameter_list_and_par_to_name_dict_from_parameter_dict(shared_pars)
-        cd = {'params': pl_shared}
+        #cd = {'params': pl_shared}
+        cd = {'params': filter(lambda p: p.requires_grad, pl_shared)}
         cd.update(settings_shared)
         par_list.append(cd)
         for current_par, key in zip(pl_shared, par_to_name_shared):
@@ -2452,7 +2434,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.nr_of_epochs = cparams[('nr_of_epochs', 1, 'how many iterations for consensus; i.e., how often to iterate over the entire dataset')]
         """how many iterations for consensus; i.e., how often to iterate over the entire dataset"""
-        self.batch_size = cparams[('batch_size',100,'how many images per batch (if set larger or equal to the number of images, it will be processed as one batch')]
+        self.batch_size = cparams[('batch_size',1,'how many images per batch (if set larger or equal to the number of images, it will be processed as one batch')]
         """how many images per batch"""
         self.save_intermediate_checkpoints = cparams[('save_intermediate_checkpoints',False,'when set to True checkpoints are retained for each batch iterations')]
         """when set to True checkpoints are retained for each batch iterations"""
@@ -3211,8 +3193,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             currentNrOfIteratons = reverseIterations[currentScaleNumber]
 
-            ISourceC, spacingC = self.sampler.downsample_image_to_size(self.ISource, self.spacing, currentDesiredSz[2::])
-            ITargetC, spacingC = self.sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz[2::])
+            ISourceC, spacingC = self.sampler.downsample_image_to_size(self.ISource, self.spacing, currentDesiredSz[2::],self.spline_order)
+            ITargetC, spacingC = self.sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz[2::],self.spline_order)
 
             szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
 

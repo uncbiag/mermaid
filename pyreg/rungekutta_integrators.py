@@ -27,8 +27,8 @@ class RKIntegrator(object):
         :param params: general ParameterDict() parameters for setting
         """
 
-        self.nrOfTimeSteps = params[('number_of_time_steps', 10,
-                                                'Number of time-steps to integrate the PDE')]
+        self.nrOfTimeSteps_perUnitTimeInterval = params[('number_of_time_steps', 10,
+                                                'Number of time-steps to per unit time-interval integrate the PDE')]
         """number of time steps for the integration"""
         self.f = f
         """Function to be integrated"""
@@ -50,19 +50,19 @@ class RKIntegrator(object):
 
     def set_number_of_time_steps(self, nr):
         """
-        Sets the number of time-steps for the integration
+        Sets the number of time-steps per unit time-interval the integration
         
-        :param nr: number of timesteps 
+        :param nr: number of timesteps per unit time-interval
         """
-        self.nrOfTimeSteps = nr
+        self.nrOfTimeSteps_perUnitTimeInterval = nr
 
     def get_number_of_time_steps(self):
         """
-        Returns the number of time steps that are used for the integration
+        Returns the number of time steps per unit time-interval that are used for the integration
         
-        :return: nuber of time steps
+        :return: number of time steps per unit time-interval
         """
-        return self.nrOfTimeSteps
+        return self.nrOfTimeSteps_perUnitTimeInterval
 
     def solve(self,x,fromT,toT,variables_from_optimizer=None):
         """
@@ -76,11 +76,15 @@ class RKIntegrator(object):
         """
         # arguments need to be list so we can pass multiple variables at the same time
         assert type(x)==list
-        timepoints = np.linspace(fromT, toT, self.nrOfTimeSteps + 1)
+
+        dT = toT-fromT
+        nr_of_timepoints = int(round(self.nrOfTimeSteps_perUnitTimeInterval*dT))
+
+        timepoints = np.linspace(fromT, toT, nr_of_timepoints + 1)
         dt = timepoints[1]-timepoints[0]
         currentT = fromT
         #iter = 0
-        for i in range(0, self.nrOfTimeSteps):
+        for i in range(0, nr_of_timepoints):
             #print('RKIter = ' + str( iter ) )
             #iter+=1
             x = self.solve_one_step(x, currentT, dt, variables_from_optimizer)

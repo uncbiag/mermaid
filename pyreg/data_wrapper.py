@@ -7,13 +7,14 @@ USE_CUDA = torch.cuda.is_available() & CUDA_ON
 # --------------------   My Tensor -------------------------
 # a warped version of Tensor to adapt gpu, cpu and float16
 if USE_CUDA:
+    MyLongTensor = torch.cuda.LongTensor
     if not USE_FLOAT16:
         MyTensor = torch.cuda.FloatTensor
     else:
         MyTensor = torch.cuda.HalfTensor
 else:
     MyTensor = torch.FloatTensor
-
+    MyLongTensor = torch.LongTensor
 
 # ------------------  ApdatVal --------------------------
 # Adaptive Warper: used to adapt the data type, implemented on the existed Tensor/Variable

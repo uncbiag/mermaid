@@ -1,5 +1,9 @@
+
 import set_pyreg_paths
 import multiprocessing as mp
+
+# needs to be imported before matplotlib to assure proper plotting
+import pyreg.visualize_registration_results as vizReg
 
 import torch
 from torch.autograd import Variable
@@ -14,9 +18,12 @@ import pyreg.module_parameters as pars
 from pyreg.data_wrapper import USE_CUDA, AdaptVal, MyTensor
 
 import pyreg.fileio as FIO
-import pyreg.visualize_registration_results as vizReg
+
+
+import pyreg.utils as utils
 
 import numpy as np
+
 
 import matplotlib.pyplot as plt
 
@@ -104,9 +111,9 @@ def compute_mask(im):
     return mask
 
 
-def _compute_low_res_image(I,spacing,low_res_size):
+def _compute_low_res_image(I,spacing,low_res_size,spline_order):
     sampler = IS.ResampleImage()
-    low_res_image, _ = sampler.downsample_image_to_size(I, spacing, low_res_size[2::])
+    low_res_image, _ = sampler.downsample_image_to_size(I, spacing, low_res_size[2::],spline_order)
     return low_res_image
 
 def _get_low_res_size_from_size(sz, factor):
@@ -186,6 +193,8 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     compute_similarity_measure_at_low_res = params['model']['deformation'][
         ('compute_similarity_measure_at_low_res', False, 'to compute Sim at lower resolution')]
 
+    spline_order = params['model']['registration_model'][('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+
     lowResSize = None
     lowResSpacing = None
 
@@ -193,9 +202,9 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
         lowResSize = _get_low_res_size_from_size(sz, map_low_res_factor)
         lowResSpacing = _get_low_res_spacing_from_spacing(spacing, sz, lowResSize)
 
-        lowResISource = _compute_low_res_image(ISource, spacing, lowResSize)
+        lowResISource = _compute_low_res_image(ISource, spacing, lowResSize,spline_order)
         # todo: can be removed to save memory; is more experimental at this point
-        lowResITarget = _compute_low_res_image(ITarget, spacing, lowResSize)
+        lowResITarget = _compute_low_res_image(ITarget, spacing, lowResSize,spline_order)
 
     if map_low_res_factor is not None:
         # computes model at a lower resolution than the image similarity
@@ -208,6 +217,9 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
         mf = MF.ModelFactory(sz, spacing, sz, spacing)
 
     model, criterion = mf.create_registration_model(model_name, params['model'])
+    # set it to evaluation mode
+    model.eval()
+
     print(model)
 
     if use_map:
@@ -250,7 +262,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
                 # now upsample to correct resolution
                 desiredSz = identityMap.size()[2::]
                 sampler = IS.ResampleImage()
-                rec_phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing, desiredSz)
+                rec_phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing, desiredSz,spline_order)
         else:
             rec_phiWarped = model(identityMap, ISource)
 
@@ -258,7 +270,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
         rec_IWarped = model(ISource)
 
     if use_map:
-        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing)
+        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing,spline_order)
 
     if use_map and map_low_res_factor is not None:
         vizImage, vizName = model.get_parameter_image_and_name_to_visualize(lowResISource)
@@ -276,11 +288,11 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
 
     if use_map:
         if compute_similarity_measure_at_low_res:
-            I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing)
+            I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing, spline_order)
             vizReg.show_current_images(iter, lowResISource, lowResITarget, I1Warped, vizImage, vizName,
                                        phi_or_warped_image, visual_param)
         else:
-            I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing)
+            I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing, spline_order)
             vizReg.show_current_images(iter, ISource, ITarget, I1Warped, vizImage, vizName,
                                        phi_or_warped_image, visual_param)
     else:
@@ -301,10 +313,13 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     smoother.set_debug_retain_computed_local_weights(True)
 
     model_pars = model.get_registration_parameters()
-    if not 'lam' in model_pars:
-        raise ValueError('Expected a scalar momentum in model (use SVF for example)')
+    if 'lam' in model_pars:
+        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(model_pars['lam'], lowResISource, lowResSize,lowResSpacing)
+    elif 'm' in model_pars:
+        m = model_pars['m']
+    else:
+        raise ValueError('Expected a scalar or a vector momentum in model (use SVF for example)')
 
-    m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(model_pars['lam'], lowResISource, lowResSize, lowResSpacing)
     v = smoother.smooth(m, None, dictionary_to_pass_to_smoother)
 
     local_weights = smoother.get_debug_computed_local_weights()
@@ -320,74 +335,108 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     model_dict['default_multi_gaussian_weights'] = default_multi_gaussian_weights
     model_dict['stds'] = smoother.get_gaussian_stds()
     model_dict['model'] = model
-    model_dict['lam'] = model_pars['lam']
+    if 'lam' in model_pars:
+        model_dict['lam'] = model_pars['lam']
     model_dict['m'] = m
     model_dict['v'] = v
+    if use_map:
+        model_dict['id'] = identityMap
+    if map_low_res_factor is not None:
+        model_dict['map_low_res_factor'] = map_low_res_factor
+        model_dict['low_res_id'] = lowResIdentityMap
 
     return rec_IWarped,rec_phiWarped, model_dict
 
 def get_json_and_output_dir_for_stages(json_file,output_dir):
+
+    res_output_dir = os.path.normpath(output_dir)
     json_path, json_filename = os.path.split(json_file)
 
-    json_stage_1_in = os.path.join(json_path, 'out_stage_1_' + json_filename)
-    json_stage_2_in = os.path.join(json_path, 'out_stage_2_' + json_filename)
-    json_stage_3_in = os.path.join(json_path, 'out_stage_3_' + json_filename)
+    json_stage_0_in = os.path.join(res_output_dir, 'out_stage_0_' + json_filename)
+    json_stage_1_in = os.path.join(res_output_dir, 'out_stage_1_' + json_filename)
+    json_stage_2_in = os.path.join(res_output_dir, 'out_stage_2_' + json_filename)
 
     json_for_stages = []
+    json_for_stages.append(json_stage_0_in)
     json_for_stages.append(json_stage_1_in)
     json_for_stages.append(json_stage_2_in)
-    json_for_stages.append(json_stage_3_in)
 
-    output_dir_stage_3 = os.path.normpath(output_dir)
-    output_dir_stage_2 = output_dir_stage_3 + '_after_stage_2'
-    output_dir_stage_1 = output_dir_stage_3 + '_after_stage_1'
+    frozen_json_stage_0_in = os.path.join(res_output_dir, 'frozen_out_stage_0_' + json_filename)
+    frozen_json_stage_1_in = os.path.join(res_output_dir, 'frozen_out_stage_1_' + json_filename)
+    frozen_json_stage_2_in = os.path.join(res_output_dir, 'frozen_out_stage_2_' + json_filename)
+
+    frozen_json_for_stages = []
+    frozen_json_for_stages.append(frozen_json_stage_0_in)
+    frozen_json_for_stages.append(frozen_json_stage_1_in)
+    frozen_json_for_stages.append(frozen_json_stage_2_in)
+
+    output_dir_stage_0 = os.path.join(res_output_dir, 'results_after_stage_0')
+    output_dir_stage_1 = os.path.join(res_output_dir, 'results_after_stage_1')
+    output_dir_stage_2 = os.path.join(res_output_dir, 'results_after_stage_2')
 
     output_dir_for_stages = []
+    output_dir_for_stages.append(output_dir_stage_0)
     output_dir_for_stages.append(output_dir_stage_1)
     output_dir_for_stages.append(output_dir_stage_2)
-    output_dir_for_stages.append(output_dir_stage_3)
 
-    return json_for_stages,output_dir_for_stages
+    frozen_output_dir_stage_0 = os.path.join(res_output_dir, 'results_frozen_after_stage_0')
+    frozen_output_dir_stage_1 = os.path.join(res_output_dir, 'results_frozen_after_stage_1')
+    frozen_output_dir_stage_2 = os.path.join(res_output_dir, 'results_frozen_after_stage_2')
 
-def visualize_weights(I0,I1,Iw,phi,lam,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=None):
+    frozen_output_dir_for_stages = []
+    frozen_output_dir_for_stages.append(frozen_output_dir_stage_0)
+    frozen_output_dir_for_stages.append(frozen_output_dir_stage_1)
+    frozen_output_dir_for_stages.append(frozen_output_dir_stage_2)
+
+    return json_for_stages,frozen_json_for_stages,output_dir_for_stages,frozen_output_dir_for_stages
+
+def cond_flip(v,f):
+    if f:
+        return np.flipud(v)
+    else:
+        return v
+
+def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=None,flip_axes=False,params=None):
 
     if local_weights is not None:
         osw = compute_overall_std(local_weights[0,...].cpu(), stds.data.cpu())
 
     plt.clf()
 
+    spline_order = params['model']['registration_model'][('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+
     source_mask = compute_mask(I0[:, 0:1, ...].data.cpu().numpy())
     lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(
-        Variable(torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:])
+        Variable(torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:],spline_order)
     lowRes_source_mask = lowRes_source_mask_v.data.cpu().numpy()[0, 0, ...]
 
     plt.subplot(2, 3, 1)
-    plt.imshow(I0[0, 0, ...].data.cpu().numpy(), cmap='gray')
+    plt.imshow(cond_flip(I0[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
     plt.title('source')
 
     plt.subplot(2, 3, 2)
-    plt.imshow(I1[0, 0, ...].data.cpu().numpy(), cmap='gray')
+    plt.imshow(cond_flip(I1[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
     plt.title('target')
 
     plt.subplot(2, 3, 3)
-    plt.imshow(Iw[0, 0, ...].data.cpu().numpy(), cmap='gray')
+    plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
     plt.title('warped')
 
     plt.subplot(2, 3, 4)
-    plt.imshow(Iw[0, 0, ...].data.cpu().numpy(), cmap='gray')
-    plt.contour(phi[0, 0, ...].data.cpu().numpy(), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
-    plt.contour(phi[0, 1, ...].data.cpu().numpy(), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+    plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
+    plt.contour(cond_flip(phi[0, 0, ...].data.cpu().numpy(),flip_axes), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+    plt.contour(cond_flip(phi[0, 1, ...].data.cpu().numpy(),flip_axes), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
     plt.title('warped+grid')
 
     plt.subplot(2, 3, 5)
-    plt.imshow(lam[0, 0, ...].data.cpu().numpy(), cmap='gray')
-    plt.title('lambda')
+    plt.imshow(cond_flip(norm_m[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
+    plt.title('|m|')
 
     if local_weights is not None:
         plt.subplot(2, 3, 6)
-        cmin = osw.numpy()[lowRes_source_mask == 1].min()
-        cmax = osw.numpy()[lowRes_source_mask == 1].max()
-        plt.imshow(osw.numpy() * lowRes_source_mask, cmap='gray', vmin=cmin, vmax=cmax)
+        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
         plt.title('std')
 
     plt.suptitle('Registration result: pair id {:03d}'.format(print_figure_id))
@@ -404,19 +453,19 @@ def visualize_weights(I0,I1,Iw,phi,lam,local_weights,stds,spacing,lowResSize,pri
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            clw = local_weights[0, g, ...].numpy()
+            clw = local_weights[0, g, ...].cpu().numpy()
             cmin = clw[lowRes_source_mask == 1].min()
             cmax = clw[lowRes_source_mask == 1].max()
-            plt.imshow((local_weights[0, g, ...]).numpy() * lowRes_source_mask, vmin=cmin, vmax=cmax)
+            plt.imshow(cond_flip((local_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
             plt.title("{:.2f}".format(stds.data.cpu()[g]))
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
-        osw = compute_overall_std(local_weights[0, ...], stds.data.cpu())
+        osw = compute_overall_std(local_weights[0, ...].cpu(), stds.data.cpu())
 
-        cmin = osw.numpy()[lowRes_source_mask == 1].min()
-        cmax = osw.numpy()[lowRes_source_mask == 1].max()
-        plt.imshow(osw.numpy() * lowRes_source_mask, vmin=cmin, vmax=cmax)
+        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
         plt.colorbar()
         plt.suptitle('Weights')
 
@@ -455,8 +504,15 @@ def compute_determinant_of_jacobian(phi,spacing):
     return det
 
 
-def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_proportion_3d=0.5,slice_mode_3d=0,visualize=False,
-                                  print_images=False,write_out_images=True,compute_det_of_jacobian=True,retarget_data_directory=None):
+def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen,pair_nr,slice_proportion_3d=0.5,slice_mode_3d=0,visualize=False,
+                                  print_images=False,write_out_images=True,
+                                  write_out_source_image=False,write_out_target_image=False,
+                                  compute_det_of_jacobian=True,retarget_data_directory=None,
+                                  use_sym_links=True):
+
+    # todo: make this data-adaptive
+    flip_axes_3d = [False,True,True]
+
 
     if write_out_images:
         write_out_warped_image = True
@@ -465,8 +521,16 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
         write_out_warped_image = False
         write_out_map = False
 
-    image_and_map_output_dir = os.path.normpath(output_dir) + '_model_results_stage_{:d}'.format(stage)
-    print_output_dir = os.path.normpath(output_dir) + '_pdf_stage_{:d}'.format(stage)
+    # get the used json configuration and the output directories for the different stages
+    json_for_stages, frozen_json_for_stages, output_dir_for_stages, frozen_output_dir_for_stages = get_json_and_output_dir_for_stages(json_file,
+                                                                                                            output_dir)
+
+    if compute_from_frozen:
+        image_and_map_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_frozen_stage_{:d}'.format(stage))
+        print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_frozen_stage_{:d}'.format(stage))
+    else:
+        image_and_map_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_{:d}'.format(stage))
+        print_output_dir = os.path.join(os.path.normpath(output_dir),'pdf_stage_{:d}'.format(stage))
 
     if write_out_warped_image or write_out_map or compute_det_of_jacobian:
         if not os.path.exists(image_and_map_output_dir):
@@ -481,17 +545,24 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
             print('Creating output directory: ' + print_output_dir)
             os.makedirs(print_output_dir)
 
-    warped_output_filename = os.path.join(image_and_map_output_dir,'warped_{:05d}.nrrd'.format(pair_nr))
+    warped_output_filename = os.path.join(image_and_map_output_dir,'warped_image_{:05d}.nrrd'.format(pair_nr))
     map_output_filename = os.path.join(image_and_map_output_dir,'map_validation_format_{:05}.nrrd'.format(pair_nr))
-    det_of_jacobian_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05}.txt'.format(pair_nr))
+    det_jac_output_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05}.nrrd'.format(pair_nr))
+    displacement_output_filename = os.path.join(image_and_map_output_dir,'displacement_{:05}.nrrd'.format(pair_nr))
+    det_of_jacobian_txt_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05}.txt'.format(pair_nr))
 
-    # get the used json configuration and the output directories for the different stages
-    json_for_stages,output_dir_for_stages = get_json_and_output_dir_for_stages(json_file,output_dir)
+    source_image_output_filename = os.path.join(image_and_map_output_dir,'source_image_{:05d}.nrrd'.format(pair_nr))
+    target_image_output_filename = os.path.join(image_and_map_output_dir,'target_image_{:05d}.nrrd'.format(pair_nr))
 
     # current case
-    current_json = json_for_stages[stage]
-    individual_dir = os.path.join(output_dir_for_stages[stage],'individual')
-    shared_dir = os.path.join(output_dir_for_stages[stage],'shared')
+    if compute_from_frozen:
+        current_json = frozen_json_for_stages[stage]
+        individual_dir = os.path.join(frozen_output_dir_for_stages[stage], 'individual')
+        shared_dir = os.path.join(frozen_output_dir_for_stages[stage], 'shared')
+    else:
+        current_json = json_for_stages[stage]
+        individual_dir = os.path.join(output_dir_for_stages[stage],'individual')
+        shared_dir = os.path.join(output_dir_for_stages[stage],'shared')
 
     # load the configuration
     params = pars.ParameterDict()
@@ -530,19 +601,21 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
     # apply the actual model and get the warped image and the map (if applicable)
     IWarped,phi,model_dict = evaluate_model(ISource,ITarget,sz,spacing,individual_parameters,shared_parameters,params,visualize=False)
 
+    norm_m = ((model_dict['m']**2).sum(dim=1,keepdim=True))**0.5
+
     if visualize:
         if image_dim==2:
             if print_images:
                 visualize_weights(ISource,ITarget,IWarped,phi,
-                                  model_dict['lam'],model_dict['local_weights'],model_dict['stds'],
-                                  spacing,model_dict['lowResSize'],print_output_dir,pair_nr)
+                                  norm_m,model_dict['local_weights'],model_dict['stds'],
+                                  spacing,model_dict['lowResSize'],print_output_dir,pair_nr,params=params)
             else:
                 visualize_weights(ISource,ITarget,IWarped,phi,
-                                  model_dict['lam'],model_dict['local_weights'],model_dict['stds'],
-                                  spacing,model_dict['lowResSize'])
+                                  norm_m,model_dict['local_weights'],model_dict['stds'],
+                                  spacing,model_dict['lowResSize'],params=params)
         elif image_dim==3:
             sz_I = ISource.size()
-            sz_lam = model_dict['lam'].size()
+            sz_norm_m = norm_m.size()
 
             if not set(slice_mode_3d)<=set([0,1,2]):
                 raise ValueError('slice mode needs to be in {0,1,2}')
@@ -550,18 +623,18 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
             for sm in slice_mode_3d:
 
                 slice_I = (np.ceil(np.array(sz_I[-1-(2-slice_mode_3d[sm])]) * slice_proportion_3d[sm])).astype('int16')
-                slice_lam = (np.ceil(np.array(sz_lam[-1-(2-slice_mode_3d[sm])]) * slice_proportion_3d[sm])).astype('int16')
+                slice_norm_m = (np.ceil(np.array(sz_norm_m[-1-(2-slice_mode_3d[sm])]) * slice_proportion_3d[sm])).astype('int16')
 
                 if slice_mode_3d[sm]==0:
                     IS_slice = ISource[:, :, slice_I, ...]
                     IT_slice = ITarget[:, :, slice_I, ...]
                     IW_slice = IWarped[:, :, slice_I, ...]
                     phi_slice = phi[:, 1:, slice_I, ...]
-                    lam_slice = model_dict['lam'][:, :, slice_lam, ...]
+                    norm_m_slice = norm_m[:, :, slice_norm_m, ...]
                     lw_slice = None
                     if 'local_weights' in model_dict:
                         if model_dict['local_weights'] is not None:
-                            lw_slice = model_dict['local_weights'][:, :, slice_lam, ...]
+                            lw_slice = model_dict['local_weights'][:, :, slice_norm_m, ...]
                     spacing_slice = spacing[1:]
                     lowResSize = list(model_dict['lowResSize'])
                     lowResSize_slice = np.array(lowResSize[0:2] + lowResSize[3:])
@@ -572,11 +645,11 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
                     phi_slice = torch.zeros_like(phi[:, 1:, :, slice_I, :])
                     phi_slice[:,0,...] = phi[:,0,:,slice_I,:]
                     phi_slice[:,1,...] = phi[:,2,:,slice_I,:]
-                    lam_slice = model_dict['lam'][:, :, :, slice_lam, :]
+                    norm_m_slice = norm_m[:, :, :, slice_norm_m, :]
                     lw_slice = None
                     if 'local_weights' in model_dict:
                         if model_dict['local_weights'] is not None:
-                            lw_slice = model_dict['local_weights'][:, :, :, slice_lam, :]
+                            lw_slice = model_dict['local_weights'][:, :, :, slice_norm_m, :]
                     spacing_slice = np.array([spacing[0],spacing[2]])
                     lowResSize = list(model_dict['lowResSize'])
                     lowResSize_slice = np.array(lowResSize[0:3] + [lowResSize[-1]])
@@ -585,25 +658,26 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
                     IT_slice = ITarget[:,:,:,:,slice_I]
                     IW_slice = IWarped[:,:,:,:,slice_I]
                     phi_slice = phi[:,0:2,:,:,slice_I]
-                    lam_slice = model_dict['lam'][:,:,:,:,slice_lam]
+                    norm_m_slice = norm_m[:,:,:,:,slice_norm_m]
                     lw_slice = None
                     if 'local_weights' in model_dict:
                         if model_dict['local_weights'] is not None:
-                            lw_slice = model_dict['local_weights'][:,:,:,:,slice_lam]
+                            lw_slice = model_dict['local_weights'][:,:,:,:,slice_norm_m]
                     spacing_slice = spacing[0:-1]
                     lowResSize_slice = model_dict['lowResSize'][0:-1]
 
                 if print_images:
                     visualize_weights(IS_slice,IT_slice,IW_slice,phi_slice,
-                                      lam_slice,lw_slice,model_dict['stds'],
-                                      spacing_slice,lowResSize_slice,print_output_dir,pair_nr,slice_mode_3d[sm])
+                                      norm_m_slice,lw_slice,model_dict['stds'],
+                                      spacing_slice,lowResSize_slice,print_output_dir,pair_nr,slice_mode_3d[sm],flip_axes_3d[sm],params=params)
                 else:
                     visualize_weights(IS_slice, IT_slice, IW_slice, phi_slice,
-                                      lam_slice, lw_slice, model_dict['stds'],
-                                      spacing_slice, lowResSize_slice)
+                                      norm_m_slice, lw_slice, model_dict['stds'],
+                                      spacing_slice, lowResSize_slice,flip_axes=flip_axes_3d[sm],params=params)
 
         else:
             raise ValueError('I do not know how to visualize results with dimensions other than 2 or 3')
+
 
     # save the images
     if write_out_warped_image:
@@ -612,19 +686,32 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
 
     if write_out_map:
         map_io = FIO.MapIO()
-
-        #mres = dict()
-        #mres['spacing'] = spacing
-        #mres['phi'] = phi
-        #map_output_filename_torch = os.path.join(image_and_map_output_dir, 'map_validation_format_{:05}.pt'.format(pair_nr))
-        #print('Saving: ' + map_output_filename_torch )
-        #torch.save(mres,map_output_filename_torch)
-
         map_io.write_to_validation_map_format(map_output_filename, phi[0,...], hdr)
+
+        if 'id' in model_dict:
+            displacement = phi[0,...]-model_dict['id'][0,...]
+            map_io.write(displacement_output_filename, displacement, hdr)
+
+    if write_out_source_image:
+        if use_sym_links:
+            utils.create_symlink_with_correct_ext(current_source_filename,source_image_output_filename)
+        else:
+            im_io = FIO.ImageIO()
+            im_io.write(source_image_output_filename, ISource[0,0,...], hdr)
+
+    if write_out_target_image:
+        if use_sym_links:
+            utils.create_symlink_with_correct_ext(current_target_filename,target_image_output_filename)
+        else:
+            im_io = FIO.ImageIO()
+            im_io.write(target_image_output_filename, ITarget[0, 0, ...], hdr)
 
     # compute determinant of Jacobian of map
     if compute_det_of_jacobian:
         det = compute_determinant_of_jacobian(phi,spacing)
+
+        im_io = FIO.ImageIO()
+        im_io.write(det_jac_output_filename, det, hdr)
 
         det_min = np.min(det)
         det_max = np.max(det)
@@ -635,7 +722,7 @@ def compute_and_visualize_results(json_file,output_dir,stage,pair_nr,slice_propo
         det_95_perc = np.percentile(det,95)
         det_99_perc = np.percentile(det,99)
 
-        f = open(det_of_jacobian_filename, 'w')
+        f = open(det_of_jacobian_txt_filename, 'w')
         f.write('min, max, mean, median, 1p, 5p, 95p, 99p\n')
         out_str = str(det_min) + ', '
         out_str += str(det_max) + ', '
@@ -659,11 +746,18 @@ if __name__ == "__main__":
 
     parser.add_argument('--config', required=True, help='The main json configuration file that was used to create the results')
     parser.add_argument('--output_directory', required=True, help='Where the output was stored (now this will be the input directory)')
-    parser.add_argument('--stage_nr', required=True, type=int, help='stage number for which the computations should be performed {0,1,2}; shifted by one')
+    parser.add_argument('--stage_nr', required=True, type=int, help='stage number for which the computations should be performed {0,1,2}')
 
     parser.add_argument('--compute_only_pair_nr', required=False, type=int, default=None, help='When specified only this pair is computed; otherwise all of them')
     parser.add_argument('--slice_proportion_3d', required=False, type=str, default=None, help='Where to slice for 3D visualizations [0,1] for each mode, as a comma separated list')
     parser.add_argument('--slice_mode_3d', required=False, type=str, default=None, help='Which visualization mode {0,1,2} as a comma separated list')
+
+    parser.add_argument('--compute_from_frozen', action='store_true', help='computes the results from optimization results with frozen parameters')
+
+    parser.add_argument('--do_not_write_source_image', action='store_true', help='otherwise also writes the source image for easy visualization')
+    parser.add_argument('--do_not_write_target_image', action='store_true', help='otherwise also writes the target image for easy visualization')
+
+    parser.add_argument('--do_not_use_symlinks', action='store_true', help='For source and target images, by default symbolic links are created, otherwise files are copied')
 
     parser.add_argument('--retarget_data_directory', required=False, default=None,help='Looks for the datafiles in this directory')
 
@@ -712,21 +806,32 @@ if __name__ == "__main__":
     for pair_nr in pair_nrs:
         print('Computing pair number: ' + str(pair_nr))
         compute_and_visualize_results(json_file=args.config,output_dir=output_dir,
-                                      stage=args.stage_nr,pair_nr=pair_nr,
+                                      stage=args.stage_nr,
+                                      compute_from_frozen=args.compute_from_frozen,
+                                      pair_nr=pair_nr,
                                       slice_proportion_3d=slice_proportion_3d,
                                       slice_mode_3d=slice_mode_3d,
                                       visualize=not args.do_not_visualize,
                                       print_images=not args.do_not_print_images,
                                       write_out_images=not args.do_not_write_out_images,
+                                      write_out_source_image=not args.do_not_write_source_image,
+                                      write_out_target_image=not args.do_not_write_target_image,
                                       compute_det_of_jacobian=not args.do_not_compute_det_jac,
                                       retarget_data_directory=args.retarget_data_directory)
 
     if not args.do_not_print_images:
-        print_output_dir = os.path.normpath(output_dir) + '_pdf_stage_{:d}'.format(args.stage_nr)
+        if args.compute_from_frozen:
+            print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_frozen_stage_{:d}'.format(args.stage_nr))
+        else:
+            print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_stage_{:d}'.format(args.stage_nr))
 
         # if we have pdfjam we create a summary pdf
         if os.system('which pdfjam') == 0:
             summary_pdf_name = os.path.join(print_output_dir, 'summary.pdf')
+
+            if os.path.isfile(summary_pdf_name):
+                os.remove(summary_pdf_name)
+
             print('Creating summary PDF: ')
             cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_dir, '*.pdf'), summary_pdf_name)
             os.system(cmd)

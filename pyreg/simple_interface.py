@@ -94,13 +94,6 @@ class RegisterImagePair(object):
         else:
             return None
 
-    def get_full_warped_image(self):
-        """
-        Returns the warped image upsampled to full size
-        :return: the warped image
-        """
-        return self.opt.get_full_warped_image()
-
     def get_map(self):
         """
         Returns the deformation map
@@ -347,7 +340,7 @@ class RegisterImagePair(object):
         else:
             if self.sz is None:
                 if type(ISource)==np.ndarray:
-                    self.sz = ISource.shape
+                    self.sz = np.array(ISource.shape)
                 else:
                     raise ValueError('Input image needs to be a numpy array')
 
@@ -431,8 +424,6 @@ class RegisterImagePair(object):
             self.opt.set_light_analysis_on(True)
 
             self.optimizer_has_been_initialized = True
-            # MO.SingleScaleRegistrationOptimizer(self.sz, self.spacing, self.useMap, 1.0, self.params).self.optimizer_has_been_initialized = True
-            # self.opt.optimizer.optimizer_has_been_initialized = True
 
             if self.delayed_model_parameters_still_to_be_set:
                 self.set_model_parameters(self.delayed_model_parameters)

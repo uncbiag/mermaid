@@ -302,6 +302,8 @@ class RegistrationNetDisplacement(RegistrationNet):
 
         self.d = self.create_registration_parameters()
         """displacement field that will be optimized over"""
+        self.spline_order = params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+        """order of the spline for interpolations"""
 
     def create_registration_parameters(self):
         """
@@ -331,7 +333,7 @@ class RegistrationNetDisplacement(RegistrationNet):
         """
         sampler = IS.ResampleImage()
         ustate = self.state_dict().copy()
-        upsampled_d, upsampled_spacing = sampler.upsample_image_to_size(self.d, self.spacing, desiredSz)
+        upsampled_d, upsampled_spacing = sampler.upsample_image_to_size(self.d, self.spacing, desiredSz, self.spline_order)
         ustate['d'] = upsampled_d.data
 
         return ustate, upsampled_spacing
@@ -346,7 +348,7 @@ class RegistrationNetDisplacement(RegistrationNet):
         """
         sampler = IS.ResampleImage()
         dstate = self.state_dict().copy()
-        dstate['d'], downsampled_spacing = sampler.downsample_image_to_size(self.d, self.spacing, desiredSz)
+        dstate['d'], downsampled_spacing = sampler.downsample_image_to_size(self.d, self.spacing, desiredSz,self.spline_order)
         return dstate, downsampled_spacing
 
     def forward(self, phi, I0_source, variables_from_optimizer=None):
@@ -382,6 +384,41 @@ class RegistrationNetTimeIntegration(RegistrationNet):
         self.tTo = 1.
         """time to solve a model to"""
 
+    def set_integration_tfrom(self,tFrom):
+        """
+        Sets the starging time for integration
+        :param tFrom: starting time
+        :return: n/a
+        """
+
+        self.tFrom = tFrom
+
+    def get_integraton_tfrom(self):
+        """
+        Gets the starting integration time (typically 0)
+        :return: starting integration time
+        """
+
+        return self.tFrom
+
+    def set_integration_tto(self, tTo):
+        """
+        Sets the time up to which to integrate
+        :param tTo: time to integrate to
+        :return: n/a
+        """
+
+        self.tTo = tTo
+
+    def get_integraton_tto(self):
+        """
+        Gets the time to integrate to (typically 1)
+        :return: time to integrate to
+        """
+
+        return self.tTo
+
+
     @abstractmethod
     def create_integrator(self):
         """
@@ -399,6 +436,8 @@ class SVFNet(RegistrationNetTimeIntegration):
         """velocity field that will be optimized over"""
         self.integrator = self.create_integrator()
         """integrator to do the time-integration"""
+        self.spline_order = params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+        """order of the spline for interpolations"""
 
     def create_registration_parameters(self):
         """
@@ -427,7 +466,7 @@ class SVFNet(RegistrationNetTimeIntegration):
         """
         sampler = IS.ResampleImage()
         ustate = self.state_dict().copy()
-        upsampled_v,upsampled_spacing=sampler.upsample_image_to_size(self.v,self.spacing,desiredSz)
+        upsampled_v,upsampled_spacing=sampler.upsample_image_to_size(self.v,self.spacing,desiredSz,self.spline_order)
         ustate['v'] = upsampled_v.data
 
         return ustate,upsampled_spacing
@@ -441,7 +480,7 @@ class SVFNet(RegistrationNetTimeIntegration):
         """
         sampler = IS.ResampleImage()
         dstate = self.state_dict().copy()
-        dstate['v'],downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz)
+        dstate['v'],downsampled_spacing=sampler.downsample_image_to_size(self.v,self.spacing,desiredSz,self.spline_order)
         return dstate,downsampled_spacing
 
 class SVFImageNet(SVFNet):
@@ -493,6 +532,9 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
         self.integrator = self.create_integrator()
         """integrator to solve the forward model"""
 
+        self.spline_order = params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+        """order of the spline for interpolations"""
+
     def write_parameters_to_settings(self):
         super(SVFQuasiMomentumNet, self).write_parameters_to_settings()
         self.smoother.write_parameters_to_settings()
@@ -524,7 +566,7 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
     def upsample_registration_parameters(self, desiredSz):
         sampler = IS.ResampleImage()
         ustate = self.state_dict().copy()
-        upsampled_m,upsampled_spacing=sampler.upsample_image_to_size(self.m,self.spacing,desiredSz)
+        upsampled_m,upsampled_spacing=sampler.upsample_image_to_size(self.m,self.spacing,desiredSz,self.spline_order)
         ustate['m'] = upsampled_m.data
 
         return ustate,upsampled_spacing
@@ -532,7 +574,7 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
     def downsample_registration_parameters(self, desiredSz):
         sampler = IS.ResampleImage()
         dstate = self.state_dict().copy()
-        dstate['m'],downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz)
+        dstate['m'],downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz,self.spline_order)
         return dstate,downsampled_spacing
 
 class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
@@ -714,6 +756,9 @@ class RegistrationMapLoss(RegistrationLoss):
         max_displacement = cparams[('max_displacement',0.05,'Max displacement penalty added to loss function of limit_displacement set to True')]
         self.max_displacement_sqr = max_displacement**2
 
+        self.spline_order = params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+        """order of the spline for interpolations"""
+
     def get_energy(self, phi0, phi1, I0_source, I1_target, lowres_I0, variables_from_forward_model=None, variables_from_optimizer=None ):
         """
         Compute the energy by warping the source image via the map and then comparing it to the target image
@@ -727,7 +772,7 @@ class RegistrationMapLoss(RegistrationLoss):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: registration energy
         """
-        I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1, self.spacing_sim)
+        I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1, self.spacing_sim,self.spline_order)
         sim = self.compute_similarity_energy(I1_warped, I1_target, I0_source, phi1, variables_from_forward_model, variables_from_optimizer)
         if lowres_I0 is not None:
             reg = self.compute_regularization_energy(lowres_I0, variables_from_forward_model, variables_from_optimizer)
@@ -1112,6 +1157,9 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         self.integrator = self.create_integrator()
         """integrator to solve EPDiff variant"""
 
+        self.spline_order = params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+        """order of the spline for interpolations"""
+
     def write_parameters_to_settings(self):
         super(ShootingVectorMomentumNet, self).write_parameters_to_settings()
         self.smoother.write_parameters_to_settings()
@@ -1155,7 +1203,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
 
         ustate = self.state_dict().copy()
         sampler = IS.ResampleImage()
-        upsampled_m, upsampled_spacing = sampler.upsample_image_to_size(self.m, self.spacing, desiredSz)
+        upsampled_m, upsampled_spacing = sampler.upsample_image_to_size(self.m, self.spacing, desiredSz,self.spline_order)
         ustate['m'] = upsampled_m.data
 
         return ustate,upsampled_spacing
@@ -1170,7 +1218,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
 
         dstate = self.state_dict().copy()
         sampler = IS.ResampleImage()
-        dstate['m'],downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz)
+        dstate['m'],downsampled_spacing=sampler.downsample_image_to_size(self.m,self.spacing,desiredSz,self.spline_order)
 
         return dstate, downsampled_spacing
 
@@ -1480,6 +1528,9 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
         self.integrator = self.create_integrator()
         """integrator to integrate EPDiff and associated equations (for image or map)"""
 
+        self.spline_order = params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
+        """order of the spline for interpolations"""
+
     def write_parameters_to_settings(self):
         super(ShootingScalarMomentumNet, self).write_parameters_to_settings()
         self.smoother.write_parameters_to_settings()
@@ -1528,7 +1579,7 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
 
         ustate = self.state_dict().copy()
         sampler = IS.ResampleImage()
-        upsampled_lam, upsampled_spacing = sampler.upsample_image_to_size(self.lam, self.spacing, desiredSz)
+        upsampled_lam, upsampled_spacing = sampler.upsample_image_to_size(self.lam, self.spacing, desiredSz, self.spline_order)
         ustate['lam'] = upsampled_lam.data
 
         return ustate,upsampled_spacing
@@ -1543,7 +1594,7 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
 
         dstate = self.state_dict().copy()
         sampler = IS.ResampleImage()
-        dstate['lam'],downsampled_spacing=sampler.downsample_image_to_size(self.lam,self.spacing,desiredSz)
+        dstate['lam'],downsampled_spacing=sampler.downsample_image_to_size(self.lam,self.spacing,desiredSz,self.spline_order)
 
         return dstate, downsampled_spacing
 

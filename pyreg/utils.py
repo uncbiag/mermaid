@@ -17,11 +17,38 @@ import finite_differences as fd
 import torch.nn as nn
 import torch.nn.init as init
 
+import pyreg.module_parameters as pars
+
+from pyreg.spline_interpolation import SplineInterpolation_ND_BCXYZ
+
+import os
+
 try:
     from libraries.functions.nn_interpolation import get_nn_interpolation
 except ImportError:
     print('WARNING: nn_interpolation could not be imported (only supported in CUDA at the moment), some functionality may not be available.')
 
+
+def create_symlink_with_correct_ext(sf,tf):
+    abs_s = os.path.abspath(sf)
+    ext_s = os.path.splitext(abs_s)[1]
+
+    abs_t = os.path.abspath(tf)
+    root_t,ext_t = os.path.splitext(abs_t)
+
+    abs_t_with_right_ext = root_t + ext_s
+
+    if os.path.isfile(abs_t_with_right_ext):
+        if os.path.samefile(abs_s,abs_t_with_right_ext):
+            # nothing to do here, these are already the same file
+            return
+        else:
+            os.remove(abs_t_with_right_ext)
+
+    # now we can do the symlink
+    os.symlink(abs_s,abs_t_with_right_ext)
+
+    
 def combine_dict(d1,d2):
     """
     Creates a dictionary which has entries from both of them
@@ -241,56 +268,50 @@ def compute_normalized_gaussian(X, mu, sig):
         raise ValueError('Can only compute Gaussians in dimensions 1-3')
 
 
-'''
-def computeWarpedImage_1d( I0, phi):
-    stn = STN_ND(1)
-    sz = I0.size()
-    I0_stn = I0.view(torch.Size([1, sz[0], 1]))
-    phi_stn = Variable( torch.zeros([1,sz[0],1]), requires_grad=False )
-    phi_stn[0,:,0] = phi
-    I1_warped = stn(I0_stn, phi_stn)
-    return I1_warped[0,:,0]
+def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order):
 
-def computeWarpedImage_2d(I0, phi):
-    stn = STN_ND(2)
-    sz = I0.size()
-    I0_stn = I0.view(torch.Size([1, sz[0], sz[1], 1]))
-    phi_stn = Variable( torch.zeros([1,sz[0],sz[1],2]), requires_grad=False )
-    phi_stn[0,:,:,0]=phi[0,:,:]
-    phi_stn[0,:,:,1]=phi[1,:,:]
-    I1_warped = stn(I0_stn, phi_stn)
-    return I1_warped[0, :, :, 0]
+    if spline_order not in [1,2,3,4,5,6,7,8,9]:
+        raise ValueError('Currently only orders 1 to 9 are supported')
 
-def computeWarpedImage_3d(I0, phi):
-    stn = STN_ND(3)
-    sz = I0.size()
-    I0_stn = I0.view(torch.Size([1, sz[0], sz[1], sz[2], 1]))
-    phi_stn = Variable( torch.zeros([1,sz[0],sz[1],sz[2],3]), requires_grad=False )
-    phi_stn[0,:,:,:,0] = phi[0,:,:,:]
-    phi_stn[0,:,:,:,1] = phi[1,:,:,:]
-    phi_stn[0,:,:,:,2] = phi[2,:,:,:]
-    I1_warped = stn(I0_stn, phi_stn)
-    return I1_warped[0, :, :, :, 0]
-'''
+    if spline_order==1:
+        stn = STN_ND_BCXYZ(spacing)
+    else:
+        stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
 
-def _compute_warped_image_multiNC_1d(I0, phi, spacing):
-
-    stn = STN_ND_BCXYZ(spacing)
     I1_warped = stn(I0, phi)
+
     return I1_warped
 
-def _compute_warped_image_multiNC_2d(I0, phi, spacing):
-    stn = STN_ND_BCXYZ(spacing)
+def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order):
+
+    if spline_order not in [1,2,3,4,5,6,7,8,9]:
+        raise ValueError('Currently only orders 1 to 9 are supported')
+
+    if spline_order==1:
+        stn = STN_ND_BCXYZ(spacing)
+    else:
+        stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
+
     I1_warped = stn(I0, phi)
+
     return I1_warped
 
-def _compute_warped_image_multiNC_3d(I0, phi, spacing):
-    stn = STN_ND_BCXYZ(spacing)
+def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order):
+
+    if spline_order not in [1,2,3,4,5,6,7,8,9]:
+        raise ValueError('Currently only orders 1 to 9 are supported')
+
+    if spline_order==1:
+        stn = STN_ND_BCXYZ(spacing)
+    else:
+        stn = SplineInterpolation_ND_BCXYZ(spacing,spline_order)
+
     I1_warped = stn(I0, phi)
+
     return I1_warped
 
 
-def compute_warped_image(I0,phi,spacing):
+def compute_warped_image(I0,phi,spacing,spline_order):
     """
     Warps image.
 
@@ -302,10 +323,10 @@ def compute_warped_image(I0,phi,spacing):
 
     # implements this by creating a different view (effectively adding dimensions)
     Iw = compute_warped_image_multiNC(I0.view(torch.Size([1, 1]+ list(I0.size()))),
-                                        phi.view(torch.Size([1]+ list(phi.size()))),spacing)
+                                        phi.view(torch.Size([1]+ list(phi.size()))),spacing,spline_order)
     return Iw.view(I0.size())
 
-def compute_warped_image_multiNC(I0, phi, spacing):
+def compute_warped_image_multiNC(I0, phi, spacing, spline_order):
     """
     Warps image.
     
@@ -314,28 +335,17 @@ def compute_warped_image_multiNC(I0, phi, spacing):
     :param spacing: image spacing [dx,dy,dz]
     :return: returns the warped image of size BxCxXxYxZ
     """
+
     dim = I0.dim()-2
     if dim == 1:
-        return _compute_warped_image_multiNC_1d(I0, phi, spacing)
+        return _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order)
     elif dim == 2:
-        return _compute_warped_image_multiNC_2d(I0, phi, spacing)
+        return _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order)
     elif dim == 3:
-        return _compute_warped_image_multiNC_3d(I0, phi, spacing)
+        return _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order)
     else:
         raise ValueError('Images can only be warped in dimensions 1 to 3')
 
-'''
-def computeWarpedImage(I0, phi):
-    dim = I0.dim()
-    if dim == 1:
-        return computeWarpedImage_1d(I0, phi)
-    elif dim == 2:
-        return computeWarpedImage_2d(I0, phi)
-    elif dim == 3:
-        return computeWarpedImage_3d(I0, phi)
-    else:
-        raise ValueError('Images can only be warped in dimensions 1 to 3')
-'''
 
 def compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, sz, spacing):
     """
@@ -392,7 +402,7 @@ def create_ND_vector_field_variable_multiN(sz, nrOfI=1):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
-    return AdaptVal(Variable(torch.zeros(csz.tolist()), requires_grad=False))
+    return Variable(MyTensor(*(csz.tolist())).zero_(), requires_grad=False)
 
 def create_ND_vector_field_variable(sz):
     """
@@ -404,7 +414,7 @@ def create_ND_vector_field_variable(sz):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([dim]+list(csz))
-    return AdaptVal(Variable(torch.zeros(csz.tolist()), requires_grad=False))
+    return Variable(MyTensor(*(csz.tolist())).zero_(), requires_grad=False)
 
 def create_vector_parameter(nr_of_elements):
     """
@@ -412,7 +422,7 @@ def create_vector_parameter(nr_of_elements):
     :param nr_of_elements: number of vector elements
     :return: returns the parameter vector
     """
-    return Parameter(AdaptVal(torch.zeros(nr_of_elements)))
+    return Parameter(MyTensor(nr_of_elements).zero_())
 
 def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
     """
@@ -425,7 +435,7 @@ def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
-    return Parameter(AdaptVal(torch.zeros(csz.tolist())))
+    return Parameter(MyTensor(*(csz.tolist())).zero_())
 
 def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
     """
@@ -439,8 +449,7 @@ def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
 
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,nrOfC]+list(csz))
-    return Parameter(AdaptVal(torch.zeros(csz.tolist())))
-
+    return Parameter(MyTensor(*(csz.tolist())).zero_())
 
 def centered_identity_map_multiN(sz, spacing, dtype='float32'):
     """

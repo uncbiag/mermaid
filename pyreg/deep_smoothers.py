@@ -246,7 +246,7 @@ class DeepSmoothingModel(nn.Module):
                 n = m.out_channels
                 for d in range(self.dim):
                     n *= m.kernel_size[d]
-                m.weight.data.normal_(0, math.sqrt(0.05 / n))
+                m.weight.data.normal_(0, math.sqrt(0.01 / n))
             elif isinstance(m, DimBatchNorm(self.dim)):
                 pass
             elif isinstance(m, nn.Linear):
@@ -577,7 +577,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
 
         return self.nr_of_image_channels + add_channels
 
-    def forward(self, multi_smooth_v, I, additonal_inputs, global_multi_gaussian_weights,
+    def forward(self, multi_smooth_v, I, additional_inputs, global_multi_gaussian_weights,
                 encourage_spatial_weight_consistency=True, retain_weights=False):
 
         # format of multi_smooth_v is multi_v x batch x channels x X x Y
@@ -595,7 +595,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         assert (sz_mv[0] == self.nr_of_gaussians)
 
         # create the output tensor: will be of dimension: batch x channels x X x Y
-        ret = AdaptVal(Variable(torch.FloatTensor(*sz_mv[1:]), requires_grad=False))
+        ret = AdaptVal(Variable(MyTensor(*sz_mv[1:]), requires_grad=False))
 
         # now determine the size for the weights
         # Since the smoothing will be the same for all spatial directions (for a velocity field),
@@ -607,7 +607,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         if retain_weights and self.computed_weights is None:
             print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')
             # create storage; batch x size v x X x Y
-            self.computed_weights = torch.FloatTensor(*sz_weight)
+            self.computed_weights = MyTensor(*sz_weight)
 
         # here is the actual network; maybe abstract this out later
         if self.do_input_standardization:
@@ -829,7 +829,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         assert(sz_mv[0]==self.nr_of_gaussians)
 
         # create the output tensor: will be of dimension: batch x channels x X x Y
-        ret = AdaptVal(Variable(torch.FloatTensor(*sz_mv[1:]), requires_grad=False))
+        ret = AdaptVal(Variable(MyTensor(*sz_mv[1:]), requires_grad=False))
 
         # now determine the size for the weights
         # Since the smoothing will be the same for all spatial directions (for a velocity field),
@@ -841,7 +841,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         if retain_weights and self.computed_weights is None:
             print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')
             # create storage; batch x size v x X x Y
-            self.computed_weights = torch.FloatTensor(*sz_weight)
+            self.computed_weights = MyTensor(*sz_weight)
 
         if self.do_input_standardization:
             # network input
