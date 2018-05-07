@@ -28,15 +28,52 @@ def new_warp_image_nn(label_map, phi, spacing):
 
     return utils.get_warped_label_map(lm_t, phi, spacing, sched='nn')
 
-def warp_image_nn(moving, phi):
-    """
-    Warp labels according to deformation field
-    :param moving: Moving image in numpy array format
-    :param phi: Deformation field in numpy array format
-    :return: Warped labels according to deformation field
-    """
 
-    # get image demensions
+def _warp_image_nn_1d(moving, phi):
+    # get image dimensions
+    dim1 = moving.shape[0]
+
+    # round the deformation map to integer
+    phi_round = np.round(phi).astype('int')
+    idx_x = np.reshape(phi_round[0, :], (dim1, 1))
+
+    # deal with extreme cases
+    idx_x[idx_x < 0] = 0
+    idx_x[idx_x > dim1 - 1] = dim1 - 1
+
+    # get the wrapped results
+    ind = np.ravel_multi_index([idx_x], [dim1])
+    result = moving.flatten()[ind]
+    result = np.reshape(result, (dim1))
+    return result
+
+
+def _warp_image_nn_2d(moving, phi):
+
+    # get image dimensions
+    dim1 = moving.shape[0]
+    dim2 = moving.shape[1]
+
+    # round the deformation map to integer
+    phi_round = np.round(phi).astype('int')
+    idx_x = np.reshape(phi_round[0, :, :], (dim1 * dim2, 1))
+    idx_y = np.reshape(phi_round[1, :, :], (dim1 * dim2, 1))
+
+    # deal with extreme cases
+    idx_x[idx_x < 0] = 0
+    idx_x[idx_x > dim1 - 1] = dim1 - 1
+    idx_y[idx_y < 0] = 0
+    idx_y[idx_y > dim2 - 1] = dim2 - 1
+
+    # get the wrapped results
+    ind = np.ravel_multi_index([idx_x, idx_y], [dim1, dim2])
+    result = moving.flatten()[ind]
+    result = np.reshape(result, (dim1, dim2))
+    return result
+
+def _warp_image_nn_3d(moving, phi):
+
+    # get image dimensions
     dim1 = moving.shape[0]
     dim2 = moving.shape[1]
     dim3 = moving.shape[2]
@@ -61,6 +98,26 @@ def warp_image_nn(moving, phi):
     result = np.reshape(result, (dim1, dim2, dim3))
     return result
 
+def warp_image_nn(moving, phi):
+    """
+    Warp labels according to deformation field
+    :param moving: Moving image in numpy array format
+    :param phi: Deformation field in numpy array format
+    :return: Warped labels according to deformation field
+    """
+
+    dim = len(moving.shape)
+
+    if dim==1:
+        return _warp_image_nn_1d(moving,phi)
+    elif dim==2:
+        return _warp_image_nn_2d(moving,phi)
+    elif dim==3:
+        return _warp_image_nn_3d(moving, phi)
+    else:
+        raise ValueError('Only dimensions 1, 2, and 3 supported')
+
+
 def calculate_image_overlap(dataset_info, phi_path, source_labelmap_path, target_labelmap_path,
                             warped_labelmap_path,moving_id, target_id, use_sym_links=True):
     """
@@ -83,15 +140,14 @@ def calculate_image_overlap(dataset_info, phi_path, source_labelmap_path, target
     label_to_id = target_id-dataset_info['start_id']
 
     label_from_filename = dataset_info['label_files_dir'] + dataset_info['label_prefix'] + str(label_from_id + dataset_info['start_id']) + '.nii'
-    label_from, hdr, _, _ = im_io.read(label_from_filename, silent_mode=True)
+    label_from, hdr, _, _ = im_io.read(label_from_filename, silent_mode=True, squeeze_image=True)
 
     label_to_filename = dataset_info['label_files_dir'] + dataset_info['label_prefix'] + str(label_to_id + dataset_info['start_id']) + '.nii'
-    label_to, hdr, _, _ = im_io.read(label_to_filename, silent_mode=True)
+    label_to, hdr, _, _ = im_io.read(label_to_filename, silent_mode=True, squeeze_image=True)
 
     map_io = fio.MapIO()
 
     phi,_,_,_ = map_io.read_from_validation_map_format(phi_path)
-    phi = phi.squeeze()
     warp_result = warp_image_nn(label_from, phi)
 
     im_io.write(warped_labelmap_path,warp_result,hdr)
