@@ -2,7 +2,7 @@
     "data_loader": {
         "intensity_normalize": true,
         "normalize_spacing": true,
-        "squeeze_image": false
+        "squeeze_image": true
     },
     "model": {
         "deformation": {
