@@ -10,7 +10,7 @@ import pyreg.finite_differences as fd
 
 batch_norm_momentum_val = 0.1
 
-def compute_omt_penalty(weights, multi_gaussian_stds,volume_element,desired_power=2.0):
+def compute_omt_penalty(weights, multi_gaussian_stds,volume_element,desired_power=2.0,use_log_transform=False):
 
     # weights: B x weights x X x Y
 
@@ -19,17 +19,32 @@ def compute_omt_penalty(weights, multi_gaussian_stds,volume_element,desired_powe
 
     penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
     batch_size = weights.size()[0]
+
     max_std = max(multi_gaussian_stds)
     min_std = min(multi_gaussian_stds)
 
     if desired_power==2:
         for i, s in enumerate(multi_gaussian_stds):
-            penalty += ((weights[:, i, ...]).sum()) * ((s - max_std) ** desired_power)
-        penalty /= (max_std - min_std)** desired_power
+            if use_log_transform:
+                penalty += ((weights[:, i, ...]).sum()) * ((np.log(s) - np.log(max_std)) ** desired_power)
+            else:
+                penalty += ((weights[:, i, ...]).sum()) * ((s - max_std) ** desired_power)
+
+        if use_log_transform:
+            penalty /= (np.log(max_std) - np.log(min_std))** desired_power
+        else:
+            penalty /= (max_std - min_std)** desired_power
     else:
         for i,s in enumerate(multi_gaussian_stds):
-            penalty += ((weights[:,i,...]).sum())*(abs(s-max_std)**desired_power)
-        penalty /= abs(max_std-min_std)**desired_power
+            if use_log_transform:
+                penalty += ((weights[:,i,...]).sum())*(abs(np.log(s)-np.log(max_std))**desired_power)
+            else:
+                penalty += ((weights[:,i,...]).sum())*(abs(s-max_std)**desired_power)
+
+        if use_log_transform:
+            penalty /= abs(np.log(max_std)-np.log(min_std))**desired_power
+        else:
+            penalty /= abs(max_std-min_std)**desired_power
 
     penalty /= batch_size
     penalty *= volume_element
@@ -209,14 +224,21 @@ class DeepSmoothingModel(nn.Module):
         if max(gaussian_stds) > gaussian_stds[-1]:
             raise ValueError('The last standard deviation needs to be the largest')
 
-        self.params = params
+        self.omt_weight_penalty = params[('omt_weight_penalty', 25.0, 'Penalty for the optimal mass transport')]
 
-        self.omt_weight_penalty = self.params[('omt_weight_penalty', 25.0, 'Penalty for the optimal mass transport')]
+        self.omt_use_log_transformed_std = params[('omt_use_log_transformed_std', False,
+                                                        'If set to true the standard deviations are log transformed for the computation of OMT')]
+        """if set to true the standard deviations are log transformed for the OMT computation"""
+
+        self.omt_power = params[('omt_power', 2.0, 'Power for the optimal mass transport (i.e., to which power distances are penalized')]
+        """optimal mass transport power"""
+
+        cparams = params[('deep_smoother',{})]
+        self.params = cparams
+
         self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 1.0, 'Penalize the total variation of the weights if desired')]
         self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty',0.0,'Penalized the squared gradient of the weights')]
 
-        self.omt_power = self.params[('omt_power', 2.0, 'Power for the optimal mass transport (i.e., to which power distances are penalized')]
-        """optimal mass transport power"""
 
         self.do_input_standardization = self.params[('do_input_standardization',True,'if true, subtracts the mean from any image input and leaves momentum as is')]
         """if true subtracts the mean from all image input before running it through the network"""
@@ -692,7 +714,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             ret[:, n, ...] = yc  # ret is: batch x channels x X x Y
 
         current_omt_penalty = self.omt_weight_penalty * compute_omt_penalty(weights, self.gaussian_stds,
-                                                                            self.volumeElement, self.omt_power)
+                                                                            self.volumeElement, self.omt_power, self.omt_use_log_transformed_std)
         self.current_penalty = current_omt_penalty
         if self.total_variation_weight_penalty > 0:
             current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
@@ -928,7 +950,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             yc = torch.sum(roc*weights,dim=1)
             ret[:, n, ...] = yc # ret is: batch x channels x X x Y
 
-        current_omt_penalty = self.omt_weight_penalty*compute_omt_penalty(weights,self.gaussian_stds,self.volumeElement,self.omt_power)
+        current_omt_penalty = self.omt_weight_penalty*compute_omt_penalty(weights,self.gaussian_stds,self.volumeElement,self.omt_power,self.omt_use_log_transformed_std)
         current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
         current_diffusion_penalty = self.diffusion_weight_penalty * diffusion_penalty
 
@@ -982,13 +1004,13 @@ class DeepSmootherFactory(object):
                                                           dim=self.dim,
                                                           spacing=self.spacing,
                                                           nr_of_image_channels=self.nr_of_image_channels,
-                                                          params=cparams)
+                                                          params=params)
         elif smootherType=='encoder_decoder':
             return EncoderDecoderSmoothingModel(nr_of_gaussians=self.nr_of_gaussians,
                                                   gaussian_stds=self.gaussian_stds,
                                                   dim=self.dim,
                                                   spacing=self.spacing,
                                                   nr_of_image_channels=self.nr_of_image_channels,
-                                                  params=cparams)
+                                                  params=params)
         else:
             raise ValueError('Deep smoother: ' + smootherType + ' not known')

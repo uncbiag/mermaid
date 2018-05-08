@@ -2,7 +2,7 @@
     "data_loader": {
         "intensity_normalize": true,
         "normalize_spacing": true,
-        "squeeze_image": false
+        "squeeze_image": true
     },
     "model": {
         "deformation": {
@@ -47,7 +47,7 @@
                     ],
                     "network_penalty": 0.0,
 		    "omt_power": 2.0, 
-                    "omt_use_log_transformed_std": false, 
+                    "omt_use_log_transformed_std": true, 
                     "omt_weight_penalty": 1.0, 
                     "optimize_over_deep_network": false,
                     "optimize_over_smoother_stds": false,
@@ -71,7 +71,7 @@
     },
     "optimizer": {
         "batch_settings": {
-            "batch_size": 2,
+            "batch_size": 100,
             "checkpoint_interval": 0,
             "nr_of_epochs": 10,
             "num_workers": 0,

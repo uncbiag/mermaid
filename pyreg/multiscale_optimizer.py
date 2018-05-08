@@ -2195,6 +2195,10 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                                                                params=self.params)
 
         nr_of_datasets = len(registration_data_set)
+        if nr_of_datasets<self.batch_size:
+            print('INFO: nr of datasets is smaller than batch-size. Reducing batch size to ' + str(nr_of_datasets))
+            self.batch_size=nr_of_datasets
+
         if nr_of_datasets%self.batch_size!=0:
             raise ValueError('Number of registration pairs needs to be divisible by the batch size.')
 
