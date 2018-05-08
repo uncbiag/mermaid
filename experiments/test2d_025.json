@@ -47,7 +47,7 @@
                     ],
                     "network_penalty": 0.0,
 		    "omt_power": 2.0, 
-                    "omt_use_log_transformed_std": false, 
+                    "omt_use_log_transformed_std": true, 
                     "omt_weight_penalty": 1.0, 
                     "optimize_over_deep_network": false,
                     "optimize_over_smoother_stds": false,
