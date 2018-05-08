@@ -93,7 +93,7 @@ def get_n_pairwise_image_combinations(input_directory,n=10,no_random_shuffle=Fal
                     if current_n>=n and no_random_shuffle:
                         return source_files,target_files,source_ids,target_ids
 
-    if n<nr_of_files and not no_random_shuffle:
+    if n is not None and not no_random_shuffle:
         # we now do a random selection
         ind = range(len(source_ids))
         random.shuffle(ind)
@@ -186,7 +186,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--input_image_directory', required=True, help='Directory where all the images are')
     parser.add_argument('--output_directory', required=True, help='Where the output is stored')
-    parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=20, help='number of image pairs that will be used; if not set all pairs will be used')
+    parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=0, help='number of image pairs that will be used; if not set all pairs will be used')
     parser.add_argument('--map_low_res_factor', required=False, type=float, default=None, help='map low res factor')
 
     parser.add_argument('--nr_of_epochs', required=False,type=str, default=None, help='number of epochs for the three stages as a comma separated list')
