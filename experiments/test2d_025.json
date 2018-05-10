@@ -41,14 +41,14 @@
                         0.10
                     ],
                     "multi_gaussian_weights": [
-                        0.6,
-                        0.3,
-                        0.1
+                        0.33,
+                        0.33,
+                        0.34
                     ],
                     "network_penalty": 0.0,
 		    "omt_power": 2.0, 
                     "omt_use_log_transformed_std": true, 
-                    "omt_weight_penalty": 1.0, 
+                    "omt_weight_penalty": 5.0, 
                     "optimize_over_deep_network": false,
                     "optimize_over_smoother_stds": false,
                     "optimize_over_smoother_weights": false,

@@ -1,10 +1,19 @@
 import set_pyreg_paths
 
+import matplotlib as matplt
+from pyreg.config_parser import MATPLOTLIB_AGG
+if MATPLOTLIB_AGG:
+    matplt.use('Agg')
+
+import matplotlib.pyplot as plt
+
 import pyreg.fileio as fileio
 import pyreg.utils as utils
 import pyreg.finite_differences as fd
 import pyreg.custom_pytorch_extensions as ce
 import pyreg.smoother_factory as sf
+
+from pyreg.data_wrapper import AdaptVal
 
 import pyreg.fileio as fio
 
@@ -17,8 +26,6 @@ import torch
 from torch.autograd import Variable
 
 import numpy as np
-
-import matplotlib.pyplot as plt
 
 import os
 
@@ -204,7 +211,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
         s_m_params['smoother']['gaussian_std'] = 0.025
         s_m = sf.SmootherFactory(sz[2::], spacing).create_smoother(s_m_params)
 
-        m=s_m.smooth(Variable(torch.from_numpy(m_orig),requires_grad=False)).data.cpu().numpy()
+        m=s_m.smooth(AdaptVal(Variable(torch.from_numpy(m_orig),requires_grad=False))).data.cpu().numpy()
 
         if visualize:
             plt.clf()
@@ -220,9 +227,9 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
     # create a velocity field from this momentum using a multi-Gaussian kernel
     gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz[2:], spacing, nr_of_gaussians)
 
-    vs = ce.fourier_set_of_gaussian_convolutions(Variable(torch.from_numpy(m),requires_grad=False),
+    vs = ce.fourier_set_of_gaussian_convolutions(AdaptVal(Variable(torch.from_numpy(m),requires_grad=False)),
                                                  gaussian_fourier_filter_generator,
-                                                 sigma=Variable(torch.from_numpy(multi_gaussian_stds),requires_grad=False),
+                                                 sigma=AdaptVal(Variable(torch.from_numpy(multi_gaussian_stds),requires_grad=False)),
                                                  compute_std_gradients=False )
 
 
@@ -248,13 +255,13 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
     params['number_of_time_steps'] = 15
 
     advectionMap = fm.AdvectMap( sz[2:], spacing )
-    pars_to_pass = utils.combine_dict({'v':Variable(torch.from_numpy(localized_v),requires_grad=False)}, dict() )
+    pars_to_pass = utils.combine_dict({'v':AdaptVal(Variable(torch.from_numpy(localized_v),requires_grad=False))}, dict() )
     integrator = rk.RK4(advectionMap.f, advectionMap.u, pars_to_pass, params)
 
     tFrom = 0.
     tTo = 1.
 
-    phi0 = Variable(torch.from_numpy(utils.identity_map_multiN(sz,spacing)),requires_grad=False)
+    phi0 = AdaptVal(Variable(torch.from_numpy(utils.identity_map_multiN(sz,spacing)),requires_grad=False))
     phi1 = integrator.solve([phi0], tFrom, tTo )[0]
 
     if add_texture_to_image:
@@ -266,18 +273,18 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
         r_params['smoother']['gaussian_std'] = 0.015
         s_r = sf.SmootherFactory(sz[2::], spacing).create_smoother(r_params)
 
-        rand_noise_smoothed = s_r.smooth(Variable(torch.from_numpy(rand_noise), requires_grad=False)).data.cpu().numpy()
+        rand_noise_smoothed = s_r.smooth(AdaptVal(Variable(torch.from_numpy(rand_noise), requires_grad=False))).data.cpu().numpy()
 
         ring_im = ring_im_orig + rand_noise_smoothed
     else:
         ring_im = ring_im_orig
 
     # deform image based on this map
-    I0_source = Variable(torch.from_numpy(ring_im),requires_grad=False)
+    I0_source = AdaptVal(Variable(torch.from_numpy(ring_im),requires_grad=False))
     I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1, spacing, spline_order=1)
 
     # define the label images
-    I0_label = Variable(torch.from_numpy(ring_im_orig),requires_grad=False)
+    I0_label = AdaptVal(Variable(torch.from_numpy(ring_im_orig),requires_grad=False))
     I1_label = utils.get_warped_label_map(I0_label, phi1, spacing )
 
     if visualize_warped:
@@ -345,7 +352,7 @@ visualize = False
 visualize_warped = True
 print_images = True
 
-nr_of_pairs_to_generate = 10
+nr_of_pairs_to_generate = 300
 
 weights_not_fluid = np.array([0,0.2,0.8])
 weights_fluid = np.array([0.5,0.4,0.1])
