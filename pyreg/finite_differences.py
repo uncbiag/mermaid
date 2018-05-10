@@ -16,7 +16,7 @@ class FD(object):
     """
     *FD* is the abstract class for finite differences. It includes most of the actual finite difference code, 
     but requires the definition (in a derived class) of the methods *get_dimension*, *create_zero_array*, and *get_size_of_array*.
-    In this way the numpy and pytorch versions can easily be derived.
+    In this way the numpy and pytorch versions can easily be derived. All the method expect BxXxYxZ format (i.e., they process a batch at a time)
     """
     __metaclass__ = ABCMeta
 

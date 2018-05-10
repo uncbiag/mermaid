@@ -130,10 +130,20 @@ def calculate_image_overlap(dataset_info, phi_path, source_labelmap_path, target
     :return:
     """
 
-    Labels = sio.loadmat(dataset_info['label_name'])
-    result = np.zeros((len(Labels['Labels'])))
+    Labels = None
+    nr_of_labels = -1
+    if dataset_info['label_name'] is not None:
+        Labels = sio.loadmat(dataset_info['label_name'])
+        nr_of_labels = (len(Labels['Labels']))
+        result = np.zeros(nr_of_labels)
+    else:
+        if 'nr_of_labels' in dataset_info:
+            nr_of_labels = dataset_info['nr_of_labels']
+            result = np.zeros(nr_of_labels)
+        else:
+            raise ValueError('If matlab label file not given, nr_of_labels needs to be specified')
 
-    # todo: not sure why these are floats, but okay for now
+        # todo: not sure why these are floats, but okay for now
 
     im_io = fio.ImageIO()
     label_from_id = moving_id-dataset_info['start_id'] # typicall starts at 1
@@ -165,9 +175,12 @@ def calculate_image_overlap(dataset_info, phi_path, source_labelmap_path, target
             im_io.write(target_labelmap_path,label_to,hdr)
 
 
-    for label_idx in range(len(Labels['Labels'])):
+    for label_idx in range(nr_of_labels):
 
-        current_id = Labels['Labels'][label_idx][0]
+        if Labels is not None:
+            current_id = Labels['Labels'][label_idx][0]
+        else:
+            current_id = label_idx
 
         target_vol = float( (label_to==current_id).sum() )
 
@@ -196,21 +209,29 @@ def overlapping_plot(old_results_filename, new_results, boxplot_filename, visual
     :param new_results: Dictionary that contains the new results
     :return:
     """
-    old_results = sio.loadmat(old_results_filename)
+
+    if old_results_filename is not None:
+        old_results = sio.loadmat(old_results_filename)
+    else:
+        old_results = None
 
     # combine old names with proposed method
     compound_names = []
-    for item in old_results['direc_name']:
-        compound_names.append(str(item[0])[3:-2])
+
+    if old_results is not None:
+        for item in old_results['direc_name']:
+            compound_names.append(str(item[0])[3:-2])
 
     compound_names.append('Proposed')
 
     # new results may only have a subset of the results
+    if old_results is not None:
+        old_results_selected = old_results['results'][new_results['ind'],:] # select the desired rows
 
-    old_results_selected = old_results['results'][new_results['ind'],:] # select the desired rows
-
-    # combine data
-    compound_results = np.concatenate((old_results_selected, np.array(new_results['mean_target_overlap']).reshape(-1, 1)), axis=1)
+        # combine data
+        compound_results = np.concatenate((old_results_selected, np.array(new_results['mean_target_overlap']).reshape(-1, 1)), axis=1)
+    else:
+        compound_results = np.array(new_results['mean_target_overlap']).reshape(-1, 1)
 
     # create a figure instance
     fig = plt.figure(1, figsize=(8, 6))
@@ -344,7 +365,7 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_directory', required=True,
                         help='Main directory where dataset is stored; this directory should contain the subdirectory label_affine_icbm')
 
-    parser.add_argument('--dataset', required=False, default=None, help='Which validation dataset is being used. Specify as [CUMC|LPBA|IBSR|MGH]; CUMC is the default')
+    parser.add_argument('--dataset', required=False, default=None, help='Which validation dataset is being used. Specify as [CUMC|LPBA|IBSR|MGH|SYNTH]; CUMC is the default')
 
     parser.add_argument('--compute_from_frozen', action='store_true', help='computes the results from optimization results with frozen parameters')
 
@@ -377,6 +398,7 @@ if __name__ == "__main__":
                                    'start_id': 1,
                                    'label_prefix': 'm',
                                    'label_name': './validation_mat/m_Labels.mat',
+                                   'nr_of_labels': None,
                                    'label_files_dir': os.path.join(dataset_directory, 'label_affine_icbm/'),
                                    'old_klein_results_filename': './validation_mat/quicksilver_results/CUMC_results.mat'}
 
@@ -384,6 +406,7 @@ if __name__ == "__main__":
                                    'start_id': 1,
                                    'label_prefix': 's',
                                    'label_name': './validation_mat/l_Labels.mat',
+                                   'nr_of_labels': None,
                                    'label_files_dir': os.path.join(dataset_directory, 'label_affine_icbm/'),
                                    'old_klein_results_filename': './validation_mat/quicksilver_results/LPBA_results.mat'}
 
@@ -391,6 +414,7 @@ if __name__ == "__main__":
                                    'start_id': 1,
                                    'label_prefix': 'c',
                                    'label_name': './validation_mat/c_Labels.mat',
+                                   'nr_of_labels': None,
                                    'label_files_dir': os.path.join(dataset_directory, 'label_affine_icbm/'),
                                    'old_klein_results_filename': './validation_mat/quicksilver_results/IBSR_results.mat'}
 
@@ -398,8 +422,17 @@ if __name__ == "__main__":
                                   'start_id': 1,
                                   'label_prefix': 'g',
                                   'label_name': './validation_mat/g_Labels.mat',
+                                  'nr_of_labels': None,
                                   'label_files_dir': os.path.join(dataset_directory, 'label_affine_icbm/'),
                                   'old_klein_results_filename': './validation_mat/quicksilver_results/MGH_results.mat'}
+
+    validation_datasets['SYNTH'] = {'nr_of_images_in_dataset': -1,
+                                  'start_id': 1,
+                                  'label_prefix': 'm',
+                                  'label_name': None,
+                                  'nr_of_labels': 4,
+                                  'label_files_dir': os.path.join(dataset_directory, 'label_affine_icbm/'),
+                                  'old_klein_results_filename': None}
 
     if args.dataset is None:
         print('INFO: Assuming that dataset is CUMC; if this is not the case, use the --dataset option')
@@ -408,7 +441,7 @@ if __name__ == "__main__":
         if args.dataset in validation_datasets.keys():
             validation_dataset_name = args.dataset
         else:
-            raise ValueError('Dataset needs to be [CUMC|MGH|LPBA|IBSR], but got ' + args.dataset)
+            raise ValueError('Dataset needs to be [CUMC|MGH|LPBA|IBSR|SYNTH], but got ' + args.dataset)
 
 
     if args.save_overlap_filename is not None:
@@ -485,9 +518,11 @@ if __name__ == "__main__":
 
         res_file.close()
 
-    validation_results['ind'] = get_result_indices(validation_results,
-                                                   validation_datasets[validation_dataset_name]['start_id'],
-                                                   validation_datasets[validation_dataset_name]['nr_of_images_in_dataset'])
+    if not args.dataset=='SYNTH':
+        # synth has direct pairwise pairing, not all with respect to all others
+        validation_results['ind'] = get_result_indices(validation_results,
+                                                       validation_datasets[validation_dataset_name]['start_id'],
+                                                       validation_datasets[validation_dataset_name]['nr_of_images_in_dataset'])
 
     validation_results_filename = os.path.join(stage_output_dir,'validation_results.pt')
     print('Saving the validation results to: ' + validation_results_filename)
