@@ -274,7 +274,7 @@ def overlapping_plot(old_results_filename, new_results, boxplot_filename, visual
         ax.spines[axis].set_linewidth(2)
 
     # set the range of the overlapping rate
-    plt.ylim([0, 0.8])
+    plt.ylim([0, 1.0])
 
     # add two lines to represent the lower quartile and upper quartile
     lower_quartile = np.percentile(compound_results[:, -1], 25)

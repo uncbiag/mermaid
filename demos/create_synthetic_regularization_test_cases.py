@@ -115,13 +115,50 @@ def create_rings(levels,multi_gaussian_weights,default_multi_gaussian_weights,
         #   dxc_d[indx] = -dxc_d[indx]
         #   dyc_d[indx] = -dyc_d[indx]
 
-        indx = ((ring_im[:, 0, ...] >= fromval - 0.1) & (ring_im[:, 0, ...] <= toval + 0.1) & (dxc ** 2 + dyc ** 2 != 0))
 
         if randomize_momentum_on_circle:
-            c_rand_val_field = 2*(np.random.rand(*list(indx.shape))-0.5)
-            dxc_d[indx] = dxc_d[indx] * c_rand_val_field[indx]
-            dyc_d[indx] = dyc_d[indx] * c_rand_val_field[indx]
+
+            randomize_over_angles = True
+
+            if randomize_over_angles:
+                nr_of_angles = 10
+                angles = np.sort(2 * np.pi * np.random.rand(nr_of_angles))
+
+                for a in range(nr_of_angles):
+                    afrom = a
+                    ato = (a+1)%nr_of_angles
+
+                    nx_from = -np.sin(angles[afrom])
+                    ny_from = np.cos(angles[afrom])
+
+                    nx_to = -np.sin(angles[ato])
+                    ny_to = np.cos(angles[ato])
+
+                    indx = ((ring_im[:, 0, ...] >= fromval - 0.1) & (ring_im[:, 0, ...] <= toval + 0.1) & (dxc ** 2 + dyc ** 2 != 0)
+                            & (id_c[:,0,...]*nx_from+id_c[:,1,...]*ny_from>=0)
+                            & (id_c[:,0,...]*nx_to+id_c[:,1,...]*ny_to<0))
+
+                    c_rand_choice = np.random.randint(0, 2)
+                    if c_rand_choice==0:
+                        multiplier = 1.0
+                    else:
+                        multiplier = -1.0
+
+                    c_rand_val_field = multiplier*np.random.rand(*list(indx.shape))
+
+                    dxc_d[indx] = dxc_d[indx] * c_rand_val_field[indx]
+                    dyc_d[indx] = dyc_d[indx] * c_rand_val_field[indx]
+
+            else:
+                indx = ((ring_im[:, 0, ...] >= fromval - 0.1) & (ring_im[:, 0, ...] <= toval + 0.1) & (dxc ** 2 + dyc ** 2 != 0))
+                c_rand_val_field = 2*2*(np.random.rand(*list(indx.shape))-0.5)
+
+                dxc_d[indx] = dxc_d[indx] * c_rand_val_field[indx]
+                dyc_d[indx] = dyc_d[indx] * c_rand_val_field[indx]
+
         else:
+            indx = ((ring_im[:, 0, ...] >= fromval - 0.1) & (ring_im[:, 0, ...] <= toval + 0.1) & (dxc ** 2 + dyc ** 2 != 0))
+
             # multiply by a random number in [-1,1]
             c_rand_val = 2*(np.random.rand()-0.5)
 
@@ -259,7 +296,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
     # now compute the deformation that belongs to this velocity field
 
     params = pars.ParameterDict()
-    params['number_of_time_steps'] = 15
+    params['number_of_time_steps'] = 20
 
     advectionMap = fm.AdvectMap( sz[2:], spacing )
     pars_to_pass = utils.combine_dict({'v':AdaptVal(Variable(torch.from_numpy(localized_v),requires_grad=False))}, dict() )
