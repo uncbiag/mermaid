@@ -30,7 +30,7 @@ import numpy as np
 import os
 
 def create_rings(levels,multi_gaussian_weights,default_multi_gaussian_weights,
-                 multi_gaussian_stds,sz,spacing,visualize=False):
+                 multi_gaussian_stds,randomize_momentum_on_circle,sz,spacing,visualize=False):
 
     if len(multi_gaussian_weights)+2!=len(levels):
         raise ValueError('There needs to be one more level than the number of weights, to define this example')
@@ -116,11 +116,17 @@ def create_rings(levels,multi_gaussian_weights,default_multi_gaussian_weights,
         #   dyc_d[indx] = -dyc_d[indx]
 
         indx = ((ring_im[:, 0, ...] >= fromval - 0.1) & (ring_im[:, 0, ...] <= toval + 0.1) & (dxc ** 2 + dyc ** 2 != 0))
-        # multiply by a random number in [-1,1]
-        c_rand_val = 2*(np.random.rand()-0.5)
 
-        dxc_d[indx] = dxc_d[indx]*c_rand_val
-        dyc_d[indx] = dyc_d[indx]*c_rand_val
+        if randomize_momentum_on_circle:
+            c_rand_val_field = 2*(np.random.rand(*list(indx.shape))-0.5)
+            dxc_d[indx] = dxc_d[indx] * c_rand_val_field[indx]
+            dyc_d[indx] = dyc_d[indx] * c_rand_val_field[indx]
+        else:
+            # multiply by a random number in [-1,1]
+            c_rand_val = 2*(np.random.rand()-0.5)
+
+            dxc_d[indx] = dxc_d[indx]*c_rand_val
+            dyc_d[indx] = dyc_d[indx]*c_rand_val
 
     # now create desired initial momentum
     m = np.zeros_like(id_c)
@@ -170,7 +176,7 @@ def create_rings(levels,multi_gaussian_weights,default_multi_gaussian_weights,
 
     return m,weights,ring_im,std_im
 
-def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,multi_gaussian_stds,
+def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,multi_gaussian_stds,randomize_momentum_on_circle,
                              sz,spacing,visualize=False,visualize_warped=False,print_warped_name=None):
 
     nr_of_rings = 3
@@ -201,6 +207,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
     m_orig,weights,ring_im_orig,std_im = create_rings(rings_at,multi_gaussian_weights=multi_gaussian_weights,
                     default_multi_gaussian_weights=weights_neutral,
                     multi_gaussian_stds=multi_gaussian_stds,
+                    randomize_momentum_on_circle=randomize_momentum_on_circle,
                     sz=sz,spacing=spacing,
                     visualize=visualize)
 
@@ -353,6 +360,7 @@ visualize_warped = True
 print_images = True
 
 nr_of_pairs_to_generate = 300
+randomize_momentum_on_circle = True
 
 weights_not_fluid = np.array([0,0.2,0.8])
 weights_fluid = np.array([0.5,0.4,0.1])
@@ -414,6 +422,7 @@ for n in range(nr_of_pairs_to_generate):
                                                            weights_fluid=weights_fluid,
                                                            weights_neutral=weights_neutral,
                                                            multi_gaussian_stds=multi_gaussian_stds,
+                                                           randomize_momentum_on_circle=randomize_momentum_on_circle,
                                                            sz=sz,spacing=spacing,
                                                            visualize=visualize,
                                                            visualize_warped=visualize_warped,
