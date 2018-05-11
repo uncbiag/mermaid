@@ -7,7 +7,6 @@ if MATPLOTLIB_AGG:
 
 import matplotlib.pyplot as plt
 
-import pyreg.fileio as fileio
 import pyreg.utils as utils
 import pyreg.finite_differences as fd
 import pyreg.custom_pytorch_extensions as ce
