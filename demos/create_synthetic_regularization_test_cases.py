@@ -30,7 +30,8 @@ import numpy as np
 import os
 
 def create_rings(levels,multi_gaussian_weights,default_multi_gaussian_weights,
-                 multi_gaussian_stds,randomize_momentum_on_circle,sz,spacing,visualize=False):
+                 multi_gaussian_stds,randomize_momentum_on_circle,randomize_in_sectors,
+                 sz,spacing,visualize=False):
 
     if len(multi_gaussian_weights)+2!=len(levels):
         raise ValueError('There needs to be one more level than the number of weights, to define this example')
@@ -118,7 +119,7 @@ def create_rings(levels,multi_gaussian_weights,default_multi_gaussian_weights,
 
         if randomize_momentum_on_circle:
 
-            randomize_over_angles = True
+            randomize_over_angles = randomize_in_sectors
 
             if randomize_over_angles:
                 nr_of_angles = 10
@@ -213,7 +214,8 @@ def create_rings(levels,multi_gaussian_weights,default_multi_gaussian_weights,
 
     return m,weights,ring_im,std_im
 
-def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,multi_gaussian_stds,randomize_momentum_on_circle,
+def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,multi_gaussian_stds,
+                             randomize_momentum_on_circle,randomize_in_sectors,
                              sz,spacing,visualize=False,visualize_warped=False,print_warped_name=None):
 
     nr_of_rings = 3
@@ -245,6 +247,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
                     default_multi_gaussian_weights=weights_neutral,
                     multi_gaussian_stds=multi_gaussian_stds,
                     randomize_momentum_on_circle=randomize_momentum_on_circle,
+                    randomize_in_sectors=randomize_in_sectors,
                     sz=sz,spacing=spacing,
                     visualize=visualize)
 
@@ -392,103 +395,121 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
     return I0_source.data.cpu().numpy(), I1_warped.data.cpu().numpy(), weights, \
            I0_label.data.cpu().numpy(), I1_label.data.cpu().numpy()
 
-visualize = False
-visualize_warped = True
-print_images = True
 
-nr_of_pairs_to_generate = 300
-randomize_momentum_on_circle = True
+if __name__ == "__main__":
 
-weights_not_fluid = np.array([0,0.2,0.8])
-weights_fluid = np.array([0.5,0.4,0.1])
-weights_neutral = weights_not_fluid
+    import argparse
 
-multi_gaussian_stds = np.array([0.025,0.05,0.1])
+    parser = argparse.ArgumentParser(description='Creates a synthetic registration results')
 
-output_dir = 'synthetic_example_out'
-image_output_dir = os.path.join(output_dir,'brain_affine_icbm')
-label_output_dir = os.path.join(output_dir,'label_affine_icbm')
-misc_output_dir = os.path.join(output_dir,'misc')
-pdf_output_dir = os.path.join(output_dir,'pdf')
+    parser.add_argument('--output_directory', required=False, default='synthetic_example_out', help='Where the output was stored (now this will be the input directory)')
+    parser.add_argument('--nr_of_pairs_to_generate', required=False, default=10, type=int, help='number of image pairs to generate')
 
-if not os.path.isdir(output_dir):
-    os.makedirs(output_dir)
+    parser.add_argument('--do_not_randomize_momentum', action='store_true', help='if set, momentum is deterministic')
+    parser.add_argument('--do_not_randomize_in_sectors', action='store_true', help='if set and randomize momentum is on, momentum is only randomized uniformly over circles')
 
-if not os.path.isdir(image_output_dir):
-    os.makedirs(image_output_dir)
+    args = parser.parse_args()
 
-if not os.path.isdir(label_output_dir):
-    os.makedirs(label_output_dir)
+    visualize = False
+    visualize_warped = True
+    print_images = True
 
-if not os.path.isdir(misc_output_dir):
-    os.makedirs(misc_output_dir)
+    nr_of_pairs_to_generate = args.nr_of_pairs_to_generate
+    randomize_momentum_on_circle = not args.do_not_randomize_momentum
+    randomize_in_sectors = not args.do_not_randomize_in_sectors
 
-if not os.path.isdir(pdf_output_dir):
-    os.makedirs(pdf_output_dir)
+    weights_not_fluid = np.array([0,0.2,0.8])
+    weights_fluid = np.array([0.5,0.4,0.1])
+    weights_neutral = weights_not_fluid
 
-sz = [1,1,128,128]
-spacing = 1.0/(np.array(sz[2:])-1)
+    multi_gaussian_stds = np.array([0.025,0.05,0.1])
+
+    output_dir = args.output_directory
+
+    image_output_dir = os.path.join(output_dir,'brain_affine_icbm')
+    label_output_dir = os.path.join(output_dir,'label_affine_icbm')
+    misc_output_dir = os.path.join(output_dir,'misc')
+    pdf_output_dir = os.path.join(output_dir,'pdf')
+
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+
+    if not os.path.isdir(image_output_dir):
+        os.makedirs(image_output_dir)
+
+    if not os.path.isdir(label_output_dir):
+        os.makedirs(label_output_dir)
+
+    if not os.path.isdir(misc_output_dir):
+        os.makedirs(misc_output_dir)
+
+    if not os.path.isdir(pdf_output_dir):
+        os.makedirs(pdf_output_dir)
+
+    sz = [1,1,128,128]
+    spacing = 1.0/(np.array(sz[2:])-1)
 
 
-pt = dict()
-pt['source_images'] = []
-pt['target_images'] = []
-pt['source_ids'] = []
-pt['target_ids'] = []
+    pt = dict()
+    pt['source_images'] = []
+    pt['target_images'] = []
+    pt['source_ids'] = []
+    pt['target_ids'] = []
 
-im_io = fio.ImageIO()
-# image hdr
-hdr = dict()
-hdr['space origin'] = np.array([0,0,0])
-hdr['spacing'] = np.array(list(spacing) + [spacing[-1]])
-hdr['space directions'] = np.array([['1', '0', '0'], ['0', '1', '0'], ['0', '0', '1']])
-hdr['dimension'] = 3
-hdr['space'] = 'left-posterior-superior'
-hdr['sizes'] = list(sz[2:])+[1]
+    im_io = fio.ImageIO()
+    # image hdr
+    hdr = dict()
+    hdr['space origin'] = np.array([0,0,0])
+    hdr['spacing'] = np.array(list(spacing) + [spacing[-1]])
+    hdr['space directions'] = np.array([['1', '0', '0'], ['0', '1', '0'], ['0', '0', '1']])
+    hdr['dimension'] = 3
+    hdr['space'] = 'left-posterior-superior'
+    hdr['sizes'] = list(sz[2:])+[1]
 
-for n in range(nr_of_pairs_to_generate):
+    for n in range(nr_of_pairs_to_generate):
 
-    print('Writing file pair ' + str(n+1) + '/' + str(nr_of_pairs_to_generate))
+        print('Writing file pair ' + str(n+1) + '/' + str(nr_of_pairs_to_generate))
 
-    if print_images:
-        print_warped_name = os.path.join(pdf_output_dir,'registration_image_pair_{:05d}.pdf'.format(2*n+1))
-    else:
-        print_warped_name = None
+        if print_images:
+            print_warped_name = os.path.join(pdf_output_dir,'registration_image_pair_{:05d}.pdf'.format(2*n+1))
+        else:
+            print_warped_name = None
 
-    I0Source, I1Target, weights, I0Label, I1Label = create_random_image_pair(weights_not_fluid=weights_not_fluid,
-                                                           weights_fluid=weights_fluid,
-                                                           weights_neutral=weights_neutral,
-                                                           multi_gaussian_stds=multi_gaussian_stds,
-                                                           randomize_momentum_on_circle=randomize_momentum_on_circle,
-                                                           sz=sz,spacing=spacing,
-                                                           visualize=visualize,
-                                                           visualize_warped=visualize_warped,
-                                                           print_warped_name=print_warped_name)
+        I0Source, I1Target, weights, I0Label, I1Label = create_random_image_pair(weights_not_fluid=weights_not_fluid,
+                                                               weights_fluid=weights_fluid,
+                                                               weights_neutral=weights_neutral,
+                                                               multi_gaussian_stds=multi_gaussian_stds,
+                                                               randomize_momentum_on_circle=randomize_momentum_on_circle,
+                                                               randomize_in_sectors=randomize_in_sectors,
+                                                               sz=sz,spacing=spacing,
+                                                               visualize=visualize,
+                                                               visualize_warped=visualize_warped,
+                                                               print_warped_name=print_warped_name)
 
-    source_filename = os.path.join(image_output_dir,'m{:d}.nii'.format(2*n+1))
-    target_filename = os.path.join(image_output_dir,'m{:d}.nii'.format(2*n+1+1))
-    source_label_filename = os.path.join(label_output_dir, 'm{:d}.nii'.format(2 * n + 1))
-    target_label_filename = os.path.join(label_output_dir, 'm{:d}.nii'.format(2 * n + 1 + 1))
+        source_filename = os.path.join(image_output_dir,'m{:d}.nii'.format(2*n+1))
+        target_filename = os.path.join(image_output_dir,'m{:d}.nii'.format(2*n+1+1))
+        source_label_filename = os.path.join(label_output_dir, 'm{:d}.nii'.format(2 * n + 1))
+        target_label_filename = os.path.join(label_output_dir, 'm{:d}.nii'.format(2 * n + 1 + 1))
 
-    weights_filename = os.path.join(misc_output_dir,'weights_{:05d}.pt'.format(2*n+1))
+        weights_filename = os.path.join(misc_output_dir,'weights_{:05d}.pt'.format(2*n+1))
 
-    reshape_size = list(sz[2:]) + [1]
+        reshape_size = list(sz[2:]) + [1]
 
-    # save these files
-    im_io.write(filename=source_filename,data=I0Source.view().reshape(reshape_size),hdr=hdr)
-    im_io.write(filename=target_filename,data=I1Target.view().reshape(reshape_size),hdr=hdr)
+        # save these files
+        im_io.write(filename=source_filename,data=I0Source.view().reshape(reshape_size),hdr=hdr)
+        im_io.write(filename=target_filename,data=I1Target.view().reshape(reshape_size),hdr=hdr)
 
-    im_io.write(filename=source_label_filename, data=I0Label.view().reshape(reshape_size), hdr=hdr)
-    im_io.write(filename=target_label_filename, data=I1Label.view().reshape(reshape_size), hdr=hdr)
+        im_io.write(filename=source_label_filename, data=I0Label.view().reshape(reshape_size), hdr=hdr)
+        im_io.write(filename=target_label_filename, data=I1Label.view().reshape(reshape_size), hdr=hdr)
 
-    torch.save(weights,weights_filename)
+        torch.save(weights,weights_filename)
 
-    # create source/target configuration
-    pt['source_images'].append(source_filename)
-    pt['target_images'].append(target_filename)
-    pt['source_ids'].append(2*n+1)
-    pt['target_ids'].append(2*n+1+1)
+        # create source/target configuration
+        pt['source_images'].append(source_filename)
+        pt['target_images'].append(target_filename)
+        pt['source_ids'].append(2*n+1)
+        pt['target_ids'].append(2*n+1+1)
 
-filename_pt = os.path.join(output_dir,'used_image_pairs.pt')
-torch.save(pt,filename_pt)
+    filename_pt = os.path.join(output_dir,'used_image_pairs.pt')
+    torch.save(pt,filename_pt)
 
