@@ -605,22 +605,22 @@ def _compute_omt_penalty_for_weight_vectors(weights,multi_gaussian_stds,omt_powe
     if omt_power == 2:
         for i, s in enumerate(multi_gaussian_stds):
             if use_log_transform:
-                penalty += weights[i] * ((torch.log(s) - torch.log(max_std)) ** omt_power)
+                penalty += weights[i] * ((torch.log(max_std/s)) ** omt_power)
             else:
                 penalty += weights[i] * ((s - max_std) ** omt_power)
         if use_log_transform:
-            penalty /= (torch.log(max_std) - torch.log(min_std)) ** omt_power
+            penalty /= (torch.log(max_std/min_std)) ** omt_power
         else:
             penalty /= (max_std - min_std) ** omt_power
     else:
         for i, s in enumerate(multi_gaussian_stds):
             if use_log_transform:
-                penalty += weights[i] * (torch.abs(torch.log(s) - torch.log(max_std)) ** omt_power)
+                penalty += weights[i] * (torch.abs(torch.log(max_std/s)) ** omt_power)
             else:
                 penalty += weights[i] * (torch.abs(s - max_std) ** omt_power)
 
         if use_log_transform:
-            penalty /= torch.abs(torch.log(max_std)-torch.log(min_std))**omt_power
+            penalty /= torch.abs(torch.log(max_std/min_std))**omt_power
         else:
             penalty /= torch.abs(max_std-min_std)**omt_power
 

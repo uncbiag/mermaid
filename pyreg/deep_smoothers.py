@@ -26,23 +26,23 @@ def compute_omt_penalty(weights, multi_gaussian_stds,volume_element,desired_powe
     if desired_power==2:
         for i, s in enumerate(multi_gaussian_stds):
             if use_log_transform:
-                penalty += ((weights[:, i, ...]).sum()) * ((np.log(s) - np.log(max_std)) ** desired_power)
+                penalty += ((weights[:, i, ...]).sum()) * ((np.log(max_std/s)) ** desired_power)
             else:
                 penalty += ((weights[:, i, ...]).sum()) * ((s - max_std) ** desired_power)
 
         if use_log_transform:
-            penalty /= (np.log(max_std) - np.log(min_std))** desired_power
+            penalty /= (np.log(max_std/min_std))** desired_power
         else:
             penalty /= (max_std - min_std)** desired_power
     else:
         for i,s in enumerate(multi_gaussian_stds):
             if use_log_transform:
-                penalty += ((weights[:,i,...]).sum())*(abs(np.log(s)-np.log(max_std))**desired_power)
+                penalty += ((weights[:,i,...]).sum())*(abs(np.log(max_std/s))**desired_power)
             else:
                 penalty += ((weights[:,i,...]).sum())*(abs(s-max_std)**desired_power)
 
         if use_log_transform:
-            penalty /= abs(np.log(max_std)-np.log(min_std))**desired_power
+            penalty /= abs(np.log(max_std/min_std))**desired_power
         else:
             penalty /= abs(max_std-min_std)**desired_power
 
