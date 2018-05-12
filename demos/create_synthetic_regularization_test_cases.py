@@ -28,11 +28,12 @@ import numpy as np
 
 import os
 
-def create_rings(levels,multi_gaussian_weights,default_multi_gaussian_weights,
+def create_rings(levels_in,multi_gaussian_weights,default_multi_gaussian_weights,
                  multi_gaussian_stds,randomize_momentum_on_circle,randomize_in_sectors,
+                 put_weights_between_circles,
                  sz,spacing,visualize=False):
 
-    if len(multi_gaussian_weights)+2!=len(levels):
+    if len(multi_gaussian_weights)+1!=len(levels_in):
         raise ValueError('There needs to be one more level than the number of weights, to define this example')
 
     id_c = utils.centered_identity_map_multiN(sz, spacing, dtype='float32')
@@ -56,6 +57,14 @@ def create_rings(levels,multi_gaussian_weights,default_multi_gaussian_weights,
     sh_ring_im = list(sh_id_c[2:])
     ring_im = np.zeros(sh_ring_im,dtype='float32')
 
+    # just add one more level in case we put weights in between (otherwise add a dummy)
+    levels = np.zeros(len(levels_in)+1)
+    levels[0:-1] = levels_in
+    if put_weights_between_circles:
+        levels[-1] = levels_in[-1]+levels_in[-1]-levels_in[-2]
+    else:
+        levels[-1]=-1.
+
     for i in range(len(levels)-2):
         cl = levels[i]
         nl = levels[i+1]
@@ -67,7 +76,10 @@ def create_rings(levels,multi_gaussian_weights,default_multi_gaussian_weights,
 
         # as the momenta will be supported on the ring boundaries, we want the smoothing to be changing in the middle of the rings
 
-        indices_weight = (id_c[0,0,...]**2+id_c[0,1,...]**2>=((cl+nl)/2)**2) & (id_c[0,0,...]**2+id_c[0,1,...]**2<=((nl+nnl)/2)**2)
+        if put_weights_between_circles:
+            indices_weight = (id_c[0,0,...]**2+id_c[0,1,...]**2>=((cl+nl)/2)**2) & (id_c[0,0,...]**2+id_c[0,1,...]**2<=((nl+nnl)/2)**2)
+        else:
+            indices_weight = (id_c[0, 0, ...] ** 2 + id_c[0, 1, ...] ** 2 >= cl ** 2) & (id_c[0, 0, ...] ** 2 + id_c[0, 1, ...] ** 2 <= nl ** 2)
 
         # set the desired weights in this ring
         current_desired_weights = multi_gaussian_weights[i]
@@ -195,16 +207,15 @@ def create_rings(levels,multi_gaussian_weights,default_multi_gaussian_weights,
         plt.show()
 
         plt.clf()
-        plt.subplot(221)
-        plt.imshow(weights[0,0,...],vmin=0.0,vmax=1.0)
-        plt.colorbar()
-        plt.subplot(222)
-        plt.imshow(weights[0, 1, ...],vmin=0.0,vmax=1.0)
-        plt.colorbar()
-        plt.subplot(223)
-        plt.imshow(weights[0, 2, ...],vmin=0.0,vmax=1.0)
-        plt.colorbar()
-        plt.subplot(224)
+
+        nr_of_weights = weights.shape[1]
+
+        for cw in range(nr_of_weights):
+            plt.subplot(2,3,1+nr_of_weights)
+            plt.imshow(weights[0,cw,...],vmin=0.0,vmax=1.0)
+            plt.colorbar()
+
+        plt.subplot(236)
         plt.imshow(std_im)
         plt.colorbar()
         plt.suptitle('weights')
@@ -215,10 +226,14 @@ def create_rings(levels,multi_gaussian_weights,default_multi_gaussian_weights,
 
 def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,multi_gaussian_stds,
                              randomize_momentum_on_circle,randomize_in_sectors,
+                             put_weights_between_circles,
+                             start_with_fluid_weight,
+                             nr_of_circles_to_generate,
+                             circle_extent,
                              sz,spacing,visualize=False,visualize_warped=False,print_warped_name=None):
 
-    nr_of_rings = 3
-    extent = 0.4
+    nr_of_rings = nr_of_circles_to_generate
+    extent = circle_extent
     randomize_factor = 0.75
     randomize_radii = True
     smooth_initial_momentum = True
@@ -229,14 +244,20 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
     multi_gaussian_weights = []
     for r in range(nr_of_rings):
         if r%2==0:
-            multi_gaussian_weights.append(weights_fluid)
+            if start_with_fluid_weight:
+                multi_gaussian_weights.append(weights_fluid)
+            else:
+                multi_gaussian_weights.append(weights_not_fluid)
         else:
-            multi_gaussian_weights.append(weights_not_fluid)
+            if start_with_fluid_weight:
+                multi_gaussian_weights.append(weights_not_fluid)
+            else:
+                multi_gaussian_weights.append(weights_fluid)
 
     if randomize_radii:
-        rings_at_default = np.linspace(0., extent, nr_of_rings + 2)
+        rings_at_default = np.linspace(0., extent, nr_of_rings + 1)
         diff_r = rings_at_default[1] - rings_at_default[0]
-        rings_at = np.sort(rings_at_default + (np.random.random(nr_of_rings + 2) - 0.5) * diff_r * randomize_factor)
+        rings_at = np.sort(rings_at_default + (np.random.random(nr_of_rings + 1) - 0.5) * diff_r * randomize_factor)
     else:
         rings_at = np.linspace(0., extent, nr_of_rings + 2)
     # first one needs to be zero:
@@ -247,6 +268,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
                     multi_gaussian_stds=multi_gaussian_stds,
                     randomize_momentum_on_circle=randomize_momentum_on_circle,
                     randomize_in_sectors=randomize_in_sectors,
+                    put_weights_between_circles=put_weights_between_circles,
                     sz=sz,spacing=spacing,
                     visualize=visualize)
 
@@ -320,6 +342,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
         s_r = sf.SmootherFactory(sz[2::], spacing).create_smoother(r_params)
 
         rand_noise_smoothed = s_r.smooth(AdaptVal(Variable(torch.from_numpy(rand_noise), requires_grad=False))).data.cpu().numpy()
+        rand_noise_smoothed /= rand_noise_smoothed.max()
 
         ring_im = ring_im_orig + rand_noise_smoothed
     else:
@@ -336,34 +359,29 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
     if visualize_warped:
         plt.clf()
         # plot original image, warped image, and grids
-        plt.subplot(241)
+        plt.subplot(3,4,1)
         plt.imshow(I0_source[0,0,...].data.cpu().numpy())
         plt.title('source')
-        plt.subplot(242)
+        plt.subplot(3,4,2)
         plt.imshow(I1_warped[0,0,...].data.cpu().numpy())
         plt.title('warped = target')
-        plt.subplot(243)
+        plt.subplot(3,4,3)
         plt.imshow(I0_source[0,0,...].data.cpu().numpy())
         plt.contour(phi0[0,0,...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
         plt.contour(phi0[0,1,...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
-        plt.subplot(244)
+        plt.subplot(3,4,4)
         plt.imshow(I1_warped[0,0,...].data.cpu().numpy())
         plt.contour(phi1[0,0,...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
         plt.contour(phi1[0,1,...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
 
-        plt.subplot(245)
-        plt.imshow(weights[0, 0, ...], vmin=0.0, vmax=1.0)
-        plt.title('w: std' + str(multi_gaussian_stds[0]))
-        plt.colorbar()
-        plt.subplot(246)
-        plt.imshow(weights[0, 1, ...], vmin=0.0, vmax=1.0)
-        plt.title('w: std' + str(multi_gaussian_stds[1]))
-        plt.colorbar()
-        plt.subplot(247)
-        plt.imshow(weights[0, 2, ...], vmin=0.0, vmax=1.0)
-        plt.title('w: std' + str(multi_gaussian_stds[2]))
-        plt.colorbar()
-        plt.subplot(248)
+        nr_of_weights = weights.shape[1]
+        for cw in range(nr_of_weights):
+            plt.subplot(3,4,5+cw)
+            plt.imshow(weights[0, cw, ...], vmin=0.0, vmax=1.0)
+            plt.title('w: std' + str(multi_gaussian_stds[cw]))
+            plt.colorbar()
+
+        plt.subplot(3,4,12)
         plt.imshow(std_im)
         plt.title('std')
         plt.colorbar()
@@ -403,9 +421,18 @@ if __name__ == "__main__":
 
     parser.add_argument('--output_directory', required=False, default='synthetic_example_out', help='Where the output was stored (now this will be the input directory)')
     parser.add_argument('--nr_of_pairs_to_generate', required=False, default=10, type=int, help='number of image pairs to generate')
+    parser.add_argument('--nr_of_circles_to_generate', required=False, default=2, type=int, help='number of circles to generate in an image')
+    parser.add_argument('--circle_extent', required=False, default=0.25, type=float, help='Size of largest circle; image is [-0.5,0.5]^2')
 
     parser.add_argument('--do_not_randomize_momentum', action='store_true', help='if set, momentum is deterministic')
     parser.add_argument('--do_not_randomize_in_sectors', action='store_true', help='if set and randomize momentum is on, momentum is only randomized uniformly over circles')
+    parser.add_argument('--put_weights_between_circles', action='store_true', help='if set, the weights will change in-between circles, otherwise they will be colocated with the circles')
+    parser.add_argument('--start_with_fluid_weight', action='store_true', help='if set then the innermost circle is not fluid, otherwise it is fluid')
+
+    parser.add_argument('--stds', required=False,type=str, default=None, help='standard deviations for the multi-Gaussian; default=[0.01,0.05,0.1,0.2]')
+    parser.add_argument('--weights_not_fluid', required=False,type=str, default=None, help='weights for a non fluid circle; default=[0,0,0,1]')
+    parser.add_argument('--weights_fluid', required=False,type=str, default=None, help='weights for a fluid circle; default=[0.1,0.3,0.3,0.3]')
+    parser.add_argument('--weights_background', required=False,type=str, default=None, help='weights for the background; default=[0,0,0,1]')
 
     args = parser.parse_args()
 
@@ -414,14 +441,45 @@ if __name__ == "__main__":
     print_images = True
 
     nr_of_pairs_to_generate = args.nr_of_pairs_to_generate
+    nr_of_circles_to_generate = args.nr_of_circles_to_generate
+    circle_extent = args.circle_extent
     randomize_momentum_on_circle = not args.do_not_randomize_momentum
     randomize_in_sectors = not args.do_not_randomize_in_sectors
+    put_weights_between_circles = args.put_weights_between_circles
+    start_with_fluid_weight = args.start_with_fluid_weight
 
-    weights_not_fluid = np.array([0,0.2,0.8])
-    weights_fluid = np.array([0.5,0.4,0.1])
-    weights_neutral = weights_not_fluid
+    if args.stds is None:
+        multi_gaussian_stds = np.array([0.01, 0.05, 0.1, 0.2])
+    else:
+        mgsl = [float(item) for item in args.stds.split(',')]
+        multi_gaussian_stds = np.array(mgsl)
 
-    multi_gaussian_stds = np.array([0.025,0.05,0.1])
+    if args.weights_not_fluid is None:
+        weights_not_fluid = np.array([0,0,0,1.0])
+    else:
+        cw = [float(item) for item in args.stds.split(',')]
+        weights_not_fluid = np.array(cw)
+
+    if len(weights_not_fluid)!=len(multi_gaussian_stds):
+        raise ValueError('Need as many weights as there are standard deviations')
+
+    if args.weights_fluid is None:
+        weights_fluid = np.array([0.1,0.3,0.3,0.3])
+    else:
+        cw = [float(item) for item in args.stds.split(',')]
+        weights_fluid = np.array(cw)
+
+    if len(weights_fluid)!=len(multi_gaussian_stds):
+        raise ValueError('Need as many weights as there are standard deviations')
+
+    if args.weights_background is None:
+        weights_neutral = np.array([0,0,0,1.0])
+    else:
+        cw = [float(item) for item in args.stds.split(',')]
+        weights_neutral = np.array(cw)
+
+    if len(weights_neutral)!=len(multi_gaussian_stds):
+        raise ValueError('Need as many weights as there are standard deviations')
 
     output_dir = args.output_directory
 
@@ -480,6 +538,10 @@ if __name__ == "__main__":
                                                                multi_gaussian_stds=multi_gaussian_stds,
                                                                randomize_momentum_on_circle=randomize_momentum_on_circle,
                                                                randomize_in_sectors=randomize_in_sectors,
+                                                               put_weights_between_circles=put_weights_between_circles,
+                                                               start_with_fluid_weight=start_with_fluid_weight,
+                                                               nr_of_circles_to_generate=nr_of_circles_to_generate,
+                                                               circle_extent=circle_extent,
                                                                sz=sz,spacing=spacing,
                                                                visualize=visualize,
                                                                visualize_warped=visualize_warped,
