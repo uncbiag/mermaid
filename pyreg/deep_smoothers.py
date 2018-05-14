@@ -21,7 +21,10 @@ def compute_localized_edge_penalty(I,spacing):
 
     return localized_edge_penalty
 
-def _compute_weighted_total_variation_1d(d,w, spacing, pnorm=2):
+def _compute_weighted_total_variation_1d(d,w, spacing, bc_val, pnorm=2):
+
+    #todo
+    raise ValueError('Not completely implemented; need to force boundary condition')
 
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.abs here to make sure the proper subgradient is computed at zero
@@ -29,9 +32,19 @@ def _compute_weighted_total_variation_1d(d,w, spacing, pnorm=2):
     volumeElement = spacing.prod()
     t0 = torch.abs(fdt.dXc(d))
 
-    return (t0*w).sum()*volumeElement/batch_size
+    tm = t0*w
 
-def _compute_weighted_total_variation_2d(d,w, spacing, pnorm=2):
+    return (tm).sum()*volumeElement/batch_size
+
+def _compute_weighted_total_variation_2d(d_in,w, spacing, bc_val, pnorm=2):
+
+    # force the boundary condition
+    d = torch.zeros_like(d_in)
+    d[:] = d_in
+    d[:,0,:] = bc_val
+    d[:,-1,:] = bc_val
+    d[:,:,0] = bc_val
+    d[:,:,-1] = bc_val
 
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.norm here to make sure the proper subgradient is computed at zero
@@ -39,9 +52,14 @@ def _compute_weighted_total_variation_2d(d,w, spacing, pnorm=2):
     volumeElement = spacing.prod()
     t0 = torch.norm(torch.stack((fdt.dXc(d),fdt.dYc(d))),pnorm,0)
 
-    return (t0*w).sum()*volumeElement/batch_size
+    tm = t0*w
 
-def _compute_weighted_total_variation_3d(d,w, spacing, pnorm=2):
+    return (tm).sum()*volumeElement/batch_size
+
+def _compute_weighted_total_variation_3d(d,w, spacing, bc_val, pnorm=2):
+
+    # todo
+    raise ValueError('Not completely implemented; need to force boundary condition')
 
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.norm here to make sure the proper subgradient is computed at zero
@@ -52,20 +70,22 @@ def _compute_weighted_total_variation_3d(d,w, spacing, pnorm=2):
                                  fdt.dYc(d),
                                  fdt.dZc(d))), pnorm, 0)
 
-    return (t0*w).sum()*volumeElement/batch_size
+    tm = t0*w
 
-def compute_weighted_total_variation(d, w, spacing,pnorm=2):
+    return (tm).sum()*volumeElement/batch_size
+
+def compute_weighted_total_variation(d, w, spacing,bc_val,pnorm=2):
     # just do the standard component-wise Euclidean norm of the gradient, but muliplied locally by a weight
     # format needs to be B x X x Y x Z
 
     dim = len(d.size())-1
 
     if dim == 1:
-        return _compute_weighted_total_variation_1d(d,w, spacing,pnorm)
+        return _compute_weighted_total_variation_1d(d,w, spacing,bc_val,pnorm)
     elif dim == 2:
-        return _compute_weighted_total_variation_2d(d,w, spacing,pnorm)
+        return _compute_weighted_total_variation_2d(d,w, spacing,bc_val,pnorm)
     elif dim == 3:
-        return _compute_weighted_total_variation_3d(d,w, spacing,pnorm)
+        return _compute_weighted_total_variation_3d(d,w, spacing,bc_val,pnorm)
     else:
         raise ValueError('Total variation computation is currently only supported in dimensions 1 to 3')
 
@@ -90,10 +110,19 @@ def compute_localized_omt_penalty(weights, I, multi_gaussian_stds,spacing,volume
     max_std = max(multi_gaussian_stds)
     min_std = min(multi_gaussian_stds)
 
+    nr_of_multi_gaussians = len(multi_gaussian_stds)
+    if multi_gaussian_stds[nr_of_multi_gaussians-1]!=max_std:
+        raise ValueError('Assuming that the last standard deviation is the largest')
+
     if desired_power == 2:
         for i, s in enumerate(multi_gaussian_stds):
 
-            weighted_tv_penalty = compute_weighted_total_variation(weights[:,i,...], image_edge_weights, spacing)
+            if i==nr_of_multi_gaussians-1:
+                bc_val = 1.0
+            else:
+                bc_val = 0.0
+
+            weighted_tv_penalty = compute_weighted_total_variation(weights[:,i,...], image_edge_weights, bc_val=bc_val, spacing=spacing)
 
             if use_log_transform:
                 penalty += weighted_tv_penalty * ((np.log(max_std / s)) ** desired_power)
@@ -107,7 +136,12 @@ def compute_localized_omt_penalty(weights, I, multi_gaussian_stds,spacing,volume
     else:
         for i, s in enumerate(multi_gaussian_stds):
 
-            weighted_tv_penalty = compute_weighted_total_variation(weights[:,i,...], image_edge_weights, spacing)
+            if i==nr_of_multi_gaussians-1:
+                bc_val = 1.0
+            else:
+                bc_val = 0.0
+
+            weighted_tv_penalty = compute_weighted_total_variation(weights[:,i,...], image_edge_weights, bc_val=bc_val, spacing=spacing)
 
             if use_log_transform:
                 penalty += weighted_tv_penalty * (abs(np.log(max_std / s)) ** desired_power)
