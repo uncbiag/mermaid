@@ -10,6 +10,118 @@ import pyreg.finite_differences as fd
 
 batch_norm_momentum_val = 0.1
 
+def compute_localized_edge_penalty(I,spacing):
+    # needs to be batch B x X x Y x Z format
+    fdt = fd.FD_torch(spacing=spacing)
+    gnI = fdt.grad_norm_sqr(I)**0.5
+
+    # compute edge penalty
+    gamma = float(1.0*spacing.min())
+    localized_edge_penalty = 1.0/(1.0+gamma*gnI) # this is what we weight the OMT values with
+
+    return localized_edge_penalty
+
+def _compute_weighted_total_variation_1d(d,w, spacing, pnorm=2):
+
+    fdt = fd.FD_torch(spacing=spacing)
+    # need to use torch.abs here to make sure the proper subgradient is computed at zero
+    batch_size = d.size()[0]
+    volumeElement = spacing.prod()
+    t0 = torch.abs(fdt.dXc(d))
+
+    return (t0*w).sum()*volumeElement/batch_size
+
+def _compute_weighted_total_variation_2d(d,w, spacing, pnorm=2):
+
+    fdt = fd.FD_torch(spacing=spacing)
+    # need to use torch.norm here to make sure the proper subgradient is computed at zero
+    batch_size = d.size()[0]
+    volumeElement = spacing.prod()
+    t0 = torch.norm(torch.stack((fdt.dXc(d),fdt.dYc(d))),pnorm,0)
+
+    return (t0*w).sum()*volumeElement/batch_size
+
+def _compute_weighted_total_variation_3d(d,w, spacing, pnorm=2):
+
+    fdt = fd.FD_torch(spacing=spacing)
+    # need to use torch.norm here to make sure the proper subgradient is computed at zero
+    batch_size = d.size()[0]
+    volumeElement = spacing.prod()
+
+    t0 = torch.norm(torch.stack((fdt.dXc(d),
+                                 fdt.dYc(d),
+                                 fdt.dZc(d))), pnorm, 0)
+
+    return (t0*w).sum()*volumeElement/batch_size
+
+def compute_weighted_total_variation(d, w, spacing,pnorm=2):
+    # just do the standard component-wise Euclidean norm of the gradient, but muliplied locally by a weight
+    # format needs to be B x X x Y x Z
+
+    dim = len(d.size())-1
+
+    if dim == 1:
+        return _compute_weighted_total_variation_1d(d,w, spacing,pnorm)
+    elif dim == 2:
+        return _compute_weighted_total_variation_2d(d,w, spacing,pnorm)
+    elif dim == 3:
+        return _compute_weighted_total_variation_3d(d,w, spacing,pnorm)
+    else:
+        raise ValueError('Total variation computation is currently only supported in dimensions 1 to 3')
+
+
+def compute_localized_omt_penalty(weights, I, multi_gaussian_stds,spacing,volume_element,desired_power=2.0,use_log_transform=False):
+    # weights: B x weights x X x Y
+
+    if weights.size()[1] != len(multi_gaussian_stds):
+        raise ValueError('Number of weights need to be the same as number of Gaussians. Format recently changed for weights to B x weights x X x Y')
+
+    penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+
+    # first compute the gradient of the image as the penalty is only evaluated at gradients of the image
+    # and where the gradients of the total variation of the weights are
+
+    nr_of_image_channels = I.size()[1]
+    if nr_of_image_channels!=1:
+        raise ValueError('localized omt is currently only supported for single channel images')
+
+    image_edge_weights = compute_localized_edge_penalty(I[:,0,...],spacing)
+
+    max_std = max(multi_gaussian_stds)
+    min_std = min(multi_gaussian_stds)
+
+    if desired_power == 2:
+        for i, s in enumerate(multi_gaussian_stds):
+
+            weighted_tv_penalty = compute_weighted_total_variation(weights[:,i,...], image_edge_weights, spacing)
+
+            if use_log_transform:
+                penalty += weighted_tv_penalty * ((np.log(max_std / s)) ** desired_power)
+            else:
+                penalty += weighted_tv_penalty * ((s - max_std) ** desired_power)
+
+        if use_log_transform:
+            penalty /= (np.log(max_std / min_std)) ** desired_power
+        else:
+            penalty /= (max_std - min_std) ** desired_power
+    else:
+        for i, s in enumerate(multi_gaussian_stds):
+
+            weighted_tv_penalty = compute_weighted_total_variation(weights[:,i,...], image_edge_weights, spacing)
+
+            if use_log_transform:
+                penalty += weighted_tv_penalty * (abs(np.log(max_std / s)) ** desired_power)
+            else:
+                penalty += weighted_tv_penalty * (abs(s - max_std) ** desired_power)
+
+        if use_log_transform:
+            penalty /= abs(np.log(max_std / min_std)) ** desired_power
+        else:
+            penalty /= abs(max_std - min_std) ** desired_power
+
+    return penalty
+
+
 def compute_omt_penalty(weights, multi_gaussian_stds,volume_element,desired_power=2.0,use_log_transform=False):
 
     # weights: B x weights x X x Y
@@ -225,7 +337,6 @@ class DeepSmoothingModel(nn.Module):
             raise ValueError('The last standard deviation needs to be the largest')
 
         self.omt_weight_penalty = params[('omt_weight_penalty', 25.0, 'Penalty for the optimal mass transport')]
-
         self.omt_use_log_transformed_std = params[('omt_use_log_transformed_std', False,
                                                         'If set to true the standard deviations are log transformed for the computation of OMT')]
         """if set to true the standard deviations are log transformed for the OMT computation"""
@@ -236,9 +347,16 @@ class DeepSmoothingModel(nn.Module):
         cparams = params[('deep_smoother',{})]
         self.params = cparams
 
-        self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 1.0, 'Penalize the total variation of the weights if desired')]
-        self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty',0.0,'Penalized the squared gradient of the weights')]
+        self.use_localized_omt = self.params[('use_localized_omt', True, 'If true then OMT is evaluated on image edges and at weight discontinuities only')]
+        self.localized_omt_weight_penalty = self.params[('localized_omt_weight_penalty', 100.0, 'weight for the localized OMT total variation')]
 
+        self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty', 0.0, 'Penalized the squared gradient of the weights')]
+
+        if not self.use_localized_omt:
+            self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 1.0, 'Penalize the total variation of the weights if desired')]
+        else:
+            self.params['total_variation_weight_penalty'] = 0.0
+            self.total_variation_weight_penalty = 0.0
 
         self.do_input_standardization = self.params[('do_input_standardization',True,'if true, subtracts the mean from any image input and leaves momentum as is')]
         """if true subtracts the mean from all image input before running it through the network"""
@@ -713,14 +831,19 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             yc = torch.sum(roc * weights, dim=1)
             ret[:, n, ...] = yc  # ret is: batch x channels x X x Y
 
-        current_omt_penalty = self.omt_weight_penalty * compute_omt_penalty(weights, self.gaussian_stds,
+
+        if self.use_localized_omt:
+            current_omt_penalty = self.localized_omt_weight_penalty*compute_localized_omt_penalty(weights,I,self.gaussian_stds,self.spacing,self.volumeElement,self.omt_power,self.omt_use_log_transformed_std)
+            self.current_penalty = current_omt_penalty
+        else:
+            current_omt_penalty = self.omt_weight_penalty * compute_omt_penalty(weights, self.gaussian_stds,
                                                                             self.volumeElement, self.omt_power, self.omt_use_log_transformed_std)
-        self.current_penalty = current_omt_penalty
-        if self.total_variation_weight_penalty > 0:
-            current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
-            #print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
-            #      'OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()))
-            self.current_penalty += current_tv_penalty
+            self.current_penalty = current_omt_penalty
+            if self.total_variation_weight_penalty > 0:
+                current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
+                #print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
+                #      'OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()))
+                self.current_penalty += current_tv_penalty
 
         if retain_weights:
             # todo: change visualization to work with this new format:
@@ -923,7 +1046,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         else:
             weights = F.softmax(y, dim=1)
 
-        # compute tht total variation penalty
+        # compute the total variation penalty
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
             for g in range(self.nr_of_gaussians):
@@ -950,15 +1073,20 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             yc = torch.sum(roc*weights,dim=1)
             ret[:, n, ...] = yc # ret is: batch x channels x X x Y
 
-        current_omt_penalty = self.omt_weight_penalty*compute_omt_penalty(weights,self.gaussian_stds,self.volumeElement,self.omt_power,self.omt_use_log_transformed_std)
-        current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
         current_diffusion_penalty = self.diffusion_weight_penalty * diffusion_penalty
+
+        if self.use_localized_omt:
+            current_omt_penalty = self.localized_omt_weight_penalty*compute_localized_omt_penalty(weights,I,self.gaussian_stds,self.spacing,self.volumeElement,self.omt_power,self.omt_use_log_transformed_std)
+            self.current_penalty = current_omt_penalty + current_diffusion_penalty
+        else:
+            current_omt_penalty = self.omt_weight_penalty*compute_omt_penalty(weights,self.gaussian_stds,self.volumeElement,self.omt_power,self.omt_use_log_transformed_std)
+            current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
+            self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
 
         #print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
         #      '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \
         #      '; diffusion_penalty = ' + str(current_diffusion_penalty.data.cpu().numpy()))
 
-        self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
 
         if retain_weights:
             # todo: change visualization to work with this new format:

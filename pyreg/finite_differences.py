@@ -177,6 +177,27 @@ class FD(object):
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
 
+    def grad_norm_sqr(self, I):
+        """
+        Computes the gradient norm of an image
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
+
+        :param I: Input image [batch, X,Y,Z]
+        :return: returns ||grad I||^2
+        """
+        ndim = self.getdimension(I)
+        if ndim == 1 + 1:
+            return self.ddXc(I)**2
+        elif ndim == 2 + 1:
+            return (self.ddXc(I)**2 + self.ddYc(I)**2)
+        elif ndim == 3 + 1:
+            return (self.ddXc(I)**2 + self.ddYc(I)**2 + self.ddZc(I)**2)
+        else:
+            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
+
     @abstractmethod
     def getdimension(self,I):
         """
