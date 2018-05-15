@@ -431,7 +431,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--stds', required=False,type=str, default=None, help='standard deviations for the multi-Gaussian; default=[0.01,0.05,0.1,0.2]')
     parser.add_argument('--weights_not_fluid', required=False,type=str, default=None, help='weights for a non fluid circle; default=[0,0,0,1]')
-    parser.add_argument('--weights_fluid', required=False,type=str, default=None, help='weights for a fluid circle; default=[0.1,0.3,0.3,0.3]')
+    parser.add_argument('--weights_fluid', required=False,type=str, default=None, help='weights for a fluid circle; default=[0.2,0.5,0.2,0.1]')
     parser.add_argument('--weights_background', required=False,type=str, default=None, help='weights for the background; default=[0,0,0,1]')
 
     args = parser.parse_args()
@@ -464,7 +464,7 @@ if __name__ == "__main__":
         raise ValueError('Need as many weights as there are standard deviations')
 
     if args.weights_fluid is None:
-        weights_fluid = np.array([0.1,0.3,0.3,0.3])
+        weights_fluid = np.array([0.2,0.5,0.2,0.1])
     else:
         cw = [float(item) for item in args.stds.split(',')]
         weights_fluid = np.array(cw)
