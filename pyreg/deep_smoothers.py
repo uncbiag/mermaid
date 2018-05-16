@@ -21,7 +21,14 @@ def compute_localized_edge_penalty(I,spacing):
 
     return localized_edge_penalty
 
-def _compute_weighted_total_variation_1d(d,w, spacing, bc_val, pnorm=2):
+def _compute_weighted_total_variation_1d(d_in,w, spacing, bc_val, pnorm=2):
+
+    d = torch.zeros_like(d_in)
+    d[:] = d_in
+
+    # now force the boundary condition
+    d[:, 0] = bc_val
+    d[:, -1] = bc_val
 
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.abs here to make sure the proper subgradient is computed at zero
@@ -31,15 +38,18 @@ def _compute_weighted_total_variation_1d(d,w, spacing, bc_val, pnorm=2):
 
     tm = t0*w
 
-    # now force the boundary condition
-    # todo: what should the right balance be here with respect to the total variation term?
-    # dividing by spacing here, to make it somewhat comparable to the total variation derivative
-    tm[:,0] = bc_val/spacing[0]
-    tm[:,-1] = bc_val/spacing[0]
-
     return (tm).sum()*volumeElement/batch_size
 
-def _compute_weighted_total_variation_2d(d,w, spacing, bc_val, pnorm=2):
+def _compute_weighted_total_variation_2d(d_in,w, spacing, bc_val, pnorm=2):
+
+    d = torch.zeros_like(d_in)
+    d[:] = d_in
+
+    # now force the boundary condition
+    d[:, 0, :] = bc_val
+    d[:, -1, :] = bc_val
+    d[:, :, 0] = bc_val
+    d[:, :, -1] = bc_val
 
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.norm here to make sure the proper subgradient is computed at zero
@@ -49,17 +59,20 @@ def _compute_weighted_total_variation_2d(d,w, spacing, bc_val, pnorm=2):
 
     tm = t0*w
 
-    # now force the boundary condition
-    # todo: what should the right balance be here with respect to the total variation term?
-    # dividing by spacing here, to make it somewhat comparable to the total variation derivative
-    tm[:,0,:] = bc_val/spacing[0]
-    tm[:,-1,:] = bc_val/spacing[0]
-    tm[:,:,0] = bc_val/spacing[1]
-    tm[:,:,-1] = bc_val/spacing[1]
-
     return (tm).sum()*volumeElement/batch_size
 
-def _compute_weighted_total_variation_3d(d,w, spacing, bc_val, pnorm=2):
+def _compute_weighted_total_variation_3d(d_in,w, spacing, bc_val, pnorm=2):
+
+    d = torch.zeros_like(d_in)
+    d[:] = d_in
+
+    # now force the boundary condition
+    d[:, 0, :, :] = bc_val
+    d[:, -1, :, :] = bc_val
+    d[:, :, 0, :] = bc_val
+    d[:, :, -1, :] = bc_val
+    d[:, :, :, 0] = bc_val
+    d[:, :, :, -1] = bc_val
 
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.norm here to make sure the proper subgradient is computed at zero
@@ -71,16 +84,6 @@ def _compute_weighted_total_variation_3d(d,w, spacing, bc_val, pnorm=2):
                                  fdt.dZc(d))), pnorm, 0)
 
     tm = t0*w
-
-    # now force the boundary condition
-    # todo: what should the right balance be here with respect to the total variation term?
-    # dividing by spacing here, to make it somewhat comparable to the total variation derivative
-    tm[:, 0, :, :] = bc_val / spacing[0]
-    tm[:, -1, :, :] = bc_val / spacing[0]
-    tm[:, :, 0, :] = bc_val / spacing[1]
-    tm[:, :, -1, :] = bc_val / spacing[1]
-    tm[:, :, :, 0] = bc_val / spacing[2]
-    tm[:, :, :, -1] = bc_val / spacing[2]
 
     return (tm).sum()*volumeElement/batch_size
 
