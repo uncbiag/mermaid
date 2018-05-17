@@ -169,7 +169,7 @@ def _compute_localized_omt_weight_1d(weights,g,spacing,pnorm):
     nr_of_weights = weights.size()[1]
 
     for n in range(nr_of_weights):
-        sum_tv += _compute_total_variation(weights[:, n, ...], spacing, pnorm)
+        sum_tv += float(np.min(spacing))*_compute_total_variation(weights[:, n, ...], spacing, pnorm)
 
     #r_tv = half_sigmoid(sum_tv) * g
     r_tv = sum_tv*g
@@ -202,7 +202,7 @@ def _compute_localized_omt_weight_2d(weights,g,spacing,pnorm):
     nr_of_weights = weights.size()[1]
 
     for n in range(nr_of_weights):
-        sum_tv += _compute_total_variation(weights[:,n,...],spacing,pnorm)
+        sum_tv += float(np.min(spacing))*_compute_total_variation(weights[:,n,...],spacing,pnorm)
 
     #r_tv = half_sigmoid(sum_tv)*g
     r_tv = sum_tv * g
@@ -235,7 +235,7 @@ def _compute_localized_omt_weight_3d(weights,g,spacing,pnorm):
     nr_of_weights = weights.size()[1]
 
     for n in range(nr_of_weights):
-        sum_tv += _compute_total_variation(weights[:, n, ...], spacing, pnorm)
+        sum_tv += float(np.min(spacing))*_compute_total_variation(weights[:, n, ...], spacing, pnorm)
 
     #r_tv = half_sigmoid(sum_tv) * g
     r_tv = sum_tv * g
