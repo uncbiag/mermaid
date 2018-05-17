@@ -195,11 +195,11 @@ def _compute_localized_omt_weight_2d(weights,g,I,spacing,pnorm):
 
     r = torch.zeros_like(g)
 
-    # set the boundary values to 1
-    r[:,0,:] = 1
-    r[:,-1,:] = 1
-    r[:,:,0] = 1
-    r[:,:,-1] = 1
+    ## set the boundary values to 1
+    #r[:,0,:] = 1
+    #r[:,-1,:] = 1
+    #r[:,:,0] = 1
+    #r[:,:,-1] = 1
 
     sz = r.size()
     S0 = 2 * sz[2] + 2 * sz[1]
@@ -213,17 +213,22 @@ def _compute_localized_omt_weight_2d(weights,g,I,spacing,pnorm):
     sum_tv /= nr_of_weights
 
     #sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm))
-    sum_tv += _compute_local_norm_of_gradient(I[:, 0, ...], spacing, pnorm)
+    tvl_I = _compute_local_norm_of_gradient(I[:, 0, ...], spacing, pnorm)
+    sum_tv += tvl_I
 
     #r_tv = half_sigmoid(sum_tv)*g
     r_tv = sum_tv * g
 
-    r_tv[:,0,:] = 0
-    r_tv[:,-1,:] = 0
-    r_tv[:,:,0] = 0
-    r_tv[:,:,-1] = 0
+    batch_size = I.size()[0]
+    r_tv *= batch_size/(tvl_I*g).sum()
 
-    r = r + r_tv
+    #r_tv[:,0,:] = 0
+    #r_tv[:,-1,:] = 0
+    #r_tv[:,:,0] = 0
+    #r_tv[:,:,-1] = 0
+
+    #r = r + r_tv
+    r = r_tv
 
     return r,S0
 
@@ -330,7 +335,7 @@ def compute_localized_omt_penalty(weights, I, multi_gaussian_stds,spacing,volume
         else:
             penalty /= (max_std - min_std) ** desired_power
 
-        penalty/=S0
+        #penalty/=S0
 
     else:
         for i, s in enumerate(multi_gaussian_stds):
@@ -347,7 +352,7 @@ def compute_localized_omt_penalty(weights, I, multi_gaussian_stds,spacing,volume
         else:
             penalty /= abs(max_std - min_std) ** desired_power
 
-        penalty/=S0
+        #penalty/=S0
 
     # todo: check why division by batch size appears not to be necessary (probably because of division by S0)
     penalty /= batch_size
