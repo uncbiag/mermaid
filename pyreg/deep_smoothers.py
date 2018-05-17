@@ -106,57 +106,63 @@ def compute_weighted_total_variation(d, w, spacing,bc_val,pnorm=2):
     else:
         raise ValueError('Total variation computation is currently only supported in dimensions 1 to 3')
 
-
-def _compute_total_variation_1d(d,spacing,pnorm=2):
+def _compute_local_norm_of_gradient_1d(d,spacing,pnorm=2):
 
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.abs here to make sure the proper subgradient is computed at zero
-    batch_size = d.size()[0]
-    volumeElement = spacing.prod()
     t0 = torch.abs(fdt.dXc(d))
 
-    return (t0).sum()*volumeElement/batch_size
+    return t0
 
-def _compute_total_variation_2d(d,spacing,pnorm=2):
+def _compute_local_norm_of_gradient_2d(d,spacing,pnorm=2):
 
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.norm here to make sure the proper subgradient is computed at zero
-    batch_size = d.size()[0]
-    volumeElement = spacing.prod()
     t0 = torch.norm(torch.stack((fdt.dXc(d),fdt.dYc(d))),pnorm,0)
 
-    return (t0).sum()*volumeElement/batch_size
+    return t0
 
-def _compute_total_variation_3d(d,spacing, pnorm=2):
+def _compute_local_norm_of_gradient_3d(d,spacing, pnorm=2):
 
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.norm here to make sure the proper subgradient is computed at zero
-    batch_size = d.size()[0]
-    volumeElement = spacing.prod()
 
     t0 = torch.norm(torch.stack((fdt.dXc(d),
                                  fdt.dYc(d),
                                  fdt.dZc(d))), pnorm, 0)
 
-    return (t0).sum()*volumeElement/batch_size
+    return t0
 
-def _compute_total_variation(d, spacing, pnorm=2):
+def _compute_local_norm_of_gradient(d, spacing, pnorm=2):
     # just do the standard component-wise Euclidean norm of the gradient, but muliplied locally by a weight
     # format needs to be B x X x Y x Z
 
     dim = len(d.size())-1
 
     if dim == 1:
-        return _compute_total_variation_1d(d,spacing,pnorm)
+        return _compute_local_norm_of_gradient_1d(d,spacing,pnorm)
     elif dim == 2:
-        return _compute_total_variation_2d(d,spacing,pnorm)
+        return _compute_local_norm_of_gradient_2d(d,spacing,pnorm)
     elif dim == 3:
-        return _compute_total_variation_3d(d,spacing,pnorm)
+        return _compute_local_norm_of_gradient_3d(d,spacing,pnorm)
     else:
-        raise ValueError('Total variation computation is currently only supported in dimensions 1 to 3')
+        raise ValueError('Local norm of gradient computation is currently only supported in dimensions 1 to 3')
+
+def _compute_total_variation(d, spacing, pnorm=2):
+    # just do the standard component-wise Euclidean norm of the gradient, but muliplied locally by a weight
+    # format needs to be B x X x Y x Z
+
+    batch_size = d.size()[0]
+    volumeElement = spacing.prod()
+
+    tv = _compute_local_norm_of_gradient(d,spacing,norm)
+    return (tv).sum()*volumeElement/batch_size
 
 
 def _compute_localized_omt_weight_1d(weights,g,I,spacing,pnorm):
+
+    batch_size = I.size()[0]
+    volumeElement = spacing.prod()
 
     r = torch.zeros_like(g)
 
@@ -169,12 +175,13 @@ def _compute_localized_omt_weight_1d(weights,g,I,spacing,pnorm):
     nr_of_weights = weights.size()[1]
 
     for n in range(nr_of_weights):
-        sum_tv += _compute_total_variation(weights[:, n, ...], spacing, pnorm)
+        sum_tv += _compute_local_norm_of_gradient(weights[:, n, ...], spacing, pnorm)
+    sum_tv /= nr_of_weights
 
-    sum_tv += _compute_total_variation(I[:,0,...], spacing, pnorm)/torch.max(I)
+    sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm)/torch.max(I))
 
     #r_tv = half_sigmoid(sum_tv) * g
-    r_tv = sum_tv*g*float(np.min(spacing))
+    r_tv = sum_tv*g
 
     r_tv[:, 0] = 0
     r_tv[:, -1] = 0
@@ -204,11 +211,12 @@ def _compute_localized_omt_weight_2d(weights,g,I,spacing,pnorm):
     nr_of_weights = weights.size()[1]
 
     for n in range(nr_of_weights):
-        sum_tv += _compute_total_variation(weights[:,n,...],spacing,pnorm)
+        sum_tv += _compute_local_norm_of_gradient(weights[:,n,...],spacing,pnorm)
+    sum_tv /= nr_of_weights
 
-    sum_tv += _compute_total_variation(I[:,0,...], spacing, pnorm)/torch.max(I)
+    sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm)/torch.max(I))
     #r_tv = half_sigmoid(sum_tv)*g
-    r_tv = sum_tv * g * float(np.min(spacing))
+    r_tv = sum_tv * g
 
     r_tv[:,0,:] = 0
     r_tv[:,-1,:] = 0
@@ -220,6 +228,7 @@ def _compute_localized_omt_weight_2d(weights,g,I,spacing,pnorm):
     return r,S0
 
 def _compute_localized_omt_weight_3d(weights,g,I,spacing,pnorm):
+
     r = torch.zeros_like(g)
 
     # set the boundary values to 1
@@ -238,11 +247,13 @@ def _compute_localized_omt_weight_3d(weights,g,I,spacing,pnorm):
     nr_of_weights = weights.size()[1]
 
     for n in range(nr_of_weights):
-        sum_tv += _compute_total_variation(weights[:, n, ...], spacing, pnorm)
+        sum_tv += _compute_local_norm_of_gradient(weights[:, n, ...], spacing, pnorm)
+    sum_tv /= nr_of_weights
 
-    sum_tv += _compute_total_variation(I[:,0,...], spacing, pnorm)/torch.max(I)
+    sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm)/torch.max(I))
+
     #r_tv = half_sigmoid(sum_tv) * g
-    r_tv = sum_tv * g * float(np.min(spacing))
+    r_tv = sum_tv * g
 
     r_tv[:, 0, :, :] = 0
     r_tv[:, -1, :, :] = 0
