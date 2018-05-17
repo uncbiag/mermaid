@@ -17,10 +17,10 @@ def half_sigmoid(x,alpha=1):
 def compute_localized_edge_penalty(I,spacing):
     # needs to be batch B x X x Y x Z format
     fdt = fd.FD_torch(spacing=spacing)
-    gnI = fdt.grad_norm_sqr(I)**0.5
+    gnI = float(np.min(spacing))*fdt.grad_norm_sqr(I)**0.5
 
     # compute edge penalty
-    gamma = float(1.0*spacing.min())
+    gamma = 1.0
     localized_edge_penalty = 1.0/(1.0+gamma*gnI) # this is what we weight the OMT values with
 
     return localized_edge_penalty
@@ -156,7 +156,7 @@ def _compute_total_variation(d, spacing, pnorm=2):
         raise ValueError('Total variation computation is currently only supported in dimensions 1 to 3')
 
 
-def _compute_localized_omt_weight_1d(weights,g,spacing,pnorm):
+def _compute_localized_omt_weight_1d(weights,g,I,spacing,pnorm):
 
     r = torch.zeros_like(g)
 
@@ -169,10 +169,12 @@ def _compute_localized_omt_weight_1d(weights,g,spacing,pnorm):
     nr_of_weights = weights.size()[1]
 
     for n in range(nr_of_weights):
-        sum_tv += float(np.min(spacing))*_compute_total_variation(weights[:, n, ...], spacing, pnorm)
+        sum_tv += _compute_total_variation(weights[:, n, ...], spacing, pnorm)
+
+    sum_tv += _compute_total_variation(I[:,0,...], spacing, pnorm)/torch.max(I)
 
     #r_tv = half_sigmoid(sum_tv) * g
-    r_tv = sum_tv*g
+    r_tv = sum_tv*g*float(np.min(spacing))
 
     r_tv[:, 0] = 0
     r_tv[:, -1] = 0
@@ -184,7 +186,7 @@ def _compute_localized_omt_weight_1d(weights,g,spacing,pnorm):
     return r,S0
 
 
-def _compute_localized_omt_weight_2d(weights,g,spacing,pnorm):
+def _compute_localized_omt_weight_2d(weights,g,I,spacing,pnorm):
 
     r = torch.zeros_like(g)
 
@@ -202,10 +204,11 @@ def _compute_localized_omt_weight_2d(weights,g,spacing,pnorm):
     nr_of_weights = weights.size()[1]
 
     for n in range(nr_of_weights):
-        sum_tv += float(np.min(spacing))*_compute_total_variation(weights[:,n,...],spacing,pnorm)
+        sum_tv += _compute_total_variation(weights[:,n,...],spacing,pnorm)
 
+    sum_tv += _compute_total_variation(I[:,0,...], spacing, pnorm)/torch.max(I)
     #r_tv = half_sigmoid(sum_tv)*g
-    r_tv = sum_tv * g
+    r_tv = sum_tv * g * float(np.min(spacing))
 
     r_tv[:,0,:] = 0
     r_tv[:,-1,:] = 0
@@ -216,7 +219,7 @@ def _compute_localized_omt_weight_2d(weights,g,spacing,pnorm):
 
     return r,S0
 
-def _compute_localized_omt_weight_3d(weights,g,spacing,pnorm):
+def _compute_localized_omt_weight_3d(weights,g,I,spacing,pnorm):
     r = torch.zeros_like(g)
 
     # set the boundary values to 1
@@ -235,10 +238,11 @@ def _compute_localized_omt_weight_3d(weights,g,spacing,pnorm):
     nr_of_weights = weights.size()[1]
 
     for n in range(nr_of_weights):
-        sum_tv += float(np.min(spacing))*_compute_total_variation(weights[:, n, ...], spacing, pnorm)
+        sum_tv += _compute_total_variation(weights[:, n, ...], spacing, pnorm)
 
+    sum_tv += _compute_total_variation(I[:,0,...], spacing, pnorm)/torch.max(I)
     #r_tv = half_sigmoid(sum_tv) * g
-    r_tv = sum_tv * g
+    r_tv = sum_tv * g * float(np.min(spacing))
 
     r_tv[:, 0, :, :] = 0
     r_tv[:, -1, :, :] = 0
@@ -251,18 +255,23 @@ def _compute_localized_omt_weight_3d(weights,g,spacing,pnorm):
 
     return r,S0
 
-def compute_localized_omt_weight(weights, g, spacing,pnorm=2):
+def compute_localized_omt_weight(weights, I, spacing,pnorm=2):
     # just do the standard component-wise Euclidean norm of the gradient, but muliplied locally by a weight
     # format needs to be B x X x Y x Z
+
+    if I.size()[1]!=1:
+        raise ValueError('Only scalar images are currently supported')
+
+    g = compute_localized_edge_penalty(I[:,0,...],spacing)
 
     dim = len(g.size())-1
 
     if dim == 1:
-        return _compute_localized_omt_weight_1d(weights,g, spacing,pnorm)
+        return _compute_localized_omt_weight_1d(weights,g, I, spacing,pnorm)
     elif dim == 2:
-        return _compute_localized_omt_weight_2d(weights,g, spacing,pnorm)
+        return _compute_localized_omt_weight_2d(weights,g, I, spacing,pnorm)
     elif dim == 3:
-        return _compute_localized_omt_weight_3d(weights,g, spacing,pnorm)
+        return _compute_localized_omt_weight_3d(weights,g, I, spacing,pnorm)
     else:
         raise ValueError('Total variation computation is currently only supported in dimensions 1 to 3')
 
@@ -285,8 +294,6 @@ def compute_localized_omt_penalty(weights, I, multi_gaussian_stds,spacing,volume
 
     batch_size = I.size()[0]
 
-    image_edge_weights = compute_localized_edge_penalty(I[:,0,...],spacing)
-
     max_std = max(multi_gaussian_stds)
     min_std = min(multi_gaussian_stds)
 
@@ -294,7 +301,7 @@ def compute_localized_omt_penalty(weights, I, multi_gaussian_stds,spacing,volume
     if multi_gaussian_stds[nr_of_multi_gaussians-1]!=max_std:
         raise ValueError('Assuming that the last standard deviation is the largest')
 
-    gamma,S0 = compute_localized_omt_weight(weights, image_edge_weights, spacing)
+    gamma,S0 = compute_localized_omt_weight(weights, I, spacing)
 
     if desired_power == 2:
         for i, s in enumerate(multi_gaussian_stds):
