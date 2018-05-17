@@ -355,7 +355,6 @@ class GaussianSpatialSmoother(GaussianSmoother):
         :return: smoothed image
         """
 
-        self.sz = v.size()
         if self.filter is None:
             self._create_filter()
         # just doing a Gaussian smoothing
@@ -594,7 +593,7 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
                 cFilter,_ = ce.create_complex_fourier_filter(g, self.sz)
                 self.FFilter += cFilter
 
-def _compute_omt_penalty_for_weight_vectors(weights,multi_gaussian_stds,omt_power=2.0,use_log_transform=False):
+def _compute_omt_penalty_for_weight_vectors(weights,multi_gaussian_stds,batch_size,omt_power=2.0,use_log_transform=False):
 
     penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
 
@@ -623,6 +622,9 @@ def _compute_omt_penalty_for_weight_vectors(weights,multi_gaussian_stds,omt_powe
             penalty /= torch.abs(torch.log(max_std/min_std))**omt_power
         else:
             penalty /= torch.abs(max_std-min_std)**omt_power
+
+
+    penalty/=batch_size
 
     return penalty
 
@@ -684,6 +686,8 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
 
         self.omt_power = params[('omt_power',2.0,'Power for the optimal mass transport (i.e., to which power distances are penalized')]
         """optimal mass transport power"""
+
+        self.batch_size = None
 
     def get_default_multi_gaussian_weights(self):
         # todo: check, should it really return this?
@@ -812,7 +816,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         # puts an squared two-norm penalty on the weights as deviations from the baseline
         # also adds a penalty for the network parameters
 
-        current_penalty = _compute_omt_penalty_for_weight_vectors(self.get_gaussian_weights(),self.get_gaussian_stds(),self.omt_power,self.omt_use_log_transformed_std)
+        current_penalty = _compute_omt_penalty_for_weight_vectors(self.get_gaussian_weights(),self.get_gaussian_stds(),self.batch_size,self.omt_power,self.omt_use_log_transformed_std)
         penalty = current_penalty*self.omt_weight_penalty
 
         return penalty
@@ -828,6 +832,8 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
+
+        self.batch_size = v.size()[0]
 
         # just do a multi-Gaussian smoothing
         compute_weight_gradients = self.optimize_over_smoother_weights
@@ -1081,7 +1087,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         if not self._is_optimizing_over_deep_network:
             current_penalty = _compute_omt_penalty_for_weight_vectors(self.get_gaussian_weights(),
-                                                                      self.get_gaussian_stds(), self.omt_power, self.omt_use_log_transformed_std)
+                                                                      self.get_gaussian_stds(), self.batch_size,self.omt_power, self.omt_use_log_transformed_std)
 
             penalty = current_penalty * self.omt_weight_penalty*self.spacing.prod()*self.sz.prod()
 
@@ -1115,6 +1121,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :return: smoothed image
         """
+
+        self.batch_size = v.size()[0]
 
         compute_std_gradients = self.optimize_over_smoother_stds
 
