@@ -161,9 +161,6 @@ def _compute_total_variation(d, spacing, pnorm=2):
 
 def _compute_localized_omt_weight_1d(weights,g,I,spacing,pnorm):
 
-    batch_size = I.size()[0]
-    volumeElement = spacing.prod()
-
     r = torch.zeros_like(g)
 
     # set the boundary values to 1
@@ -178,7 +175,7 @@ def _compute_localized_omt_weight_1d(weights,g,I,spacing,pnorm):
         sum_tv += _compute_local_norm_of_gradient(weights[:, n, ...], spacing, pnorm)
     sum_tv /= nr_of_weights
 
-    sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm)/torch.max(I))
+    #sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm)/torch.max(I))
 
     #r_tv = half_sigmoid(sum_tv) * g
     r_tv = sum_tv*g
@@ -214,7 +211,7 @@ def _compute_localized_omt_weight_2d(weights,g,I,spacing,pnorm):
         sum_tv += _compute_local_norm_of_gradient(weights[:,n,...],spacing,pnorm)
     sum_tv /= nr_of_weights
 
-    sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm)/torch.max(I))
+    #sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm)/torch.max(I))
     #r_tv = half_sigmoid(sum_tv)*g
     r_tv = sum_tv * g
 
@@ -250,7 +247,7 @@ def _compute_localized_omt_weight_3d(weights,g,I,spacing,pnorm):
         sum_tv += _compute_local_norm_of_gradient(weights[:, n, ...], spacing, pnorm)
     sum_tv /= nr_of_weights
 
-    sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm)/torch.max(I))
+    #sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm)/torch.max(I))
 
     #r_tv = half_sigmoid(sum_tv) * g
     r_tv = sum_tv * g
