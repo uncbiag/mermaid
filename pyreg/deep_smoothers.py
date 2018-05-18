@@ -1288,8 +1288,13 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         # compute the total variation penalty
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
+            # first compute the edge map
+            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing)
+            batch_size = I.size()[0]
             for g in range(self.nr_of_gaussians):
-                total_variation_penalty += self.compute_total_variation(weights[:,g,...])
+                #total_variation_penalty += self.compute_total_variation(weights[:,g,...])
+                c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
+                total_variation_penalty += (g_I*c_local_norm_grad).sum()*self.volumeElement/batch_size
 
         diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.diffusion_weight_penalty > 0:
@@ -1314,17 +1319,18 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
 
         current_diffusion_penalty = self.diffusion_weight_penalty * diffusion_penalty
 
-        if self.use_localized_omt:
-            current_omt_penalty = self.localized_omt_weight_penalty*compute_localized_omt_penalty(weights,I,self.gaussian_stds,self.spacing,self.volumeElement,self.omt_power,self.omt_use_log_transformed_std)
-            self.current_penalty = current_omt_penalty + current_diffusion_penalty
-        else:
-            current_omt_penalty = self.omt_weight_penalty*compute_omt_penalty(weights,self.gaussian_stds,self.volumeElement,self.omt_power,self.omt_use_log_transformed_std)
-            current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
-            self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
+        #if self.use_localized_omt:
+        #    current_omt_penalty = self.localized_omt_weight_penalty*compute_localized_omt_penalty(weights,I,self.gaussian_stds,self.spacing,self.volumeElement,self.omt_power,self.omt_use_log_transformed_std)
+        #    self.current_penalty = current_omt_penalty + current_diffusion_penalty
+        #else:
 
-        #print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
-        #      '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \
-        #      '; diffusion_penalty = ' + str(current_diffusion_penalty.data.cpu().numpy()))
+        current_omt_penalty = self.omt_weight_penalty*compute_omt_penalty(weights,self.gaussian_stds,self.volumeElement,self.omt_power,self.omt_use_log_transformed_std)
+        current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
+        self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
+
+        print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
+              '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \
+              '; diffusion_penalty = ' + str(current_diffusion_penalty.data.cpu().numpy()))
 
 
         if retain_weights:
