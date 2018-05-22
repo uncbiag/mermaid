@@ -189,6 +189,8 @@ if __name__ == "__main__":
     parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=0, help='number of image pairs that will be used; if not set all pairs will be used')
     parser.add_argument('--map_low_res_factor', required=False, type=float, default=None, help='map low res factor')
 
+    parser.add_argument('--previous_stage_input_directory', required=False, default=None, help='Allows specifying a directory from which the previous state is read')
+
     parser.add_argument('--nr_of_epochs', required=False,type=str, default=None, help='number of epochs for the three stages as a comma separated list')
     parser.add_argument('--nr_of_iterations_per_batch', required=False,type=int, default=5, help='number of iterations per mini-batch')
 
@@ -274,6 +276,60 @@ if __name__ == "__main__":
     used_image_pairs_filename_pt = os.path.join(args.output_directory, 'used_image_pairs.pt')
     used_image_pairs_filename_txt = os.path.join(args.output_directory, 'used_image_pairs.txt')
 
+    if args.previous_stage_input_directory is not None:
+        used_image_pairs_filename_pt_in = os.path.join(args.previous_stage_input_directory, 'used_image_pairs.pt')
+        alternate_previous_results_output_directory = os.path.join(args.previous_stage_input_directory, 'results')
+        use_alternate_previous_input_directory = True
+
+        # now copy the previous results and the previous json file to the current results directory
+        # so we can continue from there
+
+        if 1 in stage_nr:
+            print('INFO: Copying stage 0 information from ' + args.previous_stage_input_directory + ' to ' + args.output_directory)
+            backup_source_dir = os.path.realpath(alternate_previous_results_output_directory) + '_after_stage_0'
+            target_dir = os.path.realpath(results_output_directory) + '_after_stage_0'
+
+            backup_out_json_stage_0 = os.path.join(args.previous_stage_input_directory, 'out_stage_0_' + os.path.split(args.config)[1])
+            target_out_json_stage_0 = os.path.join(args.output_directory, 'out_stage_0_' + os.path.split(args.config)[1])
+            if not os.path.isfile(backup_out_json_stage_0):
+                raise ValueError('json configuration file does not exist: ' + backup_out_json_stage_0)
+
+            shutil.copy(backup_out_json_stage_0)
+
+            if not os.path.exists(backup_source_dir):
+                raise ValueError('Source directory does not exist: ' + backup_source_dir)
+
+            if os.path.exists(target_dir):
+                shutil.rmtree(target_dir)
+            shutil.copytree(backup_source_dir,target_dir)
+
+        if 2 in stage_nr:
+            print('INFO: Copying stage 1 information from ' + args.previous_stage_input_directory + ' to ' + args.output_directory)
+            backup_source_dir = os.path.realpath(alternate_previous_results_output_directory) + '_after_stage_1'
+            target_dir = os.path.realpath(results_output_directory) + '_after_stage_1'
+
+            backup_out_json_stage_1 = os.path.join(args.previous_stage_input_directory, 'out_stage_1_' + os.path.split(args.config)[1])
+            target_out_json_stage_1 = os.path.join(args.output_directory, 'out_stage_1_' + os.path.split(args.config)[1])
+            if not os.path.isfile(backup_out_json_stage_1):
+                raise ValueError('json configuration file does not exist: ' + backup_out_json_stage_1)
+
+            shutil.copy(backup_out_json_stage_1)
+
+            if not os.path.exists(backup_source_dir):
+                raise ValueError('Source directory does not exist: ' + backup_source_dir)
+
+            if os.path.exists(target_dir):
+                shutil.rmtree(target_dir)
+            shutil.copytree(backup_source_dir,target_dir)
+
+
+    else:
+        used_image_pairs_filename_pt_in = used_image_pairs_filename_pt
+        alternate_previous_results_output_directory = None
+        use_alternate_previous_input_directory = False
+
+
+
     create_new_image_pairs = False
     save_new_image_pairs = False
 
@@ -288,14 +344,14 @@ if __name__ == "__main__":
     else:
         # image_pair_config was not specified, so we see go back to the default behavior
         if args.do_not_read_used_images_from_file:
-            if os.path.isfile(used_image_pairs_filename_pt):
-                print('WARNING! WARNING! image pair file ' + used_image_pairs_filename_pt + ' exists, but will not be used')
+            if os.path.isfile(used_image_pairs_filename_pt_in):
+                print('WARNING! WARNING! image pair file ' + used_image_pairs_filename_pt_in + ' exists, but will not be used')
 
             create_new_image_pairs = True
 
         else:
-            if os.path.isfile(used_image_pairs_filename_pt):
-                source_images,target_images,source_ids,target_ids = load_image_pair_configuration(used_image_pairs_filename_pt,args.input_image_directory)
+            if os.path.isfile(used_image_pairs_filename_pt_in):
+                source_images,target_images,source_ids,target_ids = load_image_pair_configuration(used_image_pairs_filename_pt_in,args.input_image_directory)
             else:
                 create_new_image_pairs = True
 
@@ -377,15 +433,18 @@ if __name__ == "__main__":
         if compute_frozen_epochs:
 
             print('Computing {:} frozen epochs for stage 0'.format(frozen_nr_of_epochs[0]))
+
             in_json = out_json_stage_0
+
             frozen_out_json_stage_0 = os.path.join(args.output_directory, 'frozen_out_stage_0_' + os.path.split(args.config)[1])
 
-            if args.only_compute_frozen_epochs:
+            if args.only_compute_frozen_epochs or use_alternate_previous_input_directory:
                 # copy the earlier results of stage 0 into the current results directory
                 # (otherwise they are already in this directory and we can continue from there)
                 print('Restoring stage 0 results for continuation')
                 if os.path.exists(results_output_directory):
                     shutil.rmtree(results_output_directory)
+
                 backup_dir = os.path.realpath(results_output_directory) + '_after_stage_0'
                 if os.path.exists(backup_dir):
                     shutil.copytree(backup_dir,results_output_directory)

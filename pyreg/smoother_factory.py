@@ -355,7 +355,6 @@ class GaussianSpatialSmoother(GaussianSmoother):
         :return: smoothed image
         """
 
-        self.sz = v.size()
         if self.filter is None:
             self._create_filter()
         # just doing a Gaussian smoothing
