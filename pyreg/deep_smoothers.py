@@ -155,7 +155,7 @@ def _compute_total_variation(d, spacing, pnorm=2):
     batch_size = d.size()[0]
     volumeElement = spacing.prod()
 
-    tv = _compute_local_norm_of_gradient(d,spacing,norm)
+    tv = _compute_local_norm_of_gradient(d,spacing,pnorm)
     return (tv).sum()*volumeElement/batch_size
 
 
