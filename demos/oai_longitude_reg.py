@@ -31,73 +31,18 @@ data root:  /playpen/zyshen/summer/oai_registration/data
 
 
 The patient id will be saved in patient_id.txt
-The modality list will be saved in modality.txt  ( where each line will be organized as following  MRI  mod1  #newline  CT  mod2 ...........)
+
+(to do):The modality list will be saved in modality.txt  ( where each line will be organized as following  MRI  mod1  #newline  CT  mod2 ...........)
+
 the patient slices list will be save in folder  "patient_slice"
 
 ./patient_slice/  :                     each patient_id is a separate folder
 ./patient_slice/idxxxxxxx/:             each modality is a separate folder
 ./patient_slice/idxxxxxxx/mod1/:        each specificity is a separate folder ie. left,  right
-./patient_slice/idxxxxxxx/mod1/spec1/   paths of slices will be recorded in "slice.txt", each line links to a slice and is ordered by time
-./patient_slice/idxxxxxxx/mod1/spec1/   paths of slice labels will be recorded in "slice_label.txt", each line links to a slice_label and one to one related with "slice_txt"
+./patient_slice/idxxxxxxx/mod1/spec1/   paths of slice labels will be recorded in "slice_label.txt", each line has a slice path and corresponded label path
 
 ########################################   Section 3. Code Organization  ####################################################
 
-
-
-
-
-
-
-
-
-
-class Patient:  
-                class Patient are initialized from each patient_id folder, so it need  the path of patient_id folder as input
-                
-                object varaible included: 
-                    basic_information:
-                        patient_id, modality (set), specificity(set), patient_slices_path_dic ([modality][specificity]: slice_list)  (dict),
-                        patient_slices_num_dic (dict)
-                        
-                    annotation_information:
-                        has_label, label_is_complete, patient_slices_label_path_dic (dict), 
-                
-                function called outside:
-                    check_if_taken(modality,specificity,has_label)
-                    get_slice_list(modality,specificity)
-                    get_label_path_list(modality,specificity)
-                    get_slice_num(modality,specificity)
-                    
-                
-                function called inside:
-                    __get_slice_num()
-                    __init__()
-                    
-                    
-                    
-                
-                
-                                
-
-class Patients: 
-                class Patients are initialized from patient_slice folder, so it need the path of patient_slice folder as input
-                the  class Patient will be created during the initialization
-
-                object varaible included:
-                    patients_id_list (list), modality(set), specificity(set), patients_slices_path_dic, patient_slices_num_dic,
-                    patients_modality_dic. patients_specificity_dic,
-                    patients_slices_label_path_dic, patients_has_label_list 
-                    
-                    
-                function called outside:
-                    get_patients_id_list(modality, specificity, has_label, num_of_patients= -1, len_time_range=(-1,-1), use_random=True)
-                    get_patients_slices_path(patients_id_list)
-                    get_patients_statistic_distribution(is_modality=False, is_specificity= False, has_label=False)
-                    
-                function call inside:
-                    __filter_patients_id(modality, specificity, has_label, num_of_time_series=-1)
-                    __print_patients_id_list(patients_id_list)
-                    
 
 
 
@@ -114,6 +59,61 @@ class DataPrepare:
                     __factor_file(file_name)
                     __factor_file_list()
                     __build_and_write_in()
+
+
+
+
+class Patient:  
+                class Patient are initialized from each patient_id folder, so it need  the path of patient_id folder as input
+                
+                object varaible included: 
+                    basic_information:
+                        patient_id, modality (tuple), specificity(tuple), patient_slices_path_dic ([modality][specificity]: slice_list)  (dict),
+                        patient_slices_num_dic (dict)
+                        
+                    annotation_information:
+                        has_label, label_is_complete, patient_slices_label_path_dic (dict), 
+                
+                function called outside:
+                    check_if_taken(self, modality=None, specificity=None, len_time_range=None, has_label=None)
+                    get_slice_list(modality,specificity)
+                    get_label_path_list(modality,specificity)
+                    get_slice_num(modality,specificity)
+                    
+                
+                function called inside:
+                    __init__()
+                    
+                    
+                    
+                
+                
+                                
+
+class Patients: 
+                class Patients are initialized from patient_slice folder, so it need the path of patient_slice folder as input
+                this class has a list of Patient class, and can set some condtions in order to filter the patients
+
+                object varaible included:
+                    patients_id_list (list), patients( list of class Patient)
+                    
+                    
+                function called outside:
+                    get_that_patient(self,patient_id)
+                    get_filtered_patients_list(self,modality=None, specificity=None, has_label=None, num_of_patients= -1, len_time_range=None, use_random=False):
+                    
+                    to do:
+                    get_patients_statistic_distribution(is_modality=False, is_specificity= False, has_label=False)
+                    
+                function call inside:
+                     __read_patients_id_list_from_txt(self)
+                      __init_basic_info
+                      __init_full_info
+                      
+                    
+
+
+
                     
                 
 
@@ -125,8 +125,6 @@ class Patients(object):
         self.patients_id_txt_name = 'patient_id.txt'
         self.patients_info_folder = 'patient_slice'
         self.patients_id_list= []
-        self.modality = None
-        self.specificity = None
         self.patients = []
         if not full_init:
             self.__init_basic_info()
@@ -135,18 +133,18 @@ class Patients(object):
 
 
     def __init_basic_info(self):
-        self.__get_patients_id_list_from_txt()
+        self.__read_patients_id_list_from_txt()
         self.patients_num = len(self.patients_id_list)
 
 
     def __init_full_info(self):
-        self.__get_patients_id_list_from_txt()
+        self.__read_patients_id_list_from_txt()
         self.patients_num = len(self.patients_id_list)
         for patient_id in self.patients_id_list:
             patient_info_path = os.path.join(self.root_path, self.patients_info_folder, patient_id)
             self.patients.append(Patient(patient_info_path))
 
-    def get_that_patient_info(self,patient_id):
+    def get_that_patient(self,patient_id):
         assert patient_id in self.patients_id_list
         patient_info_path = os.path.join(self.root_path, self.patients_info_folder, patient_id)
         patient = Patient(patient_info_path)
@@ -154,7 +152,7 @@ class Patients(object):
 
 
 
-    def filter_patients_id_list(self,modality=None, specificity=None, has_label=None, num_of_patients= -1, len_time_range=None, use_random=False):
+    def get_filtered_patients_list(self,modality=None, specificity=None, has_label=None, num_of_patients= -1, len_time_range=None, use_random=False):
         index = list(range(self.patients_num))
         num_of_patients = num_of_patients if num_of_patients>0 else self.patients_num
         filtered_patients_list =[]
@@ -184,7 +182,7 @@ class Patients(object):
 
 
 
-    def __get_patients_id_list_from_txt(self):
+    def __read_patients_id_list_from_txt(self):
         """
         get the patient id from the txt i.e patient_id.txt
         :param file_name:
@@ -198,15 +196,6 @@ class Patients(object):
                 infos = [line.split('\t') for line in content]
             self.patients_id_list = [info[0] for info in infos]
             self.patients_has_label_list = [info[1]=='annotation_complete' for info in infos]
-
-    def get_that_patient_slice(patient_id,mod,specificity):
-        """
-        get the slices of specific patient, the slices will be filtered by 'mod' and 'specificity'
-        :param patient_id:  the id of the patient
-        :param mod: the modality of the slice
-        :param specificity:
-        :return: type list, list of the filtered slice
-        """
 
 
 
@@ -431,4 +420,4 @@ class OAIDataPrepare():
 # test.prepare_data()
 
 patients = Patients()
-patients.filter_patients_id_list(specificity='RIGHT',num_of_patients=20, len_time_range=[2,7], use_random=True)
+patients.get_filtered_patients_list(specificity='RIGHT',num_of_patients=20, len_time_range=[2,7], use_random=True)
