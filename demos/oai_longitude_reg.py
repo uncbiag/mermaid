@@ -2,11 +2,18 @@ import numpy as np
 import os
 from glob import glob
 from functools import reduce
+import set_pyreg_paths
+import torch
 import pyreg.module_parameters as pars
 from pyreg.data_utils import make_dir
 import random
+import matplotlib.pyplot as plt
+import pyreg.simple_interface as SI
+import pyreg.fileio as FIO
 
 #######################################################
+from pyreg.data_wrapper import AdaptVal
+
 """
 ######################################### Section 1. Raw Data Organization  ###############################################
 
@@ -110,14 +117,106 @@ class Patients:
                       __init_basic_info
                       __init_full_info
                       
-                    
+                      
 
 
 
-                    
+
+
+class OAILongitudeRegistration:
+                first, we need to filter some patients  and implement longitude registration,
                 
+                for each patient, we would registrate images from different time phases to time phase 0
+                
+                then, we need use the moving map to map label, then do result analysis
+                
+                functions called outside:
+                set_patients()
+                set_model()
+                do_registration()
+                do_result_analysis
+                
+                
+                function called inside:
+                __initial_model()
+                __inital_source_and_target()
+                __do_registration()
+
+
+                                   
 
 """
+
+class OAILongitudeReisgtration(object):
+    def __init__(self):
+        self.patients = []
+        self.model_name = ''
+        self.map_low_res_factor =0.5
+        self.nr_of_iterations = 5
+        self.similarity_measure_sigma =0.5
+
+        self.__initalize_model()
+
+
+
+    def __initalize_model(self):
+        self.si = SI.RegisterImagePair()
+        self.im_io = FIO.ImageIO()
+
+
+    def set_model(self,model_name):
+        self.model_name = model_name
+
+
+    def set_patients(self, patients):
+        self.patients = patients
+
+    def do_registration(self):
+        for patient in self.patients:
+            self.do_single_patient_registration(patient)
+        print("registration for {} patients, finished".format(len(self.patients)))
+    def do_single_patient_registration(self,patient):
+        print('start processing patient {}'.format(patient.patient_id))
+        for mod in patient.modality:
+            for spec in patient.specificity:
+                if patient.get_slice_num(mod,spec)>0:
+                    print('---- start processing mod {}, spec {}'.format(mod, spec))
+                    self.do_single_patient_mod_spec_registration(patient,mod,spec)
+
+
+
+    def do_single_patient_mod_spec_registration(self,patient,mod,spec):
+
+        img_paths = patient.get_slice_list(mod,spec)
+        # # currently we may not consider label
+        # label_paths = None if not patient.label_is_complete else patient.get_label_path_list()
+        img0_path = img_paths[0]
+        img0_name = os.path.split(img0_path)[1]
+        Ic0, hdrc0, spacing0,_ = self.im_io.read_to_nc_format(filename=img0_path, intensity_normalize=True)
+        saving_folder_path = self.__gen_img_saving_path(patient,mod, spec)
+        self.im_io.write(os.path.join(saving_folder_path, img0_name), np.squeeze(Ic0), hdrc0)
+        for img_path in img_paths[1:]:
+            Ic, hdrc, spacing, _ = self.im_io.read_to_nc_format(filename=img_path, intensity_normalize=True)
+            self.si.register_images(Ic, Ic0, spacing,
+                               model_name=self.model_name,
+                               map_low_res_factor=self.map_low_res_factor,
+                               nr_of_iterations=self.nr_of_iterations,
+                               visualize_step=None,
+                               similarity_measure_sigma=self.similarity_measure_sigma)
+            wi = self.si.get_warped_image()
+            img_name = os.path.split(img_path)[1]
+            self.im_io.write(os.path.join(saving_folder_path,img_name), torch.squeeze(wi), hdrc)
+
+
+    def __gen_img_saving_path(self,patient, mod, spec):
+        expr_setting = self.model_name + '_low_f_' + str(self.map_low_res_factor) + '_niter_' \
+                       + str(self.nr_of_iterations) + '_sim_sig_' + str(self.similarity_measure_sigma)
+        current_filename = patient.get_path_for_mod_and_spec(mod, spec)
+        folder_path = os.path.join(current_filename, expr_setting)
+        make_dir(folder_path)
+        return folder_path
+
+
 class Patients(object):
     def __init__(self,full_init=False):
         self.full_init = full_init
@@ -143,6 +242,13 @@ class Patients(object):
         for patient_id in self.patients_id_list:
             patient_info_path = os.path.join(self.root_path, self.patients_info_folder, patient_id)
             self.patients.append(Patient(patient_info_path))
+
+    def get_all_patients(self):
+        if self.full_init:
+            return self.patients
+        else:
+            self.__init_full_info()
+            return self.patients
 
     def get_that_patient(self,patient_id):
         assert patient_id in self.patients_id_list
@@ -275,7 +381,8 @@ class Patient():
         elif modality in self.modality and specificity in self.specificity:
             return self.patient_slices_path_dic[modality][specificity]
         else:
-            raise ValueError("patient{} doesn't has slice in format {} and {}".format(self.patient_id, modality, specificity))
+            print("patient{} doesn't has slice in format {} and {}".format(self.patient_id, modality, specificity))
+            return []
 
 
     def get_label_path_list(self,modality=None, specificity=None):
@@ -284,7 +391,8 @@ class Patient():
         elif modality in self.modality and specificity in self.specificity:
             return self.patient_slices_label_path_dic[modality][specificity]
         else:
-            raise ValueError("patient{} doesn't has label in format {} and {}".format(self.patient_id, modality, specificity))
+            print ("patient{} doesn't has label in format {} and {}".format(self.patient_id, modality, specificity))
+            return []
 
     def get_slice_num(self,modality=None, specificity=None):
         if modality==None and specificity==None:
@@ -292,7 +400,15 @@ class Patient():
         elif modality in self.modality and specificity in self.specificity:
             return self.patient_slices_num_dic[modality][specificity]
         else:
-            raise ValueError("patient{} doesn't has slice in format {} and {}".format(self.patient_id, modality, specificity))
+            print("patient{} doesn't has slice in format {} and {}".format(self.patient_id, modality, specificity))
+            return 0
+
+    def get_path_for_mod_and_spec(self,mod,spec):
+        if self.get_slice_num(mod,spec)>0:
+            path = os.path.join(self.patient_root_path,mod,spec)
+            return path
+        else:
+            return None
 
 
 
@@ -418,6 +534,10 @@ class OAIDataPrepare():
 #
 # test = OAIDataPrepare()
 # test.prepare_data()
-
+model_name ='svf_scalar_momentum_map'
 patients = Patients()
-patients.get_filtered_patients_list(specificity='RIGHT',num_of_patients=20, len_time_range=[2,7], use_random=True)
+filtered_patients = patients.get_filtered_patients_list(specificity='RIGHT',num_of_patients=20, len_time_range=[2,7], use_random=True)
+oai_reg = OAILongitudeReisgtration()
+oai_reg.set_patients(filtered_patients)
+oai_reg.set_model(model_name)
+oai_reg.do_registration()
