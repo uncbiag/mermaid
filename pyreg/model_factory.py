@@ -1,8 +1,11 @@
 """
 Package to quickly instantiate registration models by name.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-import registration_networks as RN
+from builtins import object
+from . import registration_networks as RN
 import pyreg.utils as utils
 import pyreg.image_sampling as IS
 from pyreg.data_wrapper import AdaptVal
@@ -99,7 +102,7 @@ def run_model(model_name, model_parameters, I0, sz_sim,spacing_sim,sz_model,spac
 
     raise ValueError('Not tested yet. Check that this works first before using it. Feel free to comment out and try at your own risk.')
 
-    if not available_models.has_key(model_name):
+    if model_name not in available_models:
         _print_models(available_models)
         raise ValueError('Registration model: ' + model_name + ' not known')
     else:
@@ -205,7 +208,7 @@ class ModelFactory(object):
         cparams = params[('registration_model',{},'specifies the registration model')]
         cparams['type']= (modelName,'Name of the registration model')
 
-        if self.models.has_key(modelName):
+        if modelName in self.models:
 
             uses_map = self.models[modelName][2]
             if uses_map:

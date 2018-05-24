@@ -6,6 +6,7 @@
 # Copyright 2013-2017, John McNamara, jmcnamara@cpan.org
 #
 
+from builtins import str
 import pandas as pd
 from openpyxl import load_workbook
 import numpy as np

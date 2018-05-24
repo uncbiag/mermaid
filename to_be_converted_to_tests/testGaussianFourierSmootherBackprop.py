@@ -1,5 +1,6 @@
 # first do the torch imports
 from __future__ import print_function
+from builtins import str
 import os
 import sys
 os.chdir('../')
@@ -34,8 +35,8 @@ params = pars.ParameterDict()
 szEx = np.tile(120, 2)         # size of the desired images: (sz)^dim
 
 params['square_example_images']=({},'Settings for example image generation')
-params['square_example_images']['len_s'] = szEx.min()/6
-params['square_example_images']['len_l'] = szEx.max()/4
+params['square_example_images']['len_s'] = szEx.min()//6
+params['square_example_images']['len_l'] = szEx.max()//4
 
 # create a default image size with two sample squares
 I0,I1,spacing= eg.CreateSquares(dim).create_image_pair(szEx,params)

@@ -6,13 +6,18 @@ important for the image registration implementations. This implementation is ava
 .. todo::
     Add support for multiple parameter groups.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 #TODO
 
+from builtins import zip
+from builtins import str
+from builtins import range
 import torch
 from functools import reduce
 from torch.optim import Optimizer
 from math import isinf
-from data_wrapper import  AdaptVal
+from .data_wrapper import  AdaptVal
 
 # this is taken from the torch master; should be included in the LBFGS optimizer in the newest torch versions
 

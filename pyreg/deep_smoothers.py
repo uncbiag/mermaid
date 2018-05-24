@@ -1,9 +1,13 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import range
+from builtins import object
 import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
-from data_wrapper import USE_CUDA, MyTensor, AdaptVal
+from .data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
 import math
 import pyreg.finite_differences as fd

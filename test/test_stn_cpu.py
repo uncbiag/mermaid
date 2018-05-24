@@ -9,7 +9,7 @@ sys.path.insert(0,os.path.abspath('../pyreg/libraries'))
 
 import numpy as np
 import numpy.testing as npt
-import utils
+import pyreg.utils as utils
 import torch
 from torch.autograd import Variable
 

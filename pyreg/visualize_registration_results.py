@@ -1,7 +1,10 @@
 from __future__ import print_function
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
 import matplotlib as matplt
 
-from config_parser import MATPLOTLIB_AGG
+from .config_parser import MATPLOTLIB_AGG
 if MATPLOTLIB_AGG:
     matplt.use('Agg')
 
@@ -12,8 +15,8 @@ Some utility functions to display the registration results
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import utils
-import viewers
+from . import utils
+from . import viewers
 dpi=500
 extension= '.png'
 def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visual_param=None, i=0):

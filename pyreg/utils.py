@@ -4,16 +4,20 @@ Various utility functions.
 .. todo::
     Reorganize this package in a more meaningful way.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 # TODO
 
+from builtins import str
+from builtins import range
 import torch
 from torch.nn.parameter import Parameter
 from torch.autograd import Variable
-from libraries.modules.stn_nd import STN_ND_BCXYZ
-from data_wrapper import AdaptVal
-from data_wrapper import MyTensor
+from .libraries.modules.stn_nd import STN_ND_BCXYZ
+from .data_wrapper import AdaptVal
+from .data_wrapper import MyTensor
 import numpy as np
-import finite_differences as fd
+from . import finite_differences as fd
 import torch.nn as nn
 import torch.nn.init as init
 
@@ -24,7 +28,7 @@ from pyreg.spline_interpolation import SplineInterpolation_ND_BCXYZ
 import os
 
 try:
-    from libraries.functions.nn_interpolation import get_nn_interpolation
+    from .libraries.functions.nn_interpolation import get_nn_interpolation
 except ImportError:
     print('WARNING: nn_interpolation could not be imported (only supported in CUDA at the moment), some functionality may not be available.')
 
@@ -614,7 +618,8 @@ def get_warped_label_map(label_map, phi, spacing, sched='nn'):
         # check if here should be add assert
         assert abs(torch.sum(warped_label_map.data -warped_label_map.data.round()))< 0.1, "nn interpolation is not precise"
     else:
-        raise ValueError, " the label warping method is not implemented"
+        raise ValueError(" the label warping method is not implemented")
+
     return warped_label_map
 
 
@@ -764,7 +769,7 @@ def organize_data(moving, target, sched='depth_concat'):
 
 def bh(m,gi,go):
     print("Grad Input")
-    print(torch.sum(gi[0].data), torch.sum(gi[1].data))
+    print((torch.sum(gi[0].data), torch.sum(gi[1].data)))
     print("Grad Output")
     print(torch.sum(go[0].data))
     return gi[0],gi[1], gi[2]
@@ -776,7 +781,7 @@ class ConvBnRel(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, active_unit='relu', same_padding=False,
                  bn=False, reverse=False, bias=False):
         super(ConvBnRel, self).__init__()
-        padding = int((kernel_size - 1) / 2) if same_padding else 0
+        padding = int((kernel_size - 1) // 2) if same_padding else 0
         if not reverse:
             self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding=padding, bias=bias)
         else:

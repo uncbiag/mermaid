@@ -1,7 +1,13 @@
 from __future__ import print_function
 import os
+import sys
 import torch
 from torch.utils.ffi import create_extension
+
+if sys.version_info >= (3, 0):
+    target_dir = '_ext_p3'
+else:
+    target_dir = '_ext_p2'
 
 #this_file = os.path.dirname(__file__)
 sources_1D = []
@@ -47,7 +53,7 @@ extra_objects_3D = [os.path.join(this_file, fname) for fname in extra_objects_3D
 extra_objects_nn = [os.path.join(this_file, fname) for fname in extra_objects_nn]
 
 ffi_1D = create_extension(
-    '_ext.my_lib_1D',
+    target_dir + '.my_lib_1D',
     headers=headers_1D,
     sources=sources_1D,
     define_macros=defines,
@@ -58,7 +64,7 @@ ffi_1D = create_extension(
 
 
 ffi_2D = create_extension(
-    '_ext.my_lib_2D',
+    target_dir + '.my_lib_2D',
     headers=headers_2D,
     sources=sources_2D,
     define_macros=defines,
@@ -69,7 +75,7 @@ ffi_2D = create_extension(
 
 
 ffi_3D = create_extension(
-    '_ext.my_lib_3D',
+    target_dir + '.my_lib_3D',
     headers=headers_3D,
     sources=sources_3D,
     define_macros=defines,
@@ -79,7 +85,7 @@ ffi_3D = create_extension(
 )
 
 ffi_nn = create_extension(
-    '_ext.nn_interpolation',
+    target_dir + '.nn_interpolation',
     headers=headers_nn,
     sources=sources_nn,
     define_macros=defines,

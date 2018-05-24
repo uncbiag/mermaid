@@ -1,8 +1,15 @@
+from __future__ import print_function
 import os
+import sys
 import torch
 from torch.utils.ffi import create_extension
 
 #this_file = os.path.dirname(__file__)
+
+if sys.version_info >= (3, 0):
+    target_dir = '_ext_p3'
+else:
+    target_dir = '_ext_p2'
 
 sources_nd = ['src/my_lib_nd.c']
 headers_nd = ['src/my_lib_nd.h']
@@ -30,7 +37,7 @@ print(this_file)
 extra_objects = []
 
 ffi_nd = create_extension(
-    '_ext.my_lib_nd',
+    target_dir + '.my_lib_nd',
     headers=headers_nd,
     sources=sources_nd,
     verbose=True,
@@ -45,7 +52,7 @@ ffi_nd = create_extension(
 
 
 ffi_nn = create_extension(
-    '_ext.my_lib_nn',
+    target_dir + '.my_lib_nn',
     headers=headers_nn,
     sources=sources_nn,
     verbose=True,

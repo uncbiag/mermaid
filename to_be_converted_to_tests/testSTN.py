@@ -21,8 +21,8 @@ import matplotlib.image as img
 
 # create a default image which we want to transform
 sz = 100         # size of the 2D image: sz x sz
-c = sz/2        # center coordinates
-len_s = sz/6    # half of side-length for small square
+c = sz//2        # center coordinates
+len_s = sz//6    # half of side-length for small square
 
 # create small square
 I0 = np.zeros([1,sz,sz,1], dtype='float32' )

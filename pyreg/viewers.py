@@ -1,12 +1,17 @@
 """
 Implements various viewers to display 3D data
 """
+from __future__ import print_function
 
+from builtins import str
+from builtins import range
+from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from future.utils import with_metaclass
 
 def _create_some_test_data():
     a = np.sin(np.linspace(0, np.pi, 20))
@@ -102,7 +107,7 @@ class FigureEventHandler(object):
         self.fig.canvas.mpl_disconnect(self._on_key_release)
 
     def _event_is_registered(self, eventname, ax):
-        if self.ax_events.has_key(eventname):
+        if eventname in self.ax_events:
             registeredEvents = self.ax_events[eventname]
             for e in registeredEvents:
                 if e[0] is ax:
@@ -135,7 +140,7 @@ class FigureEventHandler(object):
         """
         if self._is_supported_event(eventname):
             _print_debug('Removing an event ... ')
-            if self.ax_events.has_key(eventname):
+            if eventname in self.ax_events:
                 registeredEvents = self.ax_events[eventname]
                 for e in registeredEvents:
                     if e[0] is ax:
@@ -165,7 +170,7 @@ class FigureEventHandler(object):
                     _print_debug('Dispatching event')
                     e[1](event)
 
-                    if self.sync_d.has_key(e[0]) and e[2] is not None:
+                    if e[0] in self.sync_d and e[2] is not None:
                         _print_debug('Broadcasting')
                         syncInfo = e[2]()
                         self._broadcast(self.sync_d[e[0]], syncInfo, 'button_press_event')
@@ -183,11 +188,10 @@ class FigureEventHandler(object):
         pass
 
 
-class ImageViewer(object):
+class ImageViewer(with_metaclass(ABCMeta, object)):
     """
     Abstract class for an image viewer.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, ax, data ):
         """
@@ -213,12 +217,10 @@ class ImageViewer(object):
         """
         pass
 
-class ImageViewer3D(ImageViewer):
+class ImageViewer3D(with_metaclass(ABCMeta, ImageViewer)):
     """
     Abstract class for a 3D image viewer.
     """
-
-    __metaclass__ = ABCMeta
 
     def __init__(self, ax, data ):
         super(ImageViewer3D,self).__init__(ax,data)

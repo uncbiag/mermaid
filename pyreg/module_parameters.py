@@ -3,7 +3,10 @@ This package implements a simple way of dealing with parameters, ofproviding
 default parameters and comments, and to keep track of used parameters for 
 registration runs. See the corresponding note for a brief description on how to use it.
 """
+from __future__ import print_function
 
+from builtins import str
+from builtins import object
 import json
 
 class ParameterDict(object):
@@ -177,7 +180,7 @@ class ParameterDict(object):
     def _set_current_category(self, key, comment):
         currentCategoryName = self.currentCategoryName + '.' + str(key)
 
-        if not self.ext.has_key(key) or (self.ext.has_key(key) and type(self.ext[key])!=dict):
+        if key not in self.ext or (key in self.ext and type(self.ext[key])!=dict):
             # we do not want to over-write any settings here
             if self.printSettings:
                 print('Creating new category: ' + currentCategoryName)
@@ -193,7 +196,7 @@ class ParameterDict(object):
     def _set_current_key(self, key, value, comment=None):
 
         if self.printSettings:
-            if self.ext.has_key(key):
+            if key in self.ext:
                 print('Overwriting key = ' + str(key) + '; category = ' + self.currentCategoryName + '; value =  ' +
                       str( self.ext[key] ) + ' -> ' + str(value) )
             else:
@@ -211,14 +214,14 @@ class ParameterDict(object):
         # returns a ParDicts object if we are accessing a category (i.e., a dictionary)
         # returns just the value if it is a regular value
 
-        if self.ext.has_key(key):
+        if key in self.ext:
             value = self.ext[key]
             if type(value)==dict:
                 # this is a category, need to create a ParDicts object to return
                 # if the key already exists in int and com keep it otherwise initialize it to empty
-                if not self.int.has_key(key):
+                if key not in self.int:
                     self.int[key]={}
-                if not self.com.has_key(key):
+                if key not in self.com:
                     self.com[key]={}
                     if comment is not None:
                         if len(comment)>0:

@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import str
+from builtins import range
 import scipy.io as sio
 import matplotlib.pyplot as plt
 import matplotlib
@@ -122,7 +125,7 @@ def calculate_dataset_overlap(dataset_name, dataset_dir, output_name):
                 to_idx = np.reshape(label_to == Labels['Labels'][label_idx], (label_to.shape[0]*label_to.shape[1]*label_to.shape[2], 1))
                 result[base_idx][label_idx] = float(np.sum(np.logical_and(warp_idx, to_idx)))/np.sum(to_idx)
             base_idx += 1
-            print(base_idx, ' out of ', dataset_size*(dataset_size-1))
+            print((base_idx, ' out of ', dataset_size*(dataset_size-1)))
 
     for i in range(dataset_size*(dataset_size-1)):
         single_result = result[i, :]

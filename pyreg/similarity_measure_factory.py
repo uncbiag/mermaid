@@ -1,23 +1,27 @@
 """
 Similarity measures for the registration methods and factory to create similarity measures.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
+from builtins import range
+from builtins import object
 from abc import ABCMeta, abstractmethod
 import torch
 from torch.autograd import Variable
-from data_wrapper import AdaptVal
-from data_wrapper import MyTensor
-import utils
+from .data_wrapper import AdaptVal
+from .data_wrapper import MyTensor
+from . import utils
 from math import floor
-from similarity_helper_omt import *
+from .similarity_helper_omt import *
 
 import numpy as np
+from future.utils import with_metaclass
 
-class SimilarityMeasure(object):
+class SimilarityMeasure(with_metaclass(ABCMeta, object)):
     """
     Abstract base class for a similarity measure
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, spacing, params):
         self.spacing = spacing
@@ -529,7 +533,7 @@ class SimilarityMeasureFactory(object):
         cparams = params[('similarity_measure',{},'settings for the similarity measure')]
         similarityMeasureType = cparams[('type', self.similarity_measure_default_type, 'type of similarity measure (ssd/ncc)')]
 
-        if self.simMeasures.has_key( similarityMeasureType ):
+        if similarityMeasureType in self.simMeasures:
             print('Using ' + similarityMeasureType + ' similarity measure')
             return self.simMeasures[similarityMeasureType](self.spacing,params)
         else:

@@ -1,13 +1,17 @@
 """
 This package provides a super-simple interface for standard registration tasks
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-import multiscale_optimizer as MO
-import module_parameters as pars
-import model_factory as MF
-import fileio
+from builtins import str
+from builtins import object
+from . import multiscale_optimizer as MO
+from . import module_parameters as pars
+from . import model_factory as MF
+from . import fileio
 import numpy as np
-import utils
+from . import utils
 
 import torch
 from torch.autograd import Variable
@@ -378,7 +382,7 @@ class RegisterImagePair(object):
 
         self.spacing = spacing
 
-        if not self.available_models.has_key(model_name):
+        if model_name not in self.available_models:
             print('Unknown model name: ' + model_name)
             MF.AvailableModels().print_available_models()
         else:
