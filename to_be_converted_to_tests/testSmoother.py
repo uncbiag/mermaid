@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import str
 import matplotlib.pyplot as plt
 import numpy as np
 import smoother_factory as sf
@@ -12,8 +14,8 @@ dim = 1
 sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
 
 params = dict()
-params['len_s'] = sz.min()/6
-params['len_l'] = sz.min()/3
+params['len_s'] = sz.min()//6
+params['len_l'] = sz.min()//3
 
 # create a default image size with two sample squares
 cs = eg.CreateSquares(sz)

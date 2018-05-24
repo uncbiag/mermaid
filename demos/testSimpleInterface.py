@@ -1,3 +1,4 @@
+from __future__ import print_function
 import set_pyreg_paths
 import torch
 import numpy as np
@@ -92,7 +93,14 @@ if try_all_models:
 else:
     # just try one of them, explicitly specified
     #si.register_images(I0, I1, spacing, model_name='total_variation_map')
-    si.register_images(I0, I1, spacing, model_name='svf_vector_momentum_map',nr_of_iterations=30,optimizer_name='sgd',compute_inverse_map=True)
+    #si.register_images(I0, I1, spacing, model_name='svf_vector_momentum_map',nr_of_iterations=30,optimizer_name='sgd',compute_inverse_map=True)
+
+    si.register_images(I0, I1, spacing, model_name='svf_vector_momentum_map',
+                       nr_of_iterations=10,
+                       optimizer_name='sgd',
+                       json_config_out_filename = 'test2d_tst.json',
+                       params = 'test2d_tst.json')
+
     #si.register_images(I0, I1, spacing, model_name='svf_vector_momentum_image')
     # si.register_images(I0, I1, spacing, model_name='affine_map', nr_of_iterations=10,
     #                    visualize_step=1, rel_ftol=1e-4,similarity_measure_sigma=0.1,

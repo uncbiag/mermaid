@@ -8,6 +8,8 @@ Contributors:
 
 # first do the torch imports
 from __future__ import print_function
+from builtins import str
+from builtins import range
 import torch
 from torch.autograd import Variable
 import time
@@ -25,8 +27,8 @@ dim = 2
 sz = np.tile( 30, dim )         # size of the desired images: (sz)^dim
 
 params = dict()
-params['len_s'] = sz.min()/5
-params['len_l'] = sz.min()/4
+params['len_s'] = sz.min()//5
+params['len_l'] = sz.min()//4
 
 # create a default image size with two sample squares
 cs = eg.CreateSquares(sz)

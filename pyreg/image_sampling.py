@@ -5,18 +5,22 @@ Package to allow for resampling of images, for example to support multi-scale so
   skimage in version 0.14 (not officially released yet, supports 3D up- and downsampling.
   Should replace this class with the skimage functionality once officially available.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 # TODO
 
+from builtins import range
+from builtins import object
 from scipy import ndimage as nd
 import torch
 from torch.autograd import Variable
 import numpy as np
 
-import smoother_factory as SF
-import module_parameters as MP
+from . import smoother_factory as SF
+from . import module_parameters as MP
 
-import utils
-from data_wrapper import AdaptVal
+from . import utils
+from .data_wrapper import AdaptVal
 
 class ResampleImage(object):
     """

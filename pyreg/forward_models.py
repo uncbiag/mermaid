@@ -19,13 +19,18 @@ Futhermore the following (RHSs) are provided
     #. Scalar conservation law
     #. EPDiff
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
+from builtins import range
+from builtins import object
 from abc import ABCMeta, abstractmethod
 import numpy as np
-import finite_differences as fd
-import utils
-from data_wrapper import MyTensor
+from . import finite_differences as fd
+from . import utils
+from .data_wrapper import MyTensor
 from torch.autograd import Variable
+from future.utils import with_metaclass
 
 class RHSLibrary(object):
     """
@@ -256,13 +261,12 @@ class RHSLibrary(object):
             raise ValueError('Only supported up to dimension ')
 
 
-class ForwardModel(object):
+class ForwardModel(with_metaclass(ABCMeta, object)):
     """
     Abstract forward model class. Should never be instantiated.
     Derived classes require the definition of f(self,t,x,u,pars) and u(self,t,pars).
     These functions will be used for integration: x'(t) = f(t,x(t),u(t))
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, sz, spacing, params=None):
         '''
@@ -454,7 +458,7 @@ class EPDiffMap(ForwardModel):
             print("flag phi: {},".format(x[2]))
             print("flag new_m: {},".format(x[3]))
             print("flag new_phi: {},".format(x[4]))
-            raise ValueError, "nan error"
+            raise ValueError("nan error")
 
     def f(self,t, x, u, pars, variables_from_optimizer=None):
         """

@@ -1,20 +1,23 @@
 '''
 Package implementing general purpose regularizers.
 '''
+from __future__ import absolute_import
 
+from builtins import range
+from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import torch
 from torch.autograd import Variable
 
-import finite_differences as fd
-from data_wrapper import MyTensor
+from . import finite_differences as fd
+from .data_wrapper import MyTensor
+from future.utils import with_metaclass
 
-class Regularizer(object):
+class Regularizer(with_metaclass(ABCMeta, object)):
     """
     Abstract regularizer base class
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, spacing, params):
         """
@@ -316,12 +319,10 @@ class HelmholtzRegularizer(Regularizer):
         return (Lv[0,:, :, :] ** 2 + Lv[1,:, :, :] ** 2 + Lv[2,:, :, :] ** 2).sum()*self.volumeElement
 
 
-class RegularizerFactory(object):
+class RegularizerFactory(with_metaclass(ABCMeta, object)):
     """
     Regularizer factory to instantiate a regularizer by name.
     """
-
-    __metaclass__ = ABCMeta
 
     def __init__(self,spacing):
         """
