@@ -266,7 +266,7 @@ class Test_registration_algorithms(unittest.TestCase):
     def test_svf_scalar_momentum_image_single_scale(self):
 
         self.params = pars.ParameterDict()
-        self.params.load_JSON('./json/svf_momentum_based_config.json')
+        self.params.load_JSON('./json/svf_momentum_base_config.json')
 
         self.params['model']['deformation']['use_map'] = False
         self.params['model']['registration_model']['type'] = 'svf_scalar_momentum_image'
@@ -287,7 +287,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
     def test_svf_scalar_momentum_map_single_scale(self):
         self.params = pars.ParameterDict()
-        self.params.load_JSON('./json/svf_momentum_based_config.json')
+        self.params.load_JSON('./json/svf_momentum_base_config.json')
 
         self.params['model']['deformation']['use_map'] = True
         self.params['model']['registration_model']['type'] = 'svf_scalar_momentum_map'
@@ -309,7 +309,7 @@ class Test_registration_algorithms(unittest.TestCase):
     def test_svf_vector_momentum_image_single_scale(self):
 
         self.params = pars.ParameterDict()
-        self.params.load_JSON('./json/svf_momentum_based_config.json')
+        self.params.load_JSON('./json/svf_momentum_base_config.json')
 
         self.params['model']['deformation']['use_map'] = False
         self.params['model']['registration_model']['type'] = 'svf_vector_momentum_image'
@@ -330,7 +330,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
     def test_svf_vector_momentum_map_single_scale(self):
         self.params = pars.ParameterDict()
-        self.params.load_JSON('./json/svf_momentum_based_config.json')
+        self.params.load_JSON('./json/svf_momentum_base_config.json')
 
         self.params['model']['deformation']['use_map'] = True
         self.params['model']['registration_model']['type'] = 'svf_vector_momentum_map'
