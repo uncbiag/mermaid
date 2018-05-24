@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 from builtins import str
 from builtins import object
+
 from . import multiscale_optimizer as MO
 from . import module_parameters as pars
 from . import model_factory as MF
@@ -367,7 +368,7 @@ class RegisterImagePair(object):
             self.params = pars.ParameterDict()
         elif type(params)==pars.ParameterDict:
             self.params = params
-        elif type(params)==str:
+        elif type(params)==type('acharacter'):
             self.params = pars.ParameterDict()
             self.params.load_JSON(params)
         else:
