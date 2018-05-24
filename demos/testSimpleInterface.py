@@ -56,7 +56,7 @@ if try_all_models:
 else:
     # just try one of them, explicitly specified
     #si.register_images(I0, I1, spacing, model_name='total_variation_map')
-    #si.register_images(I0, I1, spacing, model_name='svf_vector_momentum_map')
+    si.register_images(I0, I1, spacing, model_name='svf_vector_momentum_map',nr_of_iterations=30,optimizer_name='sgd',compute_inverse_map=True)
     #si.register_images(I0, I1, spacing, model_name='svf_vector_momentum_image')
     #si.register_images(I0, I1, spacing, model_name='affine_map')
     #si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
@@ -72,7 +72,7 @@ else:
     #si.register_images(I0, I1, spacing, model_name='diffusion_map')
     #si.register_images(I0, I1, spacing, model_name='svf_image')
     #si.register_images(I0, I1, spacing, model_name='svf_map')
-    si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_image')
+    #si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_image')
     #si.register_images(I0, I1, spacing, model_name='svf_quasi_momentum_image',nr_of_iterations=100)
     #si.register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_image',nr_of_iterations=10,use_multi_scale=False)
     #si.register_images(I0, I1, spacing, model_name='lddmm_shooting_scalar_momentum_map')

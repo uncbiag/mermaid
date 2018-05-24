@@ -1,8 +1,12 @@
 from __future__ import print_function
 from builtins import str
 from builtins import range
+
 import set_pyreg_paths
 import multiprocessing as mp
+
+# needs to be imported before matplotlib to assure proper plotting
+import pyreg.visualize_registration_results as vizReg
 
 import torch
 from torch.autograd import Variable
@@ -17,11 +21,12 @@ import pyreg.module_parameters as pars
 from pyreg.data_wrapper import USE_CUDA, AdaptVal, MyTensor
 
 import pyreg.fileio as FIO
-import pyreg.visualize_registration_results as vizReg
+
 
 import pyreg.utils as utils
 
 import numpy as np
+
 
 import matplotlib.pyplot as plt
 
@@ -148,18 +153,18 @@ def _get_low_res_spacing_from_spacing(spacing, sz, lowResSize):
 
 def _load_current_source_and_target_images_as_variables(current_source_filename,current_target_filename,params):
     # now load them
-    intensity_normalize = params['model']['data_loader'][('intensity_normalize', True, 'normalized image intensities')]
-    normalize_spacing = params['model']['data_loader'][('normalize_spacing', True, 'normalized image spacing')]
-    squeeze_image = params['model']['data_loader'][('squeeze_image', False, 'squeeze image dimensions')]
+    intensity_normalize = params['data_loader'][('intensity_normalize', True, 'normalized image intensities')]
+    normalize_spacing = params['data_loader'][('normalize_spacing', True, 'normalized image spacing')]
+    squeeze_image = params['data_loader'][('squeeze_image', False, 'squeeze image dimensions')]
 
     im_io = FIO.ImageIO()
 
-    ISource, hdr, spacing, _ = im_io.read_batch_to_nc_format([current_source_filename],
+    ISource, hdr, spacing, normalized_spacing_ = im_io.read_batch_to_nc_format([current_source_filename],
                                                              intensity_normalize=intensity_normalize,
                                                              squeeze_image=squeeze_image,
                                                              normalize_spacing=normalize_spacing,
                                                              silent_mode=True)
-    ITarget, hdr, spacing, _ = im_io.read_batch_to_nc_format([current_target_filename],
+    ITarget, hdr, spacing, normalized_spacing = im_io.read_batch_to_nc_format([current_target_filename],
                                                              intensity_normalize=intensity_normalize,
                                                              squeeze_image=squeeze_image,
                                                              normalize_spacing=normalize_spacing,
@@ -170,7 +175,7 @@ def _load_current_source_and_target_images_as_variables(current_source_filename,
     ISource = Variable(torch.from_numpy(ISource), requires_grad=False)
     ITarget = Variable(torch.from_numpy(ITarget), requires_grad=False)
 
-    return ISource,ITarget,hdr,sz,spacing
+    return ISource,ITarget,hdr,sz,normalized_spacing
 
 def individual_parameters_to_model_parameters(ind_pars):
     model_pars = dict()
@@ -394,7 +399,7 @@ def cond_flip(v,f):
     else:
         return v
 
-def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=None,flip_axes=False,params=None):
+def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=0,flip_axes=False,params=None):
 
     if local_weights is not None:
         osw = compute_overall_std(local_weights[0,...].cpu(), stds.data.cpu())
@@ -432,9 +437,9 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
 
     if local_weights is not None:
         plt.subplot(2, 3, 6)
-        cmin = osw.numpy()[lowRes_source_mask == 1].min()
-        cmax = osw.numpy()[lowRes_source_mask == 1].max()
-        plt.imshow(cond_flip(osw.numpy() * lowRes_source_mask,flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
+        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
         plt.title('std')
 
     plt.suptitle('Registration result: pair id {:03d}'.format(print_figure_id))
@@ -451,19 +456,19 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            clw = local_weights[0, g, ...].numpy()
+            clw = local_weights[0, g, ...].cpu().numpy()
             cmin = clw[lowRes_source_mask == 1].min()
             cmax = clw[lowRes_source_mask == 1].max()
-            plt.imshow(cond_flip((local_weights[0, g, ...]).numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
+            plt.imshow(cond_flip((local_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
             plt.title("{:.2f}".format(stds.data.cpu()[g]))
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
-        osw = compute_overall_std(local_weights[0, ...], stds.data.cpu())
+        osw = compute_overall_std(local_weights[0, ...].cpu(), stds.data.cpu())
 
-        cmin = osw.numpy()[lowRes_source_mask == 1].min()
-        cmax = osw.numpy()[lowRes_source_mask == 1].max()
-        plt.imshow(cond_flip(osw.numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
+        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
         plt.colorbar()
         plt.suptitle('Weights')
 
@@ -667,11 +672,11 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
                 if print_images:
                     visualize_weights(IS_slice,IT_slice,IW_slice,phi_slice,
                                       norm_m_slice,lw_slice,model_dict['stds'],
-                                      spacing_slice,lowResSize_slice,print_output_dir,pair_nr,slice_mode_3d[sm],flip_axes_3d[sm])
+                                      spacing_slice,lowResSize_slice,print_output_dir,pair_nr,slice_mode_3d[sm],flip_axes_3d[sm],params=params)
                 else:
                     visualize_weights(IS_slice, IT_slice, IW_slice, phi_slice,
                                       norm_m_slice, lw_slice, model_dict['stds'],
-                                      spacing_slice, lowResSize_slice,flip_axes=flip_axes_3d[sm])
+                                      spacing_slice, lowResSize_slice,flip_axes=flip_axes_3d[sm],params=params)
 
         else:
             raise ValueError('I do not know how to visualize results with dimensions other than 2 or 3')

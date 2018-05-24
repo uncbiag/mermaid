@@ -36,12 +36,13 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
            Abstract optimizer base class.
     """
 
-    def __init__(self,ISource,ITarget,spacing,sz,params):
+    def __init__(self,ISource,ITarget,spacing,sz,params,compute_inverse_map=False):
         """
         :param ISource: source image
         :param ITarget: target image
         :param spacing: image spacing
         :param params: parameters
+        :param compute_inverse_map: for map-based method the inverse map can be computed on the fly
         """
         self.params = params
         self.use_map = self.params['model']['deformation'][('use_map', True, '[True|False] either do computations via a map or directly using the image')]
@@ -50,6 +51,7 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
         self.ISource = ISource
         self.ITarget = ITarget
         self.sz = sz
+        self.compute_inverse_map = compute_inverse_map
         self.optimizer = None
         self.light_analysis_on = None
 
@@ -141,6 +143,14 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
         if self.optimizer is not None:
             return self.optimizer.get_map()
 
+    def get_inverse_map(self):
+        """
+        Returns the inverse deformation map if available
+        :return: deformation map
+        """
+        if self.optimizer is not None:
+            return self.optimizer.get_inverse_map()
+
     def get_model_parameters(self):
         """
         Returns the parameters of the model
@@ -183,9 +193,9 @@ class SimpleSingleScaleRegistration(SimpleRegistration):
     """
     Simple single scale registration
     """
-    def __init__(self,ISource,ITarget,spacing,sz,params):
-        super(SimpleSingleScaleRegistration, self).__init__(ISource,ITarget,spacing,sz,params)
-        self.optimizer = SingleScaleRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params)
+    def __init__(self,ISource,ITarget,spacing,sz,params,compute_inverse_map=False):
+        super(SimpleSingleScaleRegistration, self).__init__(ISource,ITarget,spacing,sz,params,compute_inverse_map=compute_inverse_map)
+        self.optimizer = SingleScaleRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params,compute_inverse_map=compute_inverse_map)
 
     def register(self):
         """
@@ -201,9 +211,9 @@ class SimpleSingleScaleConsensusRegistration(SimpleRegistration):
     Single scale registration making use of consensus optimization (to allow for multiple independent registration
     that can share parameters).
     """
-    def __init__(self,ISource,ITarget,spacing,sz,params):
-        super(SimpleSingleScaleConsensusRegistration, self).__init__(ISource,ITarget,spacing,sz,params)
-        self.optimizer = SingleScaleConsensusRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params)
+    def __init__(self,ISource,ITarget,spacing,sz,params,compute_inverse_map=False):
+        super(SimpleSingleScaleConsensusRegistration, self).__init__(ISource,ITarget,spacing,sz,params,compute_inverse_map=compute_inverse_map)
+        self.optimizer = SingleScaleConsensusRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params,compute_inverse_map=compute_inverse_map)
 
     def register(self):
         """
@@ -218,9 +228,9 @@ class SimpleSingleScaleBatchRegistration(SimpleRegistration):
     """
     Single scale registration making use of batch optimization (to allow optimizing over many or large images).
     """
-    def __init__(self,ISource,ITarget,spacing,sz,params):
-        super(SimpleSingleScaleBatchRegistration, self).__init__(ISource,ITarget,spacing,sz,params)
-        self.optimizer = SingleScaleBatchRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params)
+    def __init__(self,ISource,ITarget,spacing,sz,params,compute_inverse_map=False):
+        super(SimpleSingleScaleBatchRegistration, self).__init__(ISource,ITarget,spacing,sz,params,compute_inverse_map=compute_inverse_map)
+        self.optimizer = SingleScaleBatchRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params,compute_inverse_map=compute_inverse_map)
 
     def register(self):
         """
@@ -235,9 +245,9 @@ class SimpleMultiScaleRegistration(SimpleRegistration):
     """
     Simple multi scale registration
     """
-    def __init__(self,ISource,ITarget,spacing,sz,params):
-        super(SimpleMultiScaleRegistration, self).__init__(ISource, ITarget, spacing,sz,params)
-        self.optimizer = MultiScaleRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params)
+    def __init__(self,ISource,ITarget,spacing,sz,params,compute_inverse_map=False):
+        super(SimpleMultiScaleRegistration, self).__init__(ISource, ITarget, spacing,sz,params,compute_inverse_map=compute_inverse_map)
+        self.optimizer = MultiScaleRegistrationOptimizer(self.sz,self.spacing,self.use_map,self.map_low_res_factor,self.params,compute_inverse_map=compute_inverse_map)
 
     def register(self):
         """
@@ -254,7 +264,7 @@ class Optimizer(with_metaclass(ABCMeta, object)):
        Abstract optimizer base class.
     """
 
-    def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
+    def __init__(self, sz, spacing, useMap, mapLowResFactor, params, compute_inverse_map=False):
         """
         Constructor.
         
@@ -263,6 +273,7 @@ class Optimizer(with_metaclass(ABCMeta, object)):
         :param useMap: boolean, True if a coordinate map is evolved to warp images, False otherwise
         :param map_low_res_factor: if <1 evolutions happen at a lower resolution; >=1 ignored 
         :param params: ParametersDict() instance to hold parameters
+        :param compute_inverse_map: for map-based models the inverse map can be computed on the fly
         """
         self.sz = sz
         """image size"""
@@ -284,7 +295,8 @@ class Optimizer(with_metaclass(ABCMeta, object)):
                 print('mapLowResFactor = 1: performing computations at original resolution.')
                 self.mapLowResFactor = None
 
-
+        self.compute_inverse_map = compute_inverse_map
+        """If set to True the inverse map is computed on the fly for map-based models"""
 
         self.params = params
         """general parameters"""
@@ -434,7 +446,7 @@ class Optimizer(with_metaclass(ABCMeta, object)):
         """
         Abstract method to select the model which should be optimized by name
         
-        :param modelName: name (string) of the model that should be solved 
+        :param modelName: name (string) of the model that should be solved
         """
         pass
 
@@ -515,8 +527,8 @@ class ImageRegistrationOptimizer(Optimizer):
     Optimization class for image registration.
     """
 
-    def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
-        super(ImageRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params)
+    def __init__(self, sz, spacing, useMap, mapLowResFactor, params, compute_inverse_map=False):
+        super(ImageRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params, compute_inverse_map=compute_inverse_map)
         self.ISource = None
         """source image"""
         self.lowResISource = None
@@ -803,8 +815,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         tying it to rel_ftol is not really correct.
     """
 
-    def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
-        super(SingleScaleRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params)
+    def __init__(self, sz, spacing, useMap, mapLowResFactor, params, compute_inverse_map=False):
+        super(SingleScaleRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params,compute_inverse_map=compute_inverse_map)
 
         if (self.mapLowResFactor is not None ):
             # computes model at a lower resolution than the image similarity
@@ -840,6 +852,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.rec_regEnergy = None
         self.rec_opt_par_loss_energy = None
         self.rec_phiWarped = None
+        self.rec_phiInverseWarped = None
         self.rec_IWarped = None
         self.last_energy = None
         self.rel_f = None
@@ -938,6 +951,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         return self.rec_phiWarped
 
+    def get_inverse_map(self):
+        """
+        Returns the deformation map
+        :return: deformation map
+        """
+        return self.rec_phiInverseWarped
 
     def set_n_scale(self, n_scale):
         """
@@ -971,7 +990,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.params['model']['registration_model']['type'] = ( modelName, "['svf'|'svf_quasi_momentum'|'svf_scalar_momentum'|'svf_vector_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with '_map' or '_image' suffix" )
 
-        self.model, self.criterion = self.mf.create_registration_model(modelName, self.params['model'])
+        self.model, self.criterion = self.mf.create_registration_model(modelName, self.params['model'],compute_inverse_map=self.compute_inverse_map)
         print(self.model)
 
         self._create_initial_maps()
@@ -1176,14 +1195,41 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.useMap:
             if self.mapLowResFactor is not None:
                 if self.compute_similarity_measure_at_low_res:
-                    self.rec_phiWarped = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
+                    ret = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
+                    if self.compute_inverse_map:
+                        if type(ret)==tuple: # if it is a tuple it is returning the inverse
+                            self.rec_phiWarped = ret[0]
+                            self.rec_phiInverseWarped = ret[1]
+                        else:
+                            self.rec_phiWarped = ret
+                    else:
+                        self.rec_phiWarped = ret
                 else:
-                    rec_tmp = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
+                    ret = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
+                    if self.compute_inverse_map:
+                        if type(ret)==tuple:
+                            rec_tmp = ret[0]
+                            rec_inv_tmp = ret[1]
+                        else:
+                            rec_tmp = ret
+                            rec_inv_tmp = None
+                    else:
+                        rec_tmp = ret
                     # now upsample to correct resolution
                     desiredSz = self.initialMap.size()[2::]
                     self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz, self.spline_order)
+                    if self.compute_inverse_map and rec_inv_tmp is not None:
+                        self.rec_phiInverseWarped, _ = self.sampler.upsample_image_to_size(rec_inv_tmp, self.spacing, desiredSz,self.spline_order)
             else:
-                self.rec_phiWarped = self.model(self.initialMap, self.ISource, opt_variables)
+                ret = self.model(self.initialMap, self.ISource, opt_variables)
+                if self.compute_inverse_map:
+                    if type(ret)==tuple:
+                        self.rec_phiWarped = ret[0]
+                        self.rec_phiInverseWarped = ret[1]
+                    else:
+                        self.rec_phiWarped = ret
+                else:
+                    self.rec_phiWarped = ret
 
             if self.mapLowResFactor is not None and self.compute_similarity_measure_at_low_res:
                 loss_overall_energy, sim_energy, reg_energy = self.criterion(self.lowResInitialMap, self.rec_phiWarped,
@@ -1723,13 +1769,13 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 #    desired_lr = self.last_successful_step_size_taken
                 #else:
 
-                desired_lr_individual = self.params['optimizer']['sgd']['individual'][('lr',0.0005,'desired learning rate')]
+                desired_lr_individual = self.params['optimizer']['sgd']['individual'][('lr',0.01,'desired learning rate')]
                 sgd_momentum_individual = self.params['optimizer']['sgd']['individual'][('momentum',0.9,'sgd momentum')]
                 sgd_dampening_individual = self.params['optimizer']['sgd']['individual'][('dampening',0.0,'sgd dampening')]
                 sgd_weight_decay_individual = self.params['optimizer']['sgd']['individual'][('weight_decay',0.0,'sgd weight decay')]
                 sgd_nesterov_individual = self.params['optimizer']['sgd']['individual'][('nesterov',True,'use Nesterove scheme')]
 
-                desired_lr_shared = self.params['optimizer']['sgd']['shared'][('lr', 0.00005, 'desired learning rate')]
+                desired_lr_shared = self.params['optimizer']['sgd']['shared'][('lr', 0.01, 'desired learning rate')]
                 sgd_momentum_shared = self.params['optimizer']['sgd']['shared'][('momentum', 0.9, 'sgd momentum')]
                 sgd_dampening_shared = self.params['optimizer']['sgd']['shared'][('dampening', 0.0, 'sgd dampening')]
                 sgd_weight_decay_shared = self.params['optimizer']['sgd']['shared'][('weight_decay', 0.0, 'sgd weight decay')]
@@ -1760,7 +1806,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 if self.last_successful_step_size_taken is not None:
                     desired_lr = self.last_successful_step_size_taken
                 else:
-                    desired_lr = self.params['optimizer']['adam'][('lr',0.001,'desired learning rate')]
+                    desired_lr = self.params['optimizer']['adam'][('lr',0.01,'desired learning rate')]
                 adam_betas = self.params['optimizer']['adam'][('betas',[0.9,0.999],'adam betas')]
                 adam_eps = self.params['optimizer']['adam'][('eps',self.rel_ftol,'adam eps')]
                 adam_weight_decay = self.params['optimizer']['adam'][('weight_decay',0.0,'adam weight decay')]
@@ -1936,9 +1982,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
 class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
-    def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
+    def __init__(self, sz, spacing, useMap, mapLowResFactor, params, compute_inverse_map=False):
 
-        super(SingleScaleBatchRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params)
+        super(SingleScaleBatchRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params, compute_inverse_map=compute_inverse_map)
 
         self.params[('optimizer', {}, 'optimizer settings')]
         cparams = self.params['optimizer']
@@ -2025,7 +2071,6 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.model_name = modelName
 
-
     def add_model(self, add_model_name, add_model_networkClass, add_model_lossClass):
         """
         Adds a custom model to be optimized over
@@ -2079,6 +2124,19 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
         return p
 
+    def get_inverse_map(self):
+        """
+        Returns the inverse deformation map
+        :return: deformation map
+        """
+
+        p = dict()
+        p['phi_inv'] = []
+
+        print('get_inverse_map: not yet implemented')
+
+        return p
+
 
     def get_model_parameters(self):
         """
@@ -2108,7 +2166,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
         self.optimizer_has_been_initialized = True
 
     def _create_single_scale_optimizer(self,batch_size):
-        ssOpt = SingleScaleRegistrationOptimizer(batch_size, self.spacing, self.useMap, self.mapLowResFactor, self.params)
+        ssOpt = SingleScaleRegistrationOptimizer(batch_size, self.spacing, self.useMap, self.mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)
 
         if ((self.add_model_name is not None) and
                 (self.add_model_networkClass is not None) and
@@ -2200,6 +2258,10 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                                                                params=self.params)
 
         nr_of_datasets = len(registration_data_set)
+        if nr_of_datasets<self.batch_size:
+            print('INFO: nr of datasets is smaller than batch-size. Reducing batch size to ' + str(nr_of_datasets))
+            self.batch_size=nr_of_datasets
+
         if nr_of_datasets%self.batch_size!=0:
             raise ValueError('Number of registration pairs needs to be divisible by the batch size.')
 
@@ -2425,9 +2487,9 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
 class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
-    def __init__(self, sz, spacing, useMap, mapLowResFactor, params):
+    def __init__(self, sz, spacing, useMap, mapLowResFactor, params, compute_inverse_map=False):
 
-        super(SingleScaleConsensusRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params)
+        super(SingleScaleConsensusRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params, compute_inverse_map=compute_inverse_map)
 
         self.params[('optimizer', {}, 'optimizer settings')]
         cparams = self.params['optimizer']
@@ -2512,7 +2574,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
     def _create_single_scale_optimizer(self,batch_size,consensus_penalty):
 
-        ssOpt = SingleScaleRegistrationOptimizer(batch_size, self.spacing, self.useMap, self.mapLowResFactor, self.params)
+        ssOpt = SingleScaleRegistrationOptimizer(batch_size, self.spacing, self.useMap, self.mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)
 
         if ((self.add_model_name is not None) and
                 (self.add_model_networkClass is not None) and
@@ -2978,8 +3040,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     the hierarchy, the registration parameters are upsampled from the solution at the previous lower resolution
     """
 
-    def __init__(self, sz, spacing, useMap, mapLowResFactor, params ):
-        super(MultiScaleRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params)
+    def __init__(self, sz, spacing, useMap, mapLowResFactor, params, compute_inverse_map=False ):
+        super(MultiScaleRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params, compute_inverse_map=compute_inverse_map)
         self.scaleFactors = None
         """At what image scales optimization should be computed"""
         self.scaleIterations = None
@@ -3024,7 +3086,6 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param modelName: the name of the model (string)
         """
         self.model_name = modelName
-
 
     def set_pair_path(self,pair_paths):
         # f = lambda name: os.path.split(name)
@@ -3133,6 +3194,16 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             return None
 
+    def get_inverse_map(self):
+        """
+        Returns the inverse deformation map
+        :return: deformation map
+        """
+        if self.ssOpt is not None:
+            return self.ssOpt.get_inverse_map()
+        else:
+            return None
+
     def get_model_parameters(self):
         """
         Returns the parameters of the model
@@ -3203,7 +3274,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
 
-            self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.mapLowResFactor, self.params)
+            self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)
             print('Setting learning rate to ' + str( lastSuccessfulStepSizeTaken ))
             self.ssOpt.set_last_successful_step_size_taken( lastSuccessfulStepSizeTaken )
 

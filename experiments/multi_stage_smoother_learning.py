@@ -96,7 +96,7 @@ def get_n_pairwise_image_combinations(input_directory,n=10,no_random_shuffle=Fal
                     if current_n>=n and no_random_shuffle:
                         return source_files,target_files,source_ids,target_ids
 
-    if n<nr_of_files and not no_random_shuffle:
+    if n is not None and not no_random_shuffle:
         # we now do a random selection
         ind = list(range(len(source_ids)))
         random.shuffle(ind)
@@ -151,6 +151,34 @@ def add_key_value_pairs_to_params(params,kvs):
             # and now the last one
             current_pars[sub_keys[-1]] = ast.literal_eval(val)
 
+
+def translate_to_current_image_directory(image_names,input_image_directory):
+    # takes a list of image names and used a new input directory for them
+    # this is to allow reading config files from other machines and to retarget them
+    retargeted_image_names = []
+    for n in image_names:
+        c_name = os.path.join(input_image_directory,os.path.basename(n))
+        retargeted_image_names.append(c_name)
+
+    return retargeted_image_names
+
+def load_image_pair_configuration( filename_pt, input_image_directory ):
+
+        if os.path.isfile(filename_pt):
+
+            print('INFO: Loading image pair configuration from: ' + filename_pt)
+
+            up = torch.load(filename_pt)
+            source_images = translate_to_current_image_directory(up['source_images'],input_image_directory)
+            target_images = translate_to_current_image_directory(up['target_images'],input_image_directory)
+            source_ids = up['source_ids']
+            target_ids = up['target_ids']
+
+            return source_images,target_images,source_ids,target_ids
+        else:
+            raise ValueError('File not found: ' + filename_pt)
+
+
 if __name__ == "__main__":
 
     import argparse
@@ -161,8 +189,10 @@ if __name__ == "__main__":
 
     parser.add_argument('--input_image_directory', required=True, help='Directory where all the images are')
     parser.add_argument('--output_directory', required=True, help='Where the output is stored')
-    parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=20, help='number of image pairs that will be used; if not set all pairs will be used')
+    parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=0, help='number of image pairs that will be used; if not set all pairs will be used')
     parser.add_argument('--map_low_res_factor', required=False, type=float, default=None, help='map low res factor')
+
+    parser.add_argument('--previous_stage_input_directory', required=False, default=None, help='Allows specifying a directory from which the previous state is read')
 
     parser.add_argument('--nr_of_epochs', required=False,type=str, default=None, help='number of epochs for the three stages as a comma separated list')
     parser.add_argument('--nr_of_iterations_per_batch', required=False,type=int, default=5, help='number of iterations per mini-batch')
@@ -183,6 +213,8 @@ if __name__ == "__main__":
     parser.add_argument('--seed', required=False, type=int, default=None, help='Sets the random seed which affects data shuffling')
 
     parser.add_argument('--do_not_read_used_images_from_file', action='store_true', help='If set the image pairs are recomputed. Use with EXTREME care as stage/frozen results may become inconsistent')
+
+    parser.add_argument('--image_pair_config_pt', required=False, default=None, help='If specified then the image-pairs are determined based on the information in this file; can simply point to a previous configuration.pt file')
 
     parser.add_argument('--frozen_nr_of_epochs', required=False,type=str, default=None, help='number of epochs to run the three stages with frozen parameters (for refinement)')
     parser.add_argument('--only_compute_frozen_epochs', action='store_true', help='if specified will not redo the optimization, but will only compute the frozen results based on previous optimizatin results')
@@ -247,26 +279,84 @@ if __name__ == "__main__":
     used_image_pairs_filename_pt = os.path.join(args.output_directory, 'used_image_pairs.pt')
     used_image_pairs_filename_txt = os.path.join(args.output_directory, 'used_image_pairs.txt')
 
-    create_new_image_pairs = False
+    if args.previous_stage_input_directory is not None:
+        used_image_pairs_filename_pt_in = os.path.join(args.previous_stage_input_directory, 'used_image_pairs.pt')
+        alternate_previous_results_output_directory = os.path.join(args.previous_stage_input_directory, 'results')
+        use_alternate_previous_input_directory = True
 
-    if args.do_not_read_used_images_from_file:
-        if os.path.isfile(used_image_pairs_filename_pt):
-            print('WARNING! WARNING! image pair file ' + used_image_pairs_filename_pt + ' exists, but will not be used')
+        # now copy the previous results and the previous json file to the current results directory
+        # so we can continue from there
 
-        create_new_image_pairs = True
+        if 1 in stage_nr:
+            print('INFO: Copying stage 0 information from ' + args.previous_stage_input_directory + ' to ' + args.output_directory)
+            backup_source_dir = os.path.realpath(alternate_previous_results_output_directory) + '_after_stage_0'
+            target_dir = os.path.realpath(results_output_directory) + '_after_stage_0'
+
+            backup_out_json_stage_0 = os.path.join(args.previous_stage_input_directory, 'out_stage_0_' + os.path.split(args.config)[1])
+            target_out_json_stage_0 = os.path.join(args.output_directory, 'out_stage_0_' + os.path.split(args.config)[1])
+            if not os.path.isfile(backup_out_json_stage_0):
+                raise ValueError('json configuration file does not exist: ' + backup_out_json_stage_0)
+
+            shutil.copy(backup_out_json_stage_0)
+
+            if not os.path.exists(backup_source_dir):
+                raise ValueError('Source directory does not exist: ' + backup_source_dir)
+
+            if os.path.exists(target_dir):
+                shutil.rmtree(target_dir)
+            shutil.copytree(backup_source_dir,target_dir)
+
+        if 2 in stage_nr:
+            print('INFO: Copying stage 1 information from ' + args.previous_stage_input_directory + ' to ' + args.output_directory)
+            backup_source_dir = os.path.realpath(alternate_previous_results_output_directory) + '_after_stage_1'
+            target_dir = os.path.realpath(results_output_directory) + '_after_stage_1'
+
+            backup_out_json_stage_1 = os.path.join(args.previous_stage_input_directory, 'out_stage_1_' + os.path.split(args.config)[1])
+            target_out_json_stage_1 = os.path.join(args.output_directory, 'out_stage_1_' + os.path.split(args.config)[1])
+            if not os.path.isfile(backup_out_json_stage_1):
+                raise ValueError('json configuration file does not exist: ' + backup_out_json_stage_1)
+
+            shutil.copy(backup_out_json_stage_1)
+
+            if not os.path.exists(backup_source_dir):
+                raise ValueError('Source directory does not exist: ' + backup_source_dir)
+
+            if os.path.exists(target_dir):
+                shutil.rmtree(target_dir)
+            shutil.copytree(backup_source_dir,target_dir)
+
 
     else:
-        if os.path.isfile(used_image_pairs_filename_pt):
+        used_image_pairs_filename_pt_in = used_image_pairs_filename_pt
+        alternate_previous_results_output_directory = None
+        use_alternate_previous_input_directory = False
 
-            print('INFO: Loading image pair configuration from: ' + used_image_pairs_filename_pt)
 
-            up = torch.load(used_image_pairs_filename_pt)
-            source_images = up['source_images']
-            target_images = up['target_images']
-            source_ids = up['source_ids']
-            target_ids = up['target_ids']
+
+    create_new_image_pairs = False
+    save_new_image_pairs = False
+
+    if args.image_pair_config_pt is not None:
+        # first see if this file exists
+        if os.path.isfile(args.image_pair_config_pt):
+            source_images, target_images, source_ids, target_ids = load_image_pair_configuration(args.image_pair_config_pt,args.input_image_directory)
+            save_new_image_pairs = True # save what we read so that it is available by default for the subsequent runs
         else:
+            raise ValueError('Could not open image pair configuration file: ' + args.image_pair_config_pt)
+
+    else:
+        # image_pair_config was not specified, so we see go back to the default behavior
+        if args.do_not_read_used_images_from_file:
+            if os.path.isfile(used_image_pairs_filename_pt_in):
+                print('WARNING! WARNING! image pair file ' + used_image_pairs_filename_pt_in + ' exists, but will not be used')
+
             create_new_image_pairs = True
+
+        else:
+            if os.path.isfile(used_image_pairs_filename_pt_in):
+                source_images,target_images,source_ids,target_ids = load_image_pair_configuration(used_image_pairs_filename_pt_in,args.input_image_directory)
+            else:
+                create_new_image_pairs = True
 
     if create_new_image_pairs:
 
@@ -278,7 +368,11 @@ if __name__ == "__main__":
             no_random_shuffle=args.noshuffle,
             suffix=args.suffix)
 
-        # now save how the data was created
+        save_new_image_pairs = True
+
+
+    if save_new_image_pairs:
+        # now save how the data was created or loaded
         d = dict()
         d['source_images'] = source_images
         d['target_images'] = target_images
@@ -342,15 +436,18 @@ if __name__ == "__main__":
         if compute_frozen_epochs:
 
             print('Computing {:} frozen epochs for stage 0'.format(frozen_nr_of_epochs[0]))
+
             in_json = out_json_stage_0
+
             frozen_out_json_stage_0 = os.path.join(args.output_directory, 'frozen_out_stage_0_' + os.path.split(args.config)[1])
 
-            if args.only_compute_frozen_epochs:
+            if args.only_compute_frozen_epochs or use_alternate_previous_input_directory:
                 # copy the earlier results of stage 0 into the current results directory
                 # (otherwise they are already in this directory and we can continue from there)
                 print('Restoring stage 0 results for continuation')
                 if os.path.exists(results_output_directory):
                     shutil.rmtree(results_output_directory)
+
                 backup_dir = os.path.realpath(results_output_directory) + '_after_stage_0'
                 if os.path.exists(backup_dir):
                     shutil.copytree(backup_dir,results_output_directory)

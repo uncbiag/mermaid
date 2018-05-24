@@ -4,6 +4,9 @@ from builtins import str
 from builtins import range
 import set_pyreg_paths
 
+# needs to be imported before matplotlib to assure proper plotting
+import pyreg.visualize_registration_results as vizReg
+
 import os
 
 import torch
@@ -29,15 +32,52 @@ def new_warp_image_nn(label_map, phi, spacing):
 
     return utils.get_warped_label_map(lm_t, phi, spacing, sched='nn')
 
-def warp_image_nn(moving, phi):
-    """
-    Warp labels according to deformation field
-    :param moving: Moving image in numpy array format
-    :param phi: Deformation field in numpy array format
-    :return: Warped labels according to deformation field
-    """
 
-    # get image demensions
+def _warp_image_nn_1d(moving, phi):
+    # get image dimensions
+    dim1 = moving.shape[0]
+
+    # round the deformation map to integer
+    phi_round = np.round(phi).astype('int')
+    idx_x = np.reshape(phi_round[0, :], (dim1, 1))
+
+    # deal with extreme cases
+    idx_x[idx_x < 0] = 0
+    idx_x[idx_x > dim1 - 1] = dim1 - 1
+
+    # get the wrapped results
+    ind = np.ravel_multi_index([idx_x], [dim1])
+    result = moving.flatten()[ind]
+    result = np.reshape(result, (dim1))
+    return result
+
+
+def _warp_image_nn_2d(moving, phi):
+
+    # get image dimensions
+    dim1 = moving.shape[0]
+    dim2 = moving.shape[1]
+
+    # round the deformation map to integer
+    phi_round = np.round(phi).astype('int')
+    idx_x = np.reshape(phi_round[0, :, :], (dim1 * dim2, 1))
+    idx_y = np.reshape(phi_round[1, :, :], (dim1 * dim2, 1))
+
+    # deal with extreme cases
+    idx_x[idx_x < 0] = 0
+    idx_x[idx_x > dim1 - 1] = dim1 - 1
+    idx_y[idx_y < 0] = 0
+    idx_y[idx_y > dim2 - 1] = dim2 - 1
+
+    # get the wrapped results
+    ind = np.ravel_multi_index([idx_x, idx_y], [dim1, dim2])
+    result = moving.flatten()[ind]
+    result = np.reshape(result, (dim1, dim2))
+    return result
+
+def _warp_image_nn_3d(moving, phi):
+
+    # get image dimensions
     dim1 = moving.shape[0]
     dim2 = moving.shape[1]
     dim3 = moving.shape[2]
@@ -62,6 +102,26 @@ def warp_image_nn(moving, phi):
     result = np.reshape(result, (dim1, dim2, dim3))
     return result
 
+def warp_image_nn(moving, phi):
+    """
+    Warp labels according to deformation field
+    :param moving: Moving image in numpy array format
+    :param phi: Deformation field in numpy array format
+    :return: Warped labels according to deformation field
+    """
+
+    dim = len(moving.shape)
+
+    if dim==1:
+        return _warp_image_nn_1d(moving,phi)
+    elif dim==2:
+        return _warp_image_nn_2d(moving,phi)
+    elif dim==3:
+        return _warp_image_nn_3d(moving, phi)
+    else:
+        raise ValueError('Only dimensions 1, 2, and 3 supported')
+
+
 def calculate_image_overlap(dataset_info, phi_path, source_labelmap_path, target_labelmap_path,
                             warped_labelmap_path,moving_id, target_id, use_sym_links=True):
     """
@@ -74,25 +134,34 @@ def calculate_image_overlap(dataset_info, phi_path, source_labelmap_path, target
     :return:
     """
 
-    Labels = sio.loadmat(dataset_info['label_name'])
-    result = np.zeros((len(Labels['Labels'])))
+    Labels = None
+    nr_of_labels = -1
+    if dataset_info['label_name'] is not None:
+        Labels = sio.loadmat(dataset_info['label_name'])
+        nr_of_labels = (len(Labels['Labels']))
+        result = np.zeros(nr_of_labels)
+    else:
+        if 'nr_of_labels' in dataset_info:
+            nr_of_labels = dataset_info['nr_of_labels']
+            result = np.zeros(nr_of_labels)
+        else:
+            raise ValueError('If matlab label file not given, nr_of_labels needs to be specified')
 
-    # todo: not sure why these are floats, but okay for now
+        # todo: not sure why these are floats, but okay for now
 
     im_io = fio.ImageIO()
     label_from_id = moving_id-dataset_info['start_id'] # typicall starts at 1
     label_to_id = target_id-dataset_info['start_id']
 
     label_from_filename = dataset_info['label_files_dir'] + dataset_info['label_prefix'] + str(label_from_id + dataset_info['start_id']) + '.nii'
-    label_from, hdr, _, _ = im_io.read(label_from_filename, silent_mode=True)
+    label_from, hdr, _, _ = im_io.read(label_from_filename, silent_mode=True, squeeze_image=True)
 
     label_to_filename = dataset_info['label_files_dir'] + dataset_info['label_prefix'] + str(label_to_id + dataset_info['start_id']) + '.nii'
-    label_to, hdr, _, _ = im_io.read(label_to_filename, silent_mode=True)
+    label_to, hdr, _, _ = im_io.read(label_to_filename, silent_mode=True, squeeze_image=True)
 
     map_io = fio.MapIO()
 
     phi,_,_,_ = map_io.read_from_validation_map_format(phi_path)
-    phi = phi.squeeze()
     warp_result = warp_image_nn(label_from, phi)
 
     im_io.write(warped_labelmap_path,warp_result,hdr)
@@ -110,9 +179,12 @@ def calculate_image_overlap(dataset_info, phi_path, source_labelmap_path, target
             im_io.write(target_labelmap_path,label_to,hdr)
 
 
-    for label_idx in range(len(Labels['Labels'])):
+    for label_idx in range(nr_of_labels):
 
-        current_id = Labels['Labels'][label_idx][0]
+        if Labels is not None:
+            current_id = Labels['Labels'][label_idx][0]
+        else:
+            current_id = label_idx
 
         target_vol = float( (label_to==current_id).sum() )
 
@@ -141,21 +213,29 @@ def overlapping_plot(old_results_filename, new_results, boxplot_filename, visual
     :param new_results: Dictionary that contains the new results
     :return:
     """
-    old_results = sio.loadmat(old_results_filename)
+
+    if old_results_filename is not None:
+        old_results = sio.loadmat(old_results_filename)
+    else:
+        old_results = None
 
     # combine old names with proposed method
     compound_names = []
-    for item in old_results['direc_name']:
-        compound_names.append(str(item[0])[3:-2])
+
+    if old_results is not None:
+        for item in old_results['direc_name']:
+            compound_names.append(str(item[0])[3:-2])
 
     compound_names.append('Proposed')
 
     # new results may only have a subset of the results
+    if old_results is not None:
+        old_results_selected = old_results['results'][new_results['ind'],:] # select the desired rows
 
-    old_results_selected = old_results['results'][new_results['ind'],:] # select the desired rows
-
-    # combine data
-    compound_results = np.concatenate((old_results_selected, np.array(new_results['mean_target_overlap']).reshape(-1, 1)), axis=1)
+        # combine data
+        compound_results = np.concatenate((old_results_selected, np.array(new_results['mean_target_overlap']).reshape(-1, 1)), axis=1)
+    else:
+        compound_results = np.array(new_results['mean_target_overlap']).reshape(-1, 1)
 
     # create a figure instance
     fig = plt.figure(1, figsize=(8, 6))
@@ -198,7 +278,7 @@ def overlapping_plot(old_results_filename, new_results, boxplot_filename, visual
         ax.spines[axis].set_linewidth(2)
 
     # set the range of the overlapping rate
-    plt.ylim([0, 0.8])
+    plt.ylim([0, 1.0])
 
     # add two lines to represent the lower quartile and upper quartile
     lower_quartile = np.percentile(compound_results[:, -1], 25)
@@ -289,7 +369,7 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_directory', required=True,
                         help='Main directory where dataset is stored; this directory should contain the subdirectory label_affine_icbm')
 
-    parser.add_argument('--dataset', required=False, default=None, help='Which validation dataset is being used. Specify as [CUMC|LPBA|IBSR|MGH]; CUMC is the default')
+    parser.add_argument('--dataset', required=False, default=None, help='Which validation dataset is being used. Specify as [CUMC|LPBA|IBSR|MGH|SYNTH]; CUMC is the default')
 
     parser.add_argument('--compute_from_frozen', action='store_true', help='computes the results from optimization results with frozen parameters')
 
@@ -322,6 +402,7 @@ if __name__ == "__main__":
                                    'start_id': 1,
                                    'label_prefix': 'm',
                                    'label_name': './validation_mat/m_Labels.mat',
+                                   'nr_of_labels': None,
                                    'label_files_dir': os.path.join(dataset_directory, 'label_affine_icbm/'),
                                    'old_klein_results_filename': './validation_mat/quicksilver_results/CUMC_results.mat'}
 
@@ -329,6 +410,7 @@ if __name__ == "__main__":
                                    'start_id': 1,
                                    'label_prefix': 's',
                                    'label_name': './validation_mat/l_Labels.mat',
+                                   'nr_of_labels': None,
                                    'label_files_dir': os.path.join(dataset_directory, 'label_affine_icbm/'),
                                    'old_klein_results_filename': './validation_mat/quicksilver_results/LPBA_results.mat'}
 
@@ -336,6 +418,7 @@ if __name__ == "__main__":
                                    'start_id': 1,
                                    'label_prefix': 'c',
                                    'label_name': './validation_mat/c_Labels.mat',
+                                   'nr_of_labels': None,
                                    'label_files_dir': os.path.join(dataset_directory, 'label_affine_icbm/'),
                                    'old_klein_results_filename': './validation_mat/quicksilver_results/IBSR_results.mat'}
 
@@ -343,8 +426,17 @@ if __name__ == "__main__":
                                   'start_id': 1,
                                   'label_prefix': 'g',
                                   'label_name': './validation_mat/g_Labels.mat',
+                                  'nr_of_labels': None,
                                   'label_files_dir': os.path.join(dataset_directory, 'label_affine_icbm/'),
                                   'old_klein_results_filename': './validation_mat/quicksilver_results/MGH_results.mat'}
+
+    validation_datasets['SYNTH'] = {'nr_of_images_in_dataset': -1,
+                                  'start_id': 1,
+                                  'label_prefix': 'm',
+                                  'label_name': None,
+                                  'nr_of_labels': 4,
+                                  'label_files_dir': os.path.join(dataset_directory, 'label_affine_icbm/'),
+                                  'old_klein_results_filename': None}
 
     if args.dataset is None:
         print('INFO: Assuming that dataset is CUMC; if this is not the case, use the --dataset option')
@@ -353,7 +445,7 @@ if __name__ == "__main__":
         if args.dataset in list(validation_datasets.keys()):
             validation_dataset_name = args.dataset
         else:
-            raise ValueError('Dataset needs to be [CUMC|MGH|LPBA|IBSR], but got ' + args.dataset)
+            raise ValueError('Dataset needs to be [CUMC|MGH|LPBA|IBSR|SYNTH], but got ' + args.dataset)
 
 
     if args.save_overlap_filename is not None:
@@ -430,9 +522,11 @@ if __name__ == "__main__":
 
         res_file.close()
 
-    validation_results['ind'] = get_result_indices(validation_results,
-                                                   validation_datasets[validation_dataset_name]['start_id'],
-                                                   validation_datasets[validation_dataset_name]['nr_of_images_in_dataset'])
+    if not args.dataset=='SYNTH':
+        # synth has direct pairwise pairing, not all with respect to all others
+        validation_results['ind'] = get_result_indices(validation_results,
+                                                       validation_datasets[validation_dataset_name]['start_id'],
+                                                       validation_datasets[validation_dataset_name]['nr_of_images_in_dataset'])
 
     validation_results_filename = os.path.join(stage_output_dir,'validation_results.pt')
     print('Saving the validation results to: ' + validation_results_filename)
