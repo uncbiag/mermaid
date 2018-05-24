@@ -355,7 +355,6 @@ class GaussianSpatialSmoother(GaussianSmoother):
         :return: smoothed image
         """
 
-        self.sz = v.size()
         if self.filter is None:
             self._create_filter()
         # just doing a Gaussian smoothing
@@ -594,7 +593,7 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
                 cFilter,_ = ce.create_complex_fourier_filter(g, self.sz)
                 self.FFilter += cFilter
 
-def _compute_omt_penalty_for_weight_vectors(weights,multi_gaussian_stds,omt_power=2.0):
+def _compute_omt_penalty_for_weight_vectors(weights,multi_gaussian_stds,omt_power=2.0,use_log_transform=False):
 
     penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
 
@@ -604,14 +603,25 @@ def _compute_omt_penalty_for_weight_vectors(weights,multi_gaussian_stds,omt_powe
 
     if omt_power == 2:
         for i, s in enumerate(multi_gaussian_stds):
-            penalty += weights[i] * ((s - max_std) ** omt_power)
-
-        penalty /= (max_std - min_std) ** omt_power
+            if use_log_transform:
+                penalty += weights[i] * ((torch.log(max_std/s)) ** omt_power)
+            else:
+                penalty += weights[i] * ((s - max_std) ** omt_power)
+        if use_log_transform:
+            penalty /= (torch.log(max_std/min_std)) ** omt_power
+        else:
+            penalty /= (max_std - min_std) ** omt_power
     else:
         for i, s in enumerate(multi_gaussian_stds):
-            penalty += weights[i] * (torch.abs(s - max_std) ** omt_power)
+            if use_log_transform:
+                penalty += weights[i] * (torch.abs(torch.log(max_std/s)) ** omt_power)
+            else:
+                penalty += weights[i] * (torch.abs(s - max_std) ** omt_power)
 
-        penalty /= torch.abs(max_std-min_std)**omt_power
+        if use_log_transform:
+            penalty /= torch.abs(torch.log(max_std/min_std))**omt_power
+        else:
+            penalty /= torch.abs(max_std-min_std)**omt_power
 
     return penalty
 
@@ -631,6 +641,9 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
 
         self.omt_weight_penalty = self.params[('omt_weight_penalty', 25.0, 'Penalty for the optimal mass transport')]
         """penalty factor for the optimal mass transport term"""
+
+        self.omt_use_log_transformed_std = self.params[('omt_use_log_transformed_std', False, 'If set to true the standard deviations are log transformed for the computation of OMT')]
+        """if set to true the standard deviations are log transformed for the OMT computation"""
 
         self.optimize_over_smoother_stds = params[('optimize_over_smoother_stds', False, 'if set to true the smoother will optimize over standard deviations')]
         """determines if we should optimize over the smoother standard deviations"""
@@ -653,7 +666,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
             self.multi_gaussian_weights += (1. - weight_sum) / len(self.multi_gaussian_weights)
             params['multi_gaussian_weights'] = self.multi_gaussian_weights.tolist()
 
-        assert (np.array(self.multi_gaussian_weights)).sum() == 1.
+        #assert (np.array(self.multi_gaussian_weights)).sum() == 1.
         assert len(self.multi_gaussian_weights) == len(self.multi_gaussian_stds)
 
         self.nr_of_gaussians = len(self.multi_gaussian_stds)
@@ -798,7 +811,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         # puts an squared two-norm penalty on the weights as deviations from the baseline
         # also adds a penalty for the network parameters
 
-        current_penalty = _compute_omt_penalty_for_weight_vectors(self.get_gaussian_weights(),self.get_gaussian_stds(),self.omt_power)
+        current_penalty = _compute_omt_penalty_for_weight_vectors(self.get_gaussian_weights(),self.get_gaussian_stds(),self.omt_power,self.omt_use_log_transformed_std)
         penalty = current_penalty*self.omt_weight_penalty
 
         return penalty
@@ -897,6 +910,9 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         self.omt_weight_penalty = self.ws.get_omt_weight_penalty()
         """penalty factor for the optimal mass transport term"""
+
+        self.omt_use_log_transformed_std = self.params[('omt_use_log_transformed_std', False, 'If set to true the standard deviations are log transformed for the computation of OMT')]
+        """if set to true the standard deviations are log transformed for the OMT computation"""
 
         self.omt_power = self.ws.get_omt_power()
         """power for the optimal mass transport term"""
@@ -1064,7 +1080,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         if not self._is_optimizing_over_deep_network:
             current_penalty = _compute_omt_penalty_for_weight_vectors(self.get_gaussian_weights(),
-                                                                      self.get_gaussian_stds(), self.omt_power)
+                                                                      self.get_gaussian_stds(), self.omt_power, self.omt_use_log_transformed_std)
 
             penalty = current_penalty * self.omt_weight_penalty*self.spacing.prod()*self.sz.prod()
 

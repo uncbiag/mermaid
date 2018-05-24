@@ -10,7 +10,358 @@ import pyreg.finite_differences as fd
 
 batch_norm_momentum_val = 0.1
 
-def compute_omt_penalty(weights, multi_gaussian_stds,volume_element,desired_power=2.0):
+def half_sigmoid(x,alpha=1):
+    r = 2.0/(1+torch.exp(-x*alpha))-1.0
+    return r
+
+def compute_localized_edge_penalty(I,spacing):
+    # needs to be batch B x X x Y x Z format
+    fdt = fd.FD_torch(spacing=spacing)
+    gnI = float(np.min(spacing))*fdt.grad_norm_sqr(I)**0.5
+
+    # compute edge penalty
+    gamma = 1.0
+    localized_edge_penalty = 1.0/(1.0+gamma*gnI) # this is what we weight the OMT values with
+
+    return localized_edge_penalty
+
+def _compute_weighted_total_variation_1d(d_in,w, spacing, bc_val, pnorm=2):
+
+    d = torch.zeros_like(d_in)
+    d[:] = d_in
+
+    # now force the boundary condition
+    d[:, 0] = bc_val
+    d[:, -1] = bc_val
+
+    fdt = fd.FD_torch(spacing=spacing)
+    # need to use torch.abs here to make sure the proper subgradient is computed at zero
+    batch_size = d.size()[0]
+    volumeElement = spacing.prod()
+    t0 = torch.abs(fdt.dXc(d))
+
+    tm = t0*w
+
+    return (tm).sum()*volumeElement/batch_size
+
+def _compute_weighted_total_variation_2d(d_in,w, spacing, bc_val, pnorm=2):
+
+    d = torch.zeros_like(d_in)
+    d[:] = d_in
+
+    # now force the boundary condition
+    d[:, 0, :] = bc_val
+    d[:, -1, :] = bc_val
+    d[:, :, 0] = bc_val
+    d[:, :, -1] = bc_val
+
+    fdt = fd.FD_torch(spacing=spacing)
+    # need to use torch.norm here to make sure the proper subgradient is computed at zero
+    batch_size = d.size()[0]
+    volumeElement = spacing.prod()
+    t0 = torch.norm(torch.stack((fdt.dXc(d),fdt.dYc(d))),pnorm,0)
+
+    tm = t0*w
+
+    return (tm).sum()*volumeElement/batch_size
+
+def _compute_weighted_total_variation_3d(d_in,w, spacing, bc_val, pnorm=2):
+
+    d = torch.zeros_like(d_in)
+    d[:] = d_in
+
+    # now force the boundary condition
+    d[:, 0, :, :] = bc_val
+    d[:, -1, :, :] = bc_val
+    d[:, :, 0, :] = bc_val
+    d[:, :, -1, :] = bc_val
+    d[:, :, :, 0] = bc_val
+    d[:, :, :, -1] = bc_val
+
+    fdt = fd.FD_torch(spacing=spacing)
+    # need to use torch.norm here to make sure the proper subgradient is computed at zero
+    batch_size = d.size()[0]
+    volumeElement = spacing.prod()
+
+    t0 = torch.norm(torch.stack((fdt.dXc(d),
+                                 fdt.dYc(d),
+                                 fdt.dZc(d))), pnorm, 0)
+
+    tm = t0*w
+
+    return (tm).sum()*volumeElement/batch_size
+
+def compute_weighted_total_variation(d, w, spacing,bc_val,pnorm=2):
+    # just do the standard component-wise Euclidean norm of the gradient, but muliplied locally by a weight
+    # format needs to be B x X x Y x Z
+
+    dim = len(d.size())-1
+
+    if dim == 1:
+        return _compute_weighted_total_variation_1d(d,w, spacing,bc_val,pnorm)
+    elif dim == 2:
+        return _compute_weighted_total_variation_2d(d,w, spacing,bc_val,pnorm)
+    elif dim == 3:
+        return _compute_weighted_total_variation_3d(d,w, spacing,bc_val,pnorm)
+    else:
+        raise ValueError('Total variation computation is currently only supported in dimensions 1 to 3')
+
+def _compute_local_norm_of_gradient_1d(d,spacing,pnorm=2):
+
+    fdt = fd.FD_torch(spacing=spacing)
+    # need to use torch.abs here to make sure the proper subgradient is computed at zero
+    t0 = torch.abs(fdt.dXc(d))
+
+    return t0
+
+def _compute_local_norm_of_gradient_2d(d,spacing,pnorm=2):
+
+    fdt = fd.FD_torch(spacing=spacing)
+    # need to use torch.norm here to make sure the proper subgradient is computed at zero
+    t0 = torch.norm(torch.stack((fdt.dXc(d),fdt.dYc(d))),pnorm,0)
+
+    return t0
+
+def _compute_local_norm_of_gradient_3d(d,spacing, pnorm=2):
+
+    fdt = fd.FD_torch(spacing=spacing)
+    # need to use torch.norm here to make sure the proper subgradient is computed at zero
+
+    t0 = torch.norm(torch.stack((fdt.dXc(d),
+                                 fdt.dYc(d),
+                                 fdt.dZc(d))), pnorm, 0)
+
+    return t0
+
+def _compute_local_norm_of_gradient(d, spacing, pnorm=2):
+    # just do the standard component-wise Euclidean norm of the gradient, but muliplied locally by a weight
+    # format needs to be B x X x Y x Z
+
+    dim = len(d.size())-1
+
+    if dim == 1:
+        return _compute_local_norm_of_gradient_1d(d,spacing,pnorm)
+    elif dim == 2:
+        return _compute_local_norm_of_gradient_2d(d,spacing,pnorm)
+    elif dim == 3:
+        return _compute_local_norm_of_gradient_3d(d,spacing,pnorm)
+    else:
+        raise ValueError('Local norm of gradient computation is currently only supported in dimensions 1 to 3')
+
+def _compute_total_variation(d, spacing, pnorm=2):
+    # just do the standard component-wise Euclidean norm of the gradient, but muliplied locally by a weight
+    # format needs to be B x X x Y x Z
+
+    batch_size = d.size()[0]
+    volumeElement = spacing.prod()
+
+    tv = _compute_local_norm_of_gradient(d,spacing,pnorm)
+    return (tv).sum()*volumeElement/batch_size
+
+
+def _compute_localized_omt_weight_1d(weights,g,I,spacing,pnorm):
+
+    r = torch.zeros_like(g)
+
+    # set the boundary values to 1
+    r[:, 0] = 1
+    r[:, -1] = 1
+
+    # compute the sum of the total variations of the weights
+    sum_tv = torch.zeros_like(g)
+    nr_of_weights = weights.size()[1]
+
+    for n in range(nr_of_weights):
+        sum_tv += _compute_local_norm_of_gradient(weights[:, n, ...], spacing, pnorm)
+    sum_tv /= nr_of_weights
+
+    #sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm))
+    sum_tv += _compute_local_norm_of_gradient(I[:, 0, ...], spacing, pnorm)
+
+    #r_tv = half_sigmoid(sum_tv) * g
+    r_tv = sum_tv*g
+
+    r_tv[:, 0] = 0
+    r_tv[:, -1] = 0
+
+    r = r + r_tv
+
+    S0 = 2
+
+    return r,S0
+
+
+def _compute_localized_omt_weight_2d(weights,g,I,spacing,pnorm):
+
+    r = torch.zeros_like(g)
+
+    ## set the boundary values to 1
+    #r[:,0,:] = 1
+    #r[:,-1,:] = 1
+    #r[:,:,0] = 1
+    #r[:,:,-1] = 1
+
+    sz = r.size()
+    S0 = 2 * sz[2] + 2 * sz[1]
+
+    # compute the sum of the total variations of the weights
+    sum_tv = torch.zeros_like(g)
+    nr_of_weights = weights.size()[1]
+
+    for n in range(nr_of_weights):
+        sum_tv += _compute_local_norm_of_gradient(weights[:,n,...],spacing,pnorm)
+    sum_tv /= nr_of_weights
+
+    #sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm))
+    tvl_I = _compute_local_norm_of_gradient(I[:, 0, ...], spacing, pnorm)
+    sum_tv += tvl_I
+
+    #r_tv = half_sigmoid(sum_tv)*g
+    r_tv = sum_tv * g
+
+    batch_size = I.size()[0]
+    r_tv *= batch_size/(tvl_I*g).sum()
+
+    #r_tv[:,0,:] = 0
+    #r_tv[:,-1,:] = 0
+    #r_tv[:,:,0] = 0
+    #r_tv[:,:,-1] = 0
+
+    #r = r + r_tv
+    r = r_tv
+
+    return r,S0
+
+def _compute_localized_omt_weight_3d(weights,g,I,spacing,pnorm):
+
+    r = torch.zeros_like(g)
+
+    # set the boundary values to 1
+    r[:, 0, :, :] = 1
+    r[:, -1, :, :] = 1
+    r[:, :, 0, :] = 1
+    r[:, :, -1, :] = 1
+    r[:, :, :, 0] = 1
+    r[:, :, :, -1] = 1
+
+    sz = r.size()
+    S0 = 2*sz[2]*sz[3] + 2*sz[1]*sz[3] + 2*sz[1]*sz[2]
+
+    # compute the sum of the total variations of the weights
+    sum_tv = torch.zeros_like(g)
+    nr_of_weights = weights.size()[1]
+
+    for n in range(nr_of_weights):
+        sum_tv += _compute_local_norm_of_gradient(weights[:, n, ...], spacing, pnorm)
+    sum_tv /= nr_of_weights
+
+    #sum_tv = torch.max(sum_tv,_compute_local_norm_of_gradient(I[:,0,...], spacing, pnorm))
+    sum_tv += _compute_local_norm_of_gradient(I[:, 0, ...], spacing, pnorm)
+
+    #r_tv = half_sigmoid(sum_tv) * g
+    r_tv = sum_tv * g
+
+    r_tv[:, 0, :, :] = 0
+    r_tv[:, -1, :, :] = 0
+    r_tv[:, :, 0, :] = 0
+    r_tv[:, :, -1, :] = 0
+    r_tv[:, :, :, 0] = 0
+    r_tv[:, :, :, -1] = 0
+
+    r = r + r_tv
+
+    return r,S0
+
+def compute_localized_omt_weight(weights, I, spacing,pnorm=2):
+    # just do the standard component-wise Euclidean norm of the gradient, but muliplied locally by a weight
+    # format needs to be B x X x Y x Z
+
+    if I.size()[1]!=1:
+        raise ValueError('Only scalar images are currently supported')
+
+    g = compute_localized_edge_penalty(I[:,0,...],spacing)
+
+    dim = len(g.size())-1
+
+    if dim == 1:
+        return _compute_localized_omt_weight_1d(weights,g, I, spacing,pnorm)
+    elif dim == 2:
+        return _compute_localized_omt_weight_2d(weights,g, I, spacing,pnorm)
+    elif dim == 3:
+        return _compute_localized_omt_weight_3d(weights,g, I, spacing,pnorm)
+    else:
+        raise ValueError('Total variation computation is currently only supported in dimensions 1 to 3')
+
+
+
+def compute_localized_omt_penalty(weights, I, multi_gaussian_stds,spacing,volume_element,desired_power=2.0,use_log_transform=False):
+    # weights: B x weights x X x Y
+
+    if weights.size()[1] != len(multi_gaussian_stds):
+        raise ValueError('Number of weights need to be the same as number of Gaussians. Format recently changed for weights to B x weights x X x Y')
+
+    penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+
+    # first compute the gradient of the image as the penalty is only evaluated at gradients of the image
+    # and where the gradients of the total variation of the weights are
+
+    nr_of_image_channels = I.size()[1]
+    if nr_of_image_channels!=1:
+        raise ValueError('localized omt is currently only supported for single channel images')
+
+    batch_size = I.size()[0]
+
+    max_std = max(multi_gaussian_stds)
+    min_std = min(multi_gaussian_stds)
+
+    nr_of_multi_gaussians = len(multi_gaussian_stds)
+    if multi_gaussian_stds[nr_of_multi_gaussians-1]!=max_std:
+        raise ValueError('Assuming that the last standard deviation is the largest')
+
+    gamma,S0 = compute_localized_omt_weight(weights, I, spacing)
+
+    if desired_power == 2:
+        for i, s in enumerate(multi_gaussian_stds):
+
+            weighted_tv_penalty = (gamma*weights[:,i,...]).sum()
+
+            if use_log_transform:
+                penalty += weighted_tv_penalty * ((np.log(max_std / s)) ** desired_power)
+            else:
+                penalty += weighted_tv_penalty * ((s - max_std) ** desired_power)
+
+        if use_log_transform:
+            penalty /= (np.log(max_std / min_std)) ** desired_power
+        else:
+            penalty /= (max_std - min_std) ** desired_power
+
+        #penalty/=S0
+
+    else:
+        for i, s in enumerate(multi_gaussian_stds):
+
+            weighted_tv_penalty = (gamma*weights[:,i,...]).sum()
+
+            if use_log_transform:
+                penalty += weighted_tv_penalty * (abs(np.log(max_std / s)) ** desired_power)
+            else:
+                penalty += weighted_tv_penalty * (abs(s - max_std) ** desired_power)
+
+        if use_log_transform:
+            penalty /= abs(np.log(max_std / min_std)) ** desired_power
+        else:
+            penalty /= abs(max_std - min_std) ** desired_power
+
+        #penalty/=S0
+
+    # todo: check why division by batch size appears not to be necessary (probably because of division by S0)
+    penalty /= batch_size
+    #penalty *= volume_element
+
+    return penalty
+
+
+def compute_omt_penalty(weights, multi_gaussian_stds,volume_element,desired_power=2.0,use_log_transform=False):
 
     # weights: B x weights x X x Y
 
@@ -19,17 +370,32 @@ def compute_omt_penalty(weights, multi_gaussian_stds,volume_element,desired_powe
 
     penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
     batch_size = weights.size()[0]
+
     max_std = max(multi_gaussian_stds)
     min_std = min(multi_gaussian_stds)
 
     if desired_power==2:
         for i, s in enumerate(multi_gaussian_stds):
-            penalty += ((weights[:, i, ...]).sum()) * ((s - max_std) ** desired_power)
-        penalty /= (max_std - min_std)** desired_power
+            if use_log_transform:
+                penalty += ((weights[:, i, ...]).sum()) * ((np.log(max_std/s)) ** desired_power)
+            else:
+                penalty += ((weights[:, i, ...]).sum()) * ((s - max_std) ** desired_power)
+
+        if use_log_transform:
+            penalty /= (np.log(max_std/min_std))** desired_power
+        else:
+            penalty /= (max_std - min_std)** desired_power
     else:
         for i,s in enumerate(multi_gaussian_stds):
-            penalty += ((weights[:,i,...]).sum())*(abs(s-max_std)**desired_power)
-        penalty /= abs(max_std-min_std)**desired_power
+            if use_log_transform:
+                penalty += ((weights[:,i,...]).sum())*(abs(np.log(max_std/s))**desired_power)
+            else:
+                penalty += ((weights[:,i,...]).sum())*(abs(s-max_std)**desired_power)
+
+        if use_log_transform:
+            penalty /= abs(np.log(max_std/min_std))**desired_power
+        else:
+            penalty /= abs(max_std-min_std)**desired_power
 
     penalty /= batch_size
     penalty *= volume_element
@@ -209,14 +575,19 @@ class DeepSmoothingModel(nn.Module):
         if max(gaussian_stds) > gaussian_stds[-1]:
             raise ValueError('The last standard deviation needs to be the largest')
 
-        self.params = params
+        self.omt_weight_penalty = params[('omt_weight_penalty', 25.0, 'Penalty for the optimal mass transport')]
+        self.omt_use_log_transformed_std = params[('omt_use_log_transformed_std', False,
+                                                        'If set to true the standard deviations are log transformed for the computation of OMT')]
+        """if set to true the standard deviations are log transformed for the OMT computation"""
 
-        self.omt_weight_penalty = self.params[('omt_weight_penalty', 25.0, 'Penalty for the optimal mass transport')]
-        self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 1.0, 'Penalize the total variation of the weights if desired')]
-        self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty',0.0,'Penalized the squared gradient of the weights')]
-
-        self.omt_power = self.params[('omt_power', 2.0, 'Power for the optimal mass transport (i.e., to which power distances are penalized')]
+        self.omt_power = params[('omt_power', 2.0, 'Power for the optimal mass transport (i.e., to which power distances are penalized')]
         """optimal mass transport power"""
+
+        cparams = params[('deep_smoother',{})]
+        self.params = cparams
+
+        self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty', 0.0, 'Penalized the squared gradient of the weights')]
+        self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 1.0, 'Penalize the total variation of the weights if desired')]
 
         self.do_input_standardization = self.params[('do_input_standardization',True,'if true, subtracts the mean from any image input and leaves momentum as is')]
         """if true subtracts the mean from all image input before running it through the network"""
@@ -662,11 +1033,16 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         else:
             weights = F.softmax(decoder_output, dim=1)
 
-        # compute tht total variation penalty
+        # compute the total variation penalty
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
+            # first compute the edge map
+            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing)
+            batch_size = I.size()[0]
             for g in range(self.nr_of_gaussians):
-                total_variation_penalty += self.compute_total_variation(weights[:, g, ...])
+                # total_variation_penalty += self.compute_total_variation(weights[:,g,...])
+                c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
+                total_variation_penalty += (g_I * c_local_norm_grad).sum() * self.volumeElement / batch_size
 
         diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.diffusion_weight_penalty > 0:
@@ -691,13 +1067,14 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             yc = torch.sum(roc * weights, dim=1)
             ret[:, n, ...] = yc  # ret is: batch x channels x X x Y
 
+
         current_omt_penalty = self.omt_weight_penalty * compute_omt_penalty(weights, self.gaussian_stds,
-                                                                            self.volumeElement, self.omt_power)
+                                                                        self.volumeElement, self.omt_power, self.omt_use_log_transformed_std)
         self.current_penalty = current_omt_penalty
         if self.total_variation_weight_penalty > 0:
             current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
-            #print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
-            #      'OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()))
+            print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
+                  'OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()))
             self.current_penalty += current_tv_penalty
 
         if retain_weights:
@@ -901,11 +1278,16 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         else:
             weights = F.softmax(y, dim=1)
 
-        # compute tht total variation penalty
+        # compute the total variation penalty
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
+            # first compute the edge map
+            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing)
+            batch_size = I.size()[0]
             for g in range(self.nr_of_gaussians):
-                total_variation_penalty += self.compute_total_variation(weights[:,g,...])
+                #total_variation_penalty += self.compute_total_variation(weights[:,g,...])
+                c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
+                total_variation_penalty += (g_I*c_local_norm_grad).sum()*self.volumeElement/batch_size
 
         diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.diffusion_weight_penalty > 0:
@@ -928,15 +1310,16 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             yc = torch.sum(roc*weights,dim=1)
             ret[:, n, ...] = yc # ret is: batch x channels x X x Y
 
-        current_omt_penalty = self.omt_weight_penalty*compute_omt_penalty(weights,self.gaussian_stds,self.volumeElement,self.omt_power)
-        current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
         current_diffusion_penalty = self.diffusion_weight_penalty * diffusion_penalty
 
-        #print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
-        #      '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \
-        #      '; diffusion_penalty = ' + str(current_diffusion_penalty.data.cpu().numpy()))
-
+        current_omt_penalty = self.omt_weight_penalty*compute_omt_penalty(weights,self.gaussian_stds,self.volumeElement,self.omt_power,self.omt_use_log_transformed_std)
+        current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
         self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
+
+        print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
+              '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \
+              '; diffusion_penalty = ' + str(current_diffusion_penalty.data.cpu().numpy()))
+
 
         if retain_weights:
             # todo: change visualization to work with this new format:
@@ -982,13 +1365,13 @@ class DeepSmootherFactory(object):
                                                           dim=self.dim,
                                                           spacing=self.spacing,
                                                           nr_of_image_channels=self.nr_of_image_channels,
-                                                          params=cparams)
+                                                          params=params)
         elif smootherType=='encoder_decoder':
             return EncoderDecoderSmoothingModel(nr_of_gaussians=self.nr_of_gaussians,
                                                   gaussian_stds=self.gaussian_stds,
                                                   dim=self.dim,
                                                   spacing=self.spacing,
                                                   nr_of_image_channels=self.nr_of_image_channels,
-                                                  params=cparams)
+                                                  params=params)
         else:
             raise ValueError('Deep smoother: ' + smootherType + ' not known')
