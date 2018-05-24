@@ -666,7 +666,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
             self.multi_gaussian_weights += (1. - weight_sum) / len(self.multi_gaussian_weights)
             params['multi_gaussian_weights'] = self.multi_gaussian_weights.tolist()
 
-        assert (np.array(self.multi_gaussian_weights)).sum() == 1.
+        #assert (np.array(self.multi_gaussian_weights)).sum() == 1.
         assert len(self.multi_gaussian_weights) == len(self.multi_gaussian_stds)
 
         self.nr_of_gaussians = len(self.multi_gaussian_stds)
