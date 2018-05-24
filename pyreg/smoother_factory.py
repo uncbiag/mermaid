@@ -9,6 +9,8 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
+import numpy.testing as npt
+
 from data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
 import finite_differences as fd
@@ -571,7 +573,7 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
             self.multi_gaussian_weights += (1.-weight_sum)/len(self.multi_gaussian_weights)
             params['multi_gaussian_weights'] = self.multi_gaussian_weights.tolist()
 
-        assert (np.array(self.multi_gaussian_weights)).sum()==1.
+        npt.assert_almost_equal((np.array(self.multi_gaussian_weight)).sum(),1.)
 
     def _create_filter(self):
 
@@ -666,7 +668,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
             self.multi_gaussian_weights += (1. - weight_sum) / len(self.multi_gaussian_weights)
             params['multi_gaussian_weights'] = self.multi_gaussian_weights.tolist()
 
-        #assert (np.array(self.multi_gaussian_weights)).sum() == 1.
+        npt.assert_almost_equal((np.array(self.multi_gaussian_weight)).sum(),1.)
         assert len(self.multi_gaussian_weights) == len(self.multi_gaussian_stds)
 
         self.nr_of_gaussians = len(self.multi_gaussian_stds)
