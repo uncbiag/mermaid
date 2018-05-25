@@ -657,7 +657,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         """determines if we should optimize over the smoother global weights"""
 
         # todo: maybe make this more generic; there is an explicit float here
-        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(self.multi_gaussian_stds.copy()).float(), requires_grad=False))
+        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(self.multi_gaussian_weights.copy()).float(), requires_grad=False))
         self.default_multi_gaussian_weights /= self.default_multi_gaussian_weights.sum()
 
         self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', self.default_multi_gaussian_weights.data.cpu().numpy().tolist(),'weights for the multiple Gaussians')])
@@ -893,7 +893,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         """at what iteration the optimization over weights or stds should start"""
 
         # todo: maybe make this more generic; there is an explicit float here
-        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(self.multi_gaussian_stds.copy()).float(),requires_grad=False))
+        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(self.multi_gaussian_weights.copy()).float(),requires_grad=False))
         self.default_multi_gaussian_weights /= self.default_multi_gaussian_weights.sum()
 
         self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', self.default_multi_gaussian_weights.data.cpu().numpy().tolist(), 'weights for the multiple Gaussians')])

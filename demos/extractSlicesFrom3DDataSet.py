@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import str
+
 import set_pyreg_paths
 
 import pyreg.fileio as fileio

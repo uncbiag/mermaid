@@ -1,3 +1,7 @@
+from __future__ import print_function
+from builtins import str
+from builtins import range
+
 import set_pyreg_paths
 
 import matplotlib as matplt
@@ -410,7 +414,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
         plt.show()
 
     return I0_source.data.cpu().numpy(), I1_warped.data.cpu().numpy(), weights, \
-           I0_label.data.cpu().numpy(), I1_label.data.cpu().numpy()
+           I0_label.data.cpu().numpy(), I1_label.data.cpu().numpy(), phi1.data.cpu().numpy(), m
 
 
 if __name__ == "__main__":
@@ -532,27 +536,30 @@ if __name__ == "__main__":
         else:
             print_warped_name = None
 
-        I0Source, I1Target, weights, I0Label, I1Label = create_random_image_pair(weights_not_fluid=weights_not_fluid,
-                                                               weights_fluid=weights_fluid,
-                                                               weights_neutral=weights_neutral,
-                                                               multi_gaussian_stds=multi_gaussian_stds,
-                                                               randomize_momentum_on_circle=randomize_momentum_on_circle,
-                                                               randomize_in_sectors=randomize_in_sectors,
-                                                               put_weights_between_circles=put_weights_between_circles,
-                                                               start_with_fluid_weight=start_with_fluid_weight,
-                                                               nr_of_circles_to_generate=nr_of_circles_to_generate,
-                                                               circle_extent=circle_extent,
-                                                               sz=sz,spacing=spacing,
-                                                               visualize=visualize,
-                                                               visualize_warped=visualize_warped,
-                                                               print_warped_name=print_warped_name)
+        I0Source, I1Target, weights, I0Label, I1Label, gt_map, gt_m = \
+            create_random_image_pair(weights_not_fluid=weights_not_fluid,
+                                     weights_fluid=weights_fluid,
+                                     weights_neutral=weights_neutral,
+                                     multi_gaussian_stds=multi_gaussian_stds,
+                                     randomize_momentum_on_circle=randomize_momentum_on_circle,
+                                     randomize_in_sectors=randomize_in_sectors,
+                                     put_weights_between_circles=put_weights_between_circles,
+                                     start_with_fluid_weight=start_with_fluid_weight,
+                                     nr_of_circles_to_generate=nr_of_circles_to_generate,
+                                     circle_extent=circle_extent,
+                                     sz=sz,spacing=spacing,
+                                     visualize=visualize,
+                                     visualize_warped=visualize_warped,
+                                     print_warped_name=print_warped_name)
 
         source_filename = os.path.join(image_output_dir,'m{:d}.nii'.format(2*n+1))
         target_filename = os.path.join(image_output_dir,'m{:d}.nii'.format(2*n+1+1))
         source_label_filename = os.path.join(label_output_dir, 'm{:d}.nii'.format(2 * n + 1))
         target_label_filename = os.path.join(label_output_dir, 'm{:d}.nii'.format(2 * n + 1 + 1))
 
-        weights_filename = os.path.join(misc_output_dir,'weights_{:05d}.pt'.format(2*n+1))
+        gt_weights_filename = os.path.join(misc_output_dir,'gt_weights_{:05d}.pt'.format(2*n+1))
+        gt_momentum_filename = os.path.join(misc_output_dir,'gt_momentum_{:05d}.pt'.format(2*n+1))
+        gt_map_filename = os.path.join(misc_output_dir,'gt_map_{:05d}.pt'.format(2*n+1))
 
         reshape_size = list(sz[2:]) + [1]
 
@@ -563,7 +570,9 @@ if __name__ == "__main__":
         im_io.write(filename=source_label_filename, data=I0Label.view().reshape(reshape_size), hdr=hdr)
         im_io.write(filename=target_label_filename, data=I1Label.view().reshape(reshape_size), hdr=hdr)
 
-        torch.save(weights,weights_filename)
+        torch.save(weights,gt_weights_filename)
+        torch.save(gt_map,gt_map_filename)
+        torch.save(gt_m,gt_momentum_filename)
 
         # create source/target configuration
         pt['source_images'].append(source_filename)
