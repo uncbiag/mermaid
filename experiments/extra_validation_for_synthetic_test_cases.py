@@ -281,6 +281,9 @@ def compute_and_visualize_validation_result(multi_gaussian_stds_synth,
     map = torch.load(map_output_filename_pt).data.cpu().numpy()
     momentum = torch.load(momentum_output_filename_pt).data.cpu().numpy()
 
+    if print_images:
+        visualize = True
+
     weights_dict = torch.load(weights_output_filename_pt)
     if not compare_global_weights:
         if 'local_weights' in weights_dict:
@@ -447,12 +450,15 @@ def _show_global_local_boxplot_summary(current_stats,title):
     _plot_boxplot(compound_results, compound_names)
     plt.title(title)
 
-def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False):
+def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False, print_images=False):
     # there is a lot of stats info in 'all_stats'
     # let's show the boxplots over the medians for the different regions and overall
 
     ws = all_stats['weight_stats']
     ms = all_stats['map_stats']
+
+    if print_images:
+        visualize = True
 
     _show_global_local_boxplot_summary(ms,'map validation results')
     if visualize:
@@ -607,7 +613,8 @@ if __name__ == "__main__":
 
     show_boxplot_summary(all_stats,
                          print_output_directory=print_output_directory,
-                         visualize=not args.do_not_visualize)
+                         visualize=not args.do_not_visualize,
+                         print_images=not args.do_not_print_images)
 
     if not args.do_not_print_images:
         # if we have pdfjam we create a summary pdf
