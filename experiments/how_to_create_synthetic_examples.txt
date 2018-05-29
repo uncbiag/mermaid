@@ -1,0 +1,31 @@
+Synthetic examples can be created using the ../demos/create_synthetic_regularization_test_cases.py script.
+
+All the options can be seen via the help command:
+
+python create_synthetic_regularization_test_cases.py --help
+
+By default 10 image pairs are created. If more pairs are desired this can be specified with the command line argument --nr_of_pairs_to_generate, e.g.,
+
+python create_synthetic_regularization_test_cases.py --nr_of_pairs_to_generate 300
+
+This uses reasonable default settings, which will be documented after running in the config.json file in the output directory (default output directory is synthetic_example_out).
+
+One can also use this config.json file (let's say it was renamed to myconfig.json), modify settings as desired and then use these different settings to generate the synthetic examples, i.e.,
+
+python create_synthetic_regularization_test_cases.py --nr_of_pairs_to_generate 300 --config myconfig.json
+
+The config.json file is read in the extra_validation_for_synthetic_test_cases.py script to keep track of what standard deviations were used when creating these synthetic cases. If the same standard deviations as for running the experiments were used then weights are directly compared to each other, otherwise only the overall resulting standard deviations will be compared.
+
+Once, the synthetic experimental data has been generated it can be run just like any other data.
+
+After this is done some extra validation is possible, which evaluates the estimated weights and standard deviations and which also outputs region-specific information (for the different circles).
+
+For this execute extra_validation_for_synthetic_test_cases.py, for example as
+
+python extra_validation_for_synthetic_test_cases.py --config test2d_025.json
+--input_image_directory /Users/mn/PycharmProjects/mermaid/experiments/synthetic_example_out/brain_affine_icbm --output_directory ./experimental_results_synth_2d/out_test_synth_new --stage_nr 2
+
+The command line arguments are consistent with the other experimental scripts.
+
+Output is generated in the output directory under folders pdf_extra_validation ...
+
