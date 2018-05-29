@@ -467,14 +467,14 @@ def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False
         if print_output_directory is None:
             plt.show()
         else:
-            plt.savefig(os.path.join(print_output_directory, 'stat_summary_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'))
+            plt.savefig(os.path.join(print_output_directory, 'stat_summary_map_validation.pdf'))
 
     _show_global_local_boxplot_summary(ws['overall_stds'],'overall stds results')
     if visualize:
         if print_output_directory is None:
             plt.show()
         else:
-            plt.savefig(os.path.join(print_output_directory, 'stat_summary_{:0>3d}'.format(pair_nr) + '_overall_stds_validation.pdf'))
+            plt.savefig(os.path.join(print_output_directory, 'stat_summary_overall_stds_validation.pdf'))
 
 
     for k in ws['weights']:
@@ -483,9 +483,7 @@ def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False
             if print_output_directory is None:
                 plt.show()
             else:
-                plt.savefig(os.path.join(print_output_directory, 'stat_summary_{:0>3d}'.format(pair_nr) + '_weight_{:d}_validation.pdf'.format(k)))
-
-    print('Hello')
+                plt.savefig(os.path.join(print_output_directory, 'stat_summary_weight_{:d}_validation.pdf'.format(k)))
 
 if __name__ == "__main__":
 
