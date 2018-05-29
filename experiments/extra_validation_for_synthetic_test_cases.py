@@ -3,6 +3,8 @@ from builtins import str
 from builtins import range
 
 import set_pyreg_paths
+# needs to be imported before matplotlib to assure proper plotting
+import pyreg.visualize_registration_results as vizReg
 
 import torch
 from torch.autograd import Variable
