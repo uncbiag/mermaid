@@ -232,6 +232,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
                              randomize_momentum_on_circle,randomize_in_sectors,
                              put_weights_between_circles,
                              start_with_fluid_weight,
+                             use_random_source,
                              nr_of_circles_to_generate,
                              circle_extent,
                              sz,spacing,visualize=False,visualize_warped=False,print_warped_name=None):
@@ -440,6 +441,8 @@ if __name__ == "__main__":
     parser.add_argument('--nr_of_circles_to_generate', required=False, default=None, type=int, help='number of circles to generate in an image') #2
     parser.add_argument('--circle_extent', required=False, default=None, type=float, help='Size of largest circle; image is [-0.5,0.5]^2') # 0.25
 
+    parser.add_argument('--do_not_use_random_source', action='strore_true', help='if set then inital source image is circle, otherwise it also already has a random transformation')
+
     parser.add_argument('--do_not_randomize_momentum', action='store_true', help='if set, momentum is deterministic')
     parser.add_argument('--do_not_randomize_in_sectors', action='store_true', help='if set and randomize momentum is on, momentum is only randomized uniformly over circles')
     parser.add_argument('--put_weights_between_circles', action='store_true', help='if set, the weights will change in-between circles, otherwise they will be colocated with the circles')
@@ -471,6 +474,7 @@ if __name__ == "__main__":
     randomize_in_sectors = get_parameter_value(not args.do_not_randomize_in_sectors, params, 'randomize_in_sectors', True, 'randomized the momentum sector by sector')
     put_weights_between_circles = get_parameter_value(args.put_weights_between_circles, params, 'put_weights_between_circles', False, 'if set, the weights will change in-between circles, otherwise they will be colocated with the circles')
     start_with_fluid_weight = get_parameter_value(args.start_with_fluid_weight, params, 'start_with_fluid_weight', False, 'if set then the innermost circle is not fluid, otherwise it is fluid')
+    use_random_source = get_parameter_value(not args.do_not_use_random_source, params, 'use_random_source', True, 'if set then source image is already deformed (and no longer circular)')
 
     if args.stds is None:
         multi_gaussian_stds_p = None
@@ -587,6 +591,7 @@ if __name__ == "__main__":
                                      randomize_in_sectors=randomize_in_sectors,
                                      put_weights_between_circles=put_weights_between_circles,
                                      start_with_fluid_weight=start_with_fluid_weight,
+                                     use_random_source=use_random_source,
                                      nr_of_circles_to_generate=nr_of_circles_to_generate,
                                      circle_extent=circle_extent,
                                      sz=sz,spacing=spacing,
