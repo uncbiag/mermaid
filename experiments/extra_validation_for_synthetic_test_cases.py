@@ -3,6 +3,8 @@ from builtins import str
 from builtins import range
 
 import set_pyreg_paths
+# needs to be imported before matplotlib to assure proper plotting
+import pyreg.visualize_registration_results as vizReg
 
 import torch
 from torch.autograd import Variable
@@ -281,6 +283,9 @@ def compute_and_visualize_validation_result(multi_gaussian_stds_synth,
     map = torch.load(map_output_filename_pt).data.cpu().numpy()
     momentum = torch.load(momentum_output_filename_pt).data.cpu().numpy()
 
+    if print_images:
+        visualize = True
+
     weights_dict = torch.load(weights_output_filename_pt)
     if not compare_global_weights:
         if 'local_weights' in weights_dict:
@@ -447,26 +452,29 @@ def _show_global_local_boxplot_summary(current_stats,title):
     _plot_boxplot(compound_results, compound_names)
     plt.title(title)
 
-def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False):
+def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False, print_images=False):
     # there is a lot of stats info in 'all_stats'
     # let's show the boxplots over the medians for the different regions and overall
 
     ws = all_stats['weight_stats']
     ms = all_stats['map_stats']
 
+    if print_images:
+        visualize = True
+
     _show_global_local_boxplot_summary(ms,'map validation results')
     if visualize:
         if print_output_directory is None:
             plt.show()
         else:
-            plt.savefig(os.path.join(print_output_directory, 'stat_summary_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'))
+            plt.savefig(os.path.join(print_output_directory, 'stat_summary_map_validation.pdf'))
 
     _show_global_local_boxplot_summary(ws['overall_stds'],'overall stds results')
     if visualize:
         if print_output_directory is None:
             plt.show()
         else:
-            plt.savefig(os.path.join(print_output_directory, 'stat_summary_{:0>3d}'.format(pair_nr) + '_overall_stds_validation.pdf'))
+            plt.savefig(os.path.join(print_output_directory, 'stat_summary_overall_stds_validation.pdf'))
 
 
     for k in ws['weights']:
@@ -475,9 +483,7 @@ def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False
             if print_output_directory is None:
                 plt.show()
             else:
-                plt.savefig(os.path.join(print_output_directory, 'stat_summary_{:0>3d}'.format(pair_nr) + '_weight_{:d}_validation.pdf'.format(k)))
-
-    print('Hello')
+                plt.savefig(os.path.join(print_output_directory, 'stat_summary_weight_{:d}_validation.pdf'.format(k)))
 
 if __name__ == "__main__":
 
@@ -607,7 +613,8 @@ if __name__ == "__main__":
 
     show_boxplot_summary(all_stats,
                          print_output_directory=print_output_directory,
-                         visualize=not args.do_not_visualize)
+                         visualize=not args.do_not_visualize,
+                         print_images=not args.do_not_print_images)
 
     if not args.do_not_print_images:
         # if we have pdfjam we create a summary pdf
