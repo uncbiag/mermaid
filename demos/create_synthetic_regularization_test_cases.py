@@ -417,16 +417,28 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
            I0_label.data.cpu().numpy(), I1_label.data.cpu().numpy(), phi1.data.cpu().numpy(), m
 
 
+def get_parameter_value(command_line_par,params, params_name, default_val, params_description):
+
+    if command_line_par is None:
+        ret = params[(params_name, default_val, params_description)]
+    else:
+        params[params_name]=command_line_par
+        ret = command_line_par
+
+    return ret
+
 if __name__ == "__main__":
 
     import argparse
 
     parser = argparse.ArgumentParser(description='Creates a synthetic registration results')
 
+    parser.add_argument('--config', required=False, default=None, help='The main json configuration file that can be used to define the settings')
+
     parser.add_argument('--output_directory', required=False, default='synthetic_example_out', help='Where the output was stored (now this will be the input directory)')
     parser.add_argument('--nr_of_pairs_to_generate', required=False, default=10, type=int, help='number of image pairs to generate')
-    parser.add_argument('--nr_of_circles_to_generate', required=False, default=2, type=int, help='number of circles to generate in an image')
-    parser.add_argument('--circle_extent', required=False, default=0.25, type=float, help='Size of largest circle; image is [-0.5,0.5]^2')
+    parser.add_argument('--nr_of_circles_to_generate', required=False, default=None, type=int, help='number of circles to generate in an image') #2
+    parser.add_argument('--circle_extent', required=False, default=None, type=float, help='Size of largest circle; image is [-0.5,0.5]^2') # 0.25
 
     parser.add_argument('--do_not_randomize_momentum', action='store_true', help='if set, momentum is deterministic')
     parser.add_argument('--do_not_randomize_in_sectors', action='store_true', help='if set and randomize momentum is on, momentum is only randomized uniformly over circles')
@@ -438,52 +450,86 @@ if __name__ == "__main__":
     parser.add_argument('--weights_fluid', required=False,type=str, default=None, help='weights for a fluid circle; default=[0.2,0.5,0.2,0.1]')
     parser.add_argument('--weights_background', required=False,type=str, default=None, help='weights for the background; default=[0,0,0,1]')
 
+    parser.add_argument('--sz', required=False, type=str, default=None, help='Desired size of synthetic example; default=[128,128]')
+
     args = parser.parse_args()
+
+    params = pars.ParameterDict()
+    if args.config is not None:
+        # load the configuration
+        params.load_JSON(args.config)
 
     visualize = False
     visualize_warped = True
     print_images = True
 
     nr_of_pairs_to_generate = args.nr_of_pairs_to_generate
-    nr_of_circles_to_generate = args.nr_of_circles_to_generate
-    circle_extent = args.circle_extent
-    randomize_momentum_on_circle = not args.do_not_randomize_momentum
-    randomize_in_sectors = not args.do_not_randomize_in_sectors
-    put_weights_between_circles = args.put_weights_between_circles
-    start_with_fluid_weight = args.start_with_fluid_weight
+
+    nr_of_circles_to_generate = get_parameter_value(args.nr_of_circles_to_generate, params,'nr_of_circles_to_generate', 2, 'number of circles for the synthetic data')
+    circle_extent = get_parameter_value(args.circle_extent, params, 'circle_extent', 0.25, 'Size of largest circle; image is [-0.5,0.5]^2')
+    randomize_momentum_on_circle = get_parameter_value(not args.do_not_randomize_momentum, params, 'randomize_momentum_on_circle', True, 'randomizes the momentum on the circles')
+    randomize_in_sectors = get_parameter_value(not args.do_not_randomize_in_sectors, params, 'randomize_in_sectors', True, 'randomized the momentum sector by sector')
+    put_weights_between_circles = get_parameter_value(args.put_weights_between_circles, params, 'put_weights_between_circles', False, 'if set, the weights will change in-between circles, otherwise they will be colocated with the circles')
+    start_with_fluid_weight = get_parameter_value(args.start_with_fluid_weight, params, 'start_with_fluid_weight', False, 'if set then the innermost circle is not fluid, otherwise it is fluid')
 
     if args.stds is None:
-        multi_gaussian_stds = np.array([0.01, 0.05, 0.1, 0.2])
+        multi_gaussian_stds_p = None
     else:
         mgsl = [float(item) for item in args.stds.split(',')]
-        multi_gaussian_stds = np.array(mgsl)
+        multi_gaussian_stds_p = list(np.array(mgsl))
+
+    multi_gaussian_stds = get_parameter_value(multi_gaussian_stds_p, params, 'multi_gaussian_stds', list(np.array([0.01, 0.05, 0.1, 0.2])), 'multi gaussian standard deviations')
+    multi_gaussian_stds = np.array(multi_gaussian_stds)
 
     if args.weights_not_fluid is None:
-        weights_not_fluid = np.array([0,0,0,1.0])
+        weights_not_fluid_p = None
     else:
-        cw = [float(item) for item in args.stds.split(',')]
-        weights_not_fluid = np.array(cw)
+        cw = [float(item) for item in args.weights_not_fluid.split(',')]
+        weights_not_fluid_p = list(np.array(cw))
+
+    weights_not_fluid = get_parameter_value(weights_not_fluid_p, params, 'weights_not_fluid', list(np.array([0,0,0,1.0])), 'weights for the non-fluid regions')
+    weights_not_fluid = np.array(weights_not_fluid)
 
     if len(weights_not_fluid)!=len(multi_gaussian_stds):
         raise ValueError('Need as many weights as there are standard deviations')
 
+
     if args.weights_fluid is None:
-        weights_fluid = np.array([0.2,0.5,0.2,0.1])
+        weights_fluid_p = None
     else:
-        cw = [float(item) for item in args.stds.split(',')]
-        weights_fluid = np.array(cw)
+        cw = [float(item) for item in args.weights_fluid.split(',')]
+        weights_fluid_p = list(np.array(cw))
+
+    weights_fluid = get_parameter_value(weights_fluid_p, params, 'weights_fluid', list(np.array([0.2,0.5,0.2,0.1])), 'weights for fluid regions')
+    weights_fluid = np.array(weights_fluid)
 
     if len(weights_fluid)!=len(multi_gaussian_stds):
         raise ValueError('Need as many weights as there are standard deviations')
 
     if args.weights_background is None:
-        weights_neutral = np.array([0,0,0,1.0])
+        weights_neutral_p = None
     else:
-        cw = [float(item) for item in args.stds.split(',')]
-        weights_neutral = np.array(cw)
+        cw = [float(item) for item in args.weights_background.split(',')]
+        weights_neutral_p = list(np.array(cw))
+
+    weights_neutral = get_parameter_value(weights_neutral_p, params, 'weights_neutral', list(np.array([0,0,0,1.0])), 'weights in the neutral/background region')
+    weights_neutral = np.array(weights_neutral)
 
     if len(weights_neutral)!=len(multi_gaussian_stds):
         raise ValueError('Need as many weights as there are standard deviations')
+
+    if args.sz is None:
+        sz_p = None
+    else:
+        cw = [int(item) for item in args.sz.split(',')]
+        sz_p = np.array(cw)
+
+    sz = get_parameter_value(sz_p, params, 'sz', [128,128], 'size of the synthetic example')
+    if len(sz) != 2:
+        raise ValueError('Only two dimensional synthetic examples are currently supported for sz parameter')
+
+    sz = [1, 1, sz[0], sz[1]]
+    spacing = 1.0 / (np.array(sz[2:]) - 1)
 
     output_dir = args.output_directory
 
@@ -506,10 +552,6 @@ if __name__ == "__main__":
 
     if not os.path.isdir(pdf_output_dir):
         os.makedirs(pdf_output_dir)
-
-    sz = [1,1,128,128]
-    spacing = 1.0/(np.array(sz[2:])-1)
-
 
     pt = dict()
     pt['source_images'] = []
@@ -582,4 +624,7 @@ if __name__ == "__main__":
 
     filename_pt = os.path.join(output_dir,'used_image_pairs.pt')
     torch.save(pt,filename_pt)
+
+    config_json = os.path.join(output_dir,'config.json')
+    params.write_JSON(config_json)
 

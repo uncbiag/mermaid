@@ -156,7 +156,7 @@ def _load_current_source_and_target_images_as_variables(current_source_filename,
 
     im_io = FIO.ImageIO()
 
-    ISource, hdr, spacing, normalized_spacing_ = im_io.read_batch_to_nc_format([current_source_filename],
+    ISource, hdr, spacing, normalized_spacing = im_io.read_batch_to_nc_format([current_source_filename],
                                                              intensity_normalize=intensity_normalize,
                                                              squeeze_image=squeeze_image,
                                                              normalize_spacing=normalize_spacing,

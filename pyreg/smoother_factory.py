@@ -656,8 +656,11 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         self.optimize_over_smoother_weights = params[('optimize_over_smoother_weights', False, 'if set to true the smoother will optimize over the *global* weights')]
         """determines if we should optimize over the smoother global weights"""
 
+        self.nr_of_gaussians = len(self.multi_gaussian_stds)
+        """number of Gaussians"""
         # todo: maybe make this more generic; there is an explicit float here
-        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(self.multi_gaussian_weights.copy()).float(), requires_grad=False))
+
+        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(np.ones(self.nr_of_gaussians) / self.nr_of_gaussians).float(),requires_grad=False))
         self.default_multi_gaussian_weights /= self.default_multi_gaussian_weights.sum()
 
         self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', self.default_multi_gaussian_weights.data.cpu().numpy().tolist(),'weights for the multiple Gaussians')])
@@ -673,9 +676,6 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
 
         npt.assert_almost_equal((np.array(self.multi_gaussian_weights)).sum(),1.)
         assert len(self.multi_gaussian_weights) == len(self.multi_gaussian_stds)
-
-        self.nr_of_gaussians = len(self.multi_gaussian_stds)
-        """number of Gaussians"""
 
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, self.nr_of_gaussians)
         """creates the smoothed vector fields"""
@@ -863,8 +863,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
     def __init__(self, sz, spacing, params):
         super(LearnedMultiGaussianCombinationFourierSmoother, self).__init__(sz, spacing, params)
 
-        self.multi_gaussian_stds = np.array(
-            params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')])
+        self.multi_gaussian_stds = np.array(params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')])
         """standard deviations of Gaussians"""
         self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussians')]
         """minimal allowed standard deviation during optimization"""
@@ -892,8 +891,11 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                     'Does not optimize the parameters before this iteration')]
         """at what iteration the optimization over weights or stds should start"""
 
+        self.nr_of_gaussians = len(self.multi_gaussian_stds)
+        """number of Gaussians"""
         # todo: maybe make this more generic; there is an explicit float here
-        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(self.multi_gaussian_weights.copy()).float(),requires_grad=False))
+
+        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(np.ones(self.nr_of_gaussians)/self.nr_of_gaussians).float(),requires_grad=False))
         self.default_multi_gaussian_weights /= self.default_multi_gaussian_weights.sum()
 
         self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', self.default_multi_gaussian_weights.data.cpu().numpy().tolist(), 'weights for the multiple Gaussians')])
@@ -901,8 +903,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.gaussianWeight_min = params[('gaussian_weight_min', 0.0001, 'minimal allowed weight for the Gaussians')]
         """minimal allowed weight during optimization"""
 
-        self.nr_of_gaussians = len(self.multi_gaussian_stds)
-        """number of Gaussians"""
 
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, self.nr_of_gaussians)
         """creates the smoothed vector fields"""
