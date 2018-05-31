@@ -435,7 +435,9 @@ def _plot_boxplot(compound_results,compound_names):
     bp['whiskers'][-2].set(color='red')
     bp['fliers'][-1].set(color='red', markeredgecolor='red')
 
-def _show_global_local_boxplot_summary(current_stats,title):
+def _show_global_local_boxplot_summary(current_stats,title,desired_stat='median'):
+
+    # desired stat should be 'median' or 'mean'
 
     plt.clf()
 
@@ -443,10 +445,10 @@ def _show_global_local_boxplot_summary(current_stats,title):
     compound_names = []
 
     for k in current_stats['local']:
-        compound_results.append(current_stats['local'][k]['median'])
+        compound_results.append(current_stats['local'][k][desired_stat])
         compound_names.append(str(k))
 
-    compound_results.append(current_stats['global']['median'])
+    compound_results.append(current_stats['global'][desired_stat])
     compound_names.append('global')
 
     _plot_boxplot(compound_results, compound_names)
@@ -462,28 +464,32 @@ def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False
     if print_images:
         visualize = True
 
-    _show_global_local_boxplot_summary(ms,'map validation results')
-    if visualize:
-        if print_output_directory is None:
-            plt.show()
-        else:
-            plt.savefig(os.path.join(print_output_directory, 'stat_summary_map_validation.pdf'))
+    desired_stats = ['mean','median']
 
-    _show_global_local_boxplot_summary(ws['overall_stds'],'overall stds results')
-    if visualize:
-        if print_output_directory is None:
-            plt.show()
-        else:
-            plt.savefig(os.path.join(print_output_directory, 'stat_summary_overall_stds_validation.pdf'))
+    for current_stat in desired_stats:
 
-
-    for k in ws['weights']:
-        _show_global_local_boxplot_summary(ws['weights'][k], 'weight {:d} results'.format(k))
+        _show_global_local_boxplot_summary(ms,'map validation results (estimated-truth)',current_stat)
         if visualize:
             if print_output_directory is None:
                 plt.show()
             else:
-                plt.savefig(os.path.join(print_output_directory, 'stat_summary_weight_{:d}_validation.pdf'.format(k)))
+                plt.savefig(os.path.join(print_output_directory, 'stat_summary_map_validation_{:s}.pdf'.format(current_stat)))
+
+        _show_global_local_boxplot_summary(ws['overall_stds'],'overall stds results (estimated-truth)',current_stat)
+        if visualize:
+            if print_output_directory is None:
+                plt.show()
+            else:
+                plt.savefig(os.path.join(print_output_directory, 'stat_summary_overall_stds_validation_{:s}.pdf'.format(current_stat)))
+
+
+        for k in ws['weights']:
+            _show_global_local_boxplot_summary(ws['weights'][k], 'weight {:d} results (estimated-truth)'.format(k),current_stat)
+            if visualize:
+                if print_output_directory is None:
+                    plt.show()
+                else:
+                    plt.savefig(os.path.join(print_output_directory, 'stat_summary_weight_{:d}_validation_{:s}.pdf'.format(k,current_stat)))
 
 if __name__ == "__main__":
 
