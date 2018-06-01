@@ -1,0 +1,483 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>config_parser &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="../index.html"/>
+        <link rel="up" title="Module code" href="index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notes/howto_own_registration.html">How to write your own registration model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notes/todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config_parser.html">Config parser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_wrapper.html">Data wrapper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fileio.html">fileio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../image_manipulations.html">Image manipulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../load_default_settings.html">Load default settings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>config_parser</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for config_parser</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">module_parameters</span> <span class="k">as</span> <span class="nn">pars</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+
+<span class="c1"># first define all the configuration filenames</span>
+<span class="n">this_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+<span class="c1"># __file__ is the absolute path to the current python file.</span>
+
+<span class="n">_compute_settings_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">this_directory</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;../settings/compute_settings.json&#39;</span><span class="p">)</span>
+<span class="n">_compute_settings_comments_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">this_directory</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;../settings/compute_settings_comments.json&#39;</span><span class="p">)</span>
+
+<span class="n">_baseconf_settings_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">this_directory</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;../settings/baseconf_settings.json&#39;</span><span class="p">)</span>
+<span class="n">_baseconf_settings_filename_comments</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">this_directory</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;../settings/baseconf_settings_comments.json&#39;</span><span class="p">)</span>
+
+<span class="n">_algconf_settings_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">this_directory</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;../settings/algconf_settings.json&#39;</span><span class="p">)</span>
+<span class="n">_algconf_settings_filename_comments</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">this_directory</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;../settings/algconf_settings_comments.json&#39;</span><span class="p">)</span>
+
+<span class="n">_democonf_settings_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">this_directory</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;../settings/democonf_settings.json&#39;</span><span class="p">)</span>
+<span class="n">_democonf_settings_filename_comments</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">this_directory</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;../settings/democonf_settings_comments.json&#39;</span><span class="p">)</span>
+
+<span class="n">_datapro_settings_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">this_directory</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;../settings/datapro_settings.json&#39;</span><span class="p">)</span>
+<span class="n">_datapro_settings_filename_comments</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">this_directory</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;../settings/datapro_settings_comments.json&#39;</span><span class="p">)</span>
+
+<span class="n">_respro_settings_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">this_directory</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;../settings/respro_settings.json&#39;</span><span class="p">)</span>
+<span class="n">_respro_settings_filename_comments</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">this_directory</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;../settings/respro_settings_comments.json&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="get_default_compute_settings_filenames"><a class="viewcode-back" href="../config_parser.html#config_parser.get_default_compute_settings_filenames">[docs]</a><span class="k">def</span> <span class="nf">get_default_compute_settings_filenames</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">_compute_settings_filename</span><span class="p">,</span><span class="n">_compute_settings_comments_filename</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="get_default_baseconf_settings_filenames"><a class="viewcode-back" href="../config_parser.html#config_parser.get_default_baseconf_settings_filenames">[docs]</a><span class="k">def</span> <span class="nf">get_default_baseconf_settings_filenames</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">_baseconf_settings_filename</span><span class="p">,</span><span class="n">_baseconf_settings_filename_comments</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="get_default_democonf_settings_filenames"><a class="viewcode-back" href="../config_parser.html#config_parser.get_default_democonf_settings_filenames">[docs]</a><span class="k">def</span> <span class="nf">get_default_democonf_settings_filenames</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">_democonf_settings_filename</span><span class="p">,</span><span class="n">_democonf_settings_filename_comments</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="get_default_algconf_settings_filenames"><a class="viewcode-back" href="../config_parser.html#config_parser.get_default_algconf_settings_filenames">[docs]</a><span class="k">def</span> <span class="nf">get_default_algconf_settings_filenames</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">_algconf_settings_filename</span><span class="p">,</span><span class="n">_algconf_settings_filename_comments</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="get_default_datapro_settings_filenames"><a class="viewcode-back" href="../config_parser.html#config_parser.get_default_datapro_settings_filenames">[docs]</a><span class="k">def</span> <span class="nf">get_default_datapro_settings_filenames</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">_datapro_settings_filename</span><span class="p">,</span><span class="n">_datapro_settings_filename_comments</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="get_default_respro_settings_filenames"><a class="viewcode-back" href="../config_parser.html#config_parser.get_default_respro_settings_filenames">[docs]</a><span class="k">def</span> <span class="nf">get_default_respro_settings_filenames</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">_respro_settings_filename</span><span class="p">,</span><span class="n">_respro_settings_filename_comments</span><span class="p">)</span></div>
+
+<span class="c1"># First get the computational settings that will be used in various parts of the library</span>
+<span class="n">compute_params</span> <span class="o">=</span> <span class="n">pars</span><span class="o">.</span><span class="n">ParameterDict</span><span class="p">()</span>
+<span class="n">compute_params</span><span class="o">.</span><span class="n">print_settings_off</span><span class="p">()</span>
+<span class="n">compute_params</span><span class="o">.</span><span class="n">load_JSON</span><span class="p">(</span><span class="n">get_default_compute_settings_filenames</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+
+<span class="n">compute_params</span><span class="p">[(</span><span class="s1">&#39;compute&#39;</span><span class="p">,{},</span><span class="s1">&#39;how computations are done&#39;</span><span class="p">)]</span>
+<span class="n">CUDA_ON</span> <span class="o">=</span> <span class="n">compute_params</span><span class="p">[</span><span class="s1">&#39;compute&#39;</span><span class="p">][(</span><span class="s1">&#39;CUDA_ON&#39;</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="s1">&#39;Determines if the code should be run on the GPU&#39;</span><span class="p">)]</span>
+<span class="n">USE_FLOAT16</span> <span class="o">=</span> <span class="n">compute_params</span><span class="p">[</span><span class="s1">&#39;compute&#39;</span><span class="p">][(</span><span class="s1">&#39;USE_FLOAT16&#39;</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="s1">&#39;if set to True uses half-precision - not recommended&#39;</span><span class="p">)]</span>
+<span class="n">nr_of_threads</span> <span class="o">=</span> <span class="n">compute_params</span><span class="p">[</span><span class="s1">&#39;compute&#39;</span><span class="p">][(</span><span class="s1">&#39;nr_of_threads&#39;</span><span class="p">,</span><span class="n">mp</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">(),</span><span class="s1">&#39;set the maximal number of threads&#39;</span><span class="p">)]</span>
+<span class="n">MATPLOTLIB_AGG</span> <span class="o">=</span> <span class="n">compute_params</span><span class="p">[</span><span class="s1">&#39;compute&#39;</span><span class="p">][(</span><span class="s1">&#39;MATPLOTLIB_AGG&#39;</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="s1">&#39;Determines how matplotlib plots images. Set to True for remote debugging&#39;</span><span class="p">)]</span>
+
+<div class="viewcode-block" id="get_baseconf_settings"><a class="viewcode-back" href="../config_parser.html#config_parser.get_baseconf_settings">[docs]</a><span class="k">def</span> <span class="nf">get_baseconf_settings</span><span class="p">(</span> <span class="n">baseconf_settings_filename</span> <span class="o">=</span> <span class="kc">None</span> <span class="p">):</span>
+
+    <span class="c1"># These are the parameters for the general I/O and example cases</span>
+    <span class="n">baseconf_params</span> <span class="o">=</span> <span class="n">pars</span><span class="o">.</span><span class="n">ParameterDict</span><span class="p">()</span>
+    <span class="n">baseconf_params</span><span class="p">[(</span><span class="s1">&#39;baseconf&#39;</span><span class="p">,{},</span><span class="s1">&#39;determines if settings should be loaded from file and visualization options&#39;</span><span class="p">)]</span>
+
+    <span class="k">if</span> <span class="n">baseconf_settings_filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="s1">&#39;Loading baseconf configuration from: &#39;</span> <span class="o">+</span> <span class="n">baseconf_settings_filename</span> <span class="p">)</span>
+        <span class="n">baseconf_params</span><span class="o">.</span><span class="n">load_JSON</span><span class="p">(</span> <span class="n">baseconf_settings_filename</span> <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="s1">&#39;Using default baseconf settings from config_parser.py&#39;</span><span class="p">)</span>
+
+    <span class="n">baseconf_params</span><span class="p">[</span><span class="s1">&#39;baseconf&#39;</span><span class="p">][(</span><span class="s1">&#39;load_default_settings_from_default_setting_files&#39;</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="s1">&#39;if set to True default configuration files (in settings directory) are first loaded&#39;</span><span class="p">)]</span>
+    <span class="n">baseconf_params</span><span class="p">[</span><span class="s1">&#39;baseconf&#39;</span><span class="p">][(</span><span class="s1">&#39;load_settings_from_file&#39;</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="s1">&#39;if set to True configuration settings are loaded from file&#39;</span><span class="p">)]</span>
+    <span class="n">baseconf_params</span><span class="p">[</span><span class="s1">&#39;baseconf&#39;</span><span class="p">][(</span><span class="s1">&#39;save_settings_to_file&#39;</span><span class="p">,</span><span class="kc">True</span><span class="p">,</span><span class="s1">&#39;if set to True configuration settings are saved to file&#39;</span><span class="p">)]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">baseconf_params</span><span class="p">[</span><span class="s1">&#39;baseconf&#39;</span><span class="p">][</span><span class="s1">&#39;load_default_settings_from_default_setting_files&#39;</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;HINT: Only compute_settings.json and baseconf_settings.json will be read from file by default.&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;HINT: Set baseconf.load_default_settings_from_default_setting_files to True if you want to use the other setting files in directory settings.&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;HINT: Otherwise the defaults will be as defined in config_parser.py.&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">baseconf_params</span></div>
+
+<div class="viewcode-block" id="get_democonf_settings"><a class="viewcode-back" href="../config_parser.html#config_parser.get_democonf_settings">[docs]</a><span class="k">def</span> <span class="nf">get_democonf_settings</span><span class="p">(</span> <span class="n">democonf_settings_filename</span> <span class="o">=</span> <span class="kc">None</span> <span class="p">):</span>
+
+    <span class="c1"># These are the parameters for the general I/O and example cases</span>
+    <span class="n">democonf_params</span> <span class="o">=</span> <span class="n">pars</span><span class="o">.</span><span class="n">ParameterDict</span><span class="p">()</span>
+    <span class="n">democonf_params</span><span class="p">[(</span><span class="s1">&#39;democonf&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;settings for demo images/examples&#39;</span><span class="p">)]</span>
+
+    <span class="k">if</span> <span class="n">democonf_settings_filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="s1">&#39;Loading democonf configuration from: &#39;</span> <span class="o">+</span> <span class="n">democonf_settings_filename</span> <span class="p">)</span>
+        <span class="n">democonf_params</span><span class="o">.</span><span class="n">load_JSON</span><span class="p">(</span> <span class="n">democonf_settings_filename</span> <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="s1">&#39;Using default democonf settings from config_parser.py&#39;</span> <span class="p">)</span>
+
+    <span class="n">democonf_params</span><span class="p">[</span><span class="s1">&#39;democonf&#39;</span><span class="p">][(</span><span class="s1">&#39;dim&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;Spatial dimension for demo examples 1/2/3&#39;</span><span class="p">)]</span>
+    <span class="n">democonf_params</span><span class="p">[</span><span class="s1">&#39;democonf&#39;</span><span class="p">][(</span><span class="s1">&#39;example_img_len&#39;</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="s1">&#39;side length of image cube for example&#39;</span><span class="p">)]</span>
+    <span class="n">democonf_params</span><span class="p">[</span><span class="s1">&#39;democonf&#39;</span><span class="p">][(</span><span class="s1">&#39;use_real_images&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;if set to true using real and otherwise synthetic images&#39;</span><span class="p">)]</span>
+
+    <span class="k">return</span> <span class="n">democonf_params</span></div>
+
+<div class="viewcode-block" id="get_algconf_settings"><a class="viewcode-back" href="../config_parser.html#config_parser.get_algconf_settings">[docs]</a><span class="k">def</span> <span class="nf">get_algconf_settings</span><span class="p">(</span> <span class="n">algconf_settings_filename</span> <span class="o">=</span> <span class="kc">None</span> <span class="p">):</span>
+
+    <span class="c1"># These are the parameters for the general I/O and example cases</span>
+    <span class="n">algconf_params</span> <span class="o">=</span> <span class="n">pars</span><span class="o">.</span><span class="n">ParameterDict</span><span class="p">()</span>
+    <span class="n">algconf_params</span><span class="p">[(</span><span class="s1">&#39;algconf&#39;</span><span class="p">,{},</span><span class="s1">&#39;settings for the registration algorithms&#39;</span><span class="p">)]</span>
+
+    <span class="k">if</span> <span class="n">algconf_settings_filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="s1">&#39;Loading algconf configuration from: &#39;</span> <span class="o">+</span> <span class="n">algconf_settings_filename</span> <span class="p">)</span>
+        <span class="n">algconf_params</span><span class="o">.</span><span class="n">load_JSON</span><span class="p">(</span> <span class="n">algconf_settings_filename</span> <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="s1">&#39;Using default algconf settings from config_parser.py&#39;</span><span class="p">)</span>
+
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][(</span><span class="s1">&#39;optimizer&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;optimizer settings&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;optimizer&#39;</span><span class="p">][(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;lbfgs_ls&#39;</span><span class="p">,</span> <span class="s1">&#39;name of the optimizer: [lbfgs_ls|adam]&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;optimizer&#39;</span><span class="p">][(</span><span class="s1">&#39;single_scale&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;single scale settings&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;optimizer&#39;</span><span class="p">][</span><span class="s1">&#39;single_scale&#39;</span><span class="p">][(</span><span class="s1">&#39;nr_of_iterations&#39;</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="s1">&#39;number of iterations&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;optimizer&#39;</span><span class="p">][(</span><span class="s1">&#39;multi_scale&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;multi scale settings&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;optimizer&#39;</span><span class="p">][</span><span class="s1">&#39;multi_scale&#39;</span><span class="p">][(</span><span class="s1">&#39;use_multiscale&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;use multi-scale optimizer&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;optimizer&#39;</span><span class="p">][</span><span class="s1">&#39;multi_scale&#39;</span><span class="p">][(</span><span class="s1">&#39;scale_factors&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">],</span> <span class="s1">&#39;how images are scaled&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;optimizer&#39;</span><span class="p">][</span><span class="s1">&#39;multi_scale&#39;</span><span class="p">][(</span><span class="s1">&#39;scale_iterations&#39;</span><span class="p">,</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">20</span><span class="p">],</span> <span class="s1">&#39;number of iterations per scale&#39;</span><span class="p">)]</span>
+
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][(</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;general model settings&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][(</span><span class="s1">&#39;deformation&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;model describing the desired deformation model&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;deformation&#39;</span><span class="p">][(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;lddmm_shooting&#39;</span><span class="p">,</span> <span class="s2">&quot;[&#39;svf&#39;|&#39;svf_quasi_momentum&#39;|&#39;lddmm_shooting&#39;|&#39;lddmm_shooting_scalar_momentum&#39;] all with &#39;_map&#39; or &#39;_image&#39; suffix&quot;</span><span class="p">)]</span>
+
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;deformation&#39;</span><span class="p">][(</span><span class="s1">&#39;use_map&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;[True|False] either do computations via a map or directly using the image&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;deformation&#39;</span><span class="p">][(</span><span class="s1">&#39;map_low_res_factor&#39;</span><span class="p">,</span><span class="mf">1.0</span><span class="p">,</span><span class="s1">&#39;Set to a value in (0,1) if a map-based solution should be computed at a lower internal resolution (image matching is still at full resolution&#39;</span><span class="p">)]</span>
+
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][(</span><span class="s1">&#39;registration_model&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;general settings for the registration model&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][(</span><span class="s1">&#39;forward_model&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;Holds the parameters for the forward model&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;forward_model&#39;</span><span class="p">][(</span><span class="s1">&#39;number_of_time_steps&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;Number of time steps for integration (if applicable)&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;forward_model&#39;</span><span class="p">][(</span><span class="s1">&#39;smoother&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;how the smoothing of velocity fields is done&#39;</span><span class="p">)]</span>
+    <span class="c1">#algconf_params[&#39;algconf&#39;][&#39;model&#39;][&#39;registration_model&#39;][&#39;forward_model&#39;][&#39;smoother&#39;][(&#39;type&#39;, &#39;multiGaussian&#39;, &#39;type of smoothing&#39;)]</span>
+    <span class="c1">#algconf_params[&#39;algconf&#39;][&#39;model&#39;][&#39;registration_model&#39;][&#39;forward_model&#39;][&#39;smoother&#39;][(&#39;multi_gaussian_stds&#39;, [0.05,0.1,0.15,0.2,0.25], &#39;standard deviations for smoothing&#39;)]</span>
+
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;forward_model&#39;</span><span class="p">][</span><span class="s1">&#39;smoother&#39;</span><span class="p">][</span>
+        <span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;gaussian&#39;</span><span class="p">,</span> <span class="s1">&#39;type of smoothing&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;forward_model&#39;</span><span class="p">][</span><span class="s1">&#39;smoother&#39;</span><span class="p">][</span>
+        <span class="p">(</span><span class="s1">&#39;gaussian_std&#39;</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="s1">&#39;standard deviations for smoothing&#39;</span><span class="p">)]</span>
+
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][(</span><span class="s1">&#39;similarity_measure&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;model describing the similarity measure&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;similarity_measure&#39;</span><span class="p">][(</span><span class="s1">&#39;sigma&#39;</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s1">&#39;1/sigma^2 weighting&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;similarity_measure&#39;</span><span class="p">][(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;ssd&#39;</span><span class="p">,</span> <span class="s1">&#39;[ssd|ncc]&#39;</span><span class="p">)]</span>
+
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;similarity_measure&#39;</span><span class="p">][(</span><span class="s1">&#39;develop_mod_on&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;if true would allow develop settings &#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;similarity_measure&#39;</span><span class="p">][(</span><span class="s1">&#39;develop_mod&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;developing mode &#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;similarity_measure&#39;</span><span class="p">][</span><span class="s1">&#39;develop_mod&#39;</span><span class="p">][(</span><span class="s1">&#39;smoother&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;how the smoothing of velocity fields is done &#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;similarity_measure&#39;</span><span class="p">][</span><span class="s1">&#39;develop_mod&#39;</span><span class="p">][</span><span class="s1">&#39;smoother&#39;</span><span class="p">][(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;gaussian&#39;</span><span class="p">,</span> <span class="s1">&#39;type of smoothing&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;similarity_measure&#39;</span><span class="p">][</span><span class="s1">&#39;develop_mod&#39;</span><span class="p">][</span><span class="s1">&#39;smoother&#39;</span><span class="p">][(</span><span class="s1">&#39;gaussian_std&#39;</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="s1">&#39;standard deviation for smoothing&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][(</span><span class="s1">&#39;image_smoothing&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;image smoothing settings&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;image_smoothing&#39;</span><span class="p">][(</span><span class="s1">&#39;smooth_images&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;[True|False]; smoothes the images before registration&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;image_smoothing&#39;</span><span class="p">][(</span><span class="s1">&#39;smoother&#39;</span><span class="p">,{},</span><span class="s1">&#39;settings for the image smoothing&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;image_smoothing&#39;</span><span class="p">][</span><span class="s1">&#39;smoother&#39;</span><span class="p">][(</span><span class="s1">&#39;gaussian_std&#39;</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s1">&#39;how much smoothing is done&#39;</span><span class="p">)]</span>
+    <span class="n">algconf_params</span><span class="p">[</span><span class="s1">&#39;algconf&#39;</span><span class="p">][</span><span class="s1">&#39;image_smoothing&#39;</span><span class="p">][</span><span class="s1">&#39;smoother&#39;</span><span class="p">][(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;gaussian&#39;</span><span class="p">,</span> <span class="s2">&quot;[&#39;gaussianSpatial&#39;|&#39;gaussian&#39;|&#39;diffusion&#39;]&quot;</span><span class="p">)]</span>
+
+    <span class="k">return</span> <span class="n">algconf_params</span></div>
+
+
+<div class="viewcode-block" id="get_datapro_settings"><a class="viewcode-back" href="../config_parser.html#config_parser.get_datapro_settings">[docs]</a><span class="k">def</span> <span class="nf">get_datapro_settings</span><span class="p">(</span><span class="n">datapro_settings_filename</span> <span class="o">=</span> <span class="kc">None</span> <span class="p">):</span>
+
+    <span class="c1"># These are the parameters for the general I/O and example cases</span>
+    <span class="n">datapro_params</span> <span class="o">=</span> <span class="n">pars</span><span class="o">.</span><span class="n">ParameterDict</span><span class="p">()</span>
+    <span class="n">datapro_params</span><span class="p">[(</span><span class="s1">&#39;datapro&#39;</span><span class="p">,{},</span><span class="s1">&#39;settings for the data process&#39;</span><span class="p">)]</span>
+
+    <span class="k">if</span> <span class="n">datapro_settings_filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="s1">&#39;Loading datapro configuration from: &#39;</span> <span class="o">+</span> <span class="n">datapro_settings_filename</span> <span class="p">)</span>
+        <span class="n">datapro_params</span><span class="o">.</span><span class="n">load_JSON</span><span class="p">(</span> <span class="n">datapro_settings_filename</span> <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="s1">&#39;Using default datapro settings from config_parser.py&#39;</span><span class="p">)</span>
+
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][(</span><span class="s1">&#39;dataset&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;general settings for dataset&#39;</span><span class="p">)]</span>
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;dataset&#39;</span><span class="p">][(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;lpba&#39;</span><span class="p">,</span> <span class="s1">&#39;name of the dataset: oasis2d, lpba, ibsr, cmuc&#39;</span> <span class="p">)]</span>
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;dataset&#39;</span><span class="p">][(</span><span class="s1">&#39;task_name&#39;</span><span class="p">,</span> <span class="s1">&#39;lpba_affined&#39;</span><span class="p">,</span> <span class="s1">&#39;task name for data process&#39;</span> <span class="p">)]</span>
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;dataset&#39;</span><span class="p">][(</span><span class="s1">&#39;data_path&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;data path of the  dataset, default settings are in datamanger&quot;</span><span class="p">)]</span>
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;dataset&#39;</span><span class="p">][(</span><span class="s1">&#39;label_path&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;data path of the  dataset, default settings are in datamanger&quot;</span><span class="p">)]</span>
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;dataset&#39;</span><span class="p">][(</span><span class="s1">&#39;output_path&#39;</span><span class="p">,</span><span class="s1">&#39;/playpen/zyshen/data/&#39;</span><span class="p">,</span> <span class="s2">&quot;the path to save the processed data&quot;</span><span class="p">)]</span>
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;mode&#39;</span><span class="p">][(</span><span class="s1">&#39;prepare_data&#39;</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;prepare the data &#39;</span><span class="p">)]</span>
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;mode&#39;</span><span class="p">][(</span><span class="s1">&#39;sched&#39;</span><span class="p">,</span><span class="s1">&#39;inter&#39;</span><span class="p">,</span> <span class="s2">&quot;[&#39;inter&#39;|&#39;intra&#39;], inter-personal or intra-personal&quot;</span><span class="p">)]</span>
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;mode&#39;</span><span class="p">][(</span><span class="s1">&#39;all_comb&#39;</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;all possible pair combination &#39;</span><span class="p">)]</span>
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;mode&#39;</span><span class="p">][(</span><span class="s1">&#39;divided_ratio&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="s1">&#39;divided the dataset into train, val and test set by the divided_ratio&#39;</span><span class="p">)]</span>
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;mode&#39;</span><span class="p">][(</span><span class="s1">&#39;slicing&#39;</span><span class="p">,</span><span class="mi">100</span><span class="p">,</span><span class="s1">&#39;the index to be sliced from the 3d image dataset, support lpba, ibsr, cmuc&#39;</span><span class="p">)]</span>
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;mode&#39;</span><span class="p">][(</span><span class="s1">&#39;axis&#39;</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="s1">&#39;which axis needed to be sliced&#39;</span><span class="p">)]</span>
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;switch&#39;</span><span class="p">][(</span><span class="s1">&#39;switch_to_exist_task&#39;</span><span class="p">,</span><span class="kc">False</span><span class="p">,</span><span class="s1">&#39;switch to existed task without modify other datapro settings&#39;</span><span class="p">)]</span>
+
+    <span class="n">datapro_params</span><span class="p">[</span><span class="s1">&#39;datapro&#39;</span><span class="p">][</span><span class="s1">&#39;switch&#39;</span><span class="p">][(</span><span class="s1">&#39;task_root_path&#39;</span><span class="p">,</span><span class="s1">&#39;/playpen/zyshen/data/oasis_inter_slicing90&#39;</span><span class="p">,</span><span class="s1">&#39;path of existed processed data&#39;</span><span class="p">)]</span>
+
+
+    <span class="k">return</span> <span class="n">datapro_params</span></div>
+
+
+<div class="viewcode-block" id="get_respro_settings"><a class="viewcode-back" href="../config_parser.html#config_parser.get_respro_settings">[docs]</a><span class="k">def</span> <span class="nf">get_respro_settings</span><span class="p">(</span><span class="n">respro_settings_filename</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+
+    <span class="n">respro_params</span> <span class="o">=</span> <span class="n">pars</span><span class="o">.</span><span class="n">ParameterDict</span><span class="p">()</span>
+    <span class="n">respro_params</span><span class="p">[(</span><span class="s1">&#39;respro&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="s1">&#39;settings for the results process&#39;</span><span class="p">)]</span>
+
+    <span class="k">if</span> <span class="n">respro_settings_filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="s1">&#39;Loading respro configuration from: &#39;</span> <span class="o">+</span> <span class="n">respro_settings_filename</span> <span class="p">)</span>
+        <span class="n">respro_params</span><span class="o">.</span><span class="n">load_JSON</span><span class="p">(</span><span class="n">respro_settings_filename</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span> <span class="s1">&#39;Using default respro settings from config_parser.py&#39;</span><span class="p">)</span>
+
+    <span class="n">respro_params</span><span class="p">[</span><span class="s1">&#39;respro&#39;</span><span class="p">][(</span><span class="s1">&#39;expr_name&#39;</span><span class="p">,</span> <span class="s1">&#39;reg&#39;</span><span class="p">,</span> <span class="s1">&#39;name of experiment&#39;</span><span class="p">)]</span>
+    <span class="n">respro_params</span><span class="p">[</span><span class="s1">&#39;respro&#39;</span><span class="p">][(</span><span class="s1">&#39;visualize&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;if set to true intermediate results are visualized&#39;</span><span class="p">)]</span>
+    <span class="n">respro_params</span><span class="p">[</span><span class="s1">&#39;respro&#39;</span><span class="p">][(</span><span class="s1">&#39;visualize_step&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;Number of iterations between visualization output&#39;</span><span class="p">)]</span>
+
+    <span class="n">respro_params</span><span class="p">[</span><span class="s1">&#39;respro&#39;</span><span class="p">][(</span><span class="s1">&#39;save_fig&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;save visualized results&#39;</span><span class="p">)]</span>
+    <span class="n">respro_params</span><span class="p">[</span><span class="s1">&#39;respro&#39;</span><span class="p">][(</span><span class="s1">&#39;save_fig_path&#39;</span><span class="p">,</span> <span class="s1">&#39;../data/saved_results&#39;</span><span class="p">,</span> <span class="s1">&#39;path of saved figures&#39;</span><span class="p">)]</span>
+    <span class="n">respro_params</span><span class="p">[</span><span class="s1">&#39;respro&#39;</span><span class="p">][(</span><span class="s1">&#39;save_excel&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;save results in excel&#39;</span><span class="p">)]</span>
+
+    <span class="k">return</span> <span class="n">respro_params</span></div>
+
+<span class="c1"># write out the configuration files (when called as a script; in this way we can boostrap a new configuration)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="n">compute_params</span><span class="o">.</span><span class="n">write_JSON_and_JSON_comments</span><span class="p">(</span><span class="n">get_default_compute_settings_filenames</span><span class="p">())</span>
+
+    <span class="n">baseconf_params</span> <span class="o">=</span> <span class="n">get_baseconf_settings</span><span class="p">()</span>
+    <span class="n">baseconf_params</span><span class="o">.</span><span class="n">write_JSON_and_JSON_comments</span><span class="p">(</span><span class="n">get_default_baseconf_settings_filenames</span><span class="p">())</span>
+
+    <span class="n">democonf_params</span> <span class="o">=</span> <span class="n">get_democonf_settings</span><span class="p">()</span>
+    <span class="n">democonf_params</span><span class="o">.</span><span class="n">write_JSON_and_JSON_comments</span><span class="p">(</span><span class="n">get_default_democonf_settings_filenames</span><span class="p">())</span>
+
+    <span class="n">algconf_params</span> <span class="o">=</span> <span class="n">get_algconf_settings</span><span class="p">()</span>
+    <span class="n">algconf_params</span><span class="o">.</span><span class="n">write_JSON_and_JSON_comments</span><span class="p">(</span><span class="n">get_default_algconf_settings_filenames</span><span class="p">())</span>
+
+    <span class="n">datapro_params</span> <span class="o">=</span> <span class="n">get_datapro_settings</span><span class="p">()</span>
+    <span class="n">datapro_params</span><span class="o">.</span><span class="n">write_JSON_and_JSON_comments</span><span class="p">(</span><span class="n">get_default_datapro_settings_filenames</span><span class="p">())</span>
+
+    <span class="n">respro_params</span> <span class="o">=</span> <span class="n">get_respro_settings</span><span class="p">()</span>
+    <span class="n">respro_params</span><span class="o">.</span><span class="n">write_JSON_and_JSON_comments</span><span class="p">(</span><span class="n">get_default_respro_settings_filenames</span><span class="p">())</span>
+
+
+
+
+
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

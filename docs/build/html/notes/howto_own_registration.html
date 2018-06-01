@@ -1,0 +1,401 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>How to write your own registration model &mdash; mermaid 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="mermaid 0.1 documentation" href="../index.html"/>
+        <link rel="next" title="Installation" href="installation.html"/>
+        <link rel="prev" title="mermaid: iMagE Registration via autoMAtIc Differentiation" href="../index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> mermaid
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">How to write your own registration model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#writing-a-similarity-measure">Writing a similarity measure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#writing-a-new-registration-model">Writing a new registration model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parameters.html">Parameters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simple_example.html">Simple example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="todos.html">TODOs</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../config_parser.html">Config parser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../custom_optimizers.html">Custom optimizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../custom_pytorch_extensions.html">Custom pyTorch extensions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../data_wrapper.html">Data wrapper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../example_generation.html">Example generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fileio.html">fileio</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../finite_differences.html">Finite differences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../forward_models.html">Forward models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../image_manipulations.html">Image manipulations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../image_sampling.html">Image sampling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../load_default_settings.html">Load default settings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_factory.html">Model factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module_parameters.html">Parameter module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../multiscale_optimizer.html">Multiscale optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../registration_networks.html">Registration networks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../regularizer_factory.html">Regularizer factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../rungekutta_integrators.html">Runge-Kutta integrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../similarity_measure_factory.html">Similarity measure factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../smoother_factory.html">Smoother factory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../stn.html">Spatial transforms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../utils.html">Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../viewers.html">Viewers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../visualize_registration_results.html">Visualize registration results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">mermaid</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>How to write your own registration model</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/notes/howto_own_registration.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="how-to-write-your-own-registration-model">
+<h1>How to write your own registration model<a class="headerlink" href="#how-to-write-your-own-registration-model" title="Permalink to this headline">¶</a></h1>
+<p>This note explains how to write your own registration model.
+For simplicity we assume that the stationary velocity field registration (SVF) does not exist. Here we explain, step-by-step, how to recreate it. We also assume that a new similarity measure should be added. We will start with the similarity measure as it is the easiest to implement.</p>
+<div class="section" id="writing-a-similarity-measure">
+<h2>Writing a similarity measure<a class="headerlink" href="#writing-a-similarity-measure" title="Permalink to this headline">¶</a></h2>
+<p>Similarity measures are derived from <code class="xref py py-class docutils literal"><span class="pre">SimilarityMeasure</span></code>. To create a new similarity measure simply derive your own class from <code class="xref py py-class docutils literal"><span class="pre">SimilarityMeasure</span></code> and implement the method <code class="xref py py-meth docutils literal"><span class="pre">compute_similarity()</span></code>. Assume you want to rewrite the sum of squared difference SSD similarity measure then this class will look as follows:</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MySSD</span><span class="p">(</span><span class="n">SimilarityMeasure</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">compute_similarity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">I0</span><span class="p">,</span><span class="n">I1</span><span class="p">):</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="mf">0.1</span>
+        <span class="k">return</span> <span class="p">((</span><span class="n">I0</span> <span class="o">-</span> <span class="n">I1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">volumeElement</span>
+</pre></div>
+</div>
+<p>Here, <cite>self.volumeElement</cite> is defined in the base class <code class="xref py py-class docutils literal"><span class="pre">SimilarityMeasure</span></code> and indicates the volume occupied by a pixel or voxel.</p>
+<p>As the machinery to include the similarity measure into all available registration methods is rather heavy, there is a convenience method which can be accessed through the optimizer interface.</p>
+<p>Assuming the parameter stucture being used is called <cite>params</cite> (a <code class="xref py py-class docutils literal"><span class="pre">ParameterDict</span></code> object), we can first tell that we want to use our own similarity measure via</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">params</span><span class="p">[</span><span class="s1">&#39;registration_model&#39;</span><span class="p">][</span><span class="s1">&#39;similarity_measure&#39;</span><span class="p">][</span><span class="s1">&#39;type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;mySSD&#39;</span>
+</pre></div>
+</div>
+<p>Now, once we have a multi-scale optimizer</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyreg.multiscale_optimizer</span> <span class="k">as</span> <span class="nn">MO</span>
+<span class="n">mo</span> <span class="o">=</span> <span class="n">MO</span><span class="o">.</span><span class="n">MultiScaleRegistrationOptimizer</span><span class="p">(</span><span class="n">modelName</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">useMap</span><span class="p">,</span><span class="n">mapLowResFactor</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>we can simply instruct it to use our new similarity measure</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">mo</span><span class="o">.</span><span class="n">add_similarity_measure</span><span class="p">(</span><span class="s1">&#39;mySSD&#39;</span><span class="p">,</span> <span class="n">MySSD</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This will propagate through all the registration models. Hence, all of them will instantly be able to use the new similarity measure.</p>
+</div>
+<div class="section" id="writing-a-new-registration-model">
+<h2>Writing a new registration model<a class="headerlink" href="#writing-a-new-registration-model" title="Permalink to this headline">¶</a></h2>
+<p>The goal of this package is to make writing new models as easy as possible, while still providing an as simple to
+use package as possible. These are obviously somewhat contradictory goals. As a compromise, there is also a relatively
+easy interface which allows definitions of new models without integrating them into the overall machinery.</p>
+<p>Let’s first import a few packages that are needed to write the new network module</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">registration_networks</span> <span class="k">as</span> <span class="nn">RN</span>
+<span class="kn">import</span> <span class="nn">utils</span>
+<span class="kn">import</span> <span class="nn">image_sampling</span> <span class="k">as</span> <span class="nn">IS</span>
+<span class="kn">import</span> <span class="nn">rungekutta_integrators</span> <span class="k">as</span> <span class="nn">RK</span>
+<span class="kn">import</span> <span class="nn">forward_models</span> <span class="k">as</span> <span class="nn">FM</span>
+<span class="kn">import</span> <span class="nn">regularizer_factory</span> <span class="k">as</span> <span class="nn">RF</span>
+</pre></div>
+</div>
+<p>A new network is derived from the abstract class <code class="xref py py-class docutils literal"><span class="pre">RegistrationNet</span></code>. To create a working new class, it is required
+to define the following methods:</p>
+<ul class="simple">
+<li><code class="xref py py-meth docutils literal"><span class="pre">create_registration_parameters()</span></code>: To set up the registration parameters required by the model. Needs to be torch <cite>Parameter</cite> type as defined in <cite>torch.autograd</cite></li>
+<li><code class="xref py py-meth docutils literal"><span class="pre">get_registration_parameter()</span></code>: simply return the registration parameter</li>
+<li><code class="xref py py-meth docutils literal"><span class="pre">set_registration_paramters()</span></code>: to set the parameters, will be needed by the multi-scale optimizer to propagate parameters from one level to the next.</li>
+<li><code class="xref py py-meth docutils literal"><span class="pre">create_integrator()</span></code>: since we are dealing with time-dependent problems here, this is to set up (and return!) an integrator for the system that is to be solved.</li>
+<li><code class="xref py py-meth docutils literal"><span class="pre">forward()</span></code>: this is the method where all the magic happens. I.e., where we solve the forward problem by integrating the model forward in time.</li>
+<li><code class="xref py py-meth docutils literal"><span class="pre">upsample_registration_parameters()</span></code>: method to spatially upsample the registration parameters. Needs to be defined if the multi-scale solver should be used. Does not need to be defined when solving on a single scale.</li>
+</ul>
+<p>Let’s start with the simplest possible class first</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MySVFNet</span><span class="p">(</span><span class="n">RN</span><span class="o">.</span><span class="n">RegistrationNet</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MySVFNet</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_registration_parameters</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">integrator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_integrator</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">create_registration_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">utils</span><span class="o">.</span><span class="n">create_ND_vector_field_parameter_multiN</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">[</span><span class="mi">2</span><span class="p">::],</span> <span class="bp">self</span><span class="o">.</span><span class="n">nrOfImages</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_registration_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">v</span>
+
+    <span class="k">def</span> <span class="nf">set_registration_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">sz</span><span class="p">,</span> <span class="n">spacing</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sz</span> <span class="o">=</span> <span class="n">sz</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span> <span class="o">=</span> <span class="n">spacing</span>
+
+    <span class="k">def</span> <span class="nf">create_integrator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">cparams</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[(</span><span class="s1">&#39;forward_model&#39;</span><span class="p">,{},</span><span class="s1">&#39;settings for the forward model&#39;</span><span class="p">)]</span>
+        <span class="n">advection</span> <span class="o">=</span> <span class="n">FM</span><span class="o">.</span><span class="n">AdvectImage</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">RK</span><span class="o">.</span><span class="n">RK4</span><span class="p">(</span><span class="n">advection</span><span class="o">.</span><span class="n">f</span><span class="p">,</span> <span class="n">advection</span><span class="o">.</span><span class="n">u</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="p">,</span> <span class="n">cparams</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">):</span>
+        <span class="n">I1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">integrator</span><span class="o">.</span><span class="n">solve</span><span class="p">([</span><span class="n">I</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">tFrom</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tTo</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">I1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>If desired (for the multi-scale optimizer), also define</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">upsample_registration_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">desiredSz</span><span class="p">):</span>
+    <span class="n">sampler</span> <span class="o">=</span> <span class="n">IS</span><span class="o">.</span><span class="n">ResampleImage</span><span class="p">()</span>
+    <span class="n">vUpsampled</span><span class="p">,</span><span class="n">upsampled_spacing</span><span class="o">=</span><span class="n">sampler</span><span class="o">.</span><span class="n">upsample_image_to_size</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">,</span><span class="n">desiredSz</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">vUpsampled</span><span class="p">,</span><span class="n">upsampled_spacing</span>
+</pre></div>
+</div>
+<p>Lastly, we also need to define our own loss function. Loss functions are derived from <code class="xref py py-class docutils literal"><span class="pre">RegistrationImageLoss</span></code> or
+<code class="xref py py-class docutils literal"><span class="pre">RegistrationMapLoss</span></code> depending on if the source image is warped directly or via a coordinate map. The only
+method that needs to be defined is <code class="xref py py-meth docutils literal"><span class="pre">compute_regularization_energy()</span></code>. For the SVF model we just created this could
+for example look like this</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MySVFImageLoss</span><span class="p">(</span><span class="n">RN</span><span class="o">.</span><span class="n">RegistrationImageLoss</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">v</span><span class="p">,</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">):</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">MySVFImageLoss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sz</span><span class="p">,</span><span class="n">spacing</span><span class="p">,</span><span class="n">params</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">v</span> <span class="o">=</span> <span class="n">v</span>
+    <span class="n">cparams</span> <span class="o">=</span> <span class="n">params</span><span class="p">[(</span><span class="s1">&#39;loss&#39;</span><span class="p">,{},</span><span class="s1">&#39;settings for the loss function&#39;</span><span class="p">)]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">regularizer</span> <span class="o">=</span> <span class="p">(</span><span class="n">RF</span><span class="o">.</span><span class="n">RegularizerFactory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spacing</span><span class="p">)</span><span class="o">.</span>
+                        <span class="n">create_regularizer</span><span class="p">(</span><span class="n">cparams</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">compute_regularization_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I0_source</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">regularizer</span><span class="o">.</span><span class="n">compute_regularizer_multiN</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">v</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now that the models are defined, we need to use them. Just as for the custom similarity measure above, we can
+do this by adding it to the multi-scale solver and then setting it (to be used for the solution).</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">myModelName</span> <span class="o">=</span> <span class="s1">&#39;mySVF&#39;</span>
+<span class="n">mo</span><span class="o">.</span><span class="n">add_model</span><span class="p">(</span><span class="n">myModelName</span><span class="p">,</span><span class="n">MySVFNet</span><span class="p">,</span><span class="n">MySVFImageLoss</span><span class="p">)</span>
+<span class="n">mo</span><span class="o">.</span><span class="n">set_model</span><span class="p">(</span><span class="n">myModelName</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If desired, it is possible to choose a custom optimizer (the default is LBFGS, with some default settings).
+The following selects <cite>adam</cite> as an optimizer and sets one of its optimization parameters. Any optimizer supported
+by pyTorch works in principle. However, be advised that especially the shooting formulations for registration may
+require reasonably sophisticated optimizers for convergence.</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">mo</span><span class="o">.</span><span class="n">set_optimizer</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">)</span>
+<span class="n">mo</span><span class="o">.</span><span class="n">set_optimizer_params</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">lr</span><span class="o">=</span><span class="mf">0.01</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>By default visualization output is turned on. But this can be set manually by</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">mo</span><span class="o">.</span><span class="n">set_visualization</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">mo</span><span class="o">.</span><span class="n">set_visualize_step</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>And again as before the model can then be solved</p>
+<div class="code highlight-default"><div class="highlight"><pre><span></span><span class="n">mo</span><span class="o">.</span><span class="n">set_source_image</span><span class="p">(</span><span class="n">ISource</span><span class="p">)</span>
+<span class="n">mo</span><span class="o">.</span><span class="n">set_target_image</span><span class="p">(</span><span class="n">ITarget</span><span class="p">)</span>
+
+<span class="n">mo</span><span class="o">.</span><span class="n">set_scale_factors</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">])</span>
+<span class="n">mo</span><span class="o">.</span><span class="n">set_number_of_iterations_per_scale</span><span class="p">([</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
+
+<span class="n">mo</span><span class="o">.</span><span class="n">optimize</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../index.html" class="btn btn-neutral" title="mermaid: iMagE Registration via autoMAtIc Differentiation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Marc Niethammer.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
