@@ -5,6 +5,11 @@ How to compile:
 $ sh make_cuda.sh
 
 
+Make sure the arch flag (‘-arch=‘) in make_cuda.sh matches the NVIDIA GPU architecture that the CUDA files will be compiled for. The default is '-arch=sm_61', older architectures might require different flags (e.g. -arch=sm_52). Corresponding arch flags can be looked up here:
+
+http://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
+
+
 This spatial transformer code is heavily inspired by the pyTorch spatial transformer code by Fei Xia found here:
 
 https://github.com/fxia22/stn.pytorch

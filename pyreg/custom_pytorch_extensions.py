@@ -287,6 +287,7 @@ class FourierConvolution(Function):
                 result = np.zeros(input.shape)
                 for batch in range(input.size()[0]):
                     for ch in range(input.size()[1]):
+                        print(ch)
                         conv_output = self.ifftn(self.fftn(input[batch,ch].numpy()) * self.complex_fourier_filter)
                         result[batch,ch] = conv_output.real
             else:
