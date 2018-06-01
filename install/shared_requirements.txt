@@ -4,6 +4,7 @@ scipy
 matplotlib
 torchvision
 cffi
+future
 itk
 sphinx
 pynrrd

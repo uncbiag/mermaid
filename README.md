@@ -20,6 +20,7 @@ A basic installation requires the installation of a few python packages. Most of
   * conda install pytorch torchvision -c pytorch
   * [for CPU only: conda install pytorch-cpu torchvision -c pytorch]
   * conda install cffi
+  * conda install future
   * conda install -c conda-forge itk
   * conda install progressbar
   * conda install sphinx

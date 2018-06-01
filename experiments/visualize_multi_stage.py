@@ -11,7 +11,6 @@ import pyreg.visualize_registration_results as vizReg
 import torch
 from torch.autograd import Variable
 
-import pyreg.utils as utils
 import pyreg.image_sampling as IS
 import pyreg.finite_differences as FD
 
@@ -21,8 +20,6 @@ import pyreg.module_parameters as pars
 from pyreg.data_wrapper import USE_CUDA, AdaptVal, MyTensor
 
 import pyreg.fileio as FIO
-
-
 import pyreg.utils as utils
 
 import numpy as np
@@ -159,7 +156,7 @@ def _load_current_source_and_target_images_as_variables(current_source_filename,
 
     im_io = FIO.ImageIO()
 
-    ISource, hdr, spacing, normalized_spacing_ = im_io.read_batch_to_nc_format([current_source_filename],
+    ISource, hdr, spacing, normalized_spacing = im_io.read_batch_to_nc_format([current_source_filename],
                                                              intensity_normalize=intensity_normalize,
                                                              squeeze_image=squeeze_image,
                                                              normalize_spacing=normalize_spacing,
@@ -481,7 +478,11 @@ def compute_determinant_of_jacobian(phi,spacing):
     fdt = FD.FD_torch(spacing)
     dim = len(spacing)
 
-    if dim==2:
+    if dim==1:
+        p0x = fdt.dXc(phi[0:1,0,...])
+        det = p0x
+
+    elif dim==2:
         p0x = fdt.dXc(phi[0:1, 0, ...])
         p0y = fdt.dYc(phi[0:1, 0, ...])
         p1x = fdt.dXc(phi[0:1, 1, ...])
@@ -501,15 +502,19 @@ def compute_determinant_of_jacobian(phi,spacing):
 
         det = p0x*p1y*p2z + p0y*p1z*p2x + p0z*p1x*p2y -p0z*p1y*p2x -p0y*p1x*p2z -p0x*p1z*p2y
     else:
-        raise ValueError('Can only compute the determinant of Jacobina for dimensions 2 and 3')
+        raise ValueError('Can only compute the determinant of Jacobian for dimensions 1, 2 and 3')
 
     det = det.data[0, ...].cpu().numpy()
     return det
 
 
-def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen,pair_nr,slice_proportion_3d=0.5,slice_mode_3d=0,visualize=False,
+def compute_and_visualize_results(json_file,output_dir,
+                                  stage,
+                                  compute_from_frozen,
+                                  pair_nr,slice_proportion_3d=0.5,slice_mode_3d=0,visualize=False,
                                   print_images=False,write_out_images=True,
                                   write_out_source_image=False,write_out_target_image=False,
+                                  write_out_weights=False,write_out_momentum=False,
                                   compute_det_of_jacobian=True,retarget_data_directory=None,
                                   use_sym_links=True):
 
@@ -525,8 +530,7 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
         write_out_map = False
 
     # get the used json configuration and the output directories for the different stages
-    json_for_stages, frozen_json_for_stages, output_dir_for_stages, frozen_output_dir_for_stages = get_json_and_output_dir_for_stages(json_file,
-                                                                                                            output_dir)
+    json_for_stages, frozen_json_for_stages, output_dir_for_stages, frozen_output_dir_for_stages = get_json_and_output_dir_for_stages(json_file, output_dir)
 
     if compute_from_frozen:
         image_and_map_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_frozen_stage_{:d}'.format(stage))
@@ -549,10 +553,14 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
             os.makedirs(print_output_dir)
 
     warped_output_filename = os.path.join(image_and_map_output_dir,'warped_image_{:05d}.nrrd'.format(pair_nr))
-    map_output_filename = os.path.join(image_and_map_output_dir,'map_validation_format_{:05}.nrrd'.format(pair_nr))
-    det_jac_output_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05}.nrrd'.format(pair_nr))
-    displacement_output_filename = os.path.join(image_and_map_output_dir,'displacement_{:05}.nrrd'.format(pair_nr))
-    det_of_jacobian_txt_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05}.txt'.format(pair_nr))
+    map_output_filename = os.path.join(image_and_map_output_dir,'map_validation_format_{:05d}.nrrd'.format(pair_nr))
+    map_output_filename_pt = os.path.join(image_and_map_output_dir,'map_{:05d}.pt'.format(pair_nr))
+    weights_output_filename_pt = os.path.join(image_and_map_output_dir,'weights_{:05d}.pt'.format(pair_nr))
+    momentum_output_filename_pt = os.path.join(image_and_map_output_dir,'momentum_{:05d}.pt'.format(pair_nr))
+
+    det_jac_output_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05d}.nrrd'.format(pair_nr))
+    displacement_output_filename = os.path.join(image_and_map_output_dir,'displacement_{:05d}.nrrd'.format(pair_nr))
+    det_of_jacobian_txt_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05d}.txt'.format(pair_nr))
 
     source_image_output_filename = os.path.join(image_and_map_output_dir,'source_image_{:05d}.nrrd'.format(pair_nr))
     target_image_output_filename = os.path.join(image_and_map_output_dir,'target_image_{:05d}.nrrd'.format(pair_nr))
@@ -605,6 +613,16 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
     IWarped,phi,model_dict = evaluate_model(ISource,ITarget,sz,spacing,individual_parameters,shared_parameters,params,visualize=False)
 
     norm_m = ((model_dict['m']**2).sum(dim=1,keepdim=True))**0.5
+
+    if write_out_weights:
+        wd = dict()
+        if stage==2:
+            wd['local_weights'] = model_dict['local_weights']
+        wd['default_multi_gaussian_weights'] = model_dict['default_multi_gaussian_weights']
+        torch.save(wd,weights_output_filename_pt)
+
+    if write_out_momentum:
+        torch.save(model_dict['m'],momentum_output_filename_pt)
 
     if visualize:
         if image_dim==2:
@@ -690,6 +708,7 @@ def compute_and_visualize_results(json_file,output_dir,stage,compute_from_frozen
     if write_out_map:
         map_io = FIO.MapIO()
         map_io.write_to_validation_map_format(map_output_filename, phi[0,...], hdr)
+        torch.save( phi, map_output_filename_pt)
 
         if 'id' in model_dict:
             displacement = phi[0,...]-model_dict['id'][0,...]
@@ -759,6 +778,8 @@ if __name__ == "__main__":
 
     parser.add_argument('--do_not_write_source_image', action='store_true', help='otherwise also writes the source image for easy visualization')
     parser.add_argument('--do_not_write_target_image', action='store_true', help='otherwise also writes the target image for easy visualization')
+    parser.add_argument('--do_not_write_weights', action='store_true', help='otherwise also writes the weights (local or global) as pt')
+    parser.add_argument('--do_not_write_momentum', action='store_true', help='otherwise also writes the momentum as pt')
 
     parser.add_argument('--do_not_use_symlinks', action='store_true', help='For source and target images, by default symbolic links are created, otherwise files are copied')
 
@@ -819,6 +840,8 @@ if __name__ == "__main__":
                                       write_out_images=not args.do_not_write_out_images,
                                       write_out_source_image=not args.do_not_write_source_image,
                                       write_out_target_image=not args.do_not_write_target_image,
+                                      write_out_weights=not args.do_not_write_weights,
+                                      write_out_momentum=not args.do_not_write_momentum,
                                       compute_det_of_jacobian=not args.do_not_compute_det_jac,
                                       retarget_data_directory=args.retarget_data_directory)
 
