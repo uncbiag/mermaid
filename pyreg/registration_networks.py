@@ -1098,7 +1098,7 @@ class AffineMapNet(RegistrationNet):
         :return: returns a tuple (upsampled_state,upsampled_spacing)
         """
         ustate = self.state_dict().copy() # stays the same
-        upsampled_spacing = self.spacing*(self.sz[2::].astype('float')/desiredSz[2::].astype('float'))
+        upsampled_spacing = self.spacing*((self.sz[2::].astype('float')-1.)/(desiredSz[2::].astype('float')-1.))
 
         return ustate, upsampled_spacing
 
@@ -1110,7 +1110,7 @@ class AffineMapNet(RegistrationNet):
         :return: returns a tuple (downsampled_state,downsampled_spacing)
         """
         dstate = self.state_dict().copy() # stays the same
-        downsampled_spacing = self.spacing*(self.sz[2::].astype('float')/desiredSz[2::].astype('float'))
+        downsampled_spacing = self.spacing*((self.sz[2::].astype('float')-1.)/(desiredSz[2::].astype('float')-1.))
         return dstate, downsampled_spacing
 
     def forward(self, phi, I0_source, variables_from_optimizer=None):
