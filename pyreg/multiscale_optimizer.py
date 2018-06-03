@@ -3047,8 +3047,9 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         self.save_fig_path = os.path.join(save_fig_path, self.expr_name)
 
-    def init_recorder(self, task_name):
-        self.recorder = XlsxRecorder(task_name, self.save_fig_path)
+
+    def init_recorder(self, expr_name):
+        self.recorder = XlsxRecorder(expr_name, self.save_fig_path)
         return self.recorder
 
 

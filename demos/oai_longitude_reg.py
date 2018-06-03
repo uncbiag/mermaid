@@ -169,6 +169,7 @@ class OAILongitudeReisgtration(object):
         self.visualize_step =None
         self.light_analysis_on=False
         self.par_respro=None
+        self.recorder = None
         """if the patient of certain mod and spec has no label, then the light_analysis will automatically on for this patient"""
 
         self.__initalize_model()
@@ -228,7 +229,15 @@ class OAILongitudeReisgtration(object):
     def do_registration(self):
         for patient in self.patients:
             self.do_single_patient_registration(patient)
+
+
         print("registration for {} patients, finished".format(len(self.patients)))
+
+        if not self.light_analysis_on:
+            self.recorder.set_summary_based_env()
+            self.recorder.saving_results(sched='summary')
+
+
     def do_single_patient_registration(self,patient):
         print('start processing patient {}'.format(patient.patient_id))
         for mod in patient.modality:
@@ -282,7 +291,8 @@ class OAILongitudeReisgtration(object):
                 else:
                     assert("source label not find")
 
-
+            if self.recorder is not None:
+                self.si.set_recorder(self.recorder)
 
             self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
                                     model_name='affine_map',
@@ -298,6 +308,9 @@ class OAILongitudeReisgtration(object):
                                     params ='cur_settings.json')
             wi = self.si.get_warped_image()
             wi=wi.cpu().data.numpy()
+
+            if not self.light_analysis_on:
+                self.recorder = self.si.get_recorder()
 
             print("let's come to step 2 ")
 

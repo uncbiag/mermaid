@@ -67,25 +67,43 @@ class RegisterImagePair(object):
         self.task_name = task_name
 
 
+    def get_opt(self):
+        return self.opt
+
+    def set_opt(self,opt):
+        self.opt= opt
+        self.optimizer_has_been_initialized=True
+
+
     def _set_analysis(self, mo, extra_info):
-        if self.recorder is None:
-            expr_name = self.par_respro['respro']['expr_name']
-            save_fig = self.par_respro['respro']['save_fig']
-            save_fig_num = self.par_respro['respro']['save_fig_num']
-            save_fig_path = self.par_respro['respro']['save_fig_path']
-            save_excel = self.par_respro['respro']['save_excel']
-            mo.set_expr_name(expr_name)
-            mo.set_save_fig(save_fig)
-            mo.set_save_fig_path(save_fig_path)
-            mo.set_save_fig_num(save_fig_num)
-            mo.set_save_excel(save_excel    )
-            self.recorder = mo.init_recorder(expr_name)
+
+        expr_name = self.par_respro['respro']['expr_name']
+        save_fig = self.par_respro['respro']['save_fig']
+        save_fig_num = self.par_respro['respro']['save_fig_num']
+        save_fig_path = self.par_respro['respro']['save_fig_path']
+        save_excel = self.par_respro['respro']['save_excel']
+        mo.set_expr_name(expr_name)
+        mo.set_save_fig(save_fig)
+        mo.set_save_fig_path(save_fig_path)
+        mo.set_save_fig_num(save_fig_num)
+        mo.set_save_excel(save_excel)
         pair_name = extra_info['pair_name']
         batch_id = extra_info['batch_id']
         visualize = self.par_respro['respro']['visualize']
         mo.set_visualization(visualize)
         mo.set_pair_path(pair_name)
         mo.set_batch_id(batch_id)
+
+        if self.recorder is None:
+            self.recorder = mo.init_recorder(expr_name)
+        else:
+            mo.set_recorder(self.recorder)
+
+    def get_recorder(self):
+        return self.opt.optimizer.get_recorder()
+
+    def set_recorder(self, recorder):
+        self.recorder = recorder
 
     def print_available_models(self):
         MF.AvailableModels().print_available_models()
@@ -454,7 +472,6 @@ class RegisterImagePair(object):
 
             if resume_from_last_checkpoint and use_consensus_optimization:
                 self.params['optimizer']['consensus_settings']['continue_from_last_checkpoint'] = True
-
             if use_multi_scale:
                 if use_consensus_optimization or use_batch_optimization:
                     raise ValueError('Consensus or batch optimization is not yet supported for multi-scale registration')
