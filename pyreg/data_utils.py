@@ -8,6 +8,7 @@ import h5py
 import skimage
 import SimpleITK as sitk
 import sys
+import torch
 import random
 PYTHON_VERSION = 3
 if sys.version_info[0] < 3:
@@ -372,3 +373,44 @@ def save_to_h5py(path, img_pair_list, info, img_pair_path_list, label_pair_list=
 
 
 
+def read_txt_into_list(file_path):
+    lists= []
+    with open(file_path,'r') as f:
+        content = f.read().splitlines()
+        if len(content)>0:
+            lists= [line.split('     ') for line in content]
+        lists= [item[0] if len(item)==1 else item for item in lists]
+    return lists
+
+
+
+def read_h5py_file(path, type='h5py'):
+    """
+    return dictionary contain 'data' and   'info': start_coord, end_coord, file_path
+    :param path:
+    :param type:
+    :return:
+    """
+    if type == 'h5py':
+        f = h5py.File(path, 'r')
+        data = f['data'][:]
+        info = {}
+        label = None
+        if '/label' in f:
+            label = f['label'][:]
+        for key in f.attrs:
+            info[key] = f.attrs[key]
+        #info['file_id'] = f['file_id'][:]
+        f.close()
+        return {'data': data, 'info': info, 'label': label}
+
+
+def get_file_name(path):
+    return os.path.split(path)[1].split('.')[0]
+
+
+def sitk_read_img_to_std_tensor(path):
+    img = sitk.ReadImage(path)
+    img_np = sitk.GetArrayFromImage(img)
+    img_np = np.expand_dims(np.expand_dims(img_np,0),0).astype(np.float32)
+    return torch.from_numpy(img_np)

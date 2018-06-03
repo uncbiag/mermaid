@@ -1,3 +1,7 @@
+# import matplotlib as matplt
+# from pyreg.config_parser import MATPLOTLIB_AGG
+# if MATPLOTLIB_AGG:
+#     matplt.use('Agg')
 import numpy as np
 import os
 from glob import glob
@@ -5,11 +9,12 @@ from functools import reduce
 import set_pyreg_paths
 import torch
 import pyreg.module_parameters as pars
-from pyreg.data_utils import make_dir
+from pyreg.data_utils import make_dir, get_file_name,sitk_read_img_to_std_tensor
 import random
 import matplotlib.pyplot as plt
 import pyreg.simple_interface as SI
 import pyreg.fileio as FIO
+from torch.autograd import Variable
 
 #######################################################
 from pyreg.data_wrapper import AdaptVal
@@ -150,18 +155,65 @@ class OAILongitudeRegistration:
 class OAILongitudeReisgtration(object):
     def __init__(self):
         self.patients = []
-        self.model_name = ''
-        self.map_low_res_factor =0.5
-        self.nr_of_iterations = 5
+        self.task_name='oai_reg'
+        self.expr_name='debug'
+        self.model0_name = 'affine_map'
+        self.model1_name = 'svf_vector_momentum_map'
+        self.map0_low_res_factor =0.3
+        self.map1_low_res_factor =0.3
+        self.optimizer0_name = 'sgd'
+        self.optimizer1_name = 'lbfgs_ls'
+        self.nr_of_iterations = 100
+        self.similarity_measure_type='ncc'
         self.similarity_measure_sigma =0.5
+        self.visualize_step =None
+        self.light_analysis_on=False
+        self.par_respro=None
+        """if the patient of certain mod and spec has no label, then the light_analysis will automatically on for this patient"""
 
         self.__initalize_model()
 
 
 
+
+    def set_task_name(self,task_name):
+        self.task_name = task_name
+
+    def set_expr_name(self, expr_name):
+        self.expr_name = expr_name
+
+    def gen_expr_name(self):
+        self.expr_name = self.task_name+ '_'+self.expr_name + '_'+self.model0_name +'_'+self.model1_name+'_mlf_'\
+                         +str(self.map0_low_res_factor)+str(self.map1_low_res_factor) + '_op_'+self.optimizer0_name\
+                         +self.optimizer1_name+'_sm_'+ self.similarity_measure_type
+
     def __initalize_model(self):
         self.si = SI.RegisterImagePair()
         self.im_io = FIO.ImageIO()
+        self.gen_expr_name()
+        if not self.light_analysis_on:
+            self.par_respro = self.get_analysis_setting()
+            self.par_respro['respro']['expr_name'] = self.expr_name
+            self.si.init_analysis_params(self.par_respro,self.task_name)
+
+
+
+
+    def get_analysis_setting(self):
+        par_respro = pars.ParameterDict()
+        par_respro.load_JSON('../settings/respro_settings.json')
+        return par_respro
+
+    def _update_saving_analysis_path(self, path):
+        if not self.light_analysis_on:
+            self.par_respro['respro']['save_fig_path'] = path
+
+    def __gen_img_saving_path(self,patient, mod, spec):
+        current_filename = patient.get_path_for_mod_and_spec(mod, spec)
+        folder_path = os.path.join(current_filename, self.expr_name)
+        make_dir(folder_path)
+        return folder_path
+
 
 
     def set_model(self,model_name):
@@ -169,6 +221,8 @@ class OAILongitudeReisgtration(object):
 
 
     def set_patients(self, patients):
+        if type(patients)!=list:
+            patients = [patients]
         self.patients = patients
 
     def do_registration(self):
@@ -181,40 +235,93 @@ class OAILongitudeReisgtration(object):
             for spec in patient.specificity:
                 if patient.get_slice_num(mod,spec)>0:
                     print('---- start processing mod {}, spec {}'.format(mod, spec))
+
+                    self.si.set_light_analysis_on(self.light_analysis_on)
                     self.do_single_patient_mod_spec_registration(patient,mod,spec)
 
 
 
-    def do_single_patient_mod_spec_registration(self,patient,mod,spec):
 
+    def do_single_patient_mod_spec_registration(self,patient,mod,spec):
+        patient_id = patient.patient_id
         img_paths = patient.get_slice_list(mod,spec)
-        # # currently we may not consider label
-        # label_paths = None if not patient.label_is_complete else patient.get_label_path_list()
         img0_path = img_paths[0]
-        img0_name = os.path.split(img0_path)[1]
+        img0_name = get_file_name(img0_path)
+        extra_info ={}
         Ic0, hdrc0, spacing0,_ = self.im_io.read_to_nc_format(filename=img0_path, intensity_normalize=True)
+        print(Ic0.shape)
+        LSource = None
+        LTarget = None
+        if not self.light_analysis_on:
+            label_path = None if not patient.patient_has_label_dic[mod][spec] else patient.get_label_path_list()
+            if label_path:
+                LTarget= AdaptVal(Variable(sitk_read_img_to_std_tensor(label_path[0])))
+                ##LTarget, _, _, _ = self.im_io.read_to_nc_format(filename=label_path[0], intensity_normalize=False)
+            else:
+                print("complete analysis will be off for patient_id {}, modality{}, specificity{}".format(patient_id,mod, spec))
+                self.si.set_light_analysis_on(True)
+
+
+
         saving_folder_path = self.__gen_img_saving_path(patient,mod, spec)
-        self.im_io.write(os.path.join(saving_folder_path, img0_name), np.squeeze(Ic0), hdrc0)
-        for img_path in img_paths[1:]:
-            Ic, hdrc, spacing, _ = self.im_io.read_to_nc_format(filename=img_path, intensity_normalize=True)
-            self.si.register_images(Ic, Ic0, spacing,
-                               model_name=self.model_name,
-                               map_low_res_factor=self.map_low_res_factor,
-                               nr_of_iterations=self.nr_of_iterations,
-                               visualize_step=None,
-                               similarity_measure_sigma=self.similarity_measure_sigma)
+        self._update_saving_analysis_path(saving_folder_path)
+
+        self.im_io.write(os.path.join(saving_folder_path, img0_name+'.nii.gz'), np.squeeze(Ic0), hdrc0)
+        for i,img_path in enumerate(img_paths[1:]):
+            img1_name = get_file_name(img_path)
+            extra_info['pair_name']=[img1_name+'_'+img0_name +'_step1']
+            extra_info['batch_id']=img1_name+'_'+img0_name +'_step1'
+
+
+            Ic1, hdrc, spacing, _ = self.im_io.read_to_nc_format(filename=img_path, intensity_normalize=True)
+
+            if LTarget is not None:
+                if label_path:
+                    LSource = AdaptVal(Variable(sitk_read_img_to_std_tensor(label_path[i])))
+                    #LSource, _, _, _ = self.im_io.read_to_nc_format(filename=label_path[i], intensity_normalize=False)
+                else:
+                    assert("source label not find")
+
+
+
+            self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
+                                    model_name='affine_map',
+                                    map_low_res_factor=self.map0_low_res_factor,
+                                    nr_of_iterations=self.nr_of_iterations,
+                                    visualize_step=self.visualize_step,
+                                    optimizer_name=self.optimizer0_name,
+                                    use_multi_scale=True,
+                                    rel_ftol=1e-9,
+                                    similarity_measure_type=self.similarity_measure_type,
+                                    similarity_measure_sigma=self.similarity_measure_sigma,
+                                    json_config_out_filename='cur_settings.json',
+                                    params ='cur_settings.json')
+            wi = self.si.get_warped_image()
+            wi=wi.cpu().data.numpy()
+
+            print("let's come to step 2 ")
+
+            extra_info['pair_name'] = [img1_name + '_' + img0_name + '_step2']
+            extra_info['batch_id'] = img1_name + '_' + img0_name + '_step2'
+            self.si.register_images(wi, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
+                                    model_name=self.model1_name,
+                                    map_low_res_factor=self.map1_low_res_factor,
+                                    nr_of_iterations=self.nr_of_iterations,
+                                    visualize_step=self.visualize_step,
+                                    optimizer_name=self.optimizer1_name,
+                                    use_multi_scale=True,
+                                    rel_ftol=1e-9,
+                                    similarity_measure_type= self.similarity_measure_type,
+                                    similarity_measure_sigma=self.similarity_measure_sigma,
+                                    json_config_out_filename='output_settings_lbfgs.json',
+                                    params='cur_settings_lbfgs.json')
+
             wi = self.si.get_warped_image()
             img_name = os.path.split(img_path)[1]
-            self.im_io.write(os.path.join(saving_folder_path,img_name), torch.squeeze(wi), hdrc)
+            self.im_io.write(os.path.join(saving_folder_path,img_name+'.nii.gz'), torch.squeeze(wi), hdrc)
 
 
-    def __gen_img_saving_path(self,patient, mod, spec):
-        expr_setting = self.model_name + '_low_f_' + str(self.map_low_res_factor) + '_niter_' \
-                       + str(self.nr_of_iterations) + '_sim_sig_' + str(self.similarity_measure_sigma)
-        current_filename = patient.get_path_for_mod_and_spec(mod, spec)
-        folder_path = os.path.join(current_filename, expr_setting)
-        make_dir(folder_path)
-        return folder_path
+
 
 
 class Patients(object):
@@ -531,13 +638,11 @@ class OAIDataPrepare():
 
 
 
-#
+
 # test = OAIDataPrepare()
 # test.prepare_data()
-model_name ='svf_scalar_momentum_map'
 patients = Patients()
-filtered_patients = patients.get_filtered_patients_list(specificity='RIGHT',num_of_patients=20, len_time_range=[2,7], use_random=True)
+filtered_patients = patients.get_filtered_patients_list(specificity='RIGHT',num_of_patients=1, len_time_range=[2,7], use_random=False)
 oai_reg = OAILongitudeReisgtration()
 oai_reg.set_patients(filtered_patients)
-oai_reg.set_model(model_name)
 oai_reg.do_registration()

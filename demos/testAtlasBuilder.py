@@ -1,6 +1,9 @@
 # This is a simple atlas builder
 # To be used (for now) to create training data for the learned smoother
-
+import matplotlib as matplt
+from pyreg.config_parser import MATPLOTLIB_AGG
+if MATPLOTLIB_AGG:
+    matplt.use('Agg')
 import set_pyreg_paths
 
 # first do the torch imports

@@ -20,7 +20,7 @@ class XlsxRecorder(object):
     """
     def __init__(self, expr_name,  saving_path):
         self.expr_name = expr_name
-        self.saving_path = saving_path
+        self.saving_path = '../data/'+expr_name  #saving_path
         """path of saving excel, default is the same as the path of saving figures"""
         self.writer_path = None
         self.xlsx_writer =  None

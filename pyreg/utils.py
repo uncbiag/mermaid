@@ -100,15 +100,15 @@ def remove_infs_from_variable(v):
     sz = v.size()
     reduction_factor = np.prod(np.array(sz))
 
-    if type(v.data)==torch.FloatTensor or type(v.data)==torch.cuda.FloatTensor:
+    if v.data.dtype==torch.float32: #########################################################
         return torch.clamp(v,
                            min=(np.asscalar(np.finfo('float32').min))/reduction_factor,
                            max=(np.asscalar(np.finfo('float32').max))/reduction_factor)
-    elif type(v.data)==torch.DoubleTensor or type(v.data)==torch.cuda.DoubleTensor:
+    elif v.data.dtype==torch.DoubleTensor or type(v.data)==torch.cuda.DoubleTensor:
         return torch.clamp(v,
                            min=(np.asscalar(np.finfo('float64').min))/reduction_factor,
                            max=(np.asscalar(np.finfo('float64').max))/reduction_factor)
-    elif type(v.data)==torch.HalfTensor or type(v.data)==torch.cuda.HalfTensor:
+    elif v.data.dtype==torch.HalfTensor or type(v.data)==torch.cuda.HalfTensor:
         return torch.clamp(v,
                            min=(np.asscalar(np.finfo('float16').min))/reduction_factor,
                            max=(np.asscalar(np.finfo('float16').max))/reduction_factor)
@@ -626,10 +626,7 @@ def t2np( v ):
     :return: numpy array
     """
 
-    if type( v ) == torch.autograd.variable.Variable:
-        return (v.data).cpu().numpy()
-    else:
-        return v.cpu().numpy()
+    return (v.data).cpu().numpy()
 
 def checkNan(x):
     """"

@@ -277,13 +277,13 @@ class FourierConvolution(Function):
             return FFTVal(result, ini=-1)
         else:
             if self.dim <3:
-                conv_output = self.ifftn(self.fftn(input.numpy()) * self.complex_fourier_filter)
+                conv_output = self.ifftn(self.fftn(input.data.numpy()) * self.complex_fourier_filter)
                 result = conv_output.real  # should in principle be real
             elif self.dim == 3:
                 result = np.zeros(input.shape)
                 for batch in range(input.size()[0]):
                     for ch in range(input.size()[1]):
-                        conv_output = self.ifftn(self.fftn(input[batch,ch].numpy()) * self.complex_fourier_filter)
+                        conv_output = self.ifftn(self.fftn(input[batch,ch].data.numpy()) * self.complex_fourier_filter)
                         result[batch,ch] = conv_output.real
             else:
                 raise ValueError("cpu fft smooth should be 1d-3d")

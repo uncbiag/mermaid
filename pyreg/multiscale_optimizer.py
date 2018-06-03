@@ -17,6 +17,7 @@ import model_factory as MF
 import image_sampling as IS
 from metrics import get_multi_metric
 from res_recorder import XlsxRecorder
+from data_utils import make_dir
 
 from torch.utils.data import Dataset, DataLoader
 import optimizer_data_loaders as OD
@@ -283,11 +284,11 @@ class Optimizer(object):
 
         self.params = params
         """general parameters"""
-        self.rel_ftol = 1e-4
+        self.rel_ftol = 1e-6
         """relative termination tolerance for optimizer"""
         self.last_successful_step_size_taken = None
         """Records the last successful step size an optimizer took (possible use: propogate step size between multiscale levels"""
-        self.batch_id = -1
+        self.batch_id = None
 
         self.external_optimizer_parameter_loss = None
 
@@ -380,7 +381,7 @@ class Optimizer(object):
         :return: returns spacing of low res parameterization
         """
         #todo: check that this is the correct way of doing it
-        return spacing * (np.array(sz[2::])-1) / (np.array(lowResSize[2::])-1)
+        return spacing * (np.array(sz[2::])) / (np.array(lowResSize[2::])) ####################################################
 
     def _get_low_res_size_from_size(self, sz, factor):
         """
@@ -1243,7 +1244,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self._add_to_history('iter',self.iter_count)
         self._add_to_history('energy',cur_energy[0])
         self._add_to_history('similarity_energy',utils.t2np(similarityEnergy.float())[0])
-        self._add_to_history('regularization_energy',utils.t2np(regEnergy.float())[0])
+        self._add_to_history('regularization_energy',utils.t2np(regEnergy.float()))
         self._add_to_history('opt_par_energy',utils.t2np(opt_par_energy.float())[0])
 
         if custom_optimizer_output_values is not None:
@@ -1313,6 +1314,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 visual_param['save_fig_num'] = self.save_fig_num
                 visual_param['pair_path'] = self.pair_path
                 visual_param['iter'] = 'scale_'+str(self.n_scale) + '_iter_' + str(self.iter_count)
+
+
+
+
             else:
                 visual_param['save_fig'] = False
 
@@ -1328,6 +1333,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                         vizReg.show_current_images(iter, self.lowResISource, self.lowResITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
                     else:
                         I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.spline_order)
+                        vizImage = vizImage if len(vizImage)>2 else None
                         vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
                 else:
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
@@ -3049,7 +3055,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def set_saving_env(self):
         if self.save_fig==True:
             # saving by files
-            for file_name in self.pair_path[:self.save_fig_num]:
+            for file_name in self.pair_path[: min(self.save_fig_num,len(self.pair_path))]:
                 save_folder = os.path.join(os.path.join(self.save_fig_path,'byname'),file_name)
                 if not os.path.exists(save_folder):
                     os.makedirs(save_folder)
@@ -3057,7 +3063,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             # saving by iterations
             for idx, scale in enumerate(self.scaleFactors):
                 for i in range(self.scaleIterations[idx]):
-                    if i%self.visualize_step == 0:
+                    if i%self.visualize_step == 0 or i==self.scaleIterations[idx]-1:
                         save_folder = os.path.join(os.path.join(self.save_fig_path,'byiter'),'scale_'+str(scale) + '_iter_' + str(i))
                         if not os.path.exists(save_folder):
                             os.makedirs(save_folder)
@@ -3294,4 +3300,4 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                         print(self.mapLowResFactor)
                         print('After')
                         print(upsampledSz)
-                upsampledParameters, upsampledParameterSpacing = self.ssOpt.upsample_model_parameters(upsampledSz[2::])
+                upsampledParameters, upsampledParameterSpacing = self.ssOpt.upsample_model_parameters(upsampledSz[2::])######################3

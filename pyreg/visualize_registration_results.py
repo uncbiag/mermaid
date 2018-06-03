@@ -14,6 +14,7 @@ import numpy as np
 import os
 import utils
 import viewers
+from data_utils import make_dir
 dpi=500
 extension= '.png'
 def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visual_param=None, i=0):
@@ -73,6 +74,8 @@ def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visua
         if visual_param['save_fig']:
             file_name = visual_param['pair_path'][i]
             join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
+            make_dir(join_p(visual_param['save_fig_path_byname'], file_name))
+            make_dir(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']))
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
     else:
@@ -148,6 +151,8 @@ def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_p
         if visual_param['save_fig']:
             file_name = visual_param['pair_path'][i]
             join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
+            make_dir(join_p(visual_param['save_fig_path_byname'], file_name))
+            make_dir(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']))
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
     else:
@@ -227,6 +232,8 @@ def _show_current_images_2d_map(iS, iT, iW, iter, vizImage, vizName, phiWarped, 
         if visual_param['save_fig']:
             file_name = visual_param['pair_path'][i]
             join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
+            make_dir(join_p(visual_param['save_fig_path_byname'], file_name))
+            make_dir(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']))
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
             plt.clf()
@@ -333,6 +340,8 @@ def _show_current_images_3d(iS, iT, iW, iter, vizImage, vizName, phiWarped, visu
         if visual_param['save_fig']:
             file_name = visual_param['pair_path'][i]
             join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
+            make_dir(join_p(visual_param['save_fig_path_byname'], file_name))
+            make_dir(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']))
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
     else:
