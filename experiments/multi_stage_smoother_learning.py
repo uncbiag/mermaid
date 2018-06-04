@@ -219,7 +219,7 @@ if __name__ == "__main__":
     parser.add_argument('--frozen_nr_of_epochs', required=False,type=str, default=None, help='number of epochs to run the three stages with frozen parameters (for refinement)')
     parser.add_argument('--only_compute_frozen_epochs', action='store_true', help='if specified will not redo the optimization, but will only compute the frozen results based on previous optimizatin results')
 
-    parser.add_argument('--config_kvs', required=False, default=None, help='Allows specifying key value pairs that will override json settings; in format k1.k2.k3=val1, k1.k2=val2')
+    parser.add_argument('--config_kvs', required=False, default=None, help='Allows specifying key value pairs that will override json settings; in format k1.k2.k3=val1;k1.k2=val2')
 
     args = parser.parse_args()
 
