@@ -11,6 +11,8 @@ from .data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
 import math
 import pyreg.finite_differences as fd
+import pyreg.module_parameters as pars
+import pyreg.fileio as fio
 
 batch_norm_momentum_val = 0.1
 
@@ -18,14 +20,29 @@ def half_sigmoid(x,alpha=1):
     r = 2.0/(1+torch.exp(-x*alpha))-1.0
     return r
 
-def compute_localized_edge_penalty(I,spacing):
+def compute_localized_edge_penalty(I,spacing,params=None):
+
+    if params==None:
+        # will not be tracked, but this is to keep track of the parameters
+        params = pars.ParameterDict()
+
+    gamma = params[('edge_penalty_gamma',1.0,'Constant for edge penalty: 1.0/(1.0+gamma*||\\nabla I||*min(spacing)')]
+    write_edge_penalty_to_file = params[('edge_penalty_write_to_file',False,'If set to True the edge penalty is written into a file so it can be debugged')]
+    edge_penalty_filename = params[('edge_penalty_filename','DEBUG_edge_penalty.nrrd','Edge penalty image')]
+    terminate_after_writing_edge_penalty = params[('edge_penalty_terminate_after_writing',False,'Terminates the program after the edge file has been written; otherwise file may be constantly overwritten')]
+
     # needs to be batch B x X x Y x Z format
     fdt = fd.FD_torch(spacing=spacing)
     gnI = float(np.min(spacing))*fdt.grad_norm_sqr(I)**0.5
 
     # compute edge penalty
-    gamma = 1.0
     localized_edge_penalty = 1.0/(1.0+gamma*gnI) # this is what we weight the OMT values with
+
+    if write_edge_penalty_to_file:
+        fio.ImageIO().write(edge_penalty_filename,localized_edge_penalty[0,...])
+        if terminate_after_writing_edge_penalty:
+            print('Terminating, because terminate_after_writing_edge_penalty was set to True')
+            exit(code=0)
 
     return localized_edge_penalty
 
@@ -1041,7 +1058,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
             # first compute the edge map
-            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing)
+            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing, self.params)
             batch_size = I.size()[0]
             for g in range(self.nr_of_gaussians):
                 # total_variation_penalty += self.compute_total_variation(weights[:,g,...])
@@ -1286,7 +1303,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
             # first compute the edge map
-            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing)
+            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing, self.params)
             batch_size = I.size()[0]
             for g in range(self.nr_of_gaussians):
                 #total_variation_penalty += self.compute_total_variation(weights[:,g,...])
