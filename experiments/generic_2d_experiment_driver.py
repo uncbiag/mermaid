@@ -20,9 +20,14 @@ def _make_arg_list(args):
 
     return arg_list
 
-def get_bash_precommand(cuda_visible_devices):
-    if cuda_visible_devices is not None:
+def get_bash_precommand(cuda_visible_devices,pre_command=None):
+
+    if (cuda_visible_devices is not None) and (pre_command is not None):
+        ret = '{:s} && CUDA_VISIBLE_DEVICES={:d}'.format(pre_command,cuda_visible_devices)
+    elif (cuda_visible_devices is not None) and (pre_command is None):
         ret = 'CUDA_VISIBLE_DEVICES={:d}'.format(cuda_visible_devices)
+    elif (cuda_visible_devices is None) and (pre_command is not None):
+        ret = '{:s} && '.format(pre_command)
     else:
         ret = ''
     return ret
@@ -59,7 +64,7 @@ def add_to_config_string(cs,cs_to_add):
 def run_optimization(stage,nr_of_epochs,image_pair_config_pt,input_image_directory,output_directory,
                      main_json,seed,
                      key_value_overwrites=dict(),string_key_value_overwrites=dict(),
-                     cuda_visible_devices=None):
+                     cuda_visible_devices=None,pre_command=None):
 
     if stage==0:
         all_nr_of_epochs = '{:d},1,1'.format(nr_of_epochs)
@@ -94,11 +99,11 @@ def run_optimization(stage,nr_of_epochs,image_pair_config_pt,input_image_directo
     cmd_arg_list = _make_arg_list(args)
     current_python_script = 'multi_stage_smoother_learning.py'
 
-    pre_command = get_bash_precommand(cuda_visible_devices=cuda_visible_devices)
+    entire_pre_command = get_bash_precommand(cuda_visible_devices=cuda_visible_devices,pre_command=pre_command)
     log_file = get_stage_log_filename(output_directory=output_directory,stage=stage,process_name='opt')
-    ce.execute_python_script_via_bash(current_python_script, cmd_arg_list, pre_command=pre_command, log_file=log_file)
+    ce.execute_python_script_via_bash(current_python_script, cmd_arg_list, pre_command=entire_pre_command, log_file=log_file)
 
-def run_visualization(stage,output_directory,main_json,cuda_visible_devices=None):
+def run_visualization(stage,output_directory,main_json,cuda_visible_devices=None,pre_command=None):
 
     args = {'config': main_json,
             'output_directory': output_directory,
@@ -110,11 +115,11 @@ def run_visualization(stage,output_directory,main_json,cuda_visible_devices=None
     current_python_script = 'visualize_multi_stage.py'
 
 
-    pre_command = get_bash_precommand(cuda_visible_devices=cuda_visible_devices)
+    entire_pre_command = get_bash_precommand(cuda_visible_devices=cuda_visible_devices,pre_command=pre_command)
     log_file = get_stage_log_filename(output_directory=output_directory,stage=stage,process_name='viz')
-    ce.execute_python_script_via_bash(current_python_script, cmd_arg_list, pre_command=pre_command, log_file=log_file)
+    ce.execute_python_script_via_bash(current_python_script, cmd_arg_list, pre_command=entire_pre_command, log_file=log_file)
 
-def run_validation(stage,output_directory,validation_dataset_directory,validation_dataset_name,cuda_visible_devices=None):
+def run_validation(stage,output_directory,validation_dataset_directory,validation_dataset_name,cuda_visible_devices=None,pre_command=None):
 
     args = {'stage_nr':stage,
             'output_directory': output_directory,
@@ -128,11 +133,11 @@ def run_validation(stage,output_directory,validation_dataset_directory,validatio
     cmd_arg_list = _make_arg_list(args)
     current_python_script = 'compute_validation_results.py'
 
-    pre_command = get_bash_precommand(cuda_visible_devices=cuda_visible_devices)
+    entire_pre_command = get_bash_precommand(cuda_visible_devices=cuda_visible_devices,pre_command=pre_command)
     log_file = get_stage_log_filename(output_directory=output_directory,stage=stage,process_name='val')
-    ce.execute_python_script_via_bash(current_python_script, cmd_arg_list, pre_command=pre_command, log_file=log_file)
+    ce.execute_python_script_via_bash(current_python_script, cmd_arg_list, pre_command=entire_pre_command, log_file=log_file)
 
-def run_extra_validation(stage,input_image_directory,output_directory,main_json,cuda_visible_devices=None):
+def run_extra_validation(stage,input_image_directory,output_directory,main_json,cuda_visible_devices=None,pre_command=None):
 
     args = {'stage_nr': stage,
             'input_image_directory': input_image_directory,
@@ -144,9 +149,9 @@ def run_extra_validation(stage,input_image_directory,output_directory,main_json,
     cmd_arg_list = _make_arg_list(args)
     current_python_script = 'extra_validation_for_synthetic_test_cases.py'
 
-    pre_command = get_bash_precommand(cuda_visible_devices=cuda_visible_devices)
+    entire_pre_command = get_bash_precommand(cuda_visible_devices=cuda_visible_devices,pre_command=pre_command)
     log_file = get_stage_log_filename(output_directory=output_directory,stage=stage,process_name='eval')
-    ce.execute_python_script_via_bash(current_python_script, cmd_arg_list, pre_command=pre_command, log_file=log_file)
+    ce.execute_python_script_via_bash(current_python_script, cmd_arg_list, pre_command=entire_pre_command, log_file=log_file)
 
 def run(stage,nr_of_epochs,main_json,
         image_pair_config_pt,
@@ -157,7 +162,8 @@ def run(stage,nr_of_epochs,main_json,
         key_value_overwrites=dict(),
         string_key_value_overwrites=dict(),
         seed=1234,
-        cuda_visible_devices=None):
+        cuda_visible_devices=None,
+        pre_command=None):
 
     output_directory = os.path.join(output_base_directory, 'out_' + postfix )
 
@@ -178,26 +184,30 @@ def run(stage,nr_of_epochs,main_json,
                      key_value_overwrites=key_value_overwrites,
                      string_key_value_overwrites=string_key_value_overwrites,
                      seed=seed,
-                     cuda_visible_devices=cuda_visible_devices)
+                     cuda_visible_devices=cuda_visible_devices,
+                     pre_command=pre_command)
 
     run_visualization(stage=stage,
                       output_directory=output_directory,
                       main_json=main_json,
-                      cuda_visible_devices=cuda_visible_devices)
+                      cuda_visible_devices=cuda_visible_devices,
+                      pre_command=pre_command)
 
     if (validation_dataset_directory is not None) and (validation_dataset_name is not None):
         run_validation(stage=stage,
                        output_directory=output_directory,
                        validation_dataset_directory=validation_dataset_directory,
                        validation_dataset_name=validation_dataset_name,
-                       cuda_visible_devices=cuda_visible_devices)
+                       cuda_visible_devices=cuda_visible_devices,
+                       pre_command=pre_command)
 
         if validation_dataset_name=='SYNTH':
             run_extra_validation(stage=stage,
                                  input_image_directory=input_image_directory,
                                  output_directory=output_directory,
                                  main_json=main_json,
-                                 cuda_visible_devices=cuda_visible_devices)
+                                 cuda_visible_devices=cuda_visible_devices,
+                                 pre_command=pre_command)
 
     else:
         print('Validation not computed, because validation dataset is not specified')
@@ -301,7 +311,7 @@ if __name__ == "__main__":
     # --dataset_config dataset.json --config test2d_025.json --sweep_value_name_a model.registration_model.forward_model.smoother.deep_smoother.total_variation_weight_penalty
     # --sweep_values_a 0.01,0.1,1.0,10 --sweep_value_name_b model.registration_model.forward_model.smoother.omt_weight_penalty
     # --sweep_values_b 1.,10.,100. --move_to_directory test_sweep --multi_gaussian_weights_stage_0 [0.,0.,0.,1.0]
-    # --config_kvs optimizer.sgd.individual.lr=0.01\;model.optimizer.sgd.shared.lr=0.0
+    # --config_kvs optimizer.sgd.individual.lr=0.01\;model.optimizer.sgd.shared.lr=0.0 --precommand "source activate p27"
     #
     # directories can also be specified with other settings. If a json file is specified, but does not exist
     # it will generate a default one
@@ -316,6 +326,7 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_config', required=False, default=None, help='Allows to specify all the needed directories and the dataset type in a JSON file.')
 
     parser.add_argument('--cuda_device', required=False, default=0, type=int, help='The CUDA device the code is run on if CUDA is enabled')
+    parser.add_argument('--precommand', required=False, default=None, type=str, help='Command to execute before; for example to activate a virtual environment; "source activate p27"')
 
     parser.add_argument('--input_image_directory', required=False, default=None, help='Directory where all the images are')
     parser.add_argument('--output_base_directory', required=False, default='experimental_results', help='Base directory where the output is stored')
@@ -500,7 +511,8 @@ if __name__ == "__main__":
                 key_value_overwrites=kvo,
                 string_key_value_overwrites=kvos_str,
                 seed=seed,
-                cuda_visible_devices=cuda_visible_devices)
+                cuda_visible_devices=cuda_visible_devices,
+                pre_command=args.precommand)
 
         move_output_directory(move_to_directory=move_to_directory,
                               output_base_directory=output_base_directory,
@@ -532,7 +544,8 @@ if __name__ == "__main__":
                     key_value_overwrites=combined_kvs,
                     string_key_value_overwrites=kvos_str,
                     seed=seed,
-                    cuda_visible_devices=cuda_visible_devices)
+                    cuda_visible_devices=cuda_visible_devices,
+                    pre_command=args.precommand)
 
             move_output_directory(move_to_directory=move_to_directory,
                                   output_base_directory=output_base_directory,
