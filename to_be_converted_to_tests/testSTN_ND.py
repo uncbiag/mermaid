@@ -23,8 +23,8 @@ dim = 3 # desired dimension
 
 # create a default image which we want to transform
 sz = 30         # size of the 2D image: sz x sz
-coorCenter = sz/2        # center coordinates
-len_s = sz/6    # half of side-length for small square
+coorCenter = sz//2        # center coordinates
+len_s = sz//6    # half of side-length for small square
 
 # create small square
 if dim==1:

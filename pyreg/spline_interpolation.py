@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from builtins import range
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -9,8 +11,8 @@ from torch.autograd import gradcheck
 
 from torch.nn.modules.module import Module
 
-from data_wrapper import MyTensor
-from data_wrapper import MyLongTensor
+from .data_wrapper import MyTensor
+from .data_wrapper import MyLongTensor
 
 class SplineInterpolation_ND_BCXYZ(Module):
     """
@@ -361,12 +363,12 @@ class SplineInterpolation_ND_BCXYZ(Module):
         # todo: can likely be simplified (without loop over dimension)
         if self.n%2==0: # even
             for d in range(dim):
-                i = (torch.floor(x[:,d,...].data + 0.5) - self.n/2)
+                i = (torch.floor(x[:,d,...].data + 0.5) - self.n//2)
                 for k in range(0,self.n+1):
                     index[k,:,d,...] = i+k
         else:
             for d in range(dim):
-                i = (torch.floor(x[:,d,...].data)-self.n/2)
+                i = (torch.floor(x[:,d,...].data)-self.n//2)
                 for k in range(0,self.n+1):
                     index[k,:,d,...] = i+k
 
@@ -675,7 +677,7 @@ class PerformSplineInterpolationHelper(Function):
         dim = len(indices) # this is stored in a list
         l_indices = MyLongTensor(indices[0].nelement()).zero_()
         for d in range(dim):
-            l_indices += self._get_linear_view(indices[d])*np.prod(aug_t_sz[d+1:])
+            l_indices += self._get_linear_view(indices[d])*int(np.prod(aug_t_sz[d+1:]))
         return l_indices
 
     def _accumulate(self,vals,indices,target_sz):
@@ -798,7 +800,7 @@ def perform_spline_interpolation_helper(c,weight,index):
 
 def test_me(test_dim=1):
 
-    import utils
+    from . import utils
 
     testDim = test_dim
 

@@ -1,5 +1,9 @@
+from __future__ import print_function
 # This is a simple atlas builder
 # To be used (for now) to create training data for the learned smoother
+
+from builtins import str
+from builtins import range
 import matplotlib as matplt
 from pyreg.config_parser import MATPLOTLIB_AGG
 if MATPLOTLIB_AGG:

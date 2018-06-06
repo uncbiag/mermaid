@@ -1,14 +1,18 @@
 """
 This package provides a super-simple interface for standard registration tasks
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-import multiscale_optimizer as MO
-import module_parameters as pars
-import model_factory as MF
-import fileio
+from builtins import str
+from builtins import object
+
+from . import multiscale_optimizer as MO
+from . import module_parameters as pars
+from . import model_factory as MF
+from . import fileio
 import numpy as np
-import utils
-import os
+from . import utils
 
 import torch
 from torch.autograd import Variable
@@ -158,6 +162,16 @@ class RegisterImagePair(object):
         else:
             return None
 
+    def get_inverse_map(self):
+        """
+        Returns the inverse deformation map if available
+        :return: deformation map
+        """
+        if self.opt is not None:
+            return self.opt.get_inverse_map()
+        else:
+            return None
+
     def set_initial_map(self,map0):
         """
         Sets the map that will be used as initial condition. By default this is the identity, but this can be
@@ -251,6 +265,7 @@ class RegisterImagePair(object):
                                    checkpoint_dir='checkpoints',
                                    resume_from_last_checkpoint=False,
                                    optimizer_name=None,
+                                   compute_inverse_map=False,
                                    params=None):
         """
         Registers two images. Only ISource, ITarget, spacing, and model_name need to be specified.
@@ -274,6 +289,7 @@ class RegisterImagePair(object):
         :param checkpoint_dir: directory in which the checkpoints are written for consensus optimization
         :param resume_from_last_checkpoint: for consensus optimizer, resumes optimization from last checkpoint
         :param optimizer_name: name of the optimizer lbfgs_ls|adam|sgd
+        :param compute_inverse_map: for map-based models that inverse map can optionally be computed
         :param params: parameter structure to pass settings or filename to load the settings from file.
         :return: n/a
         """
@@ -313,7 +329,6 @@ class RegisterImagePair(object):
 
         else:
             # batch normalization needs the filenames as input
-            ##########################################################it seems that when using bn, input source_filename is not str but image
             ISource = source_filename
             ITarget = target_filename
             if lsource_filename and ltarget_filename:
@@ -345,6 +360,7 @@ class RegisterImagePair(object):
                       checkpoint_dir=checkpoint_dir,
                       resume_from_last_checkpoint=resume_from_last_checkpoint,
                       optimizer_name=optimizer_name,
+                      compute_inverse_map=compute_inverse_map,
                       params=params)
 
     def register_images(self,ISource,ITarget,spacing,model_name,extra_info=None,LSource=None, LTarget=None,
@@ -363,6 +379,7 @@ class RegisterImagePair(object):
                         checkpoint_dir=None,
                         resume_from_last_checkpoint=False,
                         optimizer_name=None,
+                        compute_inverse_map=False,
                         params=None):
         """
         Registers two images. Only ISource, ITarget, spacing, and model_name need to be specified.
@@ -387,6 +404,7 @@ class RegisterImagePair(object):
         :param checkpoint_dir: directory in which the checkpoints are written for consensus optimization
         :param resume_from_last_checkpoint: for consensus optimizer, resumes optimization from last checkpoint
         :param optimizer_name: name of the optimizer lbfgs_ls|adam|sgd
+        :param compute_inverse_map: for map-based models that inverse map can optionally be computed
         :param params: parameter structure to pass settings or filename to load the settings from file.
         :return: n/a
         """
@@ -421,7 +439,7 @@ class RegisterImagePair(object):
             self.params = pars.ParameterDict()
         elif type(params)==pars.ParameterDict:
             self.params = params
-        elif type(params)==str:
+        elif type(params)==type('acharacter'):
             self.params = pars.ParameterDict()
             self.params.load_JSON(params)
         else:
@@ -436,7 +454,7 @@ class RegisterImagePair(object):
 
         self.spacing = spacing
 
-        if not self.available_models.has_key(model_name):
+        if model_name not in self.available_models:
             print('Unknown model name: ' + model_name)
             MF.AvailableModels().print_available_models()
         else:
@@ -478,14 +496,14 @@ class RegisterImagePair(object):
                 if use_consensus_optimization or use_batch_optimization:
                     raise ValueError('Consensus or batch optimization is not yet supported for multi-scale registration')
                 else:
-                    self.opt = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
+                    self.opt = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map)
             else:
                 if use_consensus_optimization:
-                    self.opt = MO.SimpleSingleScaleConsensusRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
+                    self.opt = MO.SimpleSingleScaleConsensusRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map)
                 elif use_batch_optimization:
-                    self.opt = MO.SimpleSingleScaleBatchRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
+                    self.opt = MO.SimpleSingleScaleBatchRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map)
                 else:
-                    self.opt = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
+                    self.opt = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map)
 
             if visualize_step is not None:
                 self.opt.get_optimizer().set_visualization(True)

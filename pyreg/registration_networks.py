@@ -13,34 +13,37 @@ Currently implemented:
     * LDDMMShootingScalarMomentumImageNet: image-based LDDMM using the scalar-momentum parameterization
     * LDDMMShootingScalarMomentumImageNet: map-based LDDMM using the scalar-momentum parameterization
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
+from builtins import str
 import torch
 import torch.nn as nn
 from torch.autograd.variable import Variable
 from torch.nn.parameter import Parameter
 
-import rungekutta_integrators as RK
-import forward_models as FM
-from data_wrapper import AdaptVal
-import regularizer_factory as RF
-import similarity_measure_factory as SM
+from . import rungekutta_integrators as RK
+from . import forward_models as FM
+from .data_wrapper import AdaptVal
+from . import regularizer_factory as RF
+from . import similarity_measure_factory as SM
 
-import smoother_factory as SF
-import image_sampling as IS
+from . import smoother_factory as SF
+from . import image_sampling as IS
 
-from data_wrapper import MyTensor
+from .data_wrapper import MyTensor
 
-import utils
+from . import utils
 import collections
 import numpy as np
 
 from abc import ABCMeta, abstractmethod
+from future.utils import with_metaclass
 
-class RegistrationNet(nn.Module):
+class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
     """
     Abstract base-class for all the registration networks
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, sz, spacing, params):
         """
@@ -204,7 +207,7 @@ class RegistrationNet(nn.Module):
         cs = self.state_dict()
 
         for key in pars:
-            if cs.has_key(key):
+            if key in cs:
                 if torch.is_tensor(pars[key]):
                     cs[key].copy_(pars[key])
                 else: #is a parameter
@@ -225,7 +228,7 @@ class RegistrationNet(nn.Module):
         cs = self.state_dict()
 
         for key in pars:
-            if cs.has_key(key) and not self._shared_parameters.issuperset({key}):
+            if key in cs and not self._shared_parameters.issuperset({key}):
                 if torch.is_tensor(pars[key]):
                     cs[key].copy_(pars[key])
                 else: # is a parameter
@@ -242,7 +245,7 @@ class RegistrationNet(nn.Module):
         cs = self.state_dict()
 
         for key in pars:
-            if cs.has_key(key) and self._shared_parameters.issuperset({key}):
+            if key in cs and self._shared_parameters.issuperset({key}):
                 if torch.is_tensor(pars[key]):
                     cs[key].copy_(pars[key])
                 else: # is a parameter
@@ -363,11 +366,10 @@ class RegistrationNetDisplacement(RegistrationNet):
         return (phi-self.d)
 
 
-class RegistrationNetTimeIntegration(RegistrationNet):
+class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
     """
         Abstract base-class for all the registration networks with time-integration
         """
-    __metaclass__ = ABCMeta
 
     def __init__(self, sz, spacing, params):
         """
@@ -607,11 +609,10 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
         I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
         return I1[0]
 
-class RegistrationLoss(nn.Module):
+class RegistrationLoss(with_metaclass(ABCMeta, nn.Module)):
     """
     Abstract base class to define a loss function for image registration
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self,sz_sim,spacing_sim,sz_model,spacing_model,params):
         """
@@ -728,6 +729,10 @@ class RegistrationImageLoss(RegistrationLoss):
         sim = self.compute_similarity_energy(I1_warped, I1_target, I0_source, None, variables_from_forward_model, variables_from_optimizer)
         reg = self.compute_regularization_energy(I0_source, variables_from_forward_model, variables_from_optimizer)
         energy = sim + reg
+
+        # saveguard against infinity
+        energy = utils.remove_infs_from_variable(energy)
+
         return energy, sim, reg
 
     def forward(self, I1_warped, I0_source, I1_target, variables_from_forward_model=None, variables_from_optimizer=None):
@@ -911,7 +916,9 @@ class SVFMapNet(SVFNet):
     """
     Network specialization to a map-based SVF 
     """
-    def __init__(self,sz,spacing,params):
+    def __init__(self,sz,spacing,params,compute_inverse_map=False):
+        self.compute_inverse_map = compute_inverse_map
+        """If set to True the inverse map is computed on the fly"""
         super(SVFMapNet, self).__init__(sz,spacing,params)
 
     def create_integrator(self):
@@ -921,7 +928,7 @@ class SVFMapNet(SVFNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model',{},'settings for the forward model')]
-        advectionMap = FM.AdvectMap( self.sz, self.spacing )
+        advectionMap = FM.AdvectMap( self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map )
         pars_to_pass = utils.combine_dict({'v':self.v}, self._get_default_dictionary_to_pass_to_integrator())
         return RK.RK4(advectionMap.f, advectionMap.u, pars_to_pass, cparams)
 
@@ -935,8 +942,12 @@ class SVFMapNet(SVFNet):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the map at time tTo
         """
-        phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-        return phi1[0]
+        if self.compute_inverse_map:
+            phi1 = self.integrator.solve([phi,phi], self.tFrom, self.tTo, variables_from_optimizer)
+            return (phi1[0],phi1[1])
+        else:
+            phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+            return phi1[0]
 
 
 class SVFMapLoss(RegistrationMapLoss):
@@ -1086,13 +1097,8 @@ class AffineMapNet(RegistrationNet):
         :param desiredSz: desired size of the upsampled image
         :return: returns a tuple (upsampled_state,upsampled_spacing)
         """
-        ustate = self.state_dict().copy()
-        if len(self.sz)==len(desiredSz):
-            desiredSz=desiredSz[2::]# stays the same
-        if len(self.sz)-len(desiredSz)==2:
-            upsampled_spacing = self.spacing*(self.sz[2::].astype('float')/desiredSz.astype('float'))
-        else:
-            raise ValueError, "size not matched"
+        ustate = self.state_dict().copy() # stays the same
+        upsampled_spacing = self.spacing*((self.sz[2::].astype('float')-1.)/(desiredSz[2::].astype('float')-1.))
 
         return ustate, upsampled_spacing
 
@@ -1104,7 +1110,7 @@ class AffineMapNet(RegistrationNet):
         :return: returns a tuple (downsampled_state,downsampled_spacing)
         """
         dstate = self.state_dict().copy() # stays the same
-        downsampled_spacing = self.spacing*(self.sz[2::].astype('float')/desiredSz[2::].astype('float'))
+        downsampled_spacing = self.spacing*((self.sz[2::].astype('float')-1.)/(desiredSz[2::].astype('float')-1.))
         return dstate, downsampled_spacing
 
     def forward(self, phi, I0_source, variables_from_optimizer=None):
@@ -1369,9 +1375,10 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
     """
     Specialization for map-based vector-momentum where the map itself is advected
     """
-    def __init__(self,sz,spacing,params):
+    def __init__(self,sz,spacing,params,compute_inverse_map=False):
+        self.compute_inverse_map = compute_inverse_map
+        """If set to True the inverse map is computed on the fly"""
         super(LDDMMShootingVectorMomentumMapNet, self).__init__(sz,spacing,params)
-
 
     def create_integrator(self):
         """
@@ -1380,7 +1387,7 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         :return: returns this integrator 
         """
         cparams = self.params[('forward_model',{},'settings for the forward model')]
-        epdiffMap = FM.EPDiffMap( self.sz, self.spacing, self.smoother, cparams )
+        epdiffMap = FM.EPDiffMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
         return RK.RK4(epdiffMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), self.params)
 
     def forward(self, phi, I0_source, variables_from_optimizer=None):
@@ -1394,8 +1401,12 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         """
 
         self.smoother.set_source_image(I0_source)
-        mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo, variables_from_optimizer)
-        return mphi1[1]
+        if self.compute_inverse_map:
+            mphi1 = self.integrator.solve([self.m, phi, phi], self.tFrom, self.tTo, variables_from_optimizer)
+            return (mphi1[1],mphi1[2])
+        else:
+            mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo, variables_from_optimizer)
+            return mphi1[1]
 
 
 class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
@@ -1444,7 +1455,9 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
     Specialization of scalar-momentum LDDMM to SVF image-based matching
     """
 
-    def __init__(self, sz, spacing, params):
+    def __init__(self, sz, spacing, params, compute_inverse_map=False):
+        self.compute_inverse_map = compute_inverse_map
+        """If set to True the inverse map is computed on the fly"""
         super(SVFVectorMomentumMapNet, self).__init__(sz, spacing, params)
 
     def create_integrator(self):
@@ -1455,7 +1468,7 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
 
-        advectionMap = FM.AdvectMap(self.sz, self.spacing)
+        advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
         return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
 
     def forward(self, phi, I0_source, variables_from_optimizer=None):
@@ -1472,8 +1485,13 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer)
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
         self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
-        phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-        return phi1[0]
+
+        if self.compute_inverse_map:
+            phi1 = self.integrator.solve([phi,phi], self.tFrom, self.tTo, variables_from_optimizer)
+            return (phi1[0],phi1[1])
+        else:
+            phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+            return phi1[0]
 
 class SVFVectorMomentumMapLoss(RegistrationMapLoss):
     """
@@ -1747,7 +1765,9 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
     """
     Specialization of scalar-momentum LDDMM registration to map-based image matching
     """
-    def __init__(self,sz,spacing,params):
+    def __init__(self,sz,spacing,params,compute_inverse_map=False):
+        self.compute_inverse_map = compute_inverse_map
+        """If set to True the inverse map is computed on the fly"""
         super(LDDMMShootingScalarMomentumMapNet, self).__init__(sz,spacing,params)
 
     def create_integrator(self):
@@ -1758,7 +1778,7 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
         :return: returns this integrator 
         """
         cparams = self.params[('forward_model',{},'settings for the forward model')]
-        epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, self.smoother, cparams )
+        epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
         return RK.RK4(epdiffScalarMomentumMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
 
     def forward(self, phi, I0_source, variables_from_optimizer=None):
@@ -1771,8 +1791,12 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
         :return: returns the map at time tTo
         """
         self.smoother.set_source_image(I0_source)
-        lamIphi1 = self.integrator.solve([self.lam,I0_source, phi], self.tFrom, self.tTo, variables_from_optimizer)
-        return lamIphi1[2]
+        if self.compute_inverse_map:
+            lamIphi1 = self.integrator.solve([self.lam,I0_source, phi, phi], self.tFrom, self.tTo, variables_from_optimizer)
+            return (lamIphi1[2],lamIphi1[3])
+        else:
+            lamIphi1 = self.integrator.solve([self.lam,I0_source, phi], self.tFrom, self.tTo, variables_from_optimizer)
+            return lamIphi1[2]
 
 
 class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
@@ -1816,7 +1840,9 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
     Specialization of scalar-momentum LDDMM to SVF image-based matching
     """
 
-    def __init__(self, sz, spacing, params):
+    def __init__(self, sz, spacing, params, compute_inverse_map=False):
+        self.compute_inverse_map = compute_inverse_map
+        """If set to True the inverse map is computed on the fly"""
         super(SVFScalarMomentumMapNet, self).__init__(sz, spacing, params)
 
     def create_integrator(self):
@@ -1827,7 +1853,7 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
 
-        advectionMap = FM.AdvectMap(self.sz, self.spacing)
+        advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
         return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
 
     def forward(self, phi, I0_source, variables_from_optimizer=None):
@@ -1843,8 +1869,13 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         v = self.smoother.smooth(m,None,pars_to_pass_s,variables_from_optimizer)
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
         self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
-        phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-        return phi1[0]
+
+        if self.compute_inverse_map:
+            phi1 = self.integrator.solve([phi,phi], self.tFrom, self.tTo, variables_from_optimizer)
+            return (phi1[0],phi1[1])
+        else:
+            phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+            return phi1[0]
 
 class SVFScalarMomentumMapLoss(RegistrationMapLoss):
     """

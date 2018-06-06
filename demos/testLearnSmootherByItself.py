@@ -1,3 +1,5 @@
+from builtins import str
+from builtins import range
 import set_pyreg_paths
 import pyreg.smoother_factory as SF
 

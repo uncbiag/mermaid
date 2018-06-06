@@ -24,6 +24,7 @@ requirements:
   build:
     - python
     - cffi
+    - future
     - itk
     - pytorch
     - torchvision
@@ -38,6 +39,7 @@ requirements:
   run:
     - python
     - cffi
+    - future
     - itk
     - pytorch
     - torchvision

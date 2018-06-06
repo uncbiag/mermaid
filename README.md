@@ -1,3 +1,14 @@
+
+ <pre>
+                                      _     _ 
+                                     (_)   | |
+  _ __ ___   ___ _ __ _ __ ___   __ _ _  __| |
+ | '_ ` _ \ / _ \ '__| '_ ` _ \ / _` | |/ _` |
+ | | | | | |  __/ |  | | | | | | (_| | | (_| |
+ |_| |_| |_|\___|_|  |_| |_| |_|\__,_|_|\__,_|
+                                                                                      
+ </pre>                                       
+
 # Image registration using pyTorch
 
 Mermaid is a registration toolkit making use of automatic differentiation for rapid prototyping. It runs on the CPU and the GPU, though GPU acceleration only becomes obvious for large images or 3D volumes. 
@@ -9,6 +20,7 @@ A basic installation requires the installation of a few python packages. Most of
   * conda install pytorch torchvision -c pytorch
   * [for CPU only: conda install pytorch-cpu torchvision -c pytorch]
   * conda install cffi
+  * conda install future
   * conda install -c conda-forge itk
   * conda install progressbar
   * conda install sphinx
@@ -16,6 +28,7 @@ A basic installation requires the installation of a few python packages. Most of
   * conda install matplotlib
   * conda install scipy
   * conda install openpyxl
+  * conda install -c anaconda cython
   * pip install pytorch-fft
   * pip install pynrrd
 

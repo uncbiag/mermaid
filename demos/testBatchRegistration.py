@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import str
+from builtins import range
 import set_pyreg_paths
 
 # first do the torch imports
@@ -92,7 +95,7 @@ else:
                     model_name='svf_vector_momentum_map',
                     nr_of_iterations=100,
                     visualize_step=20,
-                    map_low_res_factor=0.1,
+                    map_low_res_factor=0.25,
                     rel_ftol=1e-15,
                     json_config_out_filename='testBatchNewerSmoother.json',
                     use_consensus_optimization=False,

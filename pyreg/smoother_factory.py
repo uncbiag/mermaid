@@ -1,7 +1,12 @@
 """
 This package implements various types of smoothers.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
+from builtins import str
+from builtins import range
+from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import torch
@@ -9,22 +14,25 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
-from data_wrapper import USE_CUDA, MyTensor, AdaptVal
+import numpy.testing as npt
 
-import finite_differences as fd
-import utils
-import custom_pytorch_extensions as ce
-import module_parameters as pars
-import deep_smoothers
+from .data_wrapper import USE_CUDA, MyTensor, AdaptVal
+
+from . import finite_differences as fd
+from . import utils
+from . import custom_pytorch_extensions as ce
+from . import module_parameters as pars
+from . import deep_smoothers
 
 import collections
+from future.utils import with_metaclass
 
 def get_compatible_state_dict_for_module(state_dict,module_name,target_state_dict):
 
     res_dict = collections.OrderedDict()
-    for k in target_state_dict.keys():
+    for k in list(target_state_dict.keys()):
         current_parameter_name = module_name + '.' + k
-        if state_dict.has_key(current_parameter_name):
+        if current_parameter_name in state_dict:
             res_dict[k] = state_dict[current_parameter_name]
         else:
             print('WARNING: needed key ' + k + ' but could not find it. IGNORING it.')
@@ -35,17 +43,16 @@ def get_compatible_state_dict_for_module(state_dict,module_name,target_state_dic
 def get_state_dict_for_module(state_dict,module_name):
 
     res_dict = collections.OrderedDict()
-    for k in state_dict.keys():
+    for k in list(state_dict.keys()):
         if k.startswith(module_name + '.'):
             adapted_key = k[len(module_name)+1:]
             res_dict[adapted_key] = state_dict[k]
     return res_dict
 
-class Smoother(object):
+class Smoother(with_metaclass(ABCMeta, object)):
     """
     Abstract base class defining the general smoother interface.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, sz, spacing, params):
         self.sz = sz
@@ -287,7 +294,7 @@ class GaussianSpatialSmoother(GaussianSmoother):
             self.k_sz = self.k_sz_h * 2 + 1  # this is to assure that the kernel is odd size
 
         self.smoothingKernel = self._create_smoothing_kernel(self.k_sz)
-        self.required_padding = (self.k_sz-1)/2
+        self.required_padding = (self.k_sz-1)//2
 
         if self.dim==1:
             self.filter =AdaptVal(Variable(torch.from_numpy(self.smoothingKernel)))
@@ -355,7 +362,6 @@ class GaussianSpatialSmoother(GaussianSmoother):
         :return: smoothed image
         """
 
-        self.sz = v.size()
         if self.filter is None:
             self._create_filter()
         # just doing a Gaussian smoothing
@@ -363,13 +369,11 @@ class GaussianSpatialSmoother(GaussianSmoother):
 
 
 
-class GaussianFourierSmoother(GaussianSmoother):
+class GaussianFourierSmoother(with_metaclass(ABCMeta, GaussianSmoother)):
     """
     Performs Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
     than spatial Gaussian smoothing on the CPU in large dimensions.
     """
-
-    __metaclass__ = ABCMeta
 
     def __init__(self, sz, spacing, params):
         super(GaussianFourierSmoother, self).__init__(sz, spacing, params)
@@ -572,7 +576,7 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
             self.multi_gaussian_weights += (1.-weight_sum)/len(self.multi_gaussian_weights)
             params['multi_gaussian_weights'] = self.multi_gaussian_weights.tolist()
 
-        assert (np.array(self.multi_gaussian_weights)).sum()==1.
+        npt.assert_almost_equal((np.array(self.multi_gaussian_weights)).sum(),1.)
 
     def _create_filter(self):
 
@@ -652,8 +656,11 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         self.optimize_over_smoother_weights = params[('optimize_over_smoother_weights', False, 'if set to true the smoother will optimize over the *global* weights')]
         """determines if we should optimize over the smoother global weights"""
 
+        self.nr_of_gaussians = len(self.multi_gaussian_stds)
+        """number of Gaussians"""
         # todo: maybe make this more generic; there is an explicit float here
-        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(self.multi_gaussian_stds.copy()).float(), requires_grad=False))
+
+        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(np.ones(self.nr_of_gaussians) / self.nr_of_gaussians).float(),requires_grad=False))
         self.default_multi_gaussian_weights /= self.default_multi_gaussian_weights.sum()
 
         self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', self.default_multi_gaussian_weights.data.cpu().numpy().tolist(),'weights for the multiple Gaussians')])
@@ -667,11 +674,8 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
             self.multi_gaussian_weights += (1. - weight_sum) / len(self.multi_gaussian_weights)
             params['multi_gaussian_weights'] = self.multi_gaussian_weights.tolist()
 
-        assert (np.array(self.multi_gaussian_weights)).sum() == 1.
+        npt.assert_almost_equal((np.array(self.multi_gaussian_weights)).sum(),1.)
         assert len(self.multi_gaussian_weights) == len(self.multi_gaussian_stds)
-
-        self.nr_of_gaussians = len(self.multi_gaussian_stds)
-        """number of Gaussians"""
 
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, self.nr_of_gaussians)
         """creates the smoothed vector fields"""
@@ -718,9 +722,9 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
 
     def set_state_dict(self, state_dict):
 
-        if state_dict.has_key('multi_gaussian_stds'):
+        if 'multi_gaussian_stds' in state_dict:
             self.multi_gaussian_stds_optimizer_params.data[:] = state_dict['multi_gaussian_stds']
-        if state_dict.has_key('multi_gaussian_weights'):
+        if 'multi_gaussian_weights' in state_dict:
             self.multi_gaussian_weights_optimizer_params.data[:] = state_dict['multi_gaussian_weights']
 
     def _project_parameter_vector_if_necessary(self):
@@ -859,8 +863,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
     def __init__(self, sz, spacing, params):
         super(LearnedMultiGaussianCombinationFourierSmoother, self).__init__(sz, spacing, params)
 
-        self.multi_gaussian_stds = np.array(
-            params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')])
+        self.multi_gaussian_stds = np.array(params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')])
         """standard deviations of Gaussians"""
         self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussians')]
         """minimal allowed standard deviation during optimization"""
@@ -888,8 +891,11 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                     'Does not optimize the parameters before this iteration')]
         """at what iteration the optimization over weights or stds should start"""
 
+        self.nr_of_gaussians = len(self.multi_gaussian_stds)
+        """number of Gaussians"""
         # todo: maybe make this more generic; there is an explicit float here
-        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(self.multi_gaussian_stds.copy()).float(),requires_grad=False))
+
+        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(np.ones(self.nr_of_gaussians)/self.nr_of_gaussians).float(),requires_grad=False))
         self.default_multi_gaussian_weights /= self.default_multi_gaussian_weights.sum()
 
         self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', self.default_multi_gaussian_weights.data.cpu().numpy().tolist(), 'weights for the multiple Gaussians')])
@@ -897,8 +903,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.gaussianWeight_min = params[('gaussian_weight_min', 0.0001, 'minimal allowed weight for the Gaussians')]
         """minimal allowed weight during optimization"""
 
-        self.nr_of_gaussians = len(self.multi_gaussian_stds)
-        """number of Gaussians"""
 
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, self.nr_of_gaussians)
         """creates the smoothed vector fields"""
@@ -986,9 +990,9 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
     def set_state_dict(self,state_dict):
 
-        if state_dict.has_key('multi_gaussian_stds'):
+        if 'multi_gaussian_stds' in state_dict:
             self.multi_gaussian_stds_optimizer_params.data[:] = state_dict['multi_gaussian_stds']
-        if state_dict.has_key('multi_gaussian_weights'):
+        if 'multi_gaussian_weights' in state_dict:
             self.multi_gaussian_weights_optimizer_params.data[:] = state_dict['multi_gaussian_weights']
         # first check if the learned smoother has already been initialized
         if len(self.ws.state_dict())==0:
@@ -1083,7 +1087,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             current_penalty = _compute_omt_penalty_for_weight_vectors(self.get_gaussian_weights(),
                                                                       self.get_gaussian_stds(), self.omt_power, self.omt_use_log_transformed_std)
 
-            penalty = current_penalty * self.omt_weight_penalty*self.spacing.prod()*self.sz.prod()
+            penalty = current_penalty * self.omt_weight_penalty*self.spacing.prod()*float(self.sz.prod())
 
             #print('omt penalty = ' + str(penalty.data.cpu().numpy()))
 
@@ -1131,10 +1135,10 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         # we now use a small neural net to learn the weighting
 
         # needs an image as its input
-        if not pars.has_key('I'):
+        if 'I' not in pars:
             raise ValueError('Smoother requires an image as an input')
 
-        is_map = pars.has_key('phi')
+        is_map = 'phi' in pars
         if is_map:
             # todo: for a map input we simply create the input image by applying the map
             raise ValueError('Only implemented for image input at the moment')
@@ -1341,7 +1345,7 @@ class SmootherFactory(object):
         smootherType = cparams[('type', self.default_smoother_type,
                                           'type of smoother (diffusion|gaussian|adaptive_gaussian|multiGaussian|adaptive_multiGaussian|gaussianSpatial|adaptiveNet)' )]
 
-        if self.smoothers.has_key(smootherType):
+        if smootherType in self.smoothers:
             return self.smoothers[smootherType][0](self.sz,self.spacing,cparams)
         else:
             self.print_available_smoothers()

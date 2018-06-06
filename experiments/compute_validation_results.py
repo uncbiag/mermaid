@@ -1,3 +1,7 @@
+from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
 import set_pyreg_paths
 
 # needs to be imported before matplotlib to assure proper plotting
@@ -149,10 +153,10 @@ def calculate_image_overlap(dataset_info, phi_path, source_labelmap_path, target
     label_from_id = moving_id-dataset_info['start_id'] # typicall starts at 1
     label_to_id = target_id-dataset_info['start_id']
 
-    label_from_filename = dataset_info['label_files_dir'] + dataset_info['label_prefix'] + str(label_from_id + dataset_info['start_id']) + '.nii'
+    label_from_filename = dataset_info['label_files_dir'] + dataset_info['label_prefix'] + '{:d}.nii'.format(label_from_id + dataset_info['start_id'])
     label_from, hdr, _, _ = im_io.read(label_from_filename, silent_mode=True, squeeze_image=True)
 
-    label_to_filename = dataset_info['label_files_dir'] + dataset_info['label_prefix'] + str(label_to_id + dataset_info['start_id']) + '.nii'
+    label_to_filename = dataset_info['label_files_dir'] + dataset_info['label_prefix'] + '{:d}.nii'.format(label_to_id + dataset_info['start_id'])
     label_to, hdr, _, _ = im_io.read(label_to_filename, silent_mode=True, squeeze_image=True)
 
     map_io = fio.MapIO()
@@ -310,9 +314,9 @@ def create_stage_output_dir(output_dir,stage,compute_from_frozen=False):
         raise ValueError('stages need to be {0,1,2}')
 
     if compute_from_frozen:
-        stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_frozen_stage_' + str(stage))
+        stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_frozen_stage_{:d}'.format(stage))
     else:
-        stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_' + str(stage))
+        stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_{:d}'.format(stage))
 
     return stage_output_dir
 
@@ -438,7 +442,7 @@ if __name__ == "__main__":
         print('INFO: Assuming that dataset is CUMC; if this is not the case, use the --dataset option')
         validation_dataset_name = 'CUMC'
     else:
-        if args.dataset in validation_datasets.keys():
+        if args.dataset in list(validation_datasets.keys()):
             validation_dataset_name = args.dataset
         else:
             raise ValueError('Dataset needs to be [CUMC|MGH|LPBA|IBSR|SYNTH], but got ' + args.dataset)

@@ -1,7 +1,9 @@
 """
 Various methods to manipulate images
 """
+from __future__ import print_function
 
+from builtins import object
 import numpy as np
 
 class IntensityNormalizeImage(object):

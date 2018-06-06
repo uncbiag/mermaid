@@ -1,3 +1,5 @@
+from builtins import str
+from builtins import range
 import set_pyreg_paths
 import torch
 from torch.autograd import Variable

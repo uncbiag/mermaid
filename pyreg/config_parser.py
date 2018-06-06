@@ -1,7 +1,8 @@
 from __future__ import print_function
+from __future__ import absolute_import
 
 import os
-import module_parameters as pars
+from . import module_parameters as pars
 import multiprocessing as mp
 
 # first define all the configuration filenames

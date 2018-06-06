@@ -24,13 +24,14 @@
                         "number_of_features_per_layer": [
                             20
                         ],
-                        "total_variation_weight_penalty": 1.0,
+                        "total_variation_weight_penalty": 0.1,
                         "type": "simple_consistent",
                         "use_batch_normalization": false,
                         "use_momentum_as_input": true,
                         "use_relu": true,
                         "use_source_image_as_input": false,
                         "use_target_image_as_input": false
+
                     },
                     "encourage_spatial_weight_consistency": false,
                     "gaussian_std_min": 0.01,
@@ -38,17 +39,19 @@
                     "multi_gaussian_stds": [
                         0.01,
                         0.05,
-                        0.10
+                        0.10,
+			0.2
                     ],
                     "multi_gaussian_weights": [
-                        0.33,
-                        0.33,
-                        0.34
+                        0.25,
+			0.25,
+			0.25,
+			0.25
                     ],
                     "network_penalty": 0.0,
-		    "omt_power": 2.0, 
-                    "omt_use_log_transformed_std": true, 
-                    "omt_weight_penalty": 5.0, 
+		    "omt_power": 1.0,
+                    "omt_use_log_transformed_std": true,
+                    "omt_weight_penalty": 10.0,
                     "optimize_over_deep_network": false,
                     "optimize_over_smoother_stds": false,
                     "optimize_over_smoother_weights": false,

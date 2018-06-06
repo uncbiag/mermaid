@@ -12,6 +12,7 @@ Contributors:
 # (for example to support color-images or general multi-modal registration scenarios)
 
 from __future__ import print_function
+from builtins import str
 import set_pyreg_paths
 
 # first do the torch imports
@@ -43,8 +44,8 @@ else:
     szEx = np.tile( 50, ds.dim )         # size of the desired images: (sz)^dim
 
     params['square_example_images']=({},'Settings for example image generation')
-    params['square_example_images']['len_s'] = szEx.min()/6
-    params['square_example_images']['len_l'] = szEx.max()/4
+    params['square_example_images']['len_s'] = szEx.min()//6
+    params['square_example_images']['len_l'] = szEx.max()//4
 
     # create a default image size with two sample squares
     I0,I1,spacing= eg.CreateSquares(ds.dim).create_image_pair(szEx,params)

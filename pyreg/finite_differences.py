@@ -4,21 +4,23 @@
 The package supports first and second order derivatives and Neumann and linear extrapolation
 boundary conditions (though the latter have not been tested extensively yet).
 """
+from __future__ import absolute_import
 
+from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import torch
 from torch.autograd import Variable
-from data_wrapper import MyTensor
+from .data_wrapper import MyTensor
 import numpy as np
+from future.utils import with_metaclass
 
-class FD(object):
+class FD(with_metaclass(ABCMeta, object)):
     """
     *FD* is the abstract class for finite differences. It includes most of the actual finite difference code, 
     but requires the definition (in a derived class) of the methods *get_dimension*, *create_zero_array*, and *get_size_of_array*.
     In this way the numpy and pytorch versions can easily be derived. All the method expect BxXxYxZ format (i.e., they process a batch at a time)
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, spacing, bcNeumannZero=True):
         """
@@ -174,6 +176,27 @@ class FD(object):
             return (self.ddXc(I) + self.ddYc(I))
         elif ndim == 3+1:
             return (self.ddXc(I) + self.ddYc(I) + self.ddZc(I))
+        else:
+            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
+
+    def grad_norm_sqr(self, I):
+        """
+        Computes the gradient norm of an image
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
+
+        :param I: Input image [batch, X,Y,Z]
+        :return: returns ||grad I||^2
+        """
+        ndim = self.getdimension(I)
+        if ndim == 1 + 1:
+            return self.ddXc(I)**2
+        elif ndim == 2 + 1:
+            return (self.ddXc(I)**2 + self.ddYc(I)**2)
+        elif ndim == 3 + 1:
+            return (self.ddXc(I)**2 + self.ddYc(I)**2 + self.ddZc(I)**2)
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
 

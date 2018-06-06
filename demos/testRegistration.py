@@ -1,3 +1,4 @@
+from __future__ import print_function
 import set_pyreg_paths
 
 # first do the torch imports

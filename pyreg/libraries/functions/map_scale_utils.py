@@ -1,3 +1,4 @@
+from builtins import range
 import torch
 
 def scale_map(map,spacing):

@@ -1,8 +1,11 @@
 """
 Package to quickly instantiate registration models by name.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
-import registration_networks as RN
+from builtins import object
+from . import registration_networks as RN
 import pyreg.utils as utils
 import pyreg.image_sampling as IS
 from pyreg.data_wrapper import AdaptVal
@@ -79,7 +82,7 @@ class AvailableModels(object):
 
 
 # todo: make sure this works; streamline parameters as we can get sz_sim from I0 and maybe sz_model from the model_parameters
-def run_model(model_name, model_parameters, I0, sz_sim,spacing_sim,sz_model,spacing_model, params):
+def run_model(model_name, model_parameters, I0, sz_sim,spacing_sim,sz_model,spacing_model, params, compute_inverse_map=False):
     """
     Runs the model forward
 
@@ -91,6 +94,7 @@ def run_model(model_name, model_parameters, I0, sz_sim,spacing_sim,sz_model,spac
     :param sz_model: size of the parameterization
     :param spacing_model: spacing of the parameteriation
     :param params: additonal parameters
+    :param compute_inverse_map: for a map-based model computes inverse map on the fly
     :return: either the map to warp the source image (for a map-based model) or the warped source image
     """
 
@@ -98,11 +102,11 @@ def run_model(model_name, model_parameters, I0, sz_sim,spacing_sim,sz_model,spac
 
     raise ValueError('Not tested yet. Check that this works first before using it. Feel free to comment out and try at your own risk.')
 
-    if not available_models.has_key(model_name):
+    if model_name not in available_models:
         _print_models(available_models)
         raise ValueError('Registration model: ' + model_name + ' not known')
     else:
-        model, loss = ModelFactory(sz_sim, spacing_sim, sz_model, spacing_model).create_registration_model(model_name, params)
+        model, loss = ModelFactory(sz_sim, spacing_sim, sz_model, spacing_model).create_registration_model(model_name, params, compute_inverse_map=compute_inverse_map)
         model.set_registration_parameters(model_parameters, sz_model, spacing_model)
 
         sampler = IS.ResampleImage()
@@ -191,21 +195,29 @@ class ModelFactory(object):
 
         _print_models(self.models)
 
-    def create_registration_model(self, modelName, params):
+    def create_registration_model(self, modelName, params, compute_inverse_map=False):
         """
         Performs the actual model creation including the loss function
         
         :param modelName: Name of the model to be created 
         :param params: parameter dictionary of type :class:`ParameterDict`
-        :return: a two-tupel: model, loss
+        :param compute_inverse_map: for a map-based model if this is turned on then the inverse map is computed on the fly
+        :return: a two-tuple: model, loss
         """
 
         cparams = params[('registration_model',{},'specifies the registration model')]
         cparams['type']= (modelName,'Name of the registration model')
 
-        if self.models.has_key(modelName):
-            print('Using ' + modelName + ' model')
-            model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams)
+        if modelName in self.models:
+
+            uses_map = self.models[modelName][2]
+            if uses_map:
+                print('Using map-based ' + modelName + ' model')
+                model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams, compute_inverse_map=compute_inverse_map)
+            else:
+                print('Using ' + modelName + ' model')
+                model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams)
+
             loss = self.models[modelName][1](list(model.parameters())[0], self.sz_sim, self.spacing_sim, self.sz_model, self.spacing_model, cparams)
             return model, loss
         else:

@@ -1,3 +1,4 @@
+from builtins import range
 import set_pyreg_paths
 import pyreg.utils as utils
 import matplotlib.pyplot as plt
@@ -27,7 +28,7 @@ nrOfMaxValues = len(loc[0])
 if nrOfMaxValues > 1:
     raise ValueError('Cannot enforce max symmetry as maximum is not unique')
 
-spatial_filter_max_at_zero = np.roll(spatial_filter, -np.array(maxIndex),range(len(spatial_filter.shape)))
+spatial_filter_max_at_zero = np.roll(spatial_filter, -np.array(maxIndex),list(range(len(spatial_filter.shape))))
 
 ce.symmetrize_filter_center_at_zero(spatial_filter_max_at_zero,renormalize=True)
 

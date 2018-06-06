@@ -19,13 +19,18 @@ Futhermore the following (RHSs) are provided
     #. Scalar conservation law
     #. EPDiff
 """
+from __future__ import print_function
+from __future__ import absolute_import
 
+from builtins import range
+from builtins import object
 from abc import ABCMeta, abstractmethod
 import numpy as np
-import finite_differences as fd
-import utils
-from data_wrapper import MyTensor
+from . import finite_differences as fd
+from . import utils
+from .data_wrapper import MyTensor
 from torch.autograd import Variable
+from future.utils import with_metaclass
 
 class RHSLibrary(object):
     """
@@ -256,13 +261,12 @@ class RHSLibrary(object):
             raise ValueError('Only supported up to dimension ')
 
 
-class ForwardModel(object):
+class ForwardModel(with_metaclass(ABCMeta, object)):
     """
     Abstract forward model class. Should never be instantiated.
     Derived classes require the definition of f(self,t,x,u,pars) and u(self,t,pars).
     These functions will be used for integration: x'(t) = f(t,x(t),u(t))
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, sz, spacing, params=None):
         '''
@@ -321,8 +325,10 @@ class AdvectMap(ForwardModel):
     v is treated as an external argument and \Phi is the state
     """
 
-    def __init__(self, sz, spacing, params=None):
+    def __init__(self, sz, spacing, params=None,compute_inverse_map=False):
         super(AdvectMap,self).__init__(sz,spacing,params)
+        self.compute_inverse_map = compute_inverse_map
+        """If True then computes the inverse map on the fly for a map-based solution"""
 
     def u(self,t, pars, variables_from_optimizer=None):
         """
@@ -348,7 +354,11 @@ class AdvectMap(ForwardModel):
         :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: right hand side [phi]
         """
-        return [self.rhs.rhs_advect_map_multiNC(x[0],u)]
+
+        if self.compute_inverse_map:
+            return [self.rhs.rhs_advect_map_multiNC(x[0], u),self.rhs.rhs_advect_map_multiNC(x[1],-u)]
+        else:
+            return [self.rhs.rhs_advect_map_multiNC(x[0],u)]
 
 class AdvectImage(ForwardModel):
     """
@@ -431,8 +441,11 @@ class EPDiffMap(ForwardModel):
     :math:`\\phi_t+D\\phi v=0`
     """
 
-    def __init__(self, sz, spacing, smoother, params=None):
+    def __init__(self, sz, spacing, smoother, params=None,compute_inverse_map=False):
         super(EPDiffMap, self).__init__(sz,spacing,params)
+        self.compute_inverse_map = compute_inverse_map
+        """If True then computes the inverse map on the fly for a map-based solution"""
+
         self.smoother = smoother
         self.use_net = True if self.params['smoother']['type'] == 'adaptiveNet' else False
 
@@ -445,7 +458,7 @@ class EPDiffMap(ForwardModel):
             print("flag phi: {},".format(x[2]))
             print("flag new_m: {},".format(x[3]))
             print("flag new_phi: {},".format(x[4]))
-            raise ValueError, "nan error"
+            raise ValueError("nan error")
 
     def f(self,t, x, u, pars, variables_from_optimizer=None):
         """
@@ -465,15 +478,25 @@ class EPDiffMap(ForwardModel):
         # assume x[0] is m and x[1] is phi for the state
         m = x[0]
         phi = x[1]
+
+        if self.compute_inverse_map:
+            phi_inv = x[2]
+
         if not self.use_net:
             v = self.smoother.smooth(m,None,utils.combine_dict(pars,{'phi':phi}),variables_from_optimizer)
         else:
             v = self.smoother.adaptive_smooth(m, phi, using_map=True)
 
         # print('max(|v|) = ' + str( v.abs().max() ))
-        new_val= [self.rhs.rhs_epdiff_multiNC(m,v),self.rhs.rhs_advect_map_multiNC(phi,v)]
+
+        if self.compute_inverse_map:
+            ret_val= [self.rhs.rhs_epdiff_multiNC(m,v),
+                      self.rhs.rhs_advect_map_multiNC(phi,v),
+                      self.rhs.rhs_advect_map_multiNC(phi_inv, -v)]
+        else:
+            ret_val= [self.rhs.rhs_epdiff_multiNC(m,v),self.rhs.rhs_advect_map_multiNC(phi,v)]
         #self.debugging([m, v, phi, new_val[0], new_val[1]], t)
-        return new_val
+        return ret_val
 
 class EPDiffScalarMomentum(ForwardModel):
     """
@@ -549,9 +572,10 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
     :math:`\\Phi_t+D\\Phi v=0`
     """
 
-    def __init__(self, sz, spacing, smoother, params=None):
+    def __init__(self, sz, spacing, smoother, params=None, compute_inverse_map=False):
         super(EPDiffScalarMomentumMap, self).__init__(sz,spacing, smoother, params)
-
+        self.compute_inverse_map = compute_inverse_map
+        """If True then computes the inverse map on the fly for a map-based solution"""
 
     def f(self,t, x, u, pars, variables_from_optimizer=None):
         """
@@ -578,12 +602,23 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
         I = x[1]
         phi = x[2]
 
+        if self.compute_inverse_map:
+            phi_inv = x[3]
+
         # now compute the momentum
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, self.sz, self.spacing)
         # todo: replace this by phi again
         #v = self.smoother.smooth(m,None,[phi,True],variables_from_optimizer)
         v = self.smoother.smooth(m,None,utils.combine_dict(pars,{'I':I}),variables_from_optimizer)
 
-        return [self.rhs.rhs_scalar_conservation_multiNC(lam,v),
+        if self.compute_inverse_map:
+            ret_val = [self.rhs.rhs_scalar_conservation_multiNC(lam,v),
+                self.rhs.rhs_advect_image_multiNC(I,v),
+                self.rhs.rhs_advect_map_multiNC(phi,v),
+                self.rhs.rhs_advect_map_multiNC(phi_inv, -v)]
+        else:
+            ret_val = [self.rhs.rhs_scalar_conservation_multiNC(lam,v),
                 self.rhs.rhs_advect_image_multiNC(I,v),
                 self.rhs.rhs_advect_map_multiNC(phi,v)]
+
+        return ret_val

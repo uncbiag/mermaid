@@ -1,8 +1,11 @@
-from data_utils import *
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import object
+from .data_utils import *
 from os.path import join
 import torch
-from data_loader import  *
-from data_pool import *
+from .data_loader import  *
+from .data_pool import *
 
 
 
