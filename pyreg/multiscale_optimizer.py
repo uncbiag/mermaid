@@ -4,10 +4,10 @@ This package enables easy single-scale and multi-scale optimization support.
 from __future__ import print_function
 from __future__ import absolute_import
 
-from builtins import zip
-from builtins import str
-from builtins import range
-from builtins import object
+# from builtins import zip
+# from builtins import str
+# from builtins import range
+# from builtins import object
 from abc import ABCMeta, abstractmethod
 import os
 import time
@@ -23,7 +23,7 @@ from . import model_factory as MF
 from . import image_sampling as IS
 from .metrics import get_multi_metric
 from .res_recorder import XlsxRecorder
-from data_utils import make_dir
+from .data_utils import make_dir
 from torch.utils.data import Dataset, DataLoader
 from . import optimizer_data_loaders as OD
 

@@ -16,7 +16,7 @@ Currently implemented:
 from __future__ import print_function
 from __future__ import absolute_import
 
-from builtins import str
+# from builtins import str
 import torch
 import torch.nn as nn
 from torch.autograd.variable import Variable

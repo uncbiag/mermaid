@@ -1,7 +1,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
-from builtins import str
-from builtins import range
+# from builtins import str
+# from builtins import range
 import matplotlib as matplt
 
 from .config_parser import MATPLOTLIB_AGG
@@ -17,7 +17,7 @@ import numpy as np
 import os
 from . import utils
 from . import viewers
-from data_utils import make_dir
+from .data_utils import make_dir
 dpi=500
 extension= '.png'
 def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visual_param=None, i=0):
