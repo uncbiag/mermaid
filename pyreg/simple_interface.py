@@ -96,11 +96,13 @@ class RegisterImagePair(object):
 
         if self.recorder is None:
             self.recorder = mo.init_recorder(expr_name)
+            print("the recorder initialized")
         else:
+            print("load the record")
             mo.set_recorder(self.recorder)
 
     def get_recorder(self):
-        return self.opt.optimizer.get_recorder()
+        return self.recorder
 
     def set_recorder(self, recorder):
         self.recorder = recorder
@@ -490,6 +492,7 @@ class RegisterImagePair(object):
                 self.opt.get_optimizer().set_visualize_step(visualize_step)
             else:
                 self.opt.get_optimizer().set_visualization(False)
+                self.opt.get_optimizer().set_visualize_step(visualize_step)
 
             self.opt.set_light_analysis_on(self.light_analysis_on)
 

@@ -46,7 +46,7 @@ class SimpleRegistration(object):
         self.ITarget = ITarget
         self.sz = sz
         self.optimizer = None
-        self.light_analysis_on = None
+        self.light_analysis_on = True
 
     def get_history(self):
         """
@@ -525,6 +525,13 @@ class ImageRegistrationOptimizer(Optimizer):
         """ source label """
         self.LTarget = None
         """  target label """
+
+        self.lowResLSource = None
+        """if mapLowResFactor <1, a lowres soure label image needs to be created to parameterize some of the registration algorithms"""
+
+        self.lowResLTarget = None
+        """if mapLowResFactor <1, a lowres target label image needs to be created to parameterize some of the registration algorithms"""
+
         self.optimizer_name = None #''lbfgs_ls'
         """name of the optimizer to use"""
         self.optimizer_params = {}
@@ -713,12 +720,22 @@ class ImageRegistrationOptimizer(Optimizer):
             low_res_image,_ = self.sampler.downsample_image_to_size(I,self.spacing,self.lowResSize[2::],self.spline_order)
         return low_res_image
 
+    def _compute_low_res_label_map(self,label_map,params):
+        low_res_label_map = None
+        if self.mapLowResFactor is not None:
+            low_res_image, _ = self.sampler.downsample_image_to_size(label_map, self.spacing, self.lowResSize[2::],
+                                                                     0)
+        return low_res_label_map
+
     def compute_low_res_image_if_needed(self):
         """To be called before the optimization starts"""
         if self.mapLowResFactor is not None:
             self.lowResISource = self._compute_low_res_image(self.ISource,self.params)
             # todo: can be removed to save memory; is more experimental at this point
             self.lowResITarget = self._compute_low_res_image(self.ITarget,self.params)
+            if self.LSource is not None and self.LTarget is not None:
+                self.lowResLSource = self._compute_low_res_label_map(self.LSource,self.params)
+                self.lowResLTarget = self._compute_low_res_label_map(self.LTarget, self.params)
 
     def set_source_label(self, LSource):
         """
@@ -1291,9 +1308,14 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         if self.useMap and not self.light_analysis_on and self.save_excel:
             if self.LSource is not None:
-                if iter % 4 == 0:
-                    LSource_warped = utils.get_warped_label_map(self.LSource, phi_or_warped_image, self.spacing)
-                    LTarget = self.get_target_label()
+                if iter % 4 == 0.:
+                    if self.compute_similarity_measure_at_low_res:
+                        LSource_warped = utils.get_warped_label_map(self.lowResLSource, phi_or_warped_image, self.spacing)
+                        LTarget = self.lowResLTarget
+
+                    else:
+                        LSource_warped = utils.get_warped_label_map(self.LSource, phi_or_warped_image, self.spacing)
+                        LTarget = self.get_target_label()
                     metric_results_dic = get_multi_metric(LSource_warped, LTarget, eval_label_list=None, rm_bg=False)
                     self.recorder.set_batch_based_env(self.get_pair_path(),self.get_batch_id())
                     info = {}
@@ -1315,13 +1337,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 visual_param['pair_path'] = self.pair_path
                 visual_param['iter'] = 'scale_'+str(self.n_scale) + '_iter_' + str(self.iter_count)
 
-
-
-
             else:
                 visual_param['save_fig'] = False
 
-            if (iter % self.visualize_step == 0) or (iter==self.nrOfIterations-1) or force_visualization:
+            if self.visualize_step and (iter % self.visualize_step == 0) or (iter==self.nrOfIterations-1) or force_visualization:
                 was_visualized = True
                 if self.useMap and self.mapLowResFactor is not None:
                     vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.lowResISource)
@@ -1330,11 +1349,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 if self.useMap:
                     if self.compute_similarity_measure_at_low_res:
                         I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing, self.spline_order)
-                        vizReg.show_current_images(iter, self.lowResISource, self.lowResITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
+                        lowResLWarped = utils.get_warped_label_map(self.lowResLSource, phi_or_warped_image,
+                                                                    self.spacing)
+                        vizReg.show_current_images(iter, self.lowResISource, self.lowResITarget, I1Warped, self.lowResLSource,self.lowResLTarget,lowResLWarped,vizImage, vizName, phi_or_warped_image, visual_param)
                     else:
                         I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.spline_order)
                         vizImage = vizImage if len(vizImage)>2 else None
-                        vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped, vizImage, vizName, phi_or_warped_image, visual_param)
+                        LWarped = None
+                        if self.LSource is not None  and self.LTarget is not None:
+                            LWarped = utils.get_warped_label_map(self.LSource, phi_or_warped_image, self.spacing)
+                        vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped,self.LSource, self.LTarget,LWarped, vizImage, vizName, phi_or_warped_image, visual_param)
                 else:
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
 
@@ -3206,6 +3230,11 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             ISourceC, spacingC = self.sampler.downsample_image_to_size(self.ISource, self.spacing, currentDesiredSz[2::],self.spline_order)
             ITargetC, spacingC = self.sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz[2::],self.spline_order)
+            LSourceC = None
+            LTargetC = None
+            if self.LSource is not None and self.LTarget is not None:
+                LSourceC, spacingC = self.sampler.downsample_image_to_size(self.LSource, self.spacing, currentDesiredSz[2::],0)
+                LTargetC, spacingC = self.sampler.downsample_image_to_size(self.LTarget, self.spacing, currentDesiredSz[2::],0)
 
             szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
 
@@ -3253,6 +3282,9 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             self.ssOpt.set_source_image(ISourceC)
             self.ssOpt.set_target_image(ITargetC)
+            if self.LSource is not None and self.LTarget is not None:
+                self.ssOpt.set_source_label(LSourceC)
+                self.ssOpt.set_target_label(LTargetC)
 
             if upsampledParameters is not None:
                 # check that the upsampled parameters are consistent with the downsampled images

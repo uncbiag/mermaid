@@ -270,10 +270,11 @@ def compute_normalized_gaussian(X, mu, sig):
 
 def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order):
 
-    if spline_order not in [1,2,3,4,5,6,7,8,9]:
-        raise ValueError('Currently only orders 1 to 9 are supported')
-
-    if spline_order==1:
+    if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
+        raise ValueError('Currently only orders 0 to 9 are supported')
+    if spline_order==0:
+        return get_warped_label_map(I0,phi,spacing)
+    elif spline_order==1:
         stn = STN_ND_BCXYZ(spacing)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
@@ -284,10 +285,11 @@ def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order):
 
 def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order):
 
-    if spline_order not in [1,2,3,4,5,6,7,8,9]:
-        raise ValueError('Currently only orders 1 to 9 are supported')
-
-    if spline_order==1:
+    if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
+        raise ValueError('Currently only orders 0 to 9 are supported')
+    if spline_order==0:
+        return get_warped_label_map(I0,phi,spacing)
+    elif spline_order==1:
         stn = STN_ND_BCXYZ(spacing)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
@@ -298,10 +300,11 @@ def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order):
 
 def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order):
 
-    if spline_order not in [1,2,3,4,5,6,7,8,9]:
-        raise ValueError('Currently only orders 1 to 9 are supported')
-
-    if spline_order==1:
+    if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
+        raise ValueError('Currently only orders 0 to 9 are supported')
+    if spline_order==0:
+        return get_warped_label_map(I0,phi,spacing)
+    elif spline_order==1:
         stn = STN_ND_BCXYZ(spacing)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing,spline_order)

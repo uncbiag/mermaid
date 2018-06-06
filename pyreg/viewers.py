@@ -360,20 +360,22 @@ class ImageViewer3D_Sliced(ImageViewer3D):
         """
         Display figure title
         """
+        font = {'size': 10}
         plt.sca(self.ax)
-        plt.title( self.textStr + ' = ' + str(self.index) + '/' + str(self.data.shape[self.sliceDim]-1) )
+        plt.title( self.textStr + ' = ' + str(self.index) + '/' + str(self.data.shape[self.sliceDim]-1),font )
 
     def show(self):
         """
         Show the current slice
         """
+
         plt.sca(self.ax)
         plt.cla()
         #print('debugging {}'.format(self.index), 'slice_dim{}'.format(self.sliceDim),'img_shape{}'.format(self.data.shape))
         cim = self.ax.imshow(self._get_slice_at_dimension(self.index))
         divider = make_axes_locatable(self.ax)
         cax = divider.append_axes('right', size='5%', pad=0.05)
-        plt.gcf().colorbar(cim, cax=cax, orientation='vertical')
+        plt.gcf().colorbar(cim, cax=cax, orientation='vertical').ax.tick_params(labelsize=3)
         self.display_title()
 
 

@@ -166,7 +166,7 @@ class OAILongitudeReisgtration(object):
         self.nr_of_iterations = 100
         self.similarity_measure_type='ncc'
         self.similarity_measure_sigma =0.5
-        self.visualize_step =None
+        self.visualize_step =10
         self.light_analysis_on=False
         self.par_respro=None
         self.recorder = None
@@ -234,6 +234,7 @@ class OAILongitudeReisgtration(object):
         print("registration for {} patients, finished".format(len(self.patients)))
 
         if not self.light_analysis_on:
+            self.recorder = self.si.get_recorder()
             self.recorder.set_summary_based_env()
             self.recorder.saving_results(sched='summary')
 
@@ -264,11 +265,14 @@ class OAILongitudeReisgtration(object):
         if not self.light_analysis_on:
             label_path = None if not patient.patient_has_label_dic[mod][spec] else patient.get_label_path_list()
             if label_path:
-                LTarget= AdaptVal(Variable(sitk_read_img_to_std_tensor(label_path[0])))
-                ##LTarget, _, _, _ = self.im_io.read_to_nc_format(filename=label_path[0], intensity_normalize=False)
+                try:
+                    LTarget= AdaptVal(Variable(sitk_read_img_to_std_tensor(label_path[0])))
+                except:
+                    LTarget, _, _, _ = self.im_io.read_to_nc_format(filename=label_path[0], intensity_normalize=False)
             else:
-                print("complete analysis will be off for patient_id {}, modality{}, specificity{}".format(patient_id,mod, spec))
+                print("complete analysis will be skipped for patient_id {}, modality{}, specificity{}".format(patient_id,mod, spec))
                 self.si.set_light_analysis_on(True)
+                return None
 
 
 
@@ -286,19 +290,21 @@ class OAILongitudeReisgtration(object):
 
             if LTarget is not None:
                 if label_path:
-                    LSource = AdaptVal(Variable(sitk_read_img_to_std_tensor(label_path[i])))
-                    #LSource, _, _, _ = self.im_io.read_to_nc_format(filename=label_path[i], intensity_normalize=False)
+                    try:
+                        LSource = AdaptVal(Variable(sitk_read_img_to_std_tensor(label_path[i])))
+                    except:
+                        LSource, _, _, _ = self.im_io.read_to_nc_format(filename=label_path[i], intensity_normalize=False)
                 else:
                     assert("source label not find")
 
-            if self.recorder is not None:
-                self.si.set_recorder(self.recorder)
-
+            # if self.recorder is not None:
+            #     self.si.set_recorder(self.recorder)
+            self.si.set_light_analysis_on(True)
             self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
-                                    model_name='affine_map',
+                                    model_name=self.model0_name,
                                     map_low_res_factor=self.map0_low_res_factor,
                                     nr_of_iterations=self.nr_of_iterations,
-                                    visualize_step=self.visualize_step,
+                                    visualize_step=None,
                                     optimizer_name=self.optimizer0_name,
                                     use_multi_scale=True,
                                     rel_ftol=1e-9,
@@ -309,11 +315,11 @@ class OAILongitudeReisgtration(object):
             wi = self.si.get_warped_image()
             wi=wi.cpu().data.numpy()
 
-            if not self.light_analysis_on:
-                self.recorder = self.si.get_recorder()
+            # if not self.light_analysis_on:
+            #     self.recorder = self.si.get_recorder()
 
             print("let's come to step 2 ")
-
+            self.si.set_light_analysis_on(self.light_analysis_on)
             extra_info['pair_name'] = [img1_name + '_' + img0_name + '_step2']
             extra_info['batch_id'] = img1_name + '_' + img0_name + '_step2'
             self.si.register_images(wi, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
