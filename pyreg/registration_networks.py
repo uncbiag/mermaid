@@ -1098,7 +1098,12 @@ class AffineMapNet(RegistrationNet):
         :return: returns a tuple (upsampled_state,upsampled_spacing)
         """
         ustate = self.state_dict().copy() # stays the same
-        upsampled_spacing = self.spacing*((self.sz[2::].astype('float')-1.)/(desiredSz[2::].astype('float')-1.))
+        if len(self.sz) == len(desiredSz):
+            desiredSz= desiredSz[2:]
+        if len(self.sz)-len(desiredSz)==2:
+            upsampled_spacing = self.spacing*((self.sz[2::].astype('float')-1.)/(desiredSz.astype('float')-1.))
+        else:
+            raise ValueError, "Size not matched"
 
         return ustate, upsampled_spacing
 

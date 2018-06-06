@@ -156,7 +156,7 @@ class OAILongitudeReisgtration(object):
     def __init__(self):
         self.patients = []
         self.task_name='oai_reg'
-        self.expr_name='debug'
+        self.expr_name='debug_2'
         self.model0_name = 'affine_map'
         self.model1_name = 'svf_vector_momentum_map'
         self.map0_low_res_factor =0.3
@@ -280,7 +280,9 @@ class OAILongitudeReisgtration(object):
         self._update_saving_analysis_path(saving_folder_path)
 
         self.im_io.write(os.path.join(saving_folder_path, img0_name+'.nii.gz'), np.squeeze(Ic0), hdrc0)
-        for i,img_path in enumerate(img_paths[1:]):
+        for i,img_path in enumerate(img_paths):
+            if i<1:
+                continue
             img1_name = get_file_name(img_path)
             extra_info['pair_name']=[img1_name+'_'+img0_name +'_step1']
             extra_info['batch_id']=img1_name+'_'+img0_name +'_step1'
@@ -297,8 +299,10 @@ class OAILongitudeReisgtration(object):
                 else:
                     assert("source label not find")
 
+
             # if self.recorder is not None:
             #     self.si.set_recorder(self.recorder)
+
             self.si.set_light_analysis_on(True)
             self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
                                     model_name=self.model0_name,

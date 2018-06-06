@@ -162,7 +162,10 @@ class XlsxRecorder(object):
             iter_expand = {metric: np.squeeze(np.concatenate((results[iter_info][metric], results_summary[iter_info][metric]), 0)) for metric in self.measures}
             df = pd.DataFrame.from_dict(iter_expand)
             df = df[self.measures]
-            df.index = pd.Index(self.name_list_buffer+['average'])
+            try:
+                df.index = pd.Index(self.name_list_buffer+['average'])
+            except:
+                print("DEBUGGING !!, the iter_expand is {},\n  self.name_list_buffer is {}".format(iter_expand,self.name_list_buffer))
             df.to_excel(self.xlsx_writer, sheet_name=self.sheet_name, startcol=start_column, index_label=iter_info)
             start_column += self.column_space
         self.xlsx_writer.save()

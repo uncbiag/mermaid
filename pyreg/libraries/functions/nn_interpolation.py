@@ -13,9 +13,9 @@ ffi = FFI()
 
 if USE_CUDA:
     if sys.version_info >= (3, 0):
-        from pyreg.libraries._ext_p3 import nn_interpolation
+        from pyreg.libraries._ext import nn_interpolation
     else:
-        from pyreg.libraries._ext_p2 import nn_interpolation
+        from pyreg.libraries._ext import nn_interpolation
 
 def nn_interpolation_fn_sel(input1, input2, output, ndim, device_c, use_cuda=USE_CUDA):
     if use_cuda:

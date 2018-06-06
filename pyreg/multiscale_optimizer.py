@@ -26,6 +26,7 @@ from .res_recorder import XlsxRecorder
 from .data_utils import make_dir
 from torch.utils.data import Dataset, DataLoader
 from . import optimizer_data_loaders as OD
+import pyreg.fileio as FIO
 
 from collections import defaultdict
 from future.utils import with_metaclass
@@ -1411,7 +1412,27 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 else:
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
 
+                if iter==self.nrOfIterations-1:
+                    self._debugging_saving_intermid_img(self.ISource, append='source')
+                    self._debugging_saving_intermid_img(self.LSource, is_label_map=True,append='source')
+                    self._debugging_saving_intermid_img(I1Warped,append='warpped')
+                    self._debugging_saving_intermid_img(LWarped, is_label_map=True,append='warpped')
+
+
         return reached_tolerance,was_visualized
+
+
+    def _debugging_saving_intermid_img(self,img=None,is_label_map=False, append=''):
+        folder_path = os.path.join(self.save_fig_path,'debugging')
+        folder_path = os.path.join(folder_path, self.pair_path[0])
+        make_dir(folder_path)
+        file_name = 'scale_'+str(self.n_scale) + '_iter_' + str(self.iter_count)+append
+        file_name=file_name.replace('.','_')
+        if is_label_map:
+            file_name += '_label'
+        path = os.path.join(folder_path,file_name+'.nii.gz')
+        im_io = FIO.ImageIO()
+        im_io.write(path, np.squeeze(img.data.cpu().numpy()))
 
     # todo: write these parameter/optimizer functions also for shared parameters and all parameters
     def set_sgd_shared_model_parameters_and_optimizer_states(self, pars):
