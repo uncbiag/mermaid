@@ -101,6 +101,16 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
         else:
             return None
 
+    def get_warped_label(self):
+        """
+        Returns the warped label
+        :return: the warped label
+        """
+        if self.optimizer is not None:
+            return self.optimizer.get_warped_label()
+        else:
+            return None
+
     def get_warped_image(self):
         """
         Returns the warped image
@@ -759,7 +769,9 @@ class ImageRegistrationOptimizer(Optimizer):
         :param LSource:
         :return:
         """
+        print(LSource.shape)
         self.LSource = LSource
+
 
     def set_target_label(self, LTarget):
         """
@@ -961,6 +973,18 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing, self.spline_order)
         else:
             return self.rec_IWarped
+
+    def get_warped_label(self):
+        """
+        Returns the warped label
+        :return: the warped label
+        """
+        if self.useMap:
+            cmap = self.get_map()
+            return utils.get_warped_label_map(self.LSource, cmap, self.spacing)
+        else:
+            return None
+
 
     def get_map(self):
         """
@@ -1412,9 +1436,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 else:
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
 
-                if iter==self.nrOfIterations-1:
+                if 0:#iter==self.nrOfIterations-1:
                     self._debugging_saving_intermid_img(self.ISource, append='source')
                     self._debugging_saving_intermid_img(self.LSource, is_label_map=True,append='source')
+                    self._debugging_saving_intermid_img(self.ITarget, append='target')
+                    self._debugging_saving_intermid_img(self.LTarget, is_label_map=True, append='target')
                     self._debugging_saving_intermid_img(I1Warped,append='warpped')
                     self._debugging_saving_intermid_img(LWarped, is_label_map=True,append='warpped')
 
@@ -3230,6 +3256,17 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         if self.ssOpt is not None:
             return self.ssOpt.get_warped_image()
+        else:
+            return None
+
+
+    def get_warped_label(self):
+        """
+        Returns the warped label
+        :return: the warped label
+        """
+        if self.ssOpt is not None:
+            return self.ssOpt.get_warped_label()
         else:
             return None
 

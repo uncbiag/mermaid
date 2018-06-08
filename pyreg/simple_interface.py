@@ -152,6 +152,19 @@ class RegisterImagePair(object):
         else:
             return None
 
+
+    def get_warped_label(self):
+        """
+        Returns the warped label
+
+        :return: the warped label
+        """
+
+        if self.opt is not None:
+            return self.opt.get_warped_label()
+        else:
+            return None
+
     def get_map(self):
         """
         Returns the deformation map

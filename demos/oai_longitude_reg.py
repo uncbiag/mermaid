@@ -15,9 +15,10 @@ import matplotlib.pyplot as plt
 import pyreg.simple_interface as SI
 import pyreg.fileio as FIO
 from torch.autograd import Variable
-
+from pyreg.metrics import get_multi_metric
 #######################################################
 from pyreg.data_wrapper import AdaptVal
+from pyreg.res_recorder import XlsxRecorder
 
 """
 ######################################### Section 1. Raw Data Organization  ###############################################
@@ -200,6 +201,7 @@ class OAILongitudeReisgtration(object):
 
 
 
+
     def get_analysis_setting(self):
         par_respro = pars.ParameterDict()
         par_respro.load_JSON('../settings/respro_settings.json')
@@ -226,17 +228,32 @@ class OAILongitudeReisgtration(object):
             patients = [patients]
         self.patients = patients
 
+    def record_cur_performance(self,LSource_warped,LTarget,pair_name,batch_id,iter_info):
+        metric_results_dic = get_multi_metric(LSource_warped, LTarget, eval_label_list=None, rm_bg=False)
+        self.recorder.set_batch_based_env(pair_name, batch_id)
+        print(metric_results_dic)
+        info = {}
+        info['label_info'] = metric_results_dic['label_list']
+        info['iter_info'] = iter_info  #'scale_' + str(self.n_scale) + '_iter_' + str(self.iter_count)
+        self.recorder.saving_results(sched='batch', results=metric_results_dic['multi_metric_res'], info=info,
+                                     averaged_results=metric_results_dic['batch_avg_res'])
+        self.recorder.saving_results(sched='buffer', results=metric_results_dic['label_avg_res'], info=info,
+                                     averaged_results=None)
+
     def do_registration(self):
         for patient in self.patients:
+            if not self.light_analysis_on:
+                self.recorder = XlsxRecorder(self.expr_name,patient.patient_id)
+                self.set_recorder = self.recorder
+                self.si.set_recorder(self.recorder)
             self.do_single_patient_registration(patient)
-
+            if not self.light_analysis_on:
+                self.recorder = self.si.get_recorder()
+                self.recorder.set_summary_based_env()
+                self.recorder.saving_results(sched='summary')
 
         print("registration for {} patients, finished".format(len(self.patients)))
 
-        if not self.light_analysis_on:
-            self.recorder = self.si.get_recorder()
-            self.recorder.set_summary_based_env()
-            self.recorder.saving_results(sched='summary')
 
 
     def do_single_patient_registration(self,patient):
@@ -248,6 +265,7 @@ class OAILongitudeReisgtration(object):
 
                     self.si.set_light_analysis_on(self.light_analysis_on)
                     self.do_single_patient_mod_spec_registration(patient,mod,spec)
+
 
 
 
@@ -269,24 +287,27 @@ class OAILongitudeReisgtration(object):
                     LTarget= AdaptVal(Variable(sitk_read_img_to_std_tensor(label_path[0])))
                 except:
                     LTarget, _, _, _ = self.im_io.read_to_nc_format(filename=label_path[0], intensity_normalize=False)
+                    LTarget = AdaptVal(Variable(LTarget))
             else:
                 print("complete analysis will be skipped for patient_id {}, modality{}, specificity{}".format(patient_id,mod, spec))
                 self.si.set_light_analysis_on(True)
                 return None
 
 
-
         saving_folder_path = self.__gen_img_saving_path(patient,mod, spec)
         self._update_saving_analysis_path(saving_folder_path)
+        #self.im_io.write(os.path.join(saving_folder_path, img0_name+'.nii.gz'), np.squeeze(Ic0), hdrc0)
 
-        self.im_io.write(os.path.join(saving_folder_path, img0_name+'.nii.gz'), np.squeeze(Ic0), hdrc0)
+
+
+
+
         for i,img_path in enumerate(img_paths):
             if i<1:
                 continue
             img1_name = get_file_name(img_path)
-            extra_info['pair_name']=[img1_name+'_'+img0_name +'_step1']
-            extra_info['batch_id']=img1_name+'_'+img0_name +'_step1'
-
+            extra_info['pair_name']=[img1_name+'_'+img0_name]
+            extra_info['batch_id']=img1_name+'_'+img0_name
 
             Ic1, hdrc, spacing, _ = self.im_io.read_to_nc_format(filename=img_path, intensity_normalize=True)
 
@@ -296,12 +317,14 @@ class OAILongitudeReisgtration(object):
                         LSource = AdaptVal(Variable(sitk_read_img_to_std_tensor(label_path[i])))
                     except:
                         LSource, _, _, _ = self.im_io.read_to_nc_format(filename=label_path[i], intensity_normalize=False)
+                        LSource = AdaptVal(Variable(LSource))
                 else:
                     assert("source label not find")
 
+            if not self.light_analysis_on:
+                self.record_cur_performance(LSource, LTarget, extra_info['pair_name'], extra_info['batch_id'],
+                                            'no_registration')
 
-            # if self.recorder is not None:
-            #     self.si.set_recorder(self.recorder)
 
             self.si.set_light_analysis_on(True)
             self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
@@ -318,15 +341,19 @@ class OAILongitudeReisgtration(object):
                                     params ='cur_settings.json')
             wi = self.si.get_warped_image()
             wi=wi.cpu().data.numpy()
+            LSource_warped= None
+            if not self.light_analysis_on:
+                self.si.opt.optimizer.ssOpt.set_source_label(LSource)
+                LSource_warped = self.si.get_warped_label()
+                self.record_cur_performance(LSource_warped, LTarget, extra_info['pair_name'], extra_info['batch_id'], 'affine_finished')
 
-            # if not self.light_analysis_on:
-            #     self.recorder = self.si.get_recorder()
+
 
             print("let's come to step 2 ")
             self.si.set_light_analysis_on(self.light_analysis_on)
-            extra_info['pair_name'] = [img1_name + '_' + img0_name + '_step2']
-            extra_info['batch_id'] = img1_name + '_' + img0_name + '_step2'
-            self.si.register_images(wi, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
+            # extra_info['pair_name'] = [img1_name + '_' + img0_name]
+            # extra_info['batch_id'] = img1_name + '_' + img0_name # + '_step2'
+            self.si.register_images(wi, Ic0, spacing,extra_info=extra_info,LSource=LSource_warped,LTarget=LTarget,
                                     model_name=self.model1_name,
                                     map_low_res_factor=self.map1_low_res_factor,
                                     nr_of_iterations=self.nr_of_iterations,
