@@ -24,6 +24,7 @@ import pyreg.utils as utils
 
 import numpy as np
 
+import experiment_utils as eu
 
 import matplotlib.pyplot as plt
 
@@ -396,7 +397,7 @@ def cond_flip(v,f):
     else:
         return v
 
-def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, print_figure_id = None, slice_mode=0,flip_axes=False,params=None):
+def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, clean_print_path=None, print_figure_id = None, slice_mode=0,flip_axes=False,params=None):
 
     if local_weights is not None:
         osw = compute_overall_std(local_weights[0,...].cpu(), stds.data.cpu())
@@ -446,6 +447,50 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
     else:
         plt.show()
 
+    if clean_print_path is not None:
+        # now also create clean prints
+        plt.clf()
+        plt.imshow(cond_flip(I0[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.axis('off')
+        plt.tight_layout()
+        plt.savefig(os.path.join(clean_print_path,'source_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+
+        plt.clf()
+        plt.imshow(cond_flip(I1[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.axis('off')
+        plt.tight_layout()
+
+        plt.savefig(os.path.join(clean_print_path,'target_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+
+        plt.clf()
+        plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.axis('off')
+        plt.tight_layout()
+        plt.savefig(os.path.join(clean_print_path, 'warped_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+
+        plt.clf()
+        plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.contour(cond_flip(phi[0, 0, ...].data.cpu().numpy(), flip_axes), np.linspace(-1, 1, 20), colors='r',
+                    linestyles='solid')
+        plt.contour(cond_flip(phi[0, 1, ...].data.cpu().numpy(), flip_axes), np.linspace(-1, 1, 20), colors='r',
+                    linestyles='solid')
+        plt.axis('off')
+        plt.tight_layout()
+        plt.savefig(os.path.join(clean_print_path, 'warped_plus_grid_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+
+        plt.clf()
+        plt.imshow(cond_flip(norm_m[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.axis('off')
+        plt.savefig(os.path.join(clean_print_path, 'm_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+
+        if local_weights is not None:
+            plt.clf()
+            cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
+            cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
+            plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_print_path, 'std_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+
     if local_weights is not None:
         plt.clf()
 
@@ -474,45 +519,44 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
         else:
             plt.show()
 
-def compute_determinant_of_jacobian(phi,spacing):
-    fdt = FD.FD_torch(spacing)
-    dim = len(spacing)
+    if clean_print_path is not None and local_weights is not None:
+        # now also create clean prints
+        nr_of_gaussians = local_weights.size()[1]
 
-    if dim==1:
-        p0x = fdt.dXc(phi[0:1,0,...])
-        det = p0x
+        for g in range(nr_of_gaussians):
+            plt.clf()
+            clw = local_weights[0, g, ...].cpu().numpy()
+            cmin = clw[lowRes_source_mask == 1].min()
+            cmax = clw[lowRes_source_mask == 1].max()
+            plt.imshow(cond_flip((local_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin,
+                       vmax=cmax)
+            #plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_print_path, 'weight_image_g{:d}_{:0>3d}.pdf'.format(g,print_figure_id)),bbox_inches='tight')
 
-    elif dim==2:
-        p0x = fdt.dXc(phi[0:1, 0, ...])
-        p0y = fdt.dYc(phi[0:1, 0, ...])
-        p1x = fdt.dXc(phi[0:1, 1, ...])
-        p1y = fdt.dYc(phi[0:1, 1, ...])
+        osw = compute_overall_std(local_weights[0, ...].cpu(), stds.data.cpu())
 
-        det = p0x * p1y - p0y * p1x
-    elif dim==3:
-        p0x = fdt.dXc(phi[0:1, 0, ...])
-        p0y = fdt.dYc(phi[0:1, 0, ...])
-        p0z = fdt.dZc(phi[0:1, 0, ...])
-        p1x = fdt.dXc(phi[0:1, 1, ...])
-        p1y = fdt.dYc(phi[0:1, 1, ...])
-        p1z = fdt.dZc(phi[0:1, 1, ...])
-        p2x = fdt.dXc(phi[0:1, 2, ...])
-        p2y = fdt.dYc(phi[0:1, 2, ...])
-        p2z = fdt.dZc(phi[0:1, 2, ...])
+        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
 
-        det = p0x*p1y*p2z + p0y*p1z*p2x + p0z*p1x*p2y -p0z*p1y*p2x -p0y*p1x*p2z -p0x*p1z*p2y
-    else:
-        raise ValueError('Can only compute the determinant of Jacobian for dimensions 1, 2 and 3')
+        plt.clf()
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
+        #plt.colorbar()
+        plt.axis('off')
+        plt.savefig(os.path.join(clean_print_path, 'weight_image_overall_std_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
 
-    det = det.data[0, ...].cpu().numpy()
-    return det
+        plt.clf()
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
+        plt.colorbar()
+        plt.axis('off')
+        plt.savefig(os.path.join(clean_print_path, 'weight_image_overall_std_with_colorbar_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
 
 
 def compute_and_visualize_results(json_file,output_dir,
                                   stage,
                                   compute_from_frozen,
-                                  pair_nr,slice_proportion_3d=0.5,slice_mode_3d=0,visualize=False,
-                                  print_images=False,write_out_images=True,
+                                  pair_nr,printing_single_pair,slice_proportion_3d=0.5,slice_mode_3d=0,visualize=False,
+                                  print_images=False,clean_publication_print=False,write_out_images=True,
                                   write_out_source_image=False,write_out_target_image=False,
                                   write_out_weights=False,write_out_momentum=False,
                                   compute_det_of_jacobian=True,retarget_data_directory=None,
@@ -532,12 +576,18 @@ def compute_and_visualize_results(json_file,output_dir,
     # get the used json configuration and the output directories for the different stages
     json_for_stages, frozen_json_for_stages, output_dir_for_stages, frozen_output_dir_for_stages = get_json_and_output_dir_for_stages(json_file, output_dir)
 
+    clean_publication_dir = None
+
     if compute_from_frozen:
         image_and_map_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_frozen_stage_{:d}'.format(stage))
         print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_frozen_stage_{:d}'.format(stage))
     else:
         image_and_map_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_{:d}'.format(stage))
         print_output_dir = os.path.join(os.path.normpath(output_dir),'pdf_stage_{:d}'.format(stage))
+
+    if clean_publication_print and printing_single_pair:
+        # we don't want to write this out for all sorts of pairs
+        clean_publication_dir = os.path.join(print_output_dir,'clean_publication_prints')
 
     if write_out_warped_image or write_out_map or compute_det_of_jacobian:
         if not os.path.exists(image_and_map_output_dir):
@@ -549,8 +599,13 @@ def compute_and_visualize_results(json_file,output_dir,
 
     if visualize and print_images:
         if not os.path.exists(print_output_dir):
-            print('Creating output directory: ' + print_output_dir)
+            print('Creating output directory: {:s}'.format(print_output_dir))
             os.makedirs(print_output_dir)
+
+        if clean_publication_dir is not None:
+            if not os.path.exists(clean_publication_dir):
+                print('Creating output directory: {:s}'.format(clean_publication_dir))
+                os.makedirs(clean_publication_dir)
 
     warped_output_filename = os.path.join(image_and_map_output_dir,'warped_image_{:05d}.nrrd'.format(pair_nr))
     map_output_filename = os.path.join(image_and_map_output_dir,'map_validation_format_{:05d}.nrrd'.format(pair_nr))
@@ -629,11 +684,14 @@ def compute_and_visualize_results(json_file,output_dir,
             if print_images:
                 visualize_weights(ISource,ITarget,IWarped,phi,
                                   norm_m,model_dict['local_weights'],model_dict['stds'],
-                                  spacing,model_dict['lowResSize'],print_output_dir,pair_nr,params=params)
+                                  spacing,model_dict['lowResSize'],
+                                  print_path=print_output_dir,clean_print_path=clean_publication_dir,print_figure_id=pair_nr,
+                                  params=params)
             else:
                 visualize_weights(ISource,ITarget,IWarped,phi,
                                   norm_m,model_dict['local_weights'],model_dict['stds'],
-                                  spacing,model_dict['lowResSize'],params=params)
+                                  spacing,model_dict['lowResSize'],
+                                  params=params)
         elif image_dim==3:
             sz_I = ISource.size()
             sz_norm_m = norm_m.size()
@@ -690,7 +748,10 @@ def compute_and_visualize_results(json_file,output_dir,
                 if print_images:
                     visualize_weights(IS_slice,IT_slice,IW_slice,phi_slice,
                                       norm_m_slice,lw_slice,model_dict['stds'],
-                                      spacing_slice,lowResSize_slice,print_output_dir,pair_nr,slice_mode_3d[sm],flip_axes_3d[sm],params=params)
+                                      spacing_slice,lowResSize_slice,
+                                      print_path=print_output_dir, clean_print_path=clean_publication_dir,
+                                      print_figure_id=pair_nr, slice_mode=slice_mode_3d[sm],
+                                      flip_axes=flip_axes_3d[sm],params=params)
                 else:
                     visualize_weights(IS_slice, IT_slice, IW_slice, phi_slice,
                                       norm_m_slice, lw_slice, model_dict['stds'],
@@ -730,7 +791,7 @@ def compute_and_visualize_results(json_file,output_dir,
 
     # compute determinant of Jacobian of map
     if compute_det_of_jacobian:
-        det = compute_determinant_of_jacobian(phi,spacing)
+        det = eu.compute_determinant_of_jacobian(phi,spacing)
 
         im_io = FIO.ImageIO()
         im_io.write(det_jac_output_filename, det, hdr)
@@ -787,6 +848,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--do_not_visualize', action='store_true', help='visualizes the output otherwise')
     parser.add_argument('--do_not_print_images', action='store_true', help='prints the results otherwise')
+    parser.add_argument('--clean_publication_print', action='store_true', help='Modifies the printing behavior so also clean images for publications are created')
     parser.add_argument('--do_not_compute_det_jac', action='store_true', help='computes the determinant of the Jacobian otherwise')
     parser.add_argument('--do_not_write_out_images', action='store_true', help='writes out the map and the warped image otherwise')
 
@@ -827,16 +889,21 @@ if __name__ == "__main__":
     else:
         pair_nrs = list(range(nr_of_computed_pairs))
 
+    nr_of_pairs = len(pair_nrs)
+    printing_single_pair = (nr_of_pairs==1)
+
     for pair_nr in pair_nrs:
         print('Computing pair number: ' + str(pair_nr))
         compute_and_visualize_results(json_file=args.config,output_dir=output_dir,
                                       stage=args.stage_nr,
                                       compute_from_frozen=args.compute_from_frozen,
                                       pair_nr=pair_nr,
+                                      printing_single_pair=printing_single_pair,
                                       slice_proportion_3d=slice_proportion_3d,
                                       slice_mode_3d=slice_mode_3d,
                                       visualize=not args.do_not_visualize,
                                       print_images=not args.do_not_print_images,
+                                      clean_publication_print=args.clean_publication_print,
                                       write_out_images=not args.do_not_write_out_images,
                                       write_out_source_image=not args.do_not_write_source_image,
                                       write_out_target_image=not args.do_not_write_target_image,
@@ -845,19 +912,20 @@ if __name__ == "__main__":
                                       compute_det_of_jacobian=not args.do_not_compute_det_jac,
                                       retarget_data_directory=args.retarget_data_directory)
 
-    if not args.do_not_print_images:
-        if args.compute_from_frozen:
-            print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_frozen_stage_{:d}'.format(args.stage_nr))
-        else:
-            print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_stage_{:d}'.format(args.stage_nr))
+    if args.compute_only_pair_nr is None:
+        if not args.do_not_print_images:
+            if args.compute_from_frozen:
+                print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_frozen_stage_{:d}'.format(args.stage_nr))
+            else:
+                print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_stage_{:d}'.format(args.stage_nr))
 
-        # if we have pdfjam we create a summary pdf
-        if os.system('which pdfjam') == 0:
-            summary_pdf_name = os.path.join(print_output_dir, 'summary.pdf')
+            # if we have pdfjam we create a summary pdf
+            if os.system('which pdfjam') == 0:
+                summary_pdf_name = os.path.join(print_output_dir, 'summary.pdf')
 
-            if os.path.isfile(summary_pdf_name):
-                os.remove(summary_pdf_name)
+                if os.path.isfile(summary_pdf_name):
+                    os.remove(summary_pdf_name)
 
-            print('Creating summary PDF: ')
-            cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_dir, '*.pdf'), summary_pdf_name)
-            os.system(cmd)
+                print('Creating summary PDF: ')
+                cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_dir, '*.pdf'), summary_pdf_name)
+                os.system(cmd)
