@@ -903,7 +903,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.gaussianWeight_min = params[('gaussian_weight_min', 0.0001, 'minimal allowed weight for the Gaussians')]
         """minimal allowed weight during optimization"""
 
-
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, self.nr_of_gaussians)
         """creates the smoothed vector fields"""
 
@@ -912,6 +911,13 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,dim=self.dim,spacing=self.spacing).create_deep_smoother(params)
         """learned mini-network to predict multi-Gaussian smoothing weights"""
+
+        self.load_dnn_parameters_from_this_file = params[('load_dnn_parameters_from_this_file','',
+                                                          'If not empty, this is the file the DNN parameters are read from; useful to run a pre-initialized network')]
+        """To allow pre-initializing a network"""
+        if self.load_dnn_parameters_from_this_file!='':
+            print('INFO: Loading network configuration from {:s}'.format(self.load_dnn_parameters_from_this_file))
+            self.set_state_dict(torch.load(self.load_dnn_parameters_from_this_file))
 
         self.omt_weight_penalty = self.ws.get_omt_weight_penalty()
         """penalty factor for the optimal mass transport term"""
@@ -946,6 +952,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
             module.register_parameter('multi_gaussian_stds',self.multi_gaussian_stds_optimizer_params)
             s.add('multi_gaussian_stds')
+
         if self.optimize_over_smoother_weights:
 
             self.multi_gaussian_weights_optimizer_params.requires_grad = not self.freeze_parameters

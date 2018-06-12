@@ -1,6 +1,42 @@
 import matplotlib.pyplot as plt
 import matplotlib
 
+import pyreg.finite_differences as FD
+
+
+def compute_determinant_of_jacobian(phi,spacing):
+    fdt = FD.FD_torch(spacing)
+    dim = len(spacing)
+
+    if dim==1:
+        p0x = fdt.dXc(phi[0:1,0,...])
+        det = p0x
+
+    elif dim==2:
+        p0x = fdt.dXc(phi[0:1, 0, ...])
+        p0y = fdt.dYc(phi[0:1, 0, ...])
+        p1x = fdt.dXc(phi[0:1, 1, ...])
+        p1y = fdt.dYc(phi[0:1, 1, ...])
+
+        det = p0x * p1y - p0y * p1x
+    elif dim==3:
+        p0x = fdt.dXc(phi[0:1, 0, ...])
+        p0y = fdt.dYc(phi[0:1, 0, ...])
+        p0z = fdt.dZc(phi[0:1, 0, ...])
+        p1x = fdt.dXc(phi[0:1, 1, ...])
+        p1y = fdt.dYc(phi[0:1, 1, ...])
+        p1z = fdt.dZc(phi[0:1, 1, ...])
+        p2x = fdt.dXc(phi[0:1, 2, ...])
+        p2y = fdt.dYc(phi[0:1, 2, ...])
+        p2z = fdt.dZc(phi[0:1, 2, ...])
+
+        det = p0x*p1y*p2z + p0y*p1z*p2x + p0z*p1x*p2y -p0z*p1y*p2x -p0y*p1x*p2z -p0x*p1z*p2y
+    else:
+        raise ValueError('Can only compute the determinant of Jacobian for dimensions 1, 2 and 3')
+
+    det = det.data[0, ...].cpu().numpy()
+    return det
+
 def plot_boxplot(compound_results,compound_names,semilogy=False, showfliers=True):
     # create a figure instance
     fig = plt.figure(1, figsize=(8, 6))

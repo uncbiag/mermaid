@@ -42,7 +42,66 @@ def compute_image_stats(im,label_image=None):
 
     return d
 
-def compare_map(map,gt_map,label_image,visualize=False,print_output_directory=None,pair_nr=None):
+def compare_det_of_jac_from_map(map,gt_map,label_image,visualize=False,print_output_directory=None,clean_publication_directory=None,pair_nr=None):
+
+    sz = np.array(map.shape[2:])
+    # synthetic spacing
+    spacing = np.array(1./(sz-1))
+
+    map_torch = Variable( torch.from_numpy(map), requires_grad=False)
+    gt_map_torch = Variable( torch.from_numpy(gt_map), requires_grad=False)
+
+    det_est = eu.compute_determinant_of_jacobian(map_torch, spacing)
+    det_gt = eu.compute_determinant_of_jacobian(gt_map_torch, spacing)
+
+    n = det_est-det_gt
+
+    if visualize:
+        plt.clf()
+
+        plt.subplot(131)
+        plt.imshow(det_gt)
+        plt.colorbar()
+        plt.title('det_gt')
+
+        plt.subplot(132)
+        plt.imshow(det_est)
+        plt.colorbar()
+        plt.title('det_est')
+
+        plt.subplot(133)
+        plt.imshow(n)
+        plt.colorbar()
+        plt.title('det_est - det_gt')
+
+        if print_output_directory is None:
+            plt.show()
+        else:
+            plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_det_jac_validation.pdf'))
+
+        if clean_publication_directory is not None:
+            plt.clf()
+            plt.imshow(det_gt)
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'det_gt_{:0>3d}'.format(pair_nr) + '_det_jac_validation.pdf'),bbox_inches='tight')
+
+            plt.clf()
+            plt.imshow(det_est)
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'det_est_{:0>3d}'.format(pair_nr) + '_det_jac_validation.pdf'),bbox_inches='tight')
+
+            plt.clf()
+            plt.imshow(n)
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'det_est_m_det_gt_{:0>3d}'.format(pair_nr) + '_det_jac_validation.pdf'),bbox_inches='tight')
+
+    ds = compute_image_stats(n,label_image)
+    return ds
+
+def compare_map(map,gt_map,label_image,visualize=False,print_output_directory=None,clean_publication_directory=None,pair_nr=None):
 
     # compute vector norm difference
     n = ((map[0, 0, ...] - gt_map[0, 0, ...]) ** 2 + (map[0, 1, ...] - gt_map[0, 1, ...]) ** 2) ** 0.5
@@ -74,6 +133,32 @@ def compare_map(map,gt_map,label_image,visualize=False,print_output_directory=No
             plt.show()
         else:
             plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_map_validation.pdf'))
+
+        if clean_publication_directory is not None:
+            plt.clf()
+            plt.imshow(map[0, 0, ...] - gt_map[0, 0, ...])
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'phix_m_gt_phix_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'),bbox_inches='tight')
+
+            plt.clf()
+            plt.imshow(map[0, 1, ...] - gt_map[0, 1, ...])
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'phiy_m_gt_phiy_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'),bbox_inches='tight')
+
+            plt.clf()
+            plt.imshow(n)
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'phi_two_norm_error_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'),bbox_inches='tight')
+
+            plt.clf()
+            plt.imshow(label_image)
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'gt_labels_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'),bbox_inches='tight')
+
 
     ds = compute_image_stats(n,label_image)
     return ds
@@ -148,7 +233,7 @@ def _compute_overall_stds(weights,stds):
 
     return overall_stds
 
-def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi_gaussian_stds,label_image,visualize=False,print_output_directory=None,pair_nr=None,upsample_weights=True):
+def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi_gaussian_stds,label_image,visualize=False,print_output_directory=None,clean_publication_directory=None,pair_nr=None,upsample_weights=True):
 
     nr_of_weights = weights_orig.shape[1]
     nr_of_weights_gt = gt_weights_orig.shape[1]
@@ -198,6 +283,29 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
             else:
                 plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_weights_validation.pdf'))
 
+            if clean_publication_directory is not None:
+                for n in range(nr_of_weights):
+                    plt.clf()
+                    plt.imshow(gt_weights[0, n, ...])
+                    plt.colorbar()
+                    plt.axis('off')
+                    plt.savefig(os.path.join(clean_publication_directory, 'gt_weight_{:d}_{:0>3d}'.format(n,pair_nr) + '_weights_validation.pdf'),bbox_inches='tight')
+
+                for n in range(nr_of_weights):
+                    plt.clf()
+                    plt.imshow(weights[0, n, ...])
+                    plt.colorbar()
+                    plt.axis('off')
+                    plt.savefig(os.path.join(clean_publication_directory, 'estimated_weight_{:d}_{:0>3d}'.format(n,pair_nr) + '_weights_validation.pdf'),bbox_inches='tight')
+
+                for n in range(nr_of_weights):
+                    plt.clf()
+                    plt.imshow(weights[0, n, ...] - gt_weights[0, n, ...])
+                    plt.colorbar()
+                    plt.axis('off')
+                    plt.savefig(os.path.join(clean_publication_directory, 'estimated_m_gt_weight_{:d}_{:0>3d}'.format(n,pair_nr) + '_weights_validation.pdf'),bbox_inches='tight')
+
+
         plt.clf()
 
         plt.subplot(131)
@@ -220,6 +328,25 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
         else:
             plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'))
 
+        if clean_publication_directory is not None:
+            plt.clf()
+            plt.imshow(stds_synth)
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'std_synth_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight')
+
+            plt.clf()
+            plt.imshow(stds_computed)
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'std_estimated_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight')
+
+            plt.clf()
+            plt.imshow(stds_computed - stds_synth)
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'std_estimated_m_synth_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight')
+
     weights_stats = dict()
 
     if compatible_stds:
@@ -231,7 +358,7 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
 
     return weights_stats
 
-def compare_momentum(momentum,gt_momentum,label_image,visualize=False,print_output_directory=None,pair_nr=None):
+def compare_momentum(momentum,gt_momentum,label_image,visualize=False,print_output_directory=None,clean_publication_directory=None,pair_nr=None):
 
     if momentum.shape!=gt_momentum.shape:
         raise ValueError('Momentum comparisons are only supported for the same size')
@@ -263,6 +390,25 @@ def compare_momentum(momentum,gt_momentum,label_image,visualize=False,print_outp
         else:
             plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_momentum_validation.pdf'))
 
+        if clean_publication_directory is not None:
+            plt.clf()
+            plt.imshow(momentum[0, 0, ...] - gt_momentum[0, 0, ...])
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'mx_m_gt_mx_{:0>3d}'.format(pair_nr) + '_momentum_validation.pdf'),bbox_inches='tight')
+
+            plt.clf()
+            plt.imshow(momentum[0, 1, ...] - gt_momentum[0, 1, ...])
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'my_m_gt_my_{:0>3d}'.format(pair_nr) + '_momentum_validation.pdf'),bbox_inches='tight')
+
+            plt.clf()
+            plt.imshow(n)
+            plt.colorbar()
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_publication_directory, 'm_two_norm_error_{:0>3d}'.format(pair_nr) + '_momentum_validation.pdf'),bbox_inches='tight')
+
     ds = compute_image_stats(n,label_image)
     return ds
 
@@ -275,7 +421,9 @@ def compute_and_visualize_validation_result(multi_gaussian_stds_synth,
                                             print_output_directory,
                                             pair_nr,current_source_id,
                                             visualize=False,
-                                            print_images=False):
+                                            print_images=False,
+                                            clean_publication_print=False,
+                                            printing_single_pair=False):
 
     # load the computed results for map, weights, and momentum
     map_output_filename_pt = os.path.join(image_and_map_output_directory, 'map_{:05d}.pt'.format(pair_nr))
@@ -287,6 +435,14 @@ def compute_and_visualize_validation_result(multi_gaussian_stds_synth,
 
     if print_images:
         visualize = True
+
+    if clean_publication_print:
+        clean_publication_dir = os.path.join(print_output_directory, 'clean_publication_prints')
+        if not os.path.exists(clean_publication_dir):
+            print('INFO: creating directory {:s}'.format(clean_publication_dir))
+            os.mkdir(clean_publication_dir)
+    else:
+        clean_publication_dir = None
 
     weights_dict = torch.load(weights_output_filename_pt)
     if not compare_global_weights:
@@ -327,15 +483,23 @@ def compute_and_visualize_validation_result(multi_gaussian_stds_synth,
     else:
         print_output_directory_eff = None
 
+    if printing_single_pair:
+        clean_publication_dir_eff = clean_publication_dir
+    else:
+        # we don't want to print them for all
+        clean_publication_dir_eff = None
+
     # now we can compare them
     d = dict()
-    d['map_stats'] = compare_map(map,gt_map,label_image,visualize=visualize,print_output_directory=print_output_directory_eff,pair_nr=pair_nr)
+    d['map_stats'] = compare_map(map,gt_map,label_image,visualize=visualize,print_output_directory=print_output_directory_eff,clean_publication_directory=clean_publication_dir_eff,pair_nr=pair_nr)
+
+    d['det_jac_stats'] = compare_det_of_jac_from_map(map,gt_map,label_image,visualize=visualize,print_output_directory=print_output_directory_eff,clean_publication_directory=clean_publication_dir_eff,pair_nr=pair_nr)
 
     d['weight_stats'] = compare_weights(weights,gt_weights,multi_gaussian_stds_synth,multi_gaussian_stds,
-                                        label_image=label_image,visualize=visualize,print_output_directory=print_output_directory_eff,pair_nr=pair_nr)
+                                        label_image=label_image,visualize=visualize,print_output_directory=print_output_directory_eff,clean_publication_directory=clean_publication_dir_eff,pair_nr=pair_nr)
 
     if momentum.shape==gt_momentum.shape:
-        d['momentum_stats'] = compare_momentum(momentum,gt_momentum,label_image,visualize=visualize,print_output_directory=print_output_directory_eff,pair_nr=pair_nr)
+        d['momentum_stats'] = compare_momentum(momentum,gt_momentum,label_image,visualize=visualize,print_output_directory=print_output_directory_eff,clean_publication_directory=clean_publication_dir_eff,pair_nr=pair_nr)
 
     return d
 
@@ -406,15 +570,21 @@ def _show_global_local_boxplot_summary(current_stats,title,desired_stat='median'
     eu.plot_boxplot(compound_results, compound_names)
     plt.title(title)
 
-def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False, print_images=False):
+def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False, print_images=False, clean_publication_print=False):
     # there is a lot of stats info in 'all_stats'
     # let's show the boxplots over the medians for the different regions and overall
 
     ws = all_stats['weight_stats']
     ms = all_stats['map_stats']
+    dj = all_stats['det_jac_stats']
 
     if print_images:
         visualize = True
+
+    if clean_publication_print:
+        clean_publication_dir = os.path.join(print_output_directory, 'clean_publication_prints')
+    else:
+        clean_publication_dir = None
 
     desired_stats = ['mean','median']
 
@@ -427,13 +597,20 @@ def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False
             else:
                 plt.savefig(os.path.join(print_output_directory, 'stat_summary_map_validation_{:s}.pdf'.format(current_stat)))
 
+        _show_global_local_boxplot_summary(dj, 'det of jac validation results (estimated-truth)', current_stat)
+        if visualize:
+            if print_output_directory is None:
+                plt.show()
+            else:
+                plt.savefig(
+                    os.path.join(print_output_directory, 'stat_summary_det_jac_validation_{:s}.pdf'.format(current_stat)))
+
         _show_global_local_boxplot_summary(ws['overall_stds'],'overall stds results (estimated-truth)',current_stat)
         if visualize:
             if print_output_directory is None:
                 plt.show()
             else:
                 plt.savefig(os.path.join(print_output_directory, 'stat_summary_overall_stds_validation_{:s}.pdf'.format(current_stat)))
-
 
         for k in ws['weights']:
             _show_global_local_boxplot_summary(ws['weights'][k], 'weight {:d} results (estimated-truth)'.format(k),current_stat)
@@ -442,6 +619,23 @@ def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False
                     plt.show()
                 else:
                     plt.savefig(os.path.join(print_output_directory, 'stat_summary_weight_{:d}_validation_{:s}.pdf'.format(k,current_stat)))
+
+    if visualize and clean_publication_dir is not None:
+        for current_stat in desired_stats:
+
+            _show_global_local_boxplot_summary(ms, '', current_stat)
+            plt.savefig(os.path.join(clean_publication_dir, 'clean_stat_summary_map_validation_{:s}.pdf'.format(current_stat)),bbox_inches='tight')
+
+            _show_global_local_boxplot_summary(dj, '', current_stat)
+            plt.savefig(os.path.join(clean_publication_dir, 'clean_stat_summary_det_jac_validation_{:s}.pdf'.format(current_stat)),bbox_inches='tight')
+
+            _show_global_local_boxplot_summary(ws['overall_stds'],'',current_stat)
+            plt.savefig(os.path.join(clean_publication_dir, 'clean_stat_summary_overall_stds_validation_{:s}.pdf'.format(current_stat)),bbox_inches='tight')
+
+            for k in ws['weights']:
+                _show_global_local_boxplot_summary(ws['weights'][k], '',current_stat)
+                plt.savefig(os.path.join(clean_publication_dir,'clean_stat_summary_weight_{:d}_validation_{:s}.pdf'.format(k,current_stat)),bbox_inches='tight')
+
 
 if __name__ == "__main__":
 
@@ -460,6 +654,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--do_not_visualize', action='store_true', help='visualizes the output otherwise')
     parser.add_argument('--do_not_print_images', action='store_true', help='prints the results otherwise')
+    parser.add_argument('--clean_publication_print', action='store_true', help='Modifies the printing behavior so also clean images for publications are created')
 
     args = parser.parse_args()
 
@@ -540,6 +735,8 @@ if __name__ == "__main__":
     #DEBUG
 
     nr_of_pairs = len(pair_nrs)
+    printing_single_pair = (nr_of_pairs==1)
+
     for pair_nr in pair_nrs:
 
         print('Computing pair {:d}/{:d}'.format(pair_nr+1,nr_of_pairs))
@@ -556,32 +753,36 @@ if __name__ == "__main__":
                                                                 pair_nr=pair_nr,
                                                                 current_source_id=current_source_id,
                                                                 visualize=not args.do_not_visualize,
-                                                                print_images=not args.do_not_print_images)
+                                                                print_images=not args.do_not_print_images,
+                                                                clean_publication_print=args.clean_publication_print,
+                                                                printing_single_pair=printing_single_pair)
 
         all_stats = append_stats(all_stats,current_stats)
 
-    # now save and output the means and the standard deviations for all the values
-    print('Writing text statistics output to {:s}'.format(extra_stats_filename_txt))
-    f = open(extra_stats_filename_txt, 'w')
-    display_stats(all_stats,file_stream=f)
-    f.close()
+    if args.compute_only_pair_nr is None:
+        show_boxplot_summary(all_stats,
+                             print_output_directory=print_output_directory,
+                             visualize=not args.do_not_visualize,
+                             print_images=not args.do_not_print_images,
+                             clean_publication_print=args.clean_publication_print)
 
-    print('Writing pt statistics output to {:s}'.format(extra_stats_filename_pt))
-    torch.save(all_stats,extra_stats_filename_pt)
+        # now save and output the means and the standard deviations for all the values
+        print('Writing text statistics output to {:s}'.format(extra_stats_filename_txt))
+        f = open(extra_stats_filename_txt, 'w')
+        display_stats(all_stats,file_stream=f)
+        f.close()
 
-    show_boxplot_summary(all_stats,
-                         print_output_directory=print_output_directory,
-                         visualize=not args.do_not_visualize,
-                         print_images=not args.do_not_print_images)
+        print('Writing pt statistics output to {:s}'.format(extra_stats_filename_pt))
+        torch.save(all_stats,extra_stats_filename_pt)
 
-    if not args.do_not_print_images:
-        # if we have pdfjam we create a summary pdf
-        if os.system('which pdfjam') == 0:
-            summary_pdf_name = os.path.join(print_output_directory, 'extra_summary.pdf')
+        if not args.do_not_print_images:
+            # if we have pdfjam we create a summary pdf
+            if os.system('which pdfjam') == 0:
+                summary_pdf_name = os.path.join(print_output_directory, 'extra_summary.pdf')
 
-            if os.path.isfile(summary_pdf_name):
-                os.remove(summary_pdf_name)
+                if os.path.isfile(summary_pdf_name):
+                    os.remove(summary_pdf_name)
 
-            print('Creating summary PDF: ')
-            cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_directory, '*.pdf'), summary_pdf_name)
-            os.system(cmd)
+                print('Creating summary PDF: ')
+                cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_directory, '*.pdf'), summary_pdf_name)
+                os.system(cmd)

@@ -103,17 +103,21 @@ def run_optimization(stage,nr_of_epochs,image_pair_config_pt,input_image_directo
     log_file = get_stage_log_filename(output_directory=output_directory,stage=stage,process_name='opt')
     ce.execute_python_script_via_bash(current_python_script, cmd_arg_list, pre_command=entire_pre_command, log_file=log_file)
 
-def run_visualization(stage,output_directory,main_json,cuda_visible_devices=None,pre_command=None):
+def run_visualization(stage,output_directory,main_json,cuda_visible_devices=None,pre_command=None,compute_only_pair_nr=None):
 
     args = {'config': main_json,
             'output_directory': output_directory,
             'stage_nr': stage,
-            'do_not_visualize': ''}
+            'do_not_visualize': '',
+            'clean_publication_print': ''}
+
+    if compute_only_pair_nr is not None:
+        print('INFO: Only computing pair nr: ' + str(compute_only_pair_nr))
+        args['compute_only_pair_nr'] = compute_only_pair_nr
 
     # now run the command
     cmd_arg_list = _make_arg_list(args)
     current_python_script = 'visualize_multi_stage.py'
-
 
     entire_pre_command = get_bash_precommand(cuda_visible_devices=cuda_visible_devices,pre_command=pre_command)
     log_file = get_stage_log_filename(output_directory=output_directory,stage=stage,process_name='viz')
@@ -137,13 +141,18 @@ def run_validation(stage,output_directory,validation_dataset_directory,validatio
     log_file = get_stage_log_filename(output_directory=output_directory,stage=stage,process_name='val')
     ce.execute_python_script_via_bash(current_python_script, cmd_arg_list, pre_command=entire_pre_command, log_file=log_file)
 
-def run_extra_validation(stage,input_image_directory,output_directory,main_json,cuda_visible_devices=None,pre_command=None):
+def run_extra_validation(stage,input_image_directory,output_directory,main_json,cuda_visible_devices=None,pre_command=None,compute_only_pair_nr=None):
 
     args = {'stage_nr': stage,
             'input_image_directory': input_image_directory,
             'output_directory': output_directory,
             'config': main_json,
-            'do_not_visualize': ''}
+            'do_not_visualize': '',
+            'clean_publication_print': ''}
+
+    if compute_only_pair_nr is not None:
+        print('INFO: Only computing pair nr: ' + str(compute_only_pair_nr))
+        args['compute_only_pair_nr'] = compute_only_pair_nr
 
     # now run the command
     cmd_arg_list = _make_arg_list(args)
@@ -163,7 +172,16 @@ def run(stage,nr_of_epochs,main_json,
         string_key_value_overwrites=dict(),
         seed=1234,
         cuda_visible_devices=None,
-        pre_command=None):
+        pre_command=None,
+        parts_to_run=None,
+        compute_only_pair_nr=None):
+
+    if parts_to_run is None:
+        parts_to_run = dict()
+        parts_to_run['run_optimization'] = True
+        parts_to_run['run_visualization'] = True
+        parts_to_run['run_validation'] = True
+        parts_to_run['run_extra_validation'] = True
 
     output_directory = os.path.join(output_base_directory, 'out_' + postfix )
 
@@ -175,39 +193,54 @@ def run(stage,nr_of_epochs,main_json,
         print('Creating output directory: {:s}'.format(output_directory))
         os.mkdir(output_directory)
 
-    run_optimization(stage=stage,
-                     nr_of_epochs=nr_of_epochs,
-                     image_pair_config_pt=image_pair_config_pt,
-                     input_image_directory=input_image_directory,
-                     output_directory=output_directory,
-                     main_json=main_json,
-                     key_value_overwrites=key_value_overwrites,
-                     string_key_value_overwrites=string_key_value_overwrites,
-                     seed=seed,
-                     cuda_visible_devices=cuda_visible_devices,
-                     pre_command=pre_command)
+    if parts_to_run['run_optimization']:
+        run_optimization(stage=stage,
+                         nr_of_epochs=nr_of_epochs,
+                         image_pair_config_pt=image_pair_config_pt,
+                         input_image_directory=input_image_directory,
+                         output_directory=output_directory,
+                         main_json=main_json,
+                         key_value_overwrites=key_value_overwrites,
+                         string_key_value_overwrites=string_key_value_overwrites,
+                         seed=seed,
+                         cuda_visible_devices=cuda_visible_devices,
+                         pre_command=pre_command)
+    else:
+        print('INFO: Optimization will not be run')
 
-    run_visualization(stage=stage,
-                      output_directory=output_directory,
-                      main_json=main_json,
-                      cuda_visible_devices=cuda_visible_devices,
-                      pre_command=pre_command)
+    if parts_to_run['run_visualization']:
+        run_visualization(stage=stage,
+                          output_directory=output_directory,
+                          main_json=main_json,
+                          cuda_visible_devices=cuda_visible_devices,
+                          pre_command=pre_command,
+                          compute_only_pair_nr=compute_only_pair_nr)
+    else:
+        print('INFO: Visualization will not be run')
 
     if (validation_dataset_directory is not None) and (validation_dataset_name is not None):
-        run_validation(stage=stage,
-                       output_directory=output_directory,
-                       validation_dataset_directory=validation_dataset_directory,
-                       validation_dataset_name=validation_dataset_name,
-                       cuda_visible_devices=cuda_visible_devices,
-                       pre_command=pre_command)
+
+        if parts_to_run['run_validation']:
+            run_validation(stage=stage,
+                           output_directory=output_directory,
+                           validation_dataset_directory=validation_dataset_directory,
+                           validation_dataset_name=validation_dataset_name,
+                           cuda_visible_devices=cuda_visible_devices,
+                           pre_command=pre_command)
+        else:
+            print('INFO: Validation will not be run')
 
         if validation_dataset_name=='SYNTH':
-            run_extra_validation(stage=stage,
-                                 input_image_directory=input_image_directory,
-                                 output_directory=output_directory,
-                                 main_json=main_json,
-                                 cuda_visible_devices=cuda_visible_devices,
-                                 pre_command=pre_command)
+            if parts_to_run['run_extra_validation']:
+                run_extra_validation(stage=stage,
+                                     input_image_directory=input_image_directory,
+                                     output_directory=output_directory,
+                                     main_json=main_json,
+                                     cuda_visible_devices=cuda_visible_devices,
+                                     pre_command=pre_command,
+                                     compute_only_pair_nr=compute_only_pair_nr)
+            else:
+                print('INFO: Extra validation will not be run')
 
     else:
         print('Validation not computed, because validation dataset is not specified')
@@ -333,6 +366,8 @@ if __name__ == "__main__":
     parser.add_argument('--validation_dataset_directory', required=False, default=None, help='Directory where the validation data can be found')
     parser.add_argument('--image_pair_config_pt', required=False, default=None, help='If specified then the image-pairs are determined based on the information in this file; can simply point to a previous configuration.pt file')
 
+    parser.add_argument('--compute_only_pair_nr', required=False, type=int, default=None, help='When specified only this pair is computed; otherwise all of them')
+
     parser.add_argument('--move_to_directory', required=False, default=None, help='If specified results will be move to this directory after computation (for example to move from SSD to slower storage)')
 
     parser.add_argument('--postfix', required=False, default=None, help='Output subdirectory will be out_postfix')
@@ -359,7 +394,38 @@ if __name__ == "__main__":
 
     parser.add_argument('--multi_gaussian_weights_stage_0', required=False, default=None, type=str, help='Convenience function to specify a multi-Gaussian weight as a string for stage 0: e.g., [0.0,0.0,0.0,1.0]')
 
+    # run only certain parts of the pipline
+    parser.add_argument('--run_optimization', action='store_true', help='If specified then only specified parts of the pipline are run')
+    parser.add_argument('--run_visualization', action='store_true', help='If specified then only specified parts of the pipline are run')
+    parser.add_argument('--run_validation', action='store_true', help='If specified then only specified parts of the pipline are run')
+    parser.add_argument('--run_extra_validation', action='store_true', help='If specified then only specified parts of the pipline are run')
+
     args = parser.parse_args()
+
+    parts_to_run = dict()
+    parts_to_run['run_optimization'] = False
+    parts_to_run['run_visualization'] = False
+    parts_to_run['run_validation'] = False
+    parts_to_run['run_extra_validation'] = False
+
+    if args.run_optimization or args.run_visualization or args.run_validation or args.run_extra_validation:
+        parts_to_run['run_optimization'] = args.run_optimization
+        parts_to_run['run_visualization'] = args.run_visualization
+        parts_to_run['run_validation'] = args.run_validation
+        parts_to_run['run_extra_validation'] = args.run_extra_validation
+    else:
+        # by default everything runs
+        parts_to_run['run_optimization'] = True
+        parts_to_run['run_visualization'] = True
+        parts_to_run['run_validation'] = True
+        parts_to_run['run_extra_validation'] = True
+
+    all_parts_will_be_run = True
+    if (parts_to_run['run_optimization']==False) \
+        or (parts_to_run['run_visualization']==False) \
+        or (parts_to_run['run_validation']==False) \
+        or (parts_to_run['run_extra_validation']==False):
+        all_parts_will_be_run = False
 
     input_image_directory = None
     image_pair_config_pt = None
@@ -545,11 +611,17 @@ if __name__ == "__main__":
                     string_key_value_overwrites=kvos_str,
                     seed=seed,
                     cuda_visible_devices=cuda_visible_devices,
-                    pre_command=args.precommand)
+                    pre_command=args.precommand,
+                    parts_to_run=parts_to_run,
+                    compute_only_pair_nr=args.compute_only_pair_nr)
 
-            move_output_directory(move_to_directory=move_to_directory,
-                                  output_base_directory=output_base_directory,
-                                  postfix=current_postfix)
+            if all_parts_will_be_run:
+                move_output_directory(move_to_directory=move_to_directory,
+                                      output_base_directory=output_base_directory,
+                                      postfix=current_postfix)
+            else:
+                if move_to_directory is not None:
+                    print('INFO: Ignored move request to directory {:s} as not all components were run'.format(move_to_directory))
 
 
 
