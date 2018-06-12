@@ -7,9 +7,9 @@ from torch.utils.ffi import create_extension
 #this_file = os.path.dirname(__file__)
 
 if sys.version_info >= (3, 0):
-    target_dir = '_ext_p3'
+    target_dir = '_ext'
 else:
-    target_dir = '_ext_p2'
+    target_dir = '_ext'
 
 sources_nd = ['src/my_lib_nd.c']
 headers_nd = ['src/my_lib_nd.h']

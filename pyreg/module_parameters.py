@@ -5,8 +5,8 @@ registration runs. See the corresponding note for a brief description on how to 
 """
 from __future__ import print_function
 
-from builtins import str
-from builtins import object
+# from builtins import str
+# from builtins import object
 import json
 
 class ParameterDict(object):

@@ -6,7 +6,7 @@ boundary conditions (though the latter have not been tested extensively yet).
 """
 from __future__ import absolute_import
 
-from builtins import object
+# from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import torch

@@ -4,9 +4,9 @@ Helper functions to take care of all the file IO
 from __future__ import print_function
 from __future__ import absolute_import
 
-from builtins import str
-from builtins import range
-from builtins import object
+# from builtins import str
+# from builtins import range
+# from builtins import object
 import itk
 import os
 import nrrd
