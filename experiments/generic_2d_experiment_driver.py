@@ -62,6 +62,7 @@ def add_to_config_string(cs,cs_to_add):
     return ret
 
 def run_optimization(stage,nr_of_epochs,image_pair_config_pt,nr_of_image_pairs,
+                     only_run_stage0_with_unchanged_config,
                      input_image_directory,output_directory,
                      main_json,seed,
                      key_value_overwrites=dict(),string_key_value_overwrites=dict(),
@@ -100,6 +101,9 @@ def run_optimization(stage,nr_of_epochs,image_pair_config_pt,nr_of_image_pairs,
 
     if not config_kv_string=='':
         args['config_kvs'] = config_kv_string
+
+    if only_run_stage0_with_unchanged_config:
+        args['only_run_stage0_with_unchanged_config']=''
 
     # now run the command
     cmd_arg_list = _make_arg_list(args)
@@ -181,7 +185,9 @@ def run(stage,nr_of_epochs,main_json,
         cuda_visible_devices=None,
         pre_command=None,
         parts_to_run=None,
-        compute_only_pair_nr=None):
+        compute_only_pair_nr=None,
+        only_run_stage0_with_unchanged_config=False
+        ):
 
     if parts_to_run is None:
         parts_to_run = dict()
@@ -205,6 +211,7 @@ def run(stage,nr_of_epochs,main_json,
                          nr_of_epochs=nr_of_epochs,
                          image_pair_config_pt=image_pair_config_pt,
                          nr_of_image_pairs=nr_of_image_pairs,
+                         only_run_stage0_with_unchanged_config=only_run_stage0_with_unchanged_config,
                          input_image_directory=input_image_directory,
                          output_directory=output_directory,
                          main_json=main_json,
@@ -216,42 +223,44 @@ def run(stage,nr_of_epochs,main_json,
     else:
         print('INFO: Optimization will not be run')
 
-    if parts_to_run['run_visualization']:
-        run_visualization(stage=stage,
-                          output_directory=output_directory,
-                          main_json=main_json,
-                          cuda_visible_devices=cuda_visible_devices,
-                          pre_command=pre_command,
-                          compute_only_pair_nr=compute_only_pair_nr)
-    else:
-        print('INFO: Visualization will not be run')
+    if not only_run_stage0_with_unchanged_config:
 
-    if (validation_dataset_directory is not None) and (validation_dataset_name is not None):
-
-        if parts_to_run['run_validation']:
-            run_validation(stage=stage,
-                           output_directory=output_directory,
-                           validation_dataset_directory=validation_dataset_directory,
-                           validation_dataset_name=validation_dataset_name,
-                           cuda_visible_devices=cuda_visible_devices,
-                           pre_command=pre_command)
+        if parts_to_run['run_visualization']:
+            run_visualization(stage=stage,
+                              output_directory=output_directory,
+                              main_json=main_json,
+                              cuda_visible_devices=cuda_visible_devices,
+                              pre_command=pre_command,
+                              compute_only_pair_nr=compute_only_pair_nr)
         else:
-            print('INFO: Validation will not be run')
+            print('INFO: Visualization will not be run')
 
-        if validation_dataset_name=='SYNTH':
-            if parts_to_run['run_extra_validation']:
-                run_extra_validation(stage=stage,
-                                     input_image_directory=input_image_directory,
-                                     output_directory=output_directory,
-                                     main_json=main_json,
-                                     cuda_visible_devices=cuda_visible_devices,
-                                     pre_command=pre_command,
-                                     compute_only_pair_nr=compute_only_pair_nr)
+        if (validation_dataset_directory is not None) and (validation_dataset_name is not None):
+
+            if parts_to_run['run_validation']:
+                run_validation(stage=stage,
+                               output_directory=output_directory,
+                               validation_dataset_directory=validation_dataset_directory,
+                               validation_dataset_name=validation_dataset_name,
+                               cuda_visible_devices=cuda_visible_devices,
+                               pre_command=pre_command)
             else:
-                print('INFO: Extra validation will not be run')
+                print('INFO: Validation will not be run')
 
-    else:
-        print('Validation not computed, because validation dataset is not specified')
+            if validation_dataset_name=='SYNTH':
+                if parts_to_run['run_extra_validation']:
+                    run_extra_validation(stage=stage,
+                                         input_image_directory=input_image_directory,
+                                         output_directory=output_directory,
+                                         main_json=main_json,
+                                         cuda_visible_devices=cuda_visible_devices,
+                                         pre_command=pre_command,
+                                         compute_only_pair_nr=compute_only_pair_nr)
+                else:
+                    print('INFO: Extra validation will not be run')
+
+        else:
+            print('Validation not computed, because validation dataset is not specified')
 
 
 
@@ -385,6 +394,8 @@ if __name__ == "__main__":
     parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=0, help='number of image pairs that will be used; if not set all pairs will be used')
 
     parser.add_argument('--compute_only_pair_nr', required=False, type=int, default=None, help='When specified only this pair is computed; otherwise all of them')
+
+    parser.add_argument('--only_run_stage0_with_unchanged_config', action='store_true', help='This is a convenience setting which allows using the script to run any json confifg file unchanged (as if it were stage 0); i.e., it will optimize over the smoother if set as such; should only be used for debugging; will terminate after stage 0.')
 
     parser.add_argument('--move_to_directory', required=False, default=None, help='If specified results will be move to this directory after computation (for example to move from SSD to slower storage)')
 
@@ -604,7 +615,9 @@ if __name__ == "__main__":
                 cuda_visible_devices=cuda_visible_devices,
                 parts_to_run=parts_to_run,
                 pre_command=args.precommand,
-                compute_only_pair_nr=args.compute_only_pair_nr)
+                compute_only_pair_nr=args.compute_only_pair_nr,
+                only_run_stage0_with_unchanged_config=args.only_run_stage0_with_unchanged_config
+                )
 
         if all_parts_will_be_run:
             move_output_directory(move_to_directory=move_to_directory,
@@ -645,7 +658,9 @@ if __name__ == "__main__":
                     cuda_visible_devices=cuda_visible_devices,
                     pre_command=args.precommand,
                     parts_to_run=parts_to_run,
-                    compute_only_pair_nr=args.compute_only_pair_nr)
+                    compute_only_pair_nr=args.compute_only_pair_nr,
+                    only_run_stage0_with_unchanged_config=args.only_run_stage0_with_unchanged_config
+                    )
 
             if all_parts_will_be_run:
                 move_output_directory(move_to_directory=move_to_directory,

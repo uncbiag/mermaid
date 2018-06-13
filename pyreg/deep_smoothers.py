@@ -14,7 +14,81 @@ import pyreg.finite_differences as fd
 import pyreg.module_parameters as pars
 import pyreg.fileio as fio
 
+import os
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 batch_norm_momentum_val = 0.1
+
+# def _custom_colorbar(mappable):
+#     ax = mappable.axes
+#     fig = ax.figure
+#     divider = make_axes_locatable(ax)
+#     cax = divider.append_axes("right", size="5%", pad=0.05)
+#     return fig.colorbar(mappable, cax=cax)
+#
+# def _plot_edgemap_2d(image,gradient_norm,edge_map):
+#     plt.clf()
+#
+#     fig, (ax1, ax2, ax3) = plt.subplots(ncols=3)
+#     c1 = ax1.imshow(image)
+#     _custom_colorbar(c1)
+#     ax1.set_title('Original image')
+#
+#     c2 = ax2.imshow(gradient_norm)
+#     _custom_colorbar(c2)
+#     ax2.set_title('Gradient norm')
+#
+#     c3 = ax3.imshow(edge_map)
+#     _custom_colorbar(c3)
+#     ax3.set_title('edge map')
+#
+#     plt.tight_layout()
+#     #plt.tight_layout(h_pad=1)
+
+def _plot_edgemap_2d(image,gradient_norm,edge_map,gamma):
+    plt.clf()
+
+    plt.subplot(221)
+    plt.imshow(image)
+    plt.colorbar()
+    plt.title('Original image')
+
+    plt.subplot(222)
+    plt.imshow(edge_map)
+    plt.colorbar()
+    plt.title('edge map')
+
+    plt.subplot(223)
+    plt.imshow(gradient_norm)
+    plt.colorbar()
+    plt.title('Gradient norm')
+
+    plt.subplot(224)
+    plt.imshow(gamma*gradient_norm)
+    plt.colorbar()
+    plt.title('gamma * Gradient norm')
+
+
+    plt.subplot
+
+    plt.tight_layout()
+    #plt.tight_layout(h_pad=1)
+
+def _edgemap_plot_and_write_to_pdf(image,gradient_norm,edge_map,gamma,pdf_filename):
+    dim = len(edge_map.size())
+
+    if dim==1:
+        print('INFO: PDF output not yet implemented for 1D image; implement it in deep_smoothers.py')
+    elif dim==2:
+        _plot_edgemap_2d(image=image,gradient_norm=gradient_norm,edge_map=edge_map,gamma=gamma)
+        plt.savefig(pdf_filename,bbox_inches='tight',pad_inches=0)
+        _plot_edgemap_2d(image=image,gradient_norm=gradient_norm,edge_map=edge_map,gamma=gamma)
+        plt.show()
+    elif dim==3:
+        print('INFO: PDF output not yet implemented for 3D image; implement it in deep_smoothers.py')
+    else:
+        raise ValueError('Unknown dimension; dimension must be 1, 2, or 3')
 
 def half_sigmoid(x,alpha=1):
     r = 2.0/(1+torch.exp(-x*alpha))-1.0
@@ -39,7 +113,13 @@ def compute_localized_edge_penalty(I,spacing,params=None):
     localized_edge_penalty = 1.0/(1.0+gamma*gnI) # this is what we weight the OMT values with
 
     if write_edge_penalty_to_file:
-        fio.ImageIO().write(edge_penalty_filename,localized_edge_penalty[0,...])
+
+        current_image_filename = str(edge_penalty_filename)
+        current_pdf_filename = (os.path.splitext(current_image_filename)[0])+'.pdf'
+        fio.ImageIO().write(current_image_filename,localized_edge_penalty[0,...].data.cpu())
+
+        _edgemap_plot_and_write_to_pdf(image=I[0,...].data.cpu(),gradient_norm=gnI[0,...].data.cpu(),edge_map=localized_edge_penalty[0,...].data.cpu(),gamma=gamma,pdf_filename=current_pdf_filename)
+
         if terminate_after_writing_edge_penalty:
             print('Terminating, because terminate_after_writing_edge_penalty was set to True')
             exit(code=0)
@@ -584,6 +664,10 @@ class DeepSmoothingModel(nn.Module):
         super(DeepSmoothingModel, self).__init__()
 
         self.nr_of_image_channels = nr_of_image_channels
+
+        if nr_of_image_channels!=1:
+            raise ValueError('Currently only implemented for images with 1 channel')
+
         self.dim = dim
         self.omt_power = omt_power
         self.pnorm = 2
