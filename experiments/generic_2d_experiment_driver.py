@@ -94,8 +94,9 @@ def run_optimization(stage,nr_of_epochs,image_pair_config_pt,nr_of_image_pairs,
 
     if image_pair_config_pt is not None:
         args['image_pair_config_pt'] = image_pair_config_pt
-    elif nr_of_image_pairs>0:
-        args['nr_of_image_pairs'] = nr_of_image_pairs
+    elif nr_of_image_pairs is not None:
+        if nr_of_image_pairs>0:
+            args['nr_of_image_pairs'] = nr_of_image_pairs
 
     if not config_kv_string=='':
         args['config_kvs'] = config_kv_string
