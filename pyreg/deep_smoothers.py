@@ -100,7 +100,7 @@ def compute_localized_edge_penalty(I,spacing,params=None):
         # will not be tracked, but this is to keep track of the parameters
         params = pars.ParameterDict()
 
-    gamma = params[('edge_penalty_gamma',1.0,'Constant for edge penalty: 1.0/(1.0+gamma*||\\nabla I||*min(spacing)')]
+    gamma = params[('edge_penalty_gamma',10.0,'Constant for edge penalty: 1.0/(1.0+gamma*||\\nabla I||*min(spacing)')]
     write_edge_penalty_to_file = params[('edge_penalty_write_to_file',False,'If set to True the edge penalty is written into a file so it can be debugged')]
     edge_penalty_filename = params[('edge_penalty_filename','DEBUG_edge_penalty.nrrd','Edge penalty image')]
     terminate_after_writing_edge_penalty = params[('edge_penalty_terminate_after_writing',False,'Terminates the program after the edge file has been written; otherwise file may be constantly overwritten')]
