@@ -578,11 +578,17 @@ if __name__ == "__main__":
                 string_key_value_overwrites=kvos_str,
                 seed=seed,
                 cuda_visible_devices=cuda_visible_devices,
+                parts_to_run=parts_to_run,
                 pre_command=args.precommand)
 
-        move_output_directory(move_to_directory=move_to_directory,
-                              output_base_directory=output_base_directory,
-                              postfix=postfix)
+        if all_parts_will_be_run:
+            move_output_directory(move_to_directory=move_to_directory,
+                                  output_base_directory=output_base_directory,
+                                  postfix=postfix)
+        else:
+            if move_to_directory is not None:
+                print('INFO: Ignored move request to directory {:s} as not all components were run'.format(
+                    move_to_directory))
 
     else:
         # we sweep over all the entries
