@@ -83,20 +83,23 @@ def compare_det_of_jac_from_map(map,gt_map,label_image,visualize=False,print_out
             plt.clf()
             plt.imshow(det_gt)
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'det_gt_{:0>3d}'.format(pair_nr) + '_det_jac_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'det_gt_{:0>3d}'.format(pair_nr) + '_det_jac_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
             plt.imshow(det_est)
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'det_est_{:0>3d}'.format(pair_nr) + '_det_jac_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'det_est_{:0>3d}'.format(pair_nr) + '_det_jac_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
             plt.imshow(n)
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'det_est_m_det_gt_{:0>3d}'.format(pair_nr) + '_det_jac_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'det_est_m_det_gt_{:0>3d}'.format(pair_nr) + '_det_jac_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
     ds = compute_image_stats(n,label_image)
     return ds
@@ -138,26 +141,30 @@ def compare_map(map,gt_map,label_image,visualize=False,print_output_directory=No
             plt.clf()
             plt.imshow(map[0, 0, ...] - gt_map[0, 0, ...])
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'phix_m_gt_phix_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'phix_m_gt_phix_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
             plt.imshow(map[0, 1, ...] - gt_map[0, 1, ...])
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'phiy_m_gt_phiy_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'phiy_m_gt_phiy_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
             plt.imshow(n)
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'phi_two_norm_error_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'phi_two_norm_error_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
             plt.imshow(label_image)
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'gt_labels_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'gt_labels_{:0>3d}'.format(pair_nr) + '_map_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
 
     ds = compute_image_stats(n,label_image)
@@ -288,22 +295,25 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
                     plt.clf()
                     plt.imshow(gt_weights[0, n, ...])
                     plt.colorbar()
+                    plt.axis('image')
                     plt.axis('off')
-                    plt.savefig(os.path.join(clean_publication_directory, 'gt_weight_{:d}_{:0>3d}'.format(n,pair_nr) + '_weights_validation.pdf'),bbox_inches='tight')
+                    plt.savefig(os.path.join(clean_publication_directory, 'gt_weight_{:d}_{:0>3d}'.format(n,pair_nr) + '_weights_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
                 for n in range(nr_of_weights):
                     plt.clf()
                     plt.imshow(weights[0, n, ...])
                     plt.colorbar()
+                    plt.axis('image')
                     plt.axis('off')
-                    plt.savefig(os.path.join(clean_publication_directory, 'estimated_weight_{:d}_{:0>3d}'.format(n,pair_nr) + '_weights_validation.pdf'),bbox_inches='tight')
+                    plt.savefig(os.path.join(clean_publication_directory, 'estimated_weight_{:d}_{:0>3d}'.format(n,pair_nr) + '_weights_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
                 for n in range(nr_of_weights):
                     plt.clf()
                     plt.imshow(weights[0, n, ...] - gt_weights[0, n, ...])
                     plt.colorbar()
+                    plt.axis('image')
                     plt.axis('off')
-                    plt.savefig(os.path.join(clean_publication_directory, 'estimated_m_gt_weight_{:d}_{:0>3d}'.format(n,pair_nr) + '_weights_validation.pdf'),bbox_inches='tight')
+                    plt.savefig(os.path.join(clean_publication_directory, 'estimated_m_gt_weight_{:d}_{:0>3d}'.format(n,pair_nr) + '_weights_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
 
         plt.clf()
@@ -332,20 +342,23 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
             plt.clf()
             plt.imshow(stds_synth)
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'std_synth_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'std_synth_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
             plt.imshow(stds_computed)
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'std_estimated_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'std_estimated_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
             plt.imshow(stds_computed - stds_synth)
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'std_estimated_m_synth_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'std_estimated_m_synth_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
     weights_stats = dict()
 
@@ -394,20 +407,23 @@ def compare_momentum(momentum,gt_momentum,label_image,visualize=False,print_outp
             plt.clf()
             plt.imshow(momentum[0, 0, ...] - gt_momentum[0, 0, ...])
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'mx_m_gt_mx_{:0>3d}'.format(pair_nr) + '_momentum_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'mx_m_gt_mx_{:0>3d}'.format(pair_nr) + '_momentum_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
             plt.imshow(momentum[0, 1, ...] - gt_momentum[0, 1, ...])
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'my_m_gt_my_{:0>3d}'.format(pair_nr) + '_momentum_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'my_m_gt_my_{:0>3d}'.format(pair_nr) + '_momentum_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
             plt.imshow(n)
             plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_publication_directory, 'm_two_norm_error_{:0>3d}'.format(pair_nr) + '_momentum_validation.pdf'),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_directory, 'm_two_norm_error_{:0>3d}'.format(pair_nr) + '_momentum_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
     ds = compute_image_stats(n,label_image)
     return ds
@@ -624,17 +640,17 @@ def show_boxplot_summary(all_stats, print_output_directory=None, visualize=False
         for current_stat in desired_stats:
 
             _show_global_local_boxplot_summary(ms, '', current_stat)
-            plt.savefig(os.path.join(clean_publication_dir, 'clean_stat_summary_map_validation_{:s}.pdf'.format(current_stat)),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_dir, 'clean_stat_summary_map_validation_{:s}.pdf'.format(current_stat)),bbox_inches='tight',pad_inches=0)
 
             _show_global_local_boxplot_summary(dj, '', current_stat)
-            plt.savefig(os.path.join(clean_publication_dir, 'clean_stat_summary_det_jac_validation_{:s}.pdf'.format(current_stat)),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_dir, 'clean_stat_summary_det_jac_validation_{:s}.pdf'.format(current_stat)),bbox_inches='tight',pad_inches=0)
 
             _show_global_local_boxplot_summary(ws['overall_stds'],'',current_stat)
-            plt.savefig(os.path.join(clean_publication_dir, 'clean_stat_summary_overall_stds_validation_{:s}.pdf'.format(current_stat)),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_publication_dir, 'clean_stat_summary_overall_stds_validation_{:s}.pdf'.format(current_stat)),bbox_inches='tight',pad_inches=0)
 
             for k in ws['weights']:
                 _show_global_local_boxplot_summary(ws['weights'][k], '',current_stat)
-                plt.savefig(os.path.join(clean_publication_dir,'clean_stat_summary_weight_{:d}_validation_{:s}.pdf'.format(k,current_stat)),bbox_inches='tight')
+                plt.savefig(os.path.join(clean_publication_dir,'clean_stat_summary_weight_{:d}_validation_{:s}.pdf'.format(k,current_stat)),bbox_inches='tight',pad_inches=0)
 
 
 if __name__ == "__main__":

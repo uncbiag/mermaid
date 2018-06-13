@@ -451,22 +451,21 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
         # now also create clean prints
         plt.clf()
         plt.imshow(cond_flip(I0[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.axis('image')
         plt.axis('off')
-        plt.tight_layout()
-        plt.savefig(os.path.join(clean_print_path,'source_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+        plt.savefig(os.path.join(clean_print_path,'source_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
         plt.imshow(cond_flip(I1[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.axis('image')
         plt.axis('off')
-        plt.tight_layout()
-
-        plt.savefig(os.path.join(clean_print_path,'target_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+        plt.savefig(os.path.join(clean_print_path,'target_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
         plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.axis('image')
         plt.axis('off')
-        plt.tight_layout()
-        plt.savefig(os.path.join(clean_print_path, 'warped_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+        plt.savefig(os.path.join(clean_print_path, 'warped_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
         plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
@@ -474,22 +473,24 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
                     linestyles='solid')
         plt.contour(cond_flip(phi[0, 1, ...].data.cpu().numpy(), flip_axes), np.linspace(-1, 1, 20), colors='r',
                     linestyles='solid')
+        plt.axis('image')
         plt.axis('off')
-        plt.tight_layout()
-        plt.savefig(os.path.join(clean_print_path, 'warped_plus_grid_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+        plt.savefig(os.path.join(clean_print_path, 'warped_plus_grid_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
         plt.imshow(cond_flip(norm_m[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.axis('image')
         plt.axis('off')
-        plt.savefig(os.path.join(clean_print_path, 'm_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+        plt.savefig(os.path.join(clean_print_path, 'm_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         if local_weights is not None:
             plt.clf()
             cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
             cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
             plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_print_path, 'std_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_print_path, 'std_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
     if local_weights is not None:
         plt.clf()
@@ -531,8 +532,9 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
             plt.imshow(cond_flip((local_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin,
                        vmax=cmax)
             #plt.colorbar()
+            plt.axis('image')
             plt.axis('off')
-            plt.savefig(os.path.join(clean_print_path, 'weight_image_g{:d}_{:0>3d}.pdf'.format(g,print_figure_id)),bbox_inches='tight')
+            plt.savefig(os.path.join(clean_print_path, 'weight_image_g{:d}_{:0>3d}.pdf'.format(g,print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         osw = compute_overall_std(local_weights[0, ...].cpu(), stds.data.cpu())
 
@@ -542,14 +544,16 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
         plt.clf()
         plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
         #plt.colorbar()
+        plt.axis('image')
         plt.axis('off')
-        plt.savefig(os.path.join(clean_print_path, 'weight_image_overall_std_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+        plt.savefig(os.path.join(clean_print_path, 'weight_image_overall_std_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
         plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
         plt.colorbar()
+        plt.axis('image')
         plt.axis('off')
-        plt.savefig(os.path.join(clean_print_path, 'weight_image_overall_std_with_colorbar_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight')
+        plt.savefig(os.path.join(clean_print_path, 'weight_image_overall_std_with_colorbar_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
 
 def compute_and_visualize_results(json_file,output_dir,
