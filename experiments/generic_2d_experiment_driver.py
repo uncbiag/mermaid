@@ -51,13 +51,25 @@ def create_kv_string(kvs):
 
     return ret
 
+def _escape_semicolons(s):
+    s_split = s.split(';')
+    if len(s_split)<2:
+        return s
+    else:
+        ret = s_split[0]
+        for c in s_split[1:]:
+            ret += '\\;' + c
+        return ret
+
 def add_to_config_string(cs,cs_to_add):
     if (cs is None) or (cs==''):
-        ret = cs_to_add
+        # we need to check if there are semicolons in the string to add, if so, these need to be escaped
+        ret = _escape_semicolons(cs_to_add)
     elif cs_to_add is None:
         ret = cs
     else:
-        ret = cs + '\\;' + cs_to_add
+        cs_to_add_escaped = _escape_semicolons(cs_to_add)
+        ret = cs + '\\;' + cs_to_add_escaped
 
     return ret
 
