@@ -192,11 +192,11 @@ class FD(with_metaclass(ABCMeta, object)):
         """
         ndim = self.getdimension(I)
         if ndim == 1 + 1:
-            return self.ddXc(I)**2
+            return self.dXc(I)**2
         elif ndim == 2 + 1:
-            return (self.ddXc(I)**2 + self.ddYc(I)**2)
+            return (self.dXc(I)**2 + self.dYc(I)**2)
         elif ndim == 3 + 1:
-            return (self.ddXc(I)**2 + self.ddYc(I)**2 + self.ddZc(I)**2)
+            return (self.dXc(I)**2 + self.dYc(I)**2 + self.dZc(I)**2)
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
 
