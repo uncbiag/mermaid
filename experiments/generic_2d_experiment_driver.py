@@ -602,7 +602,8 @@ if __name__ == "__main__":
                 seed=seed,
                 cuda_visible_devices=cuda_visible_devices,
                 parts_to_run=parts_to_run,
-                pre_command=args.precommand)
+                pre_command=args.precommand,
+                compute_only_pair_nr=args.compute_only_pair_nr)
 
         if all_parts_will_be_run:
             move_output_directory(move_to_directory=move_to_directory,
