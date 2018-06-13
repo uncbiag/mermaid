@@ -61,7 +61,8 @@ def add_to_config_string(cs,cs_to_add):
 
     return ret
 
-def run_optimization(stage,nr_of_epochs,image_pair_config_pt,input_image_directory,output_directory,
+def run_optimization(stage,nr_of_epochs,image_pair_config_pt,nr_of_image_pairs,
+                     input_image_directory,output_directory,
                      main_json,seed,
                      key_value_overwrites=dict(),string_key_value_overwrites=dict(),
                      cuda_visible_devices=None,pre_command=None):
@@ -83,14 +84,18 @@ def run_optimization(stage,nr_of_epochs,image_pair_config_pt,input_image_directo
     if stage in string_key_value_overwrites:
         config_kv_string = add_to_config_string(config_kv_string,string_key_value_overwrites[stage])
 
-    args = {'image_pair_config_pt': image_pair_config_pt,
-            'input_image_directory': input_image_directory,
+    args = {'input_image_directory': input_image_directory,
             'output_directory': output_directory,
             'nr_of_epochs': all_nr_of_epochs,
             'config': main_json,
             'stage': stage,
             'seed': seed,
             }
+
+    if image_pair_config_pt is not None:
+        args['image_pair_config_pt'] = image_pair_config_pt
+    elif nr_of_image_pairs>0:
+        args['nr_of_image_pairs'] = nr_of_image_pairs
 
     if not config_kv_string=='':
         args['config_kvs'] = config_kv_string
@@ -164,6 +169,7 @@ def run_extra_validation(stage,input_image_directory,output_directory,main_json,
 
 def run(stage,nr_of_epochs,main_json,
         image_pair_config_pt,
+        nr_of_image_pairs,
         input_image_directory,
         output_base_directory,postfix,
         validation_dataset_directory,
@@ -197,6 +203,7 @@ def run(stage,nr_of_epochs,main_json,
         run_optimization(stage=stage,
                          nr_of_epochs=nr_of_epochs,
                          image_pair_config_pt=image_pair_config_pt,
+                         nr_of_image_pairs=nr_of_image_pairs,
                          input_image_directory=input_image_directory,
                          output_directory=output_directory,
                          main_json=main_json,
@@ -332,6 +339,15 @@ def merge_kvs(kva,kvb):
 
     return ret
 
+def _none_if_empty(par):
+    if type(par)==type(pars.ParameterDict()):
+        if par.isempty():
+            return None
+        else:
+            return par
+    else:
+        return par
+
 if __name__ == "__main__":
 
     # These can be set once and for all (will likely never need to be specified on the command line
@@ -365,6 +381,7 @@ if __name__ == "__main__":
     parser.add_argument('--output_base_directory', required=False, default='experimental_results', help='Base directory where the output is stored')
     parser.add_argument('--validation_dataset_directory', required=False, default=None, help='Directory where the validation data can be found')
     parser.add_argument('--image_pair_config_pt', required=False, default=None, help='If specified then the image-pairs are determined based on the information in this file; can simply point to a previous configuration.pt file')
+    parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=0, help='number of image pairs that will be used; if not set all pairs will be used')
 
     parser.add_argument('--compute_only_pair_nr', required=False, type=int, default=None, help='When specified only this pair is computed; otherwise all of them')
 
@@ -401,6 +418,11 @@ if __name__ == "__main__":
     parser.add_argument('--run_extra_validation', action='store_true', help='If specified then only specified parts of the pipline are run')
 
     args = parser.parse_args()
+
+    if args.nr_of_image_pairs==0:
+        nr_of_image_pairs = None
+    else:
+        nr_of_image_pairs = args.nr_of_image_pairs
 
     parts_to_run = dict()
     parts_to_run['run_optimization'] = False
@@ -465,11 +487,11 @@ if __name__ == "__main__":
 
             data_params.load_JSON(args.dataset_config)
 
-        input_image_directory = data_params[('input_image_directory',input_image_directory_default,'directory where the input images live')]
-        image_pair_config_pt = data_params[('image_pair_config_pt',image_pair_config_pt_default,'file which specifies the image pairs if desired')]
+        input_image_directory = _none_if_empty(data_params[('input_image_directory',input_image_directory_default,'directory where the input images live')])
+        image_pair_config_pt = _none_if_empty(data_params[('image_pair_config_pt',image_pair_config_pt_default,'file which specifies the image pairs if desired')])
         output_base_directory = data_params[('output_base_directory',output_base_directory_default,'where the output should be stored')]
-        validation_dataset_directory = data_params[('validation_dataset_directory',validation_dataset_directory_default,'the main directory containing the validation data')]
-        validation_dataset_name = data_params[('validation_dataset',validation_dataset_name_default,'CUMC|MGH|LPBA|IBSR|SYNTH')]
+        validation_dataset_directory = _none_if_empty(data_params[('validation_dataset_directory',validation_dataset_directory_default,'the main directory containing the validation data')])
+        validation_dataset_name = _none_if_empty(data_params[('validation_dataset',validation_dataset_name_default,'CUMC|MGH|LPBA|IBSR|SYNTH')])
 
         if save_dataset_config:
             data_params.write_JSON(args.dataset_config)
@@ -569,6 +591,7 @@ if __name__ == "__main__":
                 nr_of_epochs=nr_of_epochs[stage],
                 main_json=main_json,
                 image_pair_config_pt=image_pair_config_pt,
+                nr_of_image_pairs=nr_of_image_pairs,
                 input_image_directory=input_image_directory,
                 output_base_directory=output_base_directory,
                 postfix=postfix,
@@ -608,6 +631,7 @@ if __name__ == "__main__":
                     nr_of_epochs=nr_of_epochs[stage],
                     main_json=main_json,
                     image_pair_config_pt=image_pair_config_pt,
+                    nr_of_image_pairs=nr_of_image_pairs,
                     input_image_directory=input_image_directory,
                     output_base_directory=output_base_directory,
                     postfix=current_postfix,
