@@ -716,7 +716,7 @@ class DeepSmoothingModel(nn.Module):
 
         #print('WARNING: weight initialization disabled')
         #return
-	print('WARNING: weight initializaiton ENABLED')
+	print('WARNING: weight initialization ENABLED')
 
         for m in self.modules():
             if isinstance(m, DimConv(self.dim)):

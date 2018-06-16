@@ -411,41 +411,43 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
         Variable(torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:],spline_order)
     lowRes_source_mask = lowRes_source_mask_v.data.cpu().numpy()[0, 0, ...]
 
-    plt.subplot(2, 3, 1)
-    plt.imshow(cond_flip(I0[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
-    plt.title('source')
+    if clean_print_path is None:
 
-    plt.subplot(2, 3, 2)
-    plt.imshow(cond_flip(I1[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
-    plt.title('target')
+        plt.subplot(2, 3, 1)
+        plt.imshow(cond_flip(I0[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
+        plt.title('source')
 
-    plt.subplot(2, 3, 3)
-    plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
-    plt.title('warped')
+        plt.subplot(2, 3, 2)
+        plt.imshow(cond_flip(I1[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
+        plt.title('target')
 
-    plt.subplot(2, 3, 4)
-    plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
-    plt.contour(cond_flip(phi[0, 0, ...].data.cpu().numpy(),flip_axes), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
-    plt.contour(cond_flip(phi[0, 1, ...].data.cpu().numpy(),flip_axes), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
-    plt.title('warped+grid')
+        plt.subplot(2, 3, 3)
+        plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
+        plt.title('warped')
 
-    plt.subplot(2, 3, 5)
-    plt.imshow(cond_flip(norm_m[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
-    plt.title('|m|')
+        plt.subplot(2, 3, 4)
+        plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
+        plt.contour(cond_flip(phi[0, 0, ...].data.cpu().numpy(),flip_axes), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+        plt.contour(cond_flip(phi[0, 1, ...].data.cpu().numpy(),flip_axes), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+        plt.title('warped+grid')
 
-    if local_weights is not None:
-        plt.subplot(2, 3, 6)
-        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
-        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
-        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
-        plt.title('std')
+        plt.subplot(2, 3, 5)
+        plt.imshow(cond_flip(norm_m[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
+        plt.title('|m|')
 
-    plt.suptitle('Registration result: pair id {:03d}'.format(print_figure_id))
+        if local_weights is not None:
+            plt.subplot(2, 3, 6)
+            cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
+            cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
+            plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
+            plt.title('std')
 
-    if print_figure_id is not None:
-        plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + '_registration.pdf'))
-    else:
-        plt.show()
+        plt.suptitle('Registration result: pair id {:03d}'.format(print_figure_id))
+
+        if print_figure_id is not None:
+            plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + '_registration.pdf'))
+        else:
+            plt.show()
 
     if clean_print_path is not None:
         # now also create clean prints
@@ -492,7 +494,7 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
             plt.axis('off')
             plt.savefig(os.path.join(clean_print_path, 'std_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
-    if local_weights is not None:
+    if clean_print_path is None and local_weights is not None:
         plt.clf()
 
         nr_of_gaussians = local_weights.size()[1]
@@ -580,8 +582,6 @@ def compute_and_visualize_results(json_file,output_dir,
     # get the used json configuration and the output directories for the different stages
     json_for_stages, frozen_json_for_stages, output_dir_for_stages, frozen_output_dir_for_stages = get_json_and_output_dir_for_stages(json_file, output_dir)
 
-    clean_publication_dir = None
-
     if compute_from_frozen:
         image_and_map_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_frozen_stage_{:d}'.format(stage))
         print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_frozen_stage_{:d}'.format(stage))
@@ -589,9 +589,12 @@ def compute_and_visualize_results(json_file,output_dir,
         image_and_map_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_{:d}'.format(stage))
         print_output_dir = os.path.join(os.path.normpath(output_dir),'pdf_stage_{:d}'.format(stage))
 
+    clean_publication_dir = None
     if clean_publication_print and printing_single_pair:
         # we don't want to write this out for all sorts of pairs
         clean_publication_dir = os.path.join(print_output_dir,'clean_publication_prints')
+        # In this case we only create the publication prints, any other output is suppressed
+        visualize = True
 
     if write_out_warped_image or write_out_map or compute_det_of_jacobian:
         if not os.path.exists(image_and_map_output_dir):
@@ -673,14 +676,14 @@ def compute_and_visualize_results(json_file,output_dir,
 
     norm_m = ((model_dict['m']**2).sum(dim=1,keepdim=True))**0.5
 
-    if write_out_weights:
+    if write_out_weights and (clean_publication_dir is None):
         wd = dict()
         if stage==2:
             wd['local_weights'] = model_dict['local_weights']
         wd['default_multi_gaussian_weights'] = model_dict['default_multi_gaussian_weights']
         torch.save(wd,weights_output_filename_pt)
 
-    if write_out_momentum:
+    if write_out_momentum and (clean_publication_dir is None):
         torch.save(model_dict['m'],momentum_output_filename_pt)
 
     if visualize:
@@ -766,11 +769,11 @@ def compute_and_visualize_results(json_file,output_dir,
 
 
     # save the images
-    if write_out_warped_image:
+    if write_out_warped_image and (clean_publication_dir is None):
         im_io = FIO.ImageIO()
         im_io.write(warped_output_filename, IWarped[0,0,...], hdr)
 
-    if write_out_map:
+    if write_out_map and (clean_publication_dir is None):
         map_io = FIO.MapIO()
         map_io.write_to_validation_map_format(map_output_filename, phi[0,...], hdr)
         torch.save( phi, map_output_filename_pt)
@@ -779,14 +782,14 @@ def compute_and_visualize_results(json_file,output_dir,
             displacement = phi[0,...]-model_dict['id'][0,...]
             map_io.write(displacement_output_filename, displacement, hdr)
 
-    if write_out_source_image:
+    if write_out_source_image and (clean_publication_dir is None):
         if use_sym_links:
             utils.create_symlink_with_correct_ext(current_source_filename,source_image_output_filename)
         else:
             im_io = FIO.ImageIO()
             im_io.write(source_image_output_filename, ISource[0,0,...], hdr)
 
-    if write_out_target_image:
+    if write_out_target_image and (clean_publication_dir is None):
         if use_sym_links:
             utils.create_symlink_with_correct_ext(current_target_filename,target_image_output_filename)
         else:
@@ -794,7 +797,7 @@ def compute_and_visualize_results(json_file,output_dir,
             im_io.write(target_image_output_filename, ITarget[0, 0, ...], hdr)
 
     # compute determinant of Jacobian of map
-    if compute_det_of_jacobian:
+    if compute_det_of_jacobian and (clean_publication_dir is None):
         det = eu.compute_determinant_of_jacobian(phi,spacing)
 
         im_io = FIO.ImageIO()
@@ -852,7 +855,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--do_not_visualize', action='store_true', help='visualizes the output otherwise')
     parser.add_argument('--do_not_print_images', action='store_true', help='prints the results otherwise')
-    parser.add_argument('--clean_publication_print', action='store_true', help='Modifies the printing behavior so also clean images for publications are created')
+    parser.add_argument('--clean_publication_print', action='store_true', help='Modifies the printing behavior so clean images for publications are created if --compute_only_pair_nr is specified; in this case all other output is suppressed')
     parser.add_argument('--do_not_compute_det_jac', action='store_true', help='computes the determinant of the Jacobian otherwise')
     parser.add_argument('--do_not_write_out_images', action='store_true', help='writes out the map and the warped image otherwise')
 

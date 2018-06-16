@@ -57,27 +57,29 @@ def compare_det_of_jac_from_map(map,gt_map,label_image,visualize=False,print_out
     n = det_est-det_gt
 
     if visualize:
-        plt.clf()
 
-        plt.subplot(131)
-        plt.imshow(det_gt)
-        plt.colorbar()
-        plt.title('det_gt')
+        if clean_publication_directory is None:
+            plt.clf()
 
-        plt.subplot(132)
-        plt.imshow(det_est)
-        plt.colorbar()
-        plt.title('det_est')
+            plt.subplot(131)
+            plt.imshow(det_gt)
+            plt.colorbar()
+            plt.title('det_gt')
 
-        plt.subplot(133)
-        plt.imshow(n)
-        plt.colorbar()
-        plt.title('det_est - det_gt')
+            plt.subplot(132)
+            plt.imshow(det_est)
+            plt.colorbar()
+            plt.title('det_est')
 
-        if print_output_directory is None:
-            plt.show()
-        else:
-            plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_det_jac_validation.pdf'))
+            plt.subplot(133)
+            plt.imshow(n)
+            plt.colorbar()
+            plt.title('det_est - det_gt')
+
+            if print_output_directory is None:
+                plt.show()
+            else:
+                plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_det_jac_validation.pdf'))
 
         if clean_publication_directory is not None:
             plt.clf()
@@ -110,32 +112,34 @@ def compare_map(map,gt_map,label_image,visualize=False,print_output_directory=No
     n = ((map[0, 0, ...] - gt_map[0, 0, ...]) ** 2 + (map[0, 1, ...] - gt_map[0, 1, ...]) ** 2) ** 0.5
 
     if visualize:
-        plt.clf()
 
-        plt.subplot(221)
-        plt.imshow(map[0,0,...]-gt_map[0,0,...])
-        plt.colorbar()
-        plt.title('phix-gt_phix')
+        if clean_publication_directory is None:
+            plt.clf()
 
-        plt.subplot(222)
-        plt.imshow(map[0,1,...]-gt_map[0,1,...])
-        plt.colorbar()
-        plt.title('phiy-gt_phiy')
+            plt.subplot(221)
+            plt.imshow(map[0,0,...]-gt_map[0,0,...])
+            plt.colorbar()
+            plt.title('phix-gt_phix')
 
-        plt.subplot(223)
-        plt.imshow(n)
-        plt.colorbar()
-        plt.title('2-norm error')
+            plt.subplot(222)
+            plt.imshow(map[0,1,...]-gt_map[0,1,...])
+            plt.colorbar()
+            plt.title('phiy-gt_phiy')
 
-        plt.subplot(224)
-        plt.imshow(label_image)
-        plt.colorbar()
-        plt.title('gt labels')
+            plt.subplot(223)
+            plt.imshow(n)
+            plt.colorbar()
+            plt.title('2-norm error')
 
-        if print_output_directory is None:
-            plt.show()
-        else:
-            plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_map_validation.pdf'))
+            plt.subplot(224)
+            plt.imshow(label_image)
+            plt.colorbar()
+            plt.title('gt labels')
+
+            if print_output_directory is None:
+                plt.show()
+            else:
+                plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_map_validation.pdf'))
 
         if clean_publication_directory is not None:
             plt.clf()
@@ -265,30 +269,33 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
     if visualize:
 
         if compatible_stds:
-            plt.clf()
 
-            for n in range(nr_of_weights):
-                plt.subplot(3,nr_of_weights,1+n)
-                plt.imshow(gt_weights[0,n,...])
-                plt.colorbar()
-                plt.title('gt_w')
+            if clean_publication_directory is None:
 
-            for n in range(nr_of_weights):
-                plt.subplot(3, nr_of_weights, 1 + n + nr_of_weights)
-                plt.imshow(weights[0, n, ...])
-                plt.colorbar()
-                plt.title('w')
+                plt.clf()
 
-            for n in range(nr_of_weights):
-                plt.subplot(3, nr_of_weights, 1 + n + 2*nr_of_weights)
-                plt.imshow(weights[0, n, ...]-gt_weights[0,n,...])
-                plt.colorbar()
-                plt.title('w-gt_w')
+                for n in range(nr_of_weights):
+                    plt.subplot(3,nr_of_weights,1+n)
+                    plt.imshow(gt_weights[0,n,...])
+                    plt.colorbar()
+                    plt.title('gt_w')
 
-            if print_output_directory is None:
-                plt.show()
-            else:
-                plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_weights_validation.pdf'))
+                for n in range(nr_of_weights):
+                    plt.subplot(3, nr_of_weights, 1 + n + nr_of_weights)
+                    plt.imshow(weights[0, n, ...])
+                    plt.colorbar()
+                    plt.title('w')
+
+                for n in range(nr_of_weights):
+                    plt.subplot(3, nr_of_weights, 1 + n + 2*nr_of_weights)
+                    plt.imshow(weights[0, n, ...]-gt_weights[0,n,...])
+                    plt.colorbar()
+                    plt.title('w-gt_w')
+
+                if print_output_directory is None:
+                    plt.show()
+                else:
+                    plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_weights_validation.pdf'))
 
             if clean_publication_directory is not None:
                 for n in range(nr_of_weights):
@@ -316,27 +323,29 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
                     plt.savefig(os.path.join(clean_publication_directory, 'estimated_m_gt_weight_{:d}_{:0>3d}'.format(n,pair_nr) + '_weights_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
 
-        plt.clf()
+        if clean_publication_directory is None:
 
-        plt.subplot(131)
-        plt.imshow(stds_synth)
-        plt.colorbar()
-        plt.title('std(synth)')
+            plt.clf()
 
-        plt.subplot(132)
-        plt.imshow(stds_computed)
-        plt.colorbar()
-        plt.title('std')
+            plt.subplot(131)
+            plt.imshow(stds_synth)
+            plt.colorbar()
+            plt.title('std(synth)')
 
-        plt.subplot(133)
-        plt.imshow(stds_computed-stds_synth)
-        plt.colorbar()
-        plt.title('std-std(synth)')
+            plt.subplot(132)
+            plt.imshow(stds_computed)
+            plt.colorbar()
+            plt.title('std')
 
-        if print_output_directory is None:
-            plt.show()
-        else:
-            plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'))
+            plt.subplot(133)
+            plt.imshow(stds_computed-stds_synth)
+            plt.colorbar()
+            plt.title('std-std(synth)')
+
+            if print_output_directory is None:
+                plt.show()
+            else:
+                plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'))
 
         if clean_publication_directory is not None:
             plt.clf()
@@ -381,27 +390,29 @@ def compare_momentum(momentum,gt_momentum,label_image,visualize=False,print_outp
          (momentum[0, 1, ...] - gt_momentum[0, 1, ...]) ** 2) ** 0.5
 
     if visualize:
-        plt.clf()
 
-        plt.subplot(131)
-        plt.imshow(momentum[0, 0, ...] - gt_momentum[0, 0, ...])
-        plt.colorbar()
-        plt.title('mx-gt_mx')
+        if clean_publication_directory is None:
+            plt.clf()
 
-        plt.subplot(132)
-        plt.imshow(momentum[0, 1, ...] - gt_momentum[0, 1, ...])
-        plt.colorbar()
-        plt.title('my-gt_my')
+            plt.subplot(131)
+            plt.imshow(momentum[0, 0, ...] - gt_momentum[0, 0, ...])
+            plt.colorbar()
+            plt.title('mx-gt_mx')
 
-        plt.subplot(133)
-        plt.imshow(n)
-        plt.colorbar()
-        plt.title('2-norm error')
+            plt.subplot(132)
+            plt.imshow(momentum[0, 1, ...] - gt_momentum[0, 1, ...])
+            plt.colorbar()
+            plt.title('my-gt_my')
 
-        if print_output_directory is None:
-            plt.show()
-        else:
-            plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_momentum_validation.pdf'))
+            plt.subplot(133)
+            plt.imshow(n)
+            plt.colorbar()
+            plt.title('2-norm error')
+
+            if print_output_directory is None:
+                plt.show()
+            else:
+                plt.savefig(os.path.join(print_output_directory, '{:0>3d}'.format(pair_nr) + '_momentum_validation.pdf'))
 
         if clean_publication_directory is not None:
             plt.clf()
@@ -501,6 +512,7 @@ def compute_and_visualize_validation_result(multi_gaussian_stds_synth,
 
     if printing_single_pair:
         clean_publication_dir_eff = clean_publication_dir
+        visualize = True
     else:
         # we don't want to print them for all
         clean_publication_dir_eff = None
@@ -670,7 +682,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--do_not_visualize', action='store_true', help='visualizes the output otherwise')
     parser.add_argument('--do_not_print_images', action='store_true', help='prints the results otherwise')
-    parser.add_argument('--clean_publication_print', action='store_true', help='Modifies the printing behavior so also clean images for publications are created')
+    parser.add_argument('--clean_publication_print', action='store_true', help='Modifies the printing behavior so also clean images for publications are created; if combined with --compute_only_pair_nr then ONLY the clean images are created and no other output is generated')
 
     args = parser.parse_args()
 

@@ -406,6 +406,7 @@ if __name__ == "__main__":
     parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=0, help='number of image pairs that will be used; if not set all pairs will be used')
 
     parser.add_argument('--compute_only_pair_nr', required=False, type=int, default=None, help='When specified only this pair is computed; otherwise all of them')
+    parser.add_argument('--create_clean_publication_print_for_pair_nr', required=False, type=int, default=None, help="When specified creates the publication prints only for the specified pairs numnber")
 
     parser.add_argument('--only_run_stage0_with_unchanged_config', action='store_true', help='This is a convenience setting which allows using the script to run any json confifg file unchanged (as if it were stage 0); i.e., it will optimize over the smoother if set as such; should only be used for debugging; will terminate after stage 0.')
 
@@ -465,13 +466,6 @@ if __name__ == "__main__":
         parts_to_run['run_visualization'] = True
         parts_to_run['run_validation'] = True
         parts_to_run['run_extra_validation'] = True
-
-    all_parts_will_be_run = True
-    if (parts_to_run['run_optimization']==False) \
-        or (parts_to_run['run_visualization']==False) \
-        or (parts_to_run['run_validation']==False) \
-        or (parts_to_run['run_extra_validation']==False):
-        all_parts_will_be_run = False
 
     input_image_directory = None
     image_pair_config_pt = None
@@ -606,6 +600,25 @@ if __name__ == "__main__":
     #kvo['optimizer.sgd.individual.lr'] = 0.01
     #kvo['optimizer.sgd.shared.lr'] = 0.01
 
+    # check if we only want to create some prints for publications
+    compute_only_pair_nr = args.compute_only_pair_nr
+
+    if args.create_clean_publication_print_for_pair_nr is not None:
+        print('INFO: Only publication output will be generated as --create_clean_publication_print_for_pair_nr was specified')
+        compute_only_pair_nr = args.create_clean_publication_print_for_pair_nr
+        parts_to_run['run_optimization'] = False
+        parts_to_run['run_visualization'] = True
+        parts_to_run['run_validation'] = False
+        parts_to_run['run_extra_validation'] = True
+
+    # determine of all parts will be run
+    all_parts_will_be_run = True
+    if (parts_to_run['run_optimization'] == False) \
+            or (parts_to_run['run_visualization'] == False) \
+            or (parts_to_run['run_validation'] == False) \
+            or (parts_to_run['run_extra_validation'] == False):
+        all_parts_will_be_run = False
+
     if sweep_values is None:
         # no sweeping, just do a regular call
 
@@ -627,7 +640,7 @@ if __name__ == "__main__":
                 cuda_visible_devices=cuda_visible_devices,
                 parts_to_run=parts_to_run,
                 pre_command=args.precommand,
-                compute_only_pair_nr=args.compute_only_pair_nr,
+                compute_only_pair_nr=compute_only_pair_nr,
                 only_run_stage0_with_unchanged_config=args.only_run_stage0_with_unchanged_config
                 )
 
@@ -670,7 +683,7 @@ if __name__ == "__main__":
                     cuda_visible_devices=cuda_visible_devices,
                     pre_command=args.precommand,
                     parts_to_run=parts_to_run,
-                    compute_only_pair_nr=args.compute_only_pair_nr,
+                    compute_only_pair_nr=compute_only_pair_nr,
                     only_run_stage0_with_unchanged_config=args.only_run_stage0_with_unchanged_config
                     )
 
