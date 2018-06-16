@@ -529,8 +529,10 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
         for g in range(nr_of_gaussians):
             plt.clf()
             clw = local_weights[0, g, ...].cpu().numpy()
-            cmin = clw[lowRes_source_mask == 1].min()
-            cmax = clw[lowRes_source_mask == 1].max()
+            #cmin = clw[lowRes_source_mask == 1].min()
+            #cmax = clw[lowRes_source_mask == 1].max()
+            cmin = 0.
+            cmax = 1.
             plt.imshow(cond_flip((local_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin,
                        vmax=cmax)
             #plt.colorbar()
