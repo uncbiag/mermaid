@@ -829,7 +829,7 @@ def compute_and_visualize_results(json_file,output_dir,
             im_io.write(det_jac_output_filename, det, hdr)
         else:
             # since we did not recompute it we should load it
-            det,det_hdr,det_spacing,det_squeezed_spacing = im_io.read_to_nc_format(det_jac_output_filename,squeeze_image=True)
+            det,det_hdr,det_spacing,det_squeezed_spacing = im_io.read(det_jac_output_filename,squeeze_image=True)
 
         # first, let's compute the global measure
 
@@ -845,7 +845,7 @@ def compute_and_visualize_results(json_file,output_dir,
         all_dj['det_99_perc'] = np.percentile(det,99)
 
         # now just in the area where the values are not zero
-        indx = (ISource.data.cpu().numpy()!=0)
+        indx = (ISource[0,0,...].data.cpu().numpy()!=0)
 
         nz_dj = dict()
 
