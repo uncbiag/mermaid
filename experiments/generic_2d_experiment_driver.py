@@ -125,7 +125,7 @@ def run_optimization(stage,nr_of_epochs,image_pair_config_pt,nr_of_image_pairs,
     log_file = get_stage_log_filename(output_directory=output_directory,stage=stage,process_name='opt')
     ce.execute_python_script_via_bash(current_python_script, cmd_arg_list, pre_command=entire_pre_command, log_file=log_file)
 
-def run_visualization(stage,output_directory,main_json,cuda_visible_devices=None,pre_command=None,compute_only_pair_nr=None):
+def run_visualization(stage,output_directory,main_json,cuda_visible_devices=None,pre_command=None,compute_only_pair_nr=None,only_recompute_validation_measures=False):
 
     args = {'config': main_json,
             'output_directory': output_directory,
@@ -136,6 +136,10 @@ def run_visualization(stage,output_directory,main_json,cuda_visible_devices=None
     if compute_only_pair_nr is not None:
         print('INFO: Only computing pair nr: ' + str(compute_only_pair_nr))
         args['compute_only_pair_nr'] = compute_only_pair_nr
+
+    if only_recompute_validation_measures:
+        print('INFO: Only recomputing the Jacobians')
+        args['only_recompute_validation_measures'] = ''
 
     # now run the command
     cmd_arg_list = _make_arg_list(args)
@@ -198,7 +202,8 @@ def run(stage,nr_of_epochs,main_json,
         pre_command=None,
         parts_to_run=None,
         compute_only_pair_nr=None,
-        only_run_stage0_with_unchanged_config=False
+        only_run_stage0_with_unchanged_config=False,
+        only_recompute_validation_measures=False
         ):
 
     if parts_to_run is None:
@@ -243,7 +248,8 @@ def run(stage,nr_of_epochs,main_json,
                               main_json=main_json,
                               cuda_visible_devices=cuda_visible_devices,
                               pre_command=pre_command,
-                              compute_only_pair_nr=compute_only_pair_nr)
+                              compute_only_pair_nr=compute_only_pair_nr,
+                              only_recompute_validation_measures=only_recompute_validation_measures)
         else:
             print('INFO: Visualization will not be run')
 
@@ -407,6 +413,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--compute_only_pair_nr', required=False, type=int, default=None, help='When specified only this pair is computed; otherwise all of them')
     parser.add_argument('--create_clean_publication_print_for_pair_nr', required=False, type=int, default=None, help="When specified creates the publication prints only for the specified pairs numnber")
+    parser.add_argument('--only_recompute_validation_measures', action='store_true', help='When set only the valiation measures are recomputed (nothing else; no images are written and no PDFs except for the validation boxplot are created)')
 
     parser.add_argument('--only_run_stage0_with_unchanged_config', action='store_true', help='This is a convenience setting which allows using the script to run any json confifg file unchanged (as if it were stage 0); i.e., it will optimize over the smoother if set as such; should only be used for debugging; will terminate after stage 0.')
 
@@ -611,6 +618,13 @@ if __name__ == "__main__":
         parts_to_run['run_validation'] = False
         parts_to_run['run_extra_validation'] = True
 
+    if args.only_recompute_validation_measures:
+        # so far only the visualization part is supported here, as we use it to recompute the boxplot and the Jacobian measures
+        parts_to_run['run_optimization'] = False
+        parts_to_run['run_visualization'] = True
+        parts_to_run['run_validation'] = False
+        parts_to_run['run_extra_validation'] = False
+
     # determine of all parts will be run
     all_parts_will_be_run = True
     if (parts_to_run['run_optimization'] == False) \
@@ -641,7 +655,8 @@ if __name__ == "__main__":
                 parts_to_run=parts_to_run,
                 pre_command=args.precommand,
                 compute_only_pair_nr=compute_only_pair_nr,
-                only_run_stage0_with_unchanged_config=args.only_run_stage0_with_unchanged_config
+                only_run_stage0_with_unchanged_config=args.only_run_stage0_with_unchanged_config,
+                only_recompute_validation_measures=args.only_recompute_validation_measures
                 )
 
         if all_parts_will_be_run:
@@ -684,7 +699,8 @@ if __name__ == "__main__":
                     pre_command=args.precommand,
                     parts_to_run=parts_to_run,
                     compute_only_pair_nr=compute_only_pair_nr,
-                    only_run_stage0_with_unchanged_config=args.only_run_stage0_with_unchanged_config
+                    only_run_stage0_with_unchanged_config=args.only_run_stage0_with_unchanged_config,
+                    only_recompute_validation_measures=args.only_recompute_validation_measures
                     )
 
             if all_parts_will_be_run:

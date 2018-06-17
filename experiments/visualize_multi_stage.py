@@ -568,11 +568,11 @@ def compute_and_visualize_results(json_file,output_dir,
                                   write_out_source_image=False,write_out_target_image=False,
                                   write_out_weights=False,write_out_momentum=False,
                                   compute_det_of_jacobian=True,retarget_data_directory=None,
+                                  only_recompute_validation_measures=False,
                                   use_sym_links=True):
 
     # todo: make this data-adaptive
     flip_axes_3d = [False,True,True]
-
 
     if write_out_images:
         write_out_warped_image = True
@@ -625,6 +625,7 @@ def compute_and_visualize_results(json_file,output_dir,
     det_jac_output_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05d}.nrrd'.format(pair_nr))
     displacement_output_filename = os.path.join(image_and_map_output_dir,'displacement_{:05d}.nrrd'.format(pair_nr))
     det_of_jacobian_txt_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05d}.txt'.format(pair_nr))
+    det_of_jacobian_pt_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05d}.pt'.format(pair_nr))
 
     source_image_output_filename = os.path.join(image_and_map_output_dir,'source_image_{:05d}.nrrd'.format(pair_nr))
     target_image_output_filename = os.path.join(image_and_map_output_dir,'target_image_{:05d}.nrrd'.format(pair_nr))
@@ -656,177 +657,247 @@ def compute_and_visualize_results(json_file,output_dir,
         current_source_filename = os.path.join(retarget_data_directory,os.path.split(current_source_filename)[1])
         current_target_filename = os.path.join(retarget_data_directory,os.path.split(current_target_filename)[1])
 
+    compute_or_recompute_map = True
+    compute_or_recompute_det_jac = compute_det_of_jacobian
+    # this is to recompute the determinant of Jacobian; so let's see what we need to recompute
+    if only_recompute_validation_measures:
+        compute_det_of_jacobian = True
+        # check if we have the map image required to compute the determinant of the Jacobian
+        if os.path.exists(det_jac_output_filename):
+            compute_or_recompute_det_jac = False
+            compute_or_recompute_map = False
+        else:
+            if os.path.exist(map_output_filename_pt):
+                compute_or_recompute_map = False
+            else:
+                compute_or_recompute_map = True
+            compute_or_recompute_det_jac = True
+
     ISource,ITarget,hdr,sz,spacing = _load_current_source_and_target_images_as_variables(current_source_filename,current_target_filename,params)
 
     image_dim = len(spacing)
 
-    # load the shared parameters (do this so we can load even if this was created on a GPU machine)
-    if USE_CUDA:
-        shared_parameters = torch.load(os.path.join(shared_dir,'shared_parameters.pt'))
-    else:
-        shared_parameters = torch.load(os.path.join(shared_dir,'shared_parameters.pt'),map_location=lambda storage, loc:storage)
+    if compute_or_recompute_map:
 
-    # load the individual parameters
-    individual_parameters_filename = os.path.join(individual_dir,'individual_parameter_pair_{:05d}.pt'.format(pair_nr))
-    if USE_CUDA:
-        individual_parameters = torch.load(individual_parameters_filename)
-    else:
-        individual_parameters = torch.load(individual_parameters_filename,map_location=lambda storage, loc:storage)
+        # load the shared parameters (do this so we can load even if this was created on a GPU machine)
+        if USE_CUDA:
+            shared_parameters = torch.load(os.path.join(shared_dir,'shared_parameters.pt'))
+        else:
+            shared_parameters = torch.load(os.path.join(shared_dir,'shared_parameters.pt'),map_location=lambda storage, loc:storage)
 
-    # apply the actual model and get the warped image and the map (if applicable)
-    IWarped,phi,model_dict = evaluate_model(ISource,ITarget,sz,spacing,individual_parameters,shared_parameters,params,visualize=False)
+        # load the individual parameters
+        individual_parameters_filename = os.path.join(individual_dir,'individual_parameter_pair_{:05d}.pt'.format(pair_nr))
+        if USE_CUDA:
+            individual_parameters = torch.load(individual_parameters_filename)
+        else:
+            individual_parameters = torch.load(individual_parameters_filename,map_location=lambda storage, loc:storage)
 
-    norm_m = ((model_dict['m']**2).sum(dim=1,keepdim=True))**0.5
+        # apply the actual model and get the warped image and the map (if applicable)
+        IWarped,phi,model_dict = evaluate_model(ISource,ITarget,sz,spacing,individual_parameters,shared_parameters,params,visualize=False)
 
-    if write_out_weights and (clean_publication_dir is None):
-        wd = dict()
-        if stage==2:
-            wd['local_weights'] = model_dict['local_weights']
-        wd['default_multi_gaussian_weights'] = model_dict['default_multi_gaussian_weights']
-        torch.save(wd,weights_output_filename_pt)
+        if write_out_map and (clean_publication_dir is None):
+            map_io = FIO.MapIO()
+            map_io.write_to_validation_map_format(map_output_filename, phi[0,...], hdr)
+            torch.save( phi, map_output_filename_pt)
 
-    if write_out_momentum and (clean_publication_dir is None):
-        torch.save(model_dict['m'],momentum_output_filename_pt)
+            if 'id' in model_dict:
+                displacement = phi[0,...]-model_dict['id'][0,...]
+                map_io.write(displacement_output_filename, displacement, hdr)
 
-    if visualize:
-        if image_dim==2:
-            if print_images:
-                visualize_weights(ISource,ITarget,IWarped,phi,
-                                  norm_m,model_dict['local_weights'],model_dict['stds'],
-                                  spacing,model_dict['lowResSize'],
-                                  print_path=print_output_dir,clean_print_path=clean_publication_dir,print_figure_id=pair_nr,
-                                  params=params)
-            else:
-                visualize_weights(ISource,ITarget,IWarped,phi,
-                                  norm_m,model_dict['local_weights'],model_dict['stds'],
-                                  spacing,model_dict['lowResSize'],
-                                  params=params)
-        elif image_dim==3:
-            sz_I = ISource.size()
-            sz_norm_m = norm_m.size()
+    if not only_recompute_validation_measures:
 
-            if not set(slice_mode_3d)<=set([0,1,2]):
-                raise ValueError('slice mode needs to be in {0,1,2}')
+        norm_m = ((model_dict['m']**2).sum(dim=1,keepdim=True))**0.5
 
-            for sm in slice_mode_3d:
+        if write_out_weights and (clean_publication_dir is None):
+            wd = dict()
+            if stage==2:
+                wd['local_weights'] = model_dict['local_weights']
+            wd['default_multi_gaussian_weights'] = model_dict['default_multi_gaussian_weights']
+            torch.save(wd,weights_output_filename_pt)
 
-                slice_I = (np.ceil(np.array(sz_I[-1-(2-slice_mode_3d[sm])]) * slice_proportion_3d[sm])).astype('int16')
-                slice_norm_m = (np.ceil(np.array(sz_norm_m[-1-(2-slice_mode_3d[sm])]) * slice_proportion_3d[sm])).astype('int16')
+        if write_out_momentum and (clean_publication_dir is None):
+            torch.save(model_dict['m'],momentum_output_filename_pt)
 
-                if slice_mode_3d[sm]==0:
-                    IS_slice = ISource[:, :, slice_I, ...]
-                    IT_slice = ITarget[:, :, slice_I, ...]
-                    IW_slice = IWarped[:, :, slice_I, ...]
-                    phi_slice = phi[:, 1:, slice_I, ...]
-                    norm_m_slice = norm_m[:, :, slice_norm_m, ...]
-                    lw_slice = None
-                    if 'local_weights' in model_dict:
-                        if model_dict['local_weights'] is not None:
-                            lw_slice = model_dict['local_weights'][:, :, slice_norm_m, ...]
-                    spacing_slice = spacing[1:]
-                    lowResSize = list(model_dict['lowResSize'])
-                    lowResSize_slice = np.array(lowResSize[0:2] + lowResSize[3:])
-                elif slice_mode_3d[sm]==1:
-                    IS_slice = ISource[:, :, :, slice_I, :]
-                    IT_slice = ITarget[:, :, :, slice_I, :]
-                    IW_slice = IWarped[:, :, :, slice_I, :]
-                    phi_slice = torch.zeros_like(phi[:, 1:, :, slice_I, :])
-                    phi_slice[:,0,...] = phi[:,0,:,slice_I,:]
-                    phi_slice[:,1,...] = phi[:,2,:,slice_I,:]
-                    norm_m_slice = norm_m[:, :, :, slice_norm_m, :]
-                    lw_slice = None
-                    if 'local_weights' in model_dict:
-                        if model_dict['local_weights'] is not None:
-                            lw_slice = model_dict['local_weights'][:, :, :, slice_norm_m, :]
-                    spacing_slice = np.array([spacing[0],spacing[2]])
-                    lowResSize = list(model_dict['lowResSize'])
-                    lowResSize_slice = np.array(lowResSize[0:3] + [lowResSize[-1]])
-                elif slice_mode_3d[sm]==2:
-                    IS_slice = ISource[:,:,:,:,slice_I]
-                    IT_slice = ITarget[:,:,:,:,slice_I]
-                    IW_slice = IWarped[:,:,:,:,slice_I]
-                    phi_slice = phi[:,0:2,:,:,slice_I]
-                    norm_m_slice = norm_m[:,:,:,:,slice_norm_m]
-                    lw_slice = None
-                    if 'local_weights' in model_dict:
-                        if model_dict['local_weights'] is not None:
-                            lw_slice = model_dict['local_weights'][:,:,:,:,slice_norm_m]
-                    spacing_slice = spacing[0:-1]
-                    lowResSize_slice = model_dict['lowResSize'][0:-1]
-
+        if visualize:
+            if image_dim==2:
                 if print_images:
-                    visualize_weights(IS_slice,IT_slice,IW_slice,phi_slice,
-                                      norm_m_slice,lw_slice,model_dict['stds'],
-                                      spacing_slice,lowResSize_slice,
-                                      print_path=print_output_dir, clean_print_path=clean_publication_dir,
-                                      print_figure_id=pair_nr, slice_mode=slice_mode_3d[sm],
-                                      flip_axes=flip_axes_3d[sm],params=params)
+                    visualize_weights(ISource,ITarget,IWarped,phi,
+                                      norm_m,model_dict['local_weights'],model_dict['stds'],
+                                      spacing,model_dict['lowResSize'],
+                                      print_path=print_output_dir,clean_print_path=clean_publication_dir,print_figure_id=pair_nr,
+                                      params=params)
                 else:
-                    visualize_weights(IS_slice, IT_slice, IW_slice, phi_slice,
-                                      norm_m_slice, lw_slice, model_dict['stds'],
-                                      spacing_slice, lowResSize_slice,flip_axes=flip_axes_3d[sm],params=params)
+                    visualize_weights(ISource,ITarget,IWarped,phi,
+                                      norm_m,model_dict['local_weights'],model_dict['stds'],
+                                      spacing,model_dict['lowResSize'],
+                                      params=params)
+            elif image_dim==3:
+                sz_I = ISource.size()
+                sz_norm_m = norm_m.size()
 
-        else:
-            raise ValueError('I do not know how to visualize results with dimensions other than 2 or 3')
+                if not set(slice_mode_3d)<=set([0,1,2]):
+                    raise ValueError('slice mode needs to be in {0,1,2}')
+
+                for sm in slice_mode_3d:
+
+                    slice_I = (np.ceil(np.array(sz_I[-1-(2-slice_mode_3d[sm])]) * slice_proportion_3d[sm])).astype('int16')
+                    slice_norm_m = (np.ceil(np.array(sz_norm_m[-1-(2-slice_mode_3d[sm])]) * slice_proportion_3d[sm])).astype('int16')
+
+                    if slice_mode_3d[sm]==0:
+                        IS_slice = ISource[:, :, slice_I, ...]
+                        IT_slice = ITarget[:, :, slice_I, ...]
+                        IW_slice = IWarped[:, :, slice_I, ...]
+                        phi_slice = phi[:, 1:, slice_I, ...]
+                        norm_m_slice = norm_m[:, :, slice_norm_m, ...]
+                        lw_slice = None
+                        if 'local_weights' in model_dict:
+                            if model_dict['local_weights'] is not None:
+                                lw_slice = model_dict['local_weights'][:, :, slice_norm_m, ...]
+                        spacing_slice = spacing[1:]
+                        lowResSize = list(model_dict['lowResSize'])
+                        lowResSize_slice = np.array(lowResSize[0:2] + lowResSize[3:])
+                    elif slice_mode_3d[sm]==1:
+                        IS_slice = ISource[:, :, :, slice_I, :]
+                        IT_slice = ITarget[:, :, :, slice_I, :]
+                        IW_slice = IWarped[:, :, :, slice_I, :]
+                        phi_slice = torch.zeros_like(phi[:, 1:, :, slice_I, :])
+                        phi_slice[:,0,...] = phi[:,0,:,slice_I,:]
+                        phi_slice[:,1,...] = phi[:,2,:,slice_I,:]
+                        norm_m_slice = norm_m[:, :, :, slice_norm_m, :]
+                        lw_slice = None
+                        if 'local_weights' in model_dict:
+                            if model_dict['local_weights'] is not None:
+                                lw_slice = model_dict['local_weights'][:, :, :, slice_norm_m, :]
+                        spacing_slice = np.array([spacing[0],spacing[2]])
+                        lowResSize = list(model_dict['lowResSize'])
+                        lowResSize_slice = np.array(lowResSize[0:3] + [lowResSize[-1]])
+                    elif slice_mode_3d[sm]==2:
+                        IS_slice = ISource[:,:,:,:,slice_I]
+                        IT_slice = ITarget[:,:,:,:,slice_I]
+                        IW_slice = IWarped[:,:,:,:,slice_I]
+                        phi_slice = phi[:,0:2,:,:,slice_I]
+                        norm_m_slice = norm_m[:,:,:,:,slice_norm_m]
+                        lw_slice = None
+                        if 'local_weights' in model_dict:
+                            if model_dict['local_weights'] is not None:
+                                lw_slice = model_dict['local_weights'][:,:,:,:,slice_norm_m]
+                        spacing_slice = spacing[0:-1]
+                        lowResSize_slice = model_dict['lowResSize'][0:-1]
+
+                    if print_images:
+                        visualize_weights(IS_slice,IT_slice,IW_slice,phi_slice,
+                                          norm_m_slice,lw_slice,model_dict['stds'],
+                                          spacing_slice,lowResSize_slice,
+                                          print_path=print_output_dir, clean_print_path=clean_publication_dir,
+                                          print_figure_id=pair_nr, slice_mode=slice_mode_3d[sm],
+                                          flip_axes=flip_axes_3d[sm],params=params)
+                    else:
+                        visualize_weights(IS_slice, IT_slice, IW_slice, phi_slice,
+                                          norm_m_slice, lw_slice, model_dict['stds'],
+                                          spacing_slice, lowResSize_slice,flip_axes=flip_axes_3d[sm],params=params)
+
+            else:
+                raise ValueError('I do not know how to visualize results with dimensions other than 2 or 3')
 
 
-    # save the images
-    if write_out_warped_image and (clean_publication_dir is None):
-        im_io = FIO.ImageIO()
-        im_io.write(warped_output_filename, IWarped[0,0,...], hdr)
-
-    if write_out_map and (clean_publication_dir is None):
-        map_io = FIO.MapIO()
-        map_io.write_to_validation_map_format(map_output_filename, phi[0,...], hdr)
-        torch.save( phi, map_output_filename_pt)
-
-        if 'id' in model_dict:
-            displacement = phi[0,...]-model_dict['id'][0,...]
-            map_io.write(displacement_output_filename, displacement, hdr)
-
-    if write_out_source_image and (clean_publication_dir is None):
-        if use_sym_links:
-            utils.create_symlink_with_correct_ext(current_source_filename,source_image_output_filename)
-        else:
+        # save the images
+        if write_out_warped_image and (clean_publication_dir is None):
             im_io = FIO.ImageIO()
-            im_io.write(source_image_output_filename, ISource[0,0,...], hdr)
+            im_io.write(warped_output_filename, IWarped[0,0,...], hdr)
 
-    if write_out_target_image and (clean_publication_dir is None):
-        if use_sym_links:
-            utils.create_symlink_with_correct_ext(current_target_filename,target_image_output_filename)
-        else:
-            im_io = FIO.ImageIO()
-            im_io.write(target_image_output_filename, ITarget[0, 0, ...], hdr)
+        if write_out_source_image and (clean_publication_dir is None):
+            if use_sym_links:
+                utils.create_symlink_with_correct_ext(current_source_filename,source_image_output_filename)
+            else:
+                im_io = FIO.ImageIO()
+                im_io.write(source_image_output_filename, ISource[0,0,...], hdr)
+
+        if write_out_target_image and (clean_publication_dir is None):
+            if use_sym_links:
+                utils.create_symlink_with_correct_ext(current_target_filename,target_image_output_filename)
+            else:
+                im_io = FIO.ImageIO()
+                im_io.write(target_image_output_filename, ITarget[0, 0, ...], hdr)
 
     # compute determinant of Jacobian of map
-    if compute_det_of_jacobian and (clean_publication_dir is None):
-        det = eu.compute_determinant_of_jacobian(phi,spacing)
+    if (compute_det_of_jacobian and (clean_publication_dir is None)) or compute_or_recompute_det_jac:
 
         im_io = FIO.ImageIO()
-        im_io.write(det_jac_output_filename, det, hdr)
 
-        det_min = np.min(det)
-        det_max = np.max(det)
-        det_mean = np.mean(det)
-        det_median = np.median(det)
-        det_1_perc = np.percentile(det,1)
-        det_5_perc = np.percentile(det,5)
-        det_95_perc = np.percentile(det,95)
-        det_99_perc = np.percentile(det,99)
+        if compute_or_recompute_det_jac:
+            det = eu.compute_determinant_of_jacobian(phi,spacing)
+            im_io.write(det_jac_output_filename, det, hdr)
+        else:
+            # since we did not recompute it we should load it
+            det,det_hdr,det_spacing,det_squeezed_spacing = im_io.read_to_nc_format(det_jac_output_filename,squeeze_image=True)
+
+        # first, let's compute the global measure
+
+        all_dj = dict()
+
+        all_dj['det_min'] = np.min(det)
+        all_dj['det_max'] = np.max(det)
+        all_dj['det_mean'] = np.mean(det)
+        all_dj['det_median'] = np.median(det)
+        all_dj['det_1_perc'] = np.percentile(det,1)
+        all_dj['det_5_perc'] = np.percentile(det,5)
+        all_dj['det_95_perc'] = np.percentile(det,95)
+        all_dj['det_99_perc'] = np.percentile(det,99)
+
+        # now just in the area where the values are not zero
+        indx = (ISource.data.cpu().numpy()!=0)
+
+        nz_dj = dict()
+
+        nz_dj['det_min'] = np.min(det[indx])
+        nz_dj['det_max'] = np.max(det[indx])
+        nz_dj['det_mean'] = np.mean(det[indx])
+        nz_dj['det_median'] = np.median(det[indx])
+        nz_dj['det_1_perc'] = np.percentile(det[indx], 1)
+        nz_dj['det_5_perc'] = np.percentile(det[indx], 5)
+        nz_dj['det_95_perc'] = np.percentile(det[indx], 95)
+        nz_dj['det_99_perc'] = np.percentile(det[indx], 99)
+
+        # and write out the result files
 
         f = open(det_of_jacobian_txt_filename, 'w')
+        f.write('Over the entire image:\n')
         f.write('min, max, mean, median, 1p, 5p, 95p, 99p\n')
-        out_str = str(det_min) + ', '
-        out_str += str(det_max) + ', '
-        out_str += str(det_mean) + ', '
-        out_str += str(det_median) + ', '
-        out_str += str(det_1_perc) + ', '
-        out_str += str(det_5_perc) + ', '
-        out_str += str(det_95_perc) + ', '
-        out_str += str(det_99_perc) + '\n'
-
+        out_str = str(all_dj['det_min']) + ', '
+        out_str += str(all_dj['det_max']) + ', '
+        out_str += str(all_dj['det_mean']) + ', '
+        out_str += str(all_dj['det_median']) + ', '
+        out_str += str(all_dj['det_1_perc']) + ', '
+        out_str += str(all_dj['det_5_perc']) + ', '
+        out_str += str(all_dj['det_95_perc']) + ', '
+        out_str += str(all_dj['det_99_perc']) + '\n'
         f.write(out_str)
+
+        f.write('Over non-zero-regions of the image:\n')
+        f.write('min, max, mean, median, 1p, 5p, 95p, 99p\n')
+        out_str = str(nz_dj['det_min']) + ', '
+        out_str += str(nz_dj['det_max']) + ', '
+        out_str += str(nz_dj['det_mean']) + ', '
+        out_str += str(nz_dj['det_median']) + ', '
+        out_str += str(nz_dj['det_1_perc']) + ', '
+        out_str += str(nz_dj['det_5_perc']) + ', '
+        out_str += str(nz_dj['det_95_perc']) + ', '
+        out_str += str(nz_dj['det_99_perc']) + '\n'
+        f.write(out_str)
+
         f.close()
+
+        d_save = dict()
+        d_save['all_det_jac'] = all_dj
+        d_save['nz_det_jac'] = nz_dj
+
+        torch.save(d_save,det_of_jacobian_pt_filename)
+
+        return all_dj,nz_dj
+
+    else:
+        # not computed
+        return None,None
 
 if __name__ == "__main__":
 
@@ -843,6 +914,8 @@ if __name__ == "__main__":
     parser.add_argument('--compute_only_pair_nr', required=False, type=int, default=None, help='When specified only this pair is computed; otherwise all of them')
     parser.add_argument('--slice_proportion_3d', required=False, type=str, default=None, help='Where to slice for 3D visualizations [0,1] for each mode, as a comma separated list')
     parser.add_argument('--slice_mode_3d', required=False, type=str, default=None, help='Which visualization mode {0,1,2} as a comma separated list')
+
+    parser.add_argument('--only_recompute_validation_measures', action='store_true', help='When set only the valiation measures are recomputed (nothing else; no images are written and no PDFs except for the validation boxplot are created)')
 
     parser.add_argument('--compute_from_frozen', action='store_true', help='computes the results from optimization results with frozen parameters')
 
@@ -901,27 +974,76 @@ if __name__ == "__main__":
     nr_of_pairs = len(pair_nrs)
     printing_single_pair = (nr_of_pairs==1)
 
+    if args.only_recompute_validation_measures:
+        print('INFO: forcing determinant of Jacobian to be computed')
+        do_not_compute_det_jac = False
+    else:
+        do_not_compute_det_jac = args.do_not_compute_det_jac
+
+    nz_det_jac_stat = []
+    all_det_jac_stat = []
+
     for pair_nr in pair_nrs:
         print('Computing pair number: ' + str(pair_nr))
-        compute_and_visualize_results(json_file=args.config,output_dir=output_dir,
-                                      stage=args.stage_nr,
-                                      compute_from_frozen=args.compute_from_frozen,
-                                      pair_nr=pair_nr,
-                                      printing_single_pair=printing_single_pair,
-                                      slice_proportion_3d=slice_proportion_3d,
-                                      slice_mode_3d=slice_mode_3d,
-                                      visualize=not args.do_not_visualize,
-                                      print_images=not args.do_not_print_images,
-                                      clean_publication_print=args.clean_publication_print,
-                                      write_out_images=not args.do_not_write_out_images,
-                                      write_out_source_image=not args.do_not_write_source_image,
-                                      write_out_target_image=not args.do_not_write_target_image,
-                                      write_out_weights=not args.do_not_write_weights,
-                                      write_out_momentum=not args.do_not_write_momentum,
-                                      compute_det_of_jacobian=not args.do_not_compute_det_jac,
-                                      retarget_data_directory=args.retarget_data_directory)
+        det_of_jac,det_of_jac_non_zero = compute_and_visualize_results(json_file=args.config,output_dir=output_dir,
+                                          stage=args.stage_nr,
+                                          compute_from_frozen=args.compute_from_frozen,
+                                          pair_nr=pair_nr,
+                                          printing_single_pair=printing_single_pair,
+                                          slice_proportion_3d=slice_proportion_3d,
+                                          slice_mode_3d=slice_mode_3d,
+                                          visualize=not args.do_not_visualize,
+                                          print_images=not args.do_not_print_images,
+                                          clean_publication_print=args.clean_publication_print,
+                                          write_out_images=not args.do_not_write_out_images,
+                                          write_out_source_image=not args.do_not_write_source_image,
+                                          write_out_target_image=not args.do_not_write_target_image,
+                                          write_out_weights=not args.do_not_write_weights,
+                                          write_out_momentum=not args.do_not_write_momentum,
+                                          compute_det_of_jacobian=not do_not_compute_det_jac,
+                                          retarget_data_directory=args.retarget_data_directory,
+                                          only_recompute_validation_measures=args.only_recompute_validation_measures)
 
-    if args.compute_only_pair_nr is None:
+        if det_of_jac is not None:
+            all_det_jac_stat.append(det_of_jac['det_mean'])
+        if det_of_jac_non_zero is not None:
+            nz_det_jac_stat.append(det_of_jac_non_zero['det_mean'])
+
+    all_det_jac_stat = np.array(all_det_jac_stat)
+    nz_det_jac_stat = np.array(nz_det_jac_stat)
+
+    if len(all_det_jac_stat)>0 and len(nz_det_jac_stat)>0:
+
+        if args.compute_from_frozen:
+            image_and_map_output_dir = os.path.join(os.path.normpath(output_dir),'model_results_frozen_stage_{:d}'.format(args.stage_nr))
+        else:
+            image_and_map_output_dir = os.path.join(os.path.normpath(output_dir),'model_results_stage_{:d}'.format(args.stage_nr))
+
+        all_det_of_jacobian_txt_filename = os.path.join(image_and_map_output_dir, 'all_stat_det_of_jacobian.txt')
+        all_det_of_jacobian_pt_filename = os.path.join(image_and_map_output_dir, 'all_stat_det_of_jacobian.pt')
+
+        d_save = dict()
+        d_save['all_det_jac'] = all_det_jac_stat
+        d_save['nz_det_jac'] = nz_det_jac_stat
+
+        torch.save(d_save, all_det_of_jacobian_pt_filename)
+
+        print('INFO: Writing {:s}'.format(all_det_of_jacobian_txt_filename))
+        f = open(all_det_of_jacobian_txt_filename, 'w')
+
+        f.write('Over all the means of the entire images:\n')
+        f.write('mean, median, std\n')
+        out_str = str(np.mean(all_det_jac_stat)) + ', ' + str(np.median(all_det_jac_stat)) + ', ' + str(np.std(all_det_jac_stat)) +'\n'
+        f.write(out_str)
+
+        f.write('Over all the means of the non-zero image regions:\n')
+        f.write('mean, median, std\n')
+        out_str = str(np.mean(nz_det_jac_stat)) + ', ' + str(np.median(nz_det_jac_stat)) + ', ' + str(np.std(nz_det_jac_stat)) + '\n'
+        f.write(out_str)
+
+        f.close()
+
+if args.compute_only_pair_nr is None and not args.only_recompute_validation_measures:
         if not args.do_not_print_images:
             if args.compute_from_frozen:
                 print_output_dir = os.path.join(os.path.normpath(output_dir), 'pdf_frozen_stage_{:d}'.format(args.stage_nr))
