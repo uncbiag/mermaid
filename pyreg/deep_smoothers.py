@@ -714,16 +714,15 @@ class DeepSmoothingModel(nn.Module):
 
     def _initialize_weights(self):
 
-        #print('WARNING: weight initialization disabled')
-        #return
-	print('WARNING: weight initialization ENABLED')
+        self.weight_initalization_constant = self.params[('weight_initialization_constant', 0.01, 'Weights are initialized via normal_(0, math.sqrt(weight_initialization_constant / n))')]
+        print('WARNING: weight initialization ENABLED')
 
         for m in self.modules():
             if isinstance(m, DimConv(self.dim)):
                 n = m.out_channels
                 for d in range(self.dim):
                     n *= m.kernel_size[d]
-                m.weight.data.normal_(0, math.sqrt(0.001 / n))
+                m.weight.data.normal_(0, math.sqrt(self.weight_initalization_constant / n))
             elif isinstance(m, DimBatchNorm(self.dim)):
                 pass
             elif isinstance(m, nn.Linear):
