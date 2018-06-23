@@ -16,7 +16,7 @@ import pyreg.fileio as fio
 
 import os
 import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+#from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 batch_norm_momentum_val = 0.1
 
@@ -69,11 +69,73 @@ def _plot_edgemap_2d(image,gradient_norm,edge_map,gamma):
     plt.colorbar()
     plt.title('gamma * Gradient norm')
 
+    plt.tight_layout()
+    #plt.tight_layout(h_pad=1)
 
-    plt.subplot
+def _plot_edgemap_3d(image,gradient_norm,edge_map,gamma):
+    plt.clf()
+
+    sz = image.shape
+    szh = np.array(sz) // 2
+
+    plt.subplot(3,4,1)
+    plt.imshow(image[szh[0],...])
+    plt.colorbar()
+    plt.title('O-image')
+
+    plt.subplot(3,4,2)
+    plt.imshow(edge_map[szh[0],...])
+    plt.colorbar()
+    plt.title('edge')
+
+    plt.subplot(3,4,3)
+    plt.imshow(gradient_norm[szh[0],...])
+    plt.colorbar()
+    plt.title('Grad-norm')
+
+    plt.subplot(3,4,4)
+    plt.imshow(gamma*gradient_norm[szh[0],...])
+    plt.colorbar()
+    plt.title('gamma * grad-norm')
+
+    plt.subplot(3,4,5)
+    plt.imshow(image[:,szh[1], ...])
+    plt.colorbar()
+
+    plt.subplot(3,4,6)
+    plt.imshow(edge_map[:,szh[1], ...])
+    plt.colorbar()
+
+    plt.subplot(3,4,7)
+    plt.imshow(gradient_norm[:,szh[1], ...])
+    plt.colorbar()
+    plt.title('Grad-norm')
+
+    plt.subplot(3,4,8)
+    plt.imshow(gamma * gradient_norm[:,szh[1], ...])
+    plt.colorbar()
+
+    plt.subplot(3,4,9)
+    plt.imshow(image[:,:,szh[2]])
+    plt.colorbar()
+
+    plt.subplot(3,4,10)
+    plt.imshow(edge_map[:,:,szh[2]])
+    plt.colorbar()
+
+    plt.subplot(3,4,11)
+    plt.imshow(gradient_norm[:,:,szh[2]])
+    plt.colorbar()
+    plt.title('Grad-norm')
+
+    plt.subplot(3,4,12)
+    plt.imshow(gamma * gradient_norm[:,:,szh[2]])
+    plt.colorbar()
+    plt.title('gamma * grad-norm')
 
     plt.tight_layout()
     #plt.tight_layout(h_pad=1)
+
 
 def _edgemap_plot_and_write_to_pdf(image,gradient_norm,edge_map,gamma,pdf_filename):
     dim = len(edge_map.size())
@@ -86,13 +148,26 @@ def _edgemap_plot_and_write_to_pdf(image,gradient_norm,edge_map,gamma,pdf_filena
         _plot_edgemap_2d(image=image,gradient_norm=gradient_norm,edge_map=edge_map,gamma=gamma)
         plt.show()
     elif dim==3:
-        print('INFO: PDF output not yet implemented for 3D image; implement it in deep_smoothers.py')
+        _plot_edgemap_3d(image=image,gradient_norm=gradient_norm,edge_map=edge_map,gamma=gamma)
+        plt.savefig(pdf_filename,bbox_inches='tight',pad_inches=0)
+        _plot_edgemap_3d(image=image,gradient_norm=gradient_norm,edge_map=edge_map,gamma=gamma)
+        plt.show()
     else:
         raise ValueError('Unknown dimension; dimension must be 1, 2, or 3')
 
 def half_sigmoid(x,alpha=1):
     r = 2.0/(1+torch.exp(-x*alpha))-1.0
     return r
+
+def _compute_localized_edge_penalty(I,spacing,gamma):
+    # needs to be batch B x X x Y x Z format
+    fdt = fd.FD_torch(spacing=spacing)
+    gnI = float(np.min(spacing)) * fdt.grad_norm_sqr(I) ** 0.5
+
+    # compute edge penalty
+    localized_edge_penalty = 1.0 / (1.0 + gamma * gnI)  # this is what we weight the OMT values with
+
+    return localized_edge_penalty,gnI
 
 def compute_localized_edge_penalty(I,spacing,params=None):
 
@@ -105,19 +180,20 @@ def compute_localized_edge_penalty(I,spacing,params=None):
     edge_penalty_filename = params[('edge_penalty_filename','DEBUG_edge_penalty.nrrd','Edge penalty image')]
     terminate_after_writing_edge_penalty = params[('edge_penalty_terminate_after_writing',False,'Terminates the program after the edge file has been written; otherwise file may be constantly overwritten')]
 
-    # needs to be batch B x X x Y x Z format
-    fdt = fd.FD_torch(spacing=spacing)
-    gnI = float(np.min(spacing))*fdt.grad_norm_sqr(I)**0.5
-
     # compute edge penalty
-    localized_edge_penalty = 1.0/(1.0+gamma*gnI) # this is what we weight the OMT values with
+    localized_edge_penalty,gnI = _compute_localized_edge_penalty(I,spacing=spacing,gamma=gamma) # this is what we weight the OMT values with
 
     if write_edge_penalty_to_file:
 
         current_image_filename = str(edge_penalty_filename)
         current_pdf_filename = (os.path.splitext(current_image_filename)[0])+'.pdf'
-        fio.ImageIO().write(current_image_filename,localized_edge_penalty[0,...].data.cpu())
+        current_pt_filename = (os.path.splitext(current_image_filename)[0])+'.pt'
 
+        debug_dict = dict()
+        debug_dict['image'] = I
+
+        torch.save(debug_dict,current_pt_filename)
+        fio.ImageIO().write(current_image_filename,localized_edge_penalty[0,...].data.cpu())
         _edgemap_plot_and_write_to_pdf(image=I[0,...].data.cpu(),gradient_norm=gnI[0,...].data.cpu(),edge_map=localized_edge_penalty[0,...].data.cpu(),gamma=gamma,pdf_filename=current_pdf_filename)
 
         if terminate_after_writing_edge_penalty:
@@ -706,6 +782,12 @@ class DeepSmoothingModel(nn.Module):
         self.current_penalty = None
         """to stores the current penalty (for example OMT) after running through the model"""
 
+        self.deep_network_local_weight_smoothing = self.params[('deep_network_local_weight_smoothing', 0.02, 'How much to smooth the local weights (implemented by smoothing the resulting velocity field) to assure sufficient regularity')]
+        """Smoothing of the local weight fields to assure sufficient regularity of the resulting velocity"""
+
+        self.deep_network_weight_smoother = None
+        """The smoother that does the smoothing of the weights; needs to be initialized in the forward model"""
+
     def get_omt_weight_penalty(self):
         return self.omt_weight_penalty
 
@@ -1159,6 +1241,20 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         # multiply the velocity fields by the weights and sum over them
         # this is then the multi-Gaussian output
 
+        # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
+        if self.deep_network_local_weight_smoothing > 0 and self.deep_network_weight_smoother is None:
+            import pyreg.smoother_factory as sf
+            s_m_params = pars.ParameterDict()
+            s_m_params['smoother']['type'] = 'gaussian'
+            s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
+            self.deep_network_weight_smoother = sf.SmootherFactory(ret.size()[2::], self.spacing).create_smoother(s_m_params)
+
+        if self.deep_network_local_weight_smoothing > 0 and retain_weights:
+            # now we smooth all the weights (only for this debugging mode)
+            # allow visualizing the smoothed weight fields. Smooth the resulting velocity field otherwise
+            # as this is more efficient
+            weights = self.deep_network_weight_smoother.smooth(weights)
+
         # now we apply this weight across all the channels; weight output is B x weights x X x Y
         for n in range(self.dim):
             # reverse the order so that for a given channel we have batch x multi_velocity x X x Y
@@ -1172,6 +1268,11 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             yc = torch.sum(roc * weights, dim=1)
             ret[:, n, ...] = yc  # ret is: batch x channels x X x Y
 
+        if self.deep_network_local_weight_smoothing>0 and not retain_weights:
+            # this is the actual optimization, just smooth the resulting velocity field which is more efficicient
+            # than smoothing the individual weights
+            # if weights are retained then instead the weights are smoothed, see above (as this is what we were after)
+            ret = self.deep_network_weight_smoother.smooth(ret)
 
         current_omt_penalty = self.omt_weight_penalty * compute_omt_penalty(weights, self.gaussian_stds,
                                                                         self.volumeElement, self.omt_power, self.omt_use_log_transformed_std)
@@ -1402,6 +1503,20 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         # multiply the velocity fields by the weights and sum over them
         # this is then the multi-Gaussian output
 
+        # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
+        if self.deep_network_local_weight_smoothing>0 and self.deep_network_weight_smoother is None:
+            import pyreg.smoother_factory as sf
+            s_m_params = pars.ParameterDict()
+            s_m_params['smoother']['type'] = 'gaussian'
+            s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
+            self.deep_network_weight_smoother = sf.SmootherFactory(ret.size()[2::], self.spacing).create_smoother(s_m_params)
+
+        if self.deep_network_local_weight_smoothing>0 and retain_weights:
+            # now we smooth all the weights (only for this debugging mode)
+            # allow visualizing the smoothed weight fields. Smooth the resulting velocity field otherwise
+            # as this is more efficient
+            weights = self.deep_network_weight_smoother.smooth(weights)
+
         # now we apply this weight across all the channels; weight output is B x weights x X x Y
         for n in range(self.dim):
             # reverse the order so that for a given channel we have batch x multi_velocity x X x Y
@@ -1414,6 +1529,12 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
             yc = torch.sum(roc*weights,dim=1)
             ret[:, n, ...] = yc # ret is: batch x channels x X x Y
+
+        if self.deep_network_local_weight_smoothing>0 and not retain_weights:
+            # this is the actual optimization, just smooth the resulting velocity field which is more efficicient
+            # than smoothing the individual weights
+            # if weights are retained then instead the weights are smoothed, see above (as this is what we were after)
+            ret = self.deep_network_weight_smoother.smooth(ret)
 
         current_diffusion_penalty = self.diffusion_weight_penalty * diffusion_penalty
 

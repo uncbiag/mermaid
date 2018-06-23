@@ -422,7 +422,7 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         super(AdaptiveSingleGaussianFourierSmoother, self).__init__(sz, spacing, params)
         self.gaussianStd = np.array(params[('gaussian_std', [0.15], 'std for the Gaussian')])
         """standard deviation of Gaussian"""
-        self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussian')]
+        self.gaussianStd_min = params[('gaussian_std_min', 0.001, 'minimal allowed std for the Gaussian')]
         """minimal allowed standard deviation during optimization"""
         self.optimize_over_smoother_parameters = params[('optimize_over_smoother_parameters', False, 'if set to true the smoother will be optimized')]
         """determines if we should optimize over the smoother parameters"""
@@ -523,7 +523,7 @@ class SingleGaussianFourierSmoother(GaussianFourierSmoother):
         super(SingleGaussianFourierSmoother,self).__init__(sz,spacing,params)
         self.gaussianStd = params[('gaussian_std', 0.15 ,'std for the Gaussian' )]
         """standard deviation of Gaussian"""
-        self.gaussianStd_min = params[('gaussian_std_min', 0.01 ,'minimal allowed std for the Gaussian' )]
+        self.gaussianStd_min = params[('gaussian_std_min', 0.001 ,'minimal allowed std for the Gaussian' )]
         """minimal allowed standard deviation during optimization"""
 
     def _create_filter(self):
@@ -641,7 +641,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         self.multi_gaussian_stds = np.array(params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')])
         """standard deviations of Gaussians"""
 
-        self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussians')]
+        self.gaussianStd_min = params[('gaussian_std_min', 0.001, 'minimal allowed std for the Gaussians')]
         """minimal allowed standard deviation during optimization"""
 
         self.omt_weight_penalty = self.params[('omt_weight_penalty', 25.0, 'Penalty for the optimal mass transport')]
@@ -865,7 +865,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         self.multi_gaussian_stds = np.array(params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')])
         """standard deviations of Gaussians"""
-        self.gaussianStd_min = params[('gaussian_std_min', 0.01, 'minimal allowed std for the Gaussians')]
+        self.gaussianStd_min = params[('gaussian_std_min', 0.001, 'minimal allowed std for the Gaussians')]
         """minimal allowed standard deviation during optimization"""
 
         self.network_penalty = params[('network_penalty', 0.0, 'factor by which the L2 norm of network weights is penalized')]

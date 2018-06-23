@@ -396,7 +396,7 @@ def add_texture(im_orig):
 
     return im
 
-def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,multi_gaussian_stds,
+def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,weight_smoothing_std,multi_gaussian_stds,
                              randomize_momentum_on_circle,randomize_in_sectors,
                              put_weights_between_circles,
                              start_with_fluid_weight,
@@ -440,6 +440,17 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
                     put_weights_between_circles=put_weights_between_circles,
                     sz=sz,spacing=spacing,
                     visualize=visualize)
+
+    if weight_smoothing_std is not None:
+        if weight_smoothing_std>0:
+            s_m_params = pars.ParameterDict()
+            s_m_params['smoother']['type'] = 'gaussian'
+            s_m_params['smoother']['gaussian_std'] = weight_smoothing_std
+            # smooth the weights
+            smoother = sf.SmootherFactory(weights_orig.shape[2::], spacing).create_smoother(s_m_params)
+            #weights_old = np.zeros_like(weights_orig)
+            #weights_old[:] = weights_orig
+            weights_orig = (smoother.smooth(Variable(torch.from_numpy(weights_orig),requires_grad=False))).data.cpu().numpy()
 
     if publication_figures_directory is not None:
         plt.clf()
@@ -697,6 +708,7 @@ if __name__ == "__main__":
     parser.add_argument('--put_weights_between_circles', action='store_true', help='if set, the weights will change in-between circles, otherwise they will be colocated with the circles')
     parser.add_argument('--start_with_fluid_weight', action='store_true', help='if set then the innermost circle is not fluid, otherwise it is fluid')
 
+    parser.add_argument('--weight_smoothing_std',required=False,default=0.02,type=float,help='Standard deviation to smooth the weights with; to assure sufficient regularity')
     parser.add_argument('--stds', required=False,type=str, default=None, help='standard deviations for the multi-Gaussian; default=[0.01,0.05,0.1,0.2]')
     parser.add_argument('--weights_not_fluid', required=False,type=str, default=None, help='weights for a non fluid circle; default=[0,0,0,1]')
     parser.add_argument('--weights_fluid', required=False,type=str, default=None, help='weights for a fluid circle; default=[0.2,0.5,0.2,0.1]')
@@ -726,7 +738,7 @@ if __name__ == "__main__":
     nr_of_pairs_to_generate = args.nr_of_pairs_to_generate
 
     nr_of_circles_to_generate = get_parameter_value(args.nr_of_circles_to_generate, params,'nr_of_circles_to_generate', 2, 'number of circles for the synthetic data')
-    circle_extent = get_parameter_value(args.circle_extent, params, 'circle_extent', 0.25, 'Size of largest circle; image is [-0.5,0.5]^2')
+    circle_extent = get_parameter_value(args.circle_extent, params, 'circle_extent', 0.02, 'Size of largest circle; image is [-0.5,0.5]^2')
 
     randomize_momentum_on_circle = get_parameter_value_flag(not args.do_not_randomize_momentum,params=params, params_name='randomize_momentum_on_circle',
                                                             default_val=True, params_description='randomizes the momentum on the circles')
@@ -866,6 +878,7 @@ if __name__ == "__main__":
             create_random_image_pair(weights_not_fluid=weights_not_fluid,
                                      weights_fluid=weights_fluid,
                                      weights_neutral=weights_neutral,
+                                     weight_smoothing_std=args.weight_smoothing_std,
                                      multi_gaussian_stds=multi_gaussian_stds,
                                      randomize_momentum_on_circle=randomize_momentum_on_circle,
                                      randomize_in_sectors=randomize_in_sectors,

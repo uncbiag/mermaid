@@ -101,7 +101,7 @@ def run_optimization(stage,nr_of_epochs,image_pair_config_pt,nr_of_image_pairs,
             'output_directory': output_directory,
             'nr_of_epochs': all_nr_of_epochs,
             'config': main_json,
-            'stage': stage,
+            'stage_nr': stage,
             'seed': seed,
             }
 
@@ -415,7 +415,7 @@ if __name__ == "__main__":
     parser.add_argument('--create_clean_publication_print_for_pair_nr', required=False, type=int, default=None, help="When specified creates the publication prints only for the specified pairs numnber")
     parser.add_argument('--only_recompute_validation_measures', action='store_true', help='When set only the valiation measures are recomputed (nothing else; no images are written and no PDFs except for the validation boxplot are created)')
 
-    parser.add_argument('--only_run_stage0_with_unchanged_config', action='store_true', help='This is a convenience setting which allows using the script to run any json confifg file unchanged (as if it were stage 0); i.e., it will optimize over the smoother if set as such; should only be used for debugging; will terminate after stage 0.')
+    parser.add_argument('--only_run_stage0_with_unchanged_config', action='store_true', help='This is a convenience setting which allows using the script to run any json config file unchanged (as if it were stage 0); i.e., it will optimize over the smoother if set as such; should only be used for debugging; will terminate after stage 0.')
 
     parser.add_argument('--move_to_directory', required=False, default=None, help='If specified results will be move to this directory after computation (for example to move from SSD to slower storage)')
 
