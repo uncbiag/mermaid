@@ -171,7 +171,7 @@ class XlsxRecorder(object):
             try:
                 df.index = pd.Index(self.name_list_buffer+['average'])
             except:
-                print("DEBUGGING !!, the iter_expand is {},\n  self.name_list_buffer is {}".format(iter_expand,self.name_list_buffer))
+                print("DEBUGGING !!, the iter_expand is {},\n  self.name_list_buffer is {},\n results summary is {} \n".format(iter_expand,self.name_list_buffer, results_summary))
             df.to_excel(self.xlsx_writer, sheet_name=self.sheet_name, startcol=start_column, index_label=iter_info)
             start_column += self.column_space
         self.xlsx_writer.save()
