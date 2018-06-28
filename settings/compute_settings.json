@@ -1,7 +1,7 @@
 {
     "compute": {
         "CUDA_ON": true,
-        "MATPLOTLIB_AGG": false,
+        "MATPLOTLIB_AGG": true,
         "USE_FLOAT16": false, 
         "nr_of_threads": 16
     }

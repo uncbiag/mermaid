@@ -6,8 +6,8 @@ import set_pyreg_paths
 
 import matplotlib as matplt
 from pyreg.config_parser import MATPLOTLIB_AGG
-#if MATPLOTLIB_AGG:
-#    matplt.use('Agg')
+if MATPLOTLIB_AGG:
+    matplt.use('Agg')
 
 import matplotlib.pyplot as plt
 import scipy.ndimage as ndimage
