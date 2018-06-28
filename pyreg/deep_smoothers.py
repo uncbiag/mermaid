@@ -13,6 +13,7 @@ import math
 import pyreg.finite_differences as fd
 import pyreg.module_parameters as pars
 import pyreg.fileio as fio
+import pyreg.custom_pytorch_extensions as ce
 
 import os
 import matplotlib.pyplot as plt
@@ -767,6 +768,9 @@ class DeepSmoothingModel(nn.Module):
         cparams = params[('deep_smoother',{})]
         self.params = cparams
 
+        self.use_square_root_weighting = self.params[('use_square_root_weighting', True, 'If set to true uses the square root of the weights to multiply the Gaussian on the left and the right')]
+        """If True the velocity field is computed by \sum_i w_i^0.5 K_i*(w_i^0.5 m), otherwise w_i is used directly"""
+
         self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty', 0.0, 'Penalized the squared gradient of the weights')]
         self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 1.0, 'Penalize the total variation of the weights if desired')]
 
@@ -1135,7 +1139,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
 
         return self.nr_of_image_channels + add_channels
 
-    def forward(self, multi_smooth_v, I, additional_inputs, global_multi_gaussian_weights,
+    def forward(self, I, additional_inputs, global_multi_gaussian_weights, gaussian_fourier_filter_generator,
                 encourage_spatial_weight_consistency=True, retain_weights=False):
 
         # format of multi_smooth_v is multi_v x batch x channels x X x Y
@@ -1146,7 +1150,13 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         First make sure that the multi_smooth_v has the correct dimension.
         I.e., the correct spatial dimension and one output for each Gaussian (multi_v)
         """
-        sz_mv = multi_smooth_v.size()
+
+        # get the size of the input momentum batch x channels x X x Y
+        momentum = additional_inputs['m']
+        sz_m = momentum.size()
+        # get the size of the multi-velocity field; multi_v x batch x channels x X x Y
+        sz_mv = [self.nr_of_gaussians] + list(sz_m)
+
         dim_mv = sz_mv[2]  # format is
         # currently only implemented in 2D
         assert (dim_mv == 2)
@@ -1173,7 +1183,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             x = I - I.mean()
             if self.use_momentum_as_input:
                 # let's not remove the mean from the momentum
-                x = torch.cat([x, additional_inputs['m']], dim=1)
+                x = torch.cat([x, momentum], dim=1)
             if self.use_source_image_as_input:
                 x = torch.cat([x, additional_inputs['I0'] - additional_inputs['I0'].mean()], dim=1)
             if self.use_target_image_as_input:
@@ -1182,7 +1192,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             # network input
             x = I
             if self.use_momentum_as_input:
-                x = torch.cat([x, additional_inputs['m']], dim=1)
+                x = torch.cat([x, momentum], dim=1)
             if self.use_source_image_as_input:
                 x = torch.cat([x, additional_inputs['I0']], dim=1)
             if self.use_target_image_as_input:
@@ -1249,11 +1259,22 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
             self.deep_network_weight_smoother = sf.SmootherFactory(ret.size()[2::], self.spacing).create_smoother(s_m_params)
 
-        if self.deep_network_local_weight_smoothing > 0 and retain_weights:
-            # now we smooth all the weights (only for this debugging mode)
-            # allow visualizing the smoothed weight fields. Smooth the resulting velocity field otherwise
-            # as this is more efficient
+        if self.deep_network_local_weight_smoothing > 0: # and retain_weights:
+            # now we smooth all the weights
             weights = self.deep_network_weight_smoother.smooth(weights)
+            # make sure they are all still positive
+            weights = torch.clamp(weights, 0.0, 1.0)
+
+        if self.use_square_root_weighting:
+            sqrt_weights = torch.sqrt(weights)
+            sqrt_weighted_multi_smooth_v = compute_weighted_multi_smooth_v(momentum=momentum, weights=sqrt_weights,
+                                                                           gaussian_stds=self.gaussian_stds,
+                                                                           gaussian_fourier_filter_generator=gaussian_fourier_filter_generator)
+        else:
+            # now create the weighted multi-smooth-v
+            weighted_multi_smooth_v = compute_weighted_multi_smooth_v(momentum=momentum, weights=weights,
+                                                                      gaussian_stds=self.gaussian_stds,
+                                                                      gaussian_fourier_filter_generator=gaussian_fourier_filter_generator)
 
         # now we apply this weight across all the channels; weight output is B x weights x X x Y
         for n in range(self.dim):
@@ -1263,16 +1284,26 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             # (channels here are the vector field components); i.e. as many as there are dimensions
             # each one of those should be smoothed the same
 
-            # roc should be: batch x multi_v x X x Y
-            roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
-            yc = torch.sum(roc * weights, dim=1)
+            # let's smooth this on the fly, as the smoothing will be of form
+            # w_i*K_i*(w_i m)
+
+            if self.use_square_root_weighting:
+                # roc should be: batch x multi_v x X x Y
+                roc = torch.transpose(sqrt_weighted_multi_smooth_v[:, :, n, ...], 0, 1)
+                yc = torch.sum(roc * sqrt_weights, dim=1)
+            else:
+                # roc should be: batch x multi_v x X x Y
+                roc = torch.transpose(weighted_multi_smooth_v[:, :, n, ...], 0, 1)
+                yc = torch.sum(roc * weights, dim=1)
+
             ret[:, n, ...] = yc  # ret is: batch x channels x X x Y
 
-        if self.deep_network_local_weight_smoothing>0 and not retain_weights:
-            # this is the actual optimization, just smooth the resulting velocity field which is more efficicient
-            # than smoothing the individual weights
-            # if weights are retained then instead the weights are smoothed, see above (as this is what we were after)
-            ret = self.deep_network_weight_smoother.smooth(ret)
+        #if self.deep_network_local_weight_smoothing>0 and not retain_weights:
+        #    # this is the actual optimization, just smooth the resulting velocity field which is more efficicient
+        # (no longer possible, as we now have the weights twice)
+        #    # than smoothing the individual weights
+        #    # if weights are retained then instead the weights are smoothed, see above (as this is what we were after)
+        #    ret = self.deep_network_weight_smoother.smooth(ret)
 
         current_omt_penalty = self.omt_weight_penalty * compute_omt_penalty(weights, self.gaussian_stds,
                                                                         self.volumeElement, self.omt_power, self.omt_use_log_transformed_std)
@@ -1289,6 +1320,25 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             self.computed_weights[:] = weights.data
 
         return ret
+
+def compute_weighted_multi_smooth_v(momentum, weights, gaussian_stds, gaussian_fourier_filter_generator):
+    # computes the weighted smoothed velocity field i.e., K_i*( w_i m ) for all i in one data structure
+    # dimension will be multi_v x batch x X x Y x ...
+
+    sz_m = momentum.size()
+    sz_mv = [len(gaussian_stds)] + list(sz_m)
+    dim = sz_m[1]
+    weighted_multi_smooth_v = AdaptVal(Variable(MyTensor(*sz_mv), requires_grad=False))
+    # and fill it with weighted smoothed velocity fields
+    for i,g in enumerate(gaussian_stds):
+        weighted_momentum_i = torch.zeros_like(momentum)
+        for c in range(dim):
+            weighted_momentum_i[:,c,...] = weights[:,i,...]*momentum[:,c,...]
+        current_g = Variable(torch.from_numpy(np.array([g])),requires_grad=False)
+        current_weighted_smoothed_v_i = ce.fourier_set_of_gaussian_convolutions(weighted_momentum_i, gaussian_fourier_filter_generator,current_g, compute_std_gradients=False)
+        weighted_multi_smooth_v[i,...] = current_weighted_smoothed_v_i[0,...]
+
+    return weighted_multi_smooth_v
 
 class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
     """
@@ -1396,7 +1446,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
 
         self._initialize_weights()
 
-    def forward(self, multi_smooth_v, I, additional_inputs, global_multi_gaussian_weights,
+    def forward(self, I, additional_inputs, global_multi_gaussian_weights, gaussian_fourier_filter_generator,
                 encourage_spatial_weight_consistency=True, retain_weights=False):
 
         # format of multi_smooth_v is multi_v x batch x channels x X x Y
@@ -1407,12 +1457,15 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         First make sure that the multi_smooth_v has the correct dimension.
         I.e., the correct spatial dimension and one output for each Gaussian (multi_v)
         """
-        sz_mv = multi_smooth_v.size()
-        dim_mv = sz_mv[2] # format is
-        assert(sz_mv[0]==self.nr_of_gaussians)
+
+        # get the size of the input momentum batch x channels x X x Y
+        momentum = additional_inputs['m']
+        sz_m = momentum.size()
+        # get the size of the multi-velocity field; multi_v x batch x channels x X x Y
+        sz_mv = [self.nr_of_gaussians] + list(sz_m)
 
         # create the output tensor: will be of dimension: batch x channels x X x Y
-        ret = AdaptVal(Variable(MyTensor(*sz_mv[1:]), requires_grad=False))
+        ret = AdaptVal(Variable(MyTensor(*sz_m), requires_grad=False))
 
         # now determine the size for the weights
         # Since the smoothing will be the same for all spatial directions (for a velocity field),
@@ -1431,7 +1484,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             x = I-I.mean()
             if self.use_momentum_as_input:
                 # let's not remove the mean from the momentum
-                x = torch.cat([x, additional_inputs['m']], dim=1)
+                x = torch.cat([x, momentum], dim=1)
             if self.use_source_image_as_input:
                 x = torch.cat([x, additional_inputs['I0']-additional_inputs['I0'].mean()], dim=1)
             if self.use_target_image_as_input:
@@ -1440,7 +1493,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             # network input
             x = I
             if self.use_momentum_as_input:
-                x = torch.cat([x,additional_inputs['m']],dim=1)
+                x = torch.cat([x,momentum],dim=1)
             if self.use_source_image_as_input:
                 x = torch.cat([x, additional_inputs['I0']], dim=1)
             if self.use_target_image_as_input:
@@ -1511,11 +1564,20 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
             self.deep_network_weight_smoother = sf.SmootherFactory(ret.size()[2::], self.spacing).create_smoother(s_m_params)
 
-        if self.deep_network_local_weight_smoothing>0 and retain_weights:
-            # now we smooth all the weights (only for this debugging mode)
-            # allow visualizing the smoothed weight fields. Smooth the resulting velocity field otherwise
-            # as this is more efficient
+        if self.deep_network_local_weight_smoothing>0:
+            # now we smooth all the weights
             weights = self.deep_network_weight_smoother.smooth(weights)
+            # make sure they are all still positive
+            weights = torch.clamp(weights,0.0,1.0)
+
+        if self.use_square_root_weighting:
+            sqrt_weights = torch.sqrt(weights)
+            sqrt_weighted_multi_smooth_v = compute_weighted_multi_smooth_v( momentum=momentum, weights=sqrt_weights, gaussian_stds=self.gaussian_stds,
+                                                                   gaussian_fourier_filter_generator=gaussian_fourier_filter_generator )
+        else:
+            # now create the weighted multi-smooth-v
+            weighted_multi_smooth_v = compute_weighted_multi_smooth_v( momentum=momentum, weights=weights, gaussian_stds=self.gaussian_stds,
+                                                                       gaussian_fourier_filter_generator=gaussian_fourier_filter_generator )
 
         # now we apply this weight across all the channels; weight output is B x weights x X x Y
         for n in range(self.dim):
@@ -1525,16 +1587,26 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             # (channels here are the vector field components); i.e. as many as there are dimensions
             # each one of those should be smoothed the same
 
-            # roc should be: batch x multi_v x X x Y
-            roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
-            yc = torch.sum(roc*weights,dim=1)
+            # let's smooth this on the fly, as the smoothing will be of form
+            # w_i*K_i*(w_i m)
+
+            if self.use_square_root_weighting:
+                # roc should be: batch x multi_v x X x Y
+                roc = torch.transpose(sqrt_weighted_multi_smooth_v[:, :, n, ...], 0, 1)
+                yc = torch.sum(roc * sqrt_weights, dim=1)
+            else:
+                # roc should be: batch x multi_v x X x Y
+                roc = torch.transpose(weighted_multi_smooth_v[:, :, n, ...], 0, 1)
+                yc = torch.sum(roc*weights,dim=1)
+
             ret[:, n, ...] = yc # ret is: batch x channels x X x Y
 
-        if self.deep_network_local_weight_smoothing>0 and not retain_weights:
-            # this is the actual optimization, just smooth the resulting velocity field which is more efficicient
-            # than smoothing the individual weights
-            # if weights are retained then instead the weights are smoothed, see above (as this is what we were after)
-            ret = self.deep_network_weight_smoother.smooth(ret)
+        #if self.deep_network_local_weight_smoothing>0 and not retain_weights:
+        #    # this is the actual optimization, just smooth the resulting velocity field which is more efficicient
+        # no longer possible, as the weights are in there twice now
+        #    # than smoothing the individual weights
+        #    # if weights are retained then instead the weights are smoothed, see above (as this is what we were after)
+        #    ret = self.deep_network_weight_smoother.smooth(ret)
 
         current_diffusion_penalty = self.diffusion_weight_penalty * diffusion_penalty
 

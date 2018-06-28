@@ -542,7 +542,6 @@ class GaussianFourierFilterGenerator(object):
         self.complex_gaussian_fourier_xsqr_filters = [None]*self.nr_of_gaussians
         self.sigmas_complex_gaussian_fourier_xsqr_filters = [None]*self.nr_of_gaussians
 
-
     def get_number_of_gaussians(self):
         return self.nr_of_gaussians
 
@@ -569,6 +568,58 @@ class GaussianFourierFilterGenerator(object):
         complex_gaussian_fourier_xsqr_filter,max_index = create_complex_fourier_filter(gaussian_spatial_xsqr_filter,self.sz,True,max_index)
         return complex_gaussian_fourier_xsqr_filter,max_index
 
+    def _find_closest_sigma_index(self, sigma, available_sigmas):
+        """
+        For a given sigma, finds the closest one in a list of available sigmas
+        - If a sigma is already computed it finds its index
+        - If the sigma has not been computed (it finds the next empty slot (None)
+        - If no empty slots are available it replaces the closest
+        :param available_sigmas: a list of sigmas that have already been computed (or None if they have not)
+        :return: returns the index for the closest sigma among the available_sigmas
+        """
+        closest_i = None
+        same_i = None
+        empty_slot_i = None
+        current_dist_sqr = None
+
+        for i,s in enumerate(available_sigmas):
+            if s is not None:
+
+                # keep track of the one with the closest distance
+                new_dist_sqr = (s-sigma)**2
+                if current_dist_sqr==None:
+                    current_dist_sqr = new_dist_sqr
+                    closest_i = i
+                else:
+                    if new_dist_sqr<current_dist_sqr:
+                        current_dist_sqr = new_dist_sqr
+                        closest_i = i
+
+                # also check if this is the same
+                # if it is records the first occurrence
+                if np.isclose(sigma,s):
+                    if same_i is not None:
+                        same_i = i
+            else:
+                # found an empty slot, record it if it is the first one that was found
+                if empty_slot_i is not None:
+                    empty_slot_i = i
+
+        # if we found the same we return it
+        if same_i is not None:
+            # we found the same; i.e., already computed
+            return same_i
+        elif empty_slot_i is not None:
+            # it was not already computed, but we found an empty slot to put it in
+            return empty_slot_i
+        elif closest_i is not None:
+            # no empty slot, so just overwrite the closest one if there is one
+            return closest_i
+        else:
+            # nothing has been computed yet, so return the 0 index (this should never execute, as it should be taken care of by the empty slot
+            return 0
+
+
     def get_gaussian_xsqr_filters(self,sigmas):
         """
         Returns complex Gaussian Fourier filter multiplied with x**2 with standard deviation sigma. 
@@ -578,7 +629,10 @@ class GaussianFourierFilterGenerator(object):
         """
 
         # only recompute the ones that need to be recomputed
-        for i,sigma in enumerate(sigmas):
+        for sigma in sigmas:
+
+            # now find the index that corresponds to this
+            i = self._find_closest_sigma_index(sigma, self.sigmas_complex_gaussian_fourier_xsqr_filters)
 
             need_to_recompute = False
             if self.sigmas_complex_gaussian_fourier_xsqr_filters[i] is None:
@@ -607,7 +661,10 @@ class GaussianFourierFilterGenerator(object):
         """
 
         # only recompute the ones that need to be recomputed
-        for i, sigma in enumerate(sigmas):
+        for sigma in sigmas:
+
+            # now find the index that corresponds to this
+            i = self._find_closest_sigma_index(sigma,self.sigmas_complex_gaussian_fourier_filters)
 
             need_to_recompute = False
             if self.sigmas_complex_gaussian_fourier_filters[i] is None:
@@ -1047,10 +1104,11 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
         super(FourierSetOfGaussianConvolutions, self).__init__(gaussian_fourier_filter_generator)
 
         self.gaussian_fourier_filter_generator = gaussian_fourier_filter_generator
-        self.nr_of_gaussians = gaussian_fourier_filter_generator.get_number_of_gaussians()
+        #self.nr_of_gaussians = gaussian_fourier_filter_generator.get_number_of_gaussians()
+        self.nr_of_gaussians = None
 
-        self.complex_fourier_filters = [None]*self.nr_of_gaussians
-        self.complex_fourier_xsqr_filters = [None]*self.nr_of_gaussians
+        self.complex_fourier_filters = None #[None]*self.nr_of_gaussians
+        self.complex_fourier_xsqr_filters = None #[None]*self.nr_of_gaussians
 
         self.input = None
         self.sigmas = None
@@ -1071,7 +1129,8 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
         self.input = input
         self.sigmas = sigmas
 
-        assert(len(self.sigmas)==self.nr_of_gaussians)
+        #assert(len(self.sigmas)==self.nr_of_gaussians)
+        self.nr_of_gaussians = len(self.sigmas)
 
         self.complex_fourier_filters = self.gaussian_fourier_filter_generator.get_gaussian_filters(self.sigmas)
         self.complex_fourier_xsqr_filters = self.gaussian_fourier_filter_generator.get_gaussian_xsqr_filters(self.sigmas)

@@ -1134,11 +1134,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                 compute_std_gradients = False
                 compute_weight_gradients = False
 
-
-        # collection of smoothed vector fields
-        vcollection = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
-                                                       self.get_gaussian_stds(), compute_std_gradients)
-
         # we now use a small neural net to learn the weighting
 
         # needs an image as its input
@@ -1175,11 +1170,22 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             # here the deep learning model kicks in
             if self.debug_retain_computed_local_weights:
                 # v is actually the vector-valued momentum here; changed the interface to pass this also
-                smoothed_v = self.ws(vcollection, I, additional_inputs, self.get_gaussian_weights(), self.encourage_spatial_weight_consistency, self.debug_retain_computed_local_weights)
+                smoothed_v = self.ws(I=I, additional_inputs=additional_inputs, global_multi_gaussian_weights=self.get_gaussian_weights(),
+                                     gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
+                                     encourage_spatial_weight_consistency=self.encourage_spatial_weight_consistency,
+                                     retain_weights=self.debug_retain_computed_local_weights)
+
                 self.debug_computed_local_weights = self.ws.get_computed_weights()
             else:
-                smoothed_v = self.ws(vcollection, I, additional_inputs, self.get_gaussian_weights(), self.encourage_spatial_weight_consistency)
+                smoothed_v = self.ws(I=I, additional_inputs=additional_inputs, global_multi_gaussian_weights=self.get_gaussian_weights(),
+                                     gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
+                                     encourage_spatial_weight_consistency=self.encourage_spatial_weight_consistency)
         else:
+
+            # collection of smoothed vector fields
+            vcollection = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
+                                                                  self.get_gaussian_stds(), compute_std_gradients)
+
             # just do global weighting here
             smoothed_v = torch.zeros_like(vcollection[0, ...])
             for i, w in enumerate(self.get_gaussian_weights()):
