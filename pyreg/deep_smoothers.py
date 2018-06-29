@@ -727,6 +727,131 @@ class WeightedSoftmax(nn.Module):
 
         return self.__class__.__name__ + '()'
 
+def weighted_sqrt_softmax(input, dim=None, weights=None ):
+    r"""Applies a weighted square-root softmax function.
+
+    Weighted_sqrt_softmax is defined as:
+
+    :math:`weighted_sqrt_softmax(x) = \frac{\sqrt{w_i} exp(x_i)}{\sqrt{\sum_j w_j (exp(x_j))^2}}`
+
+    It is applied to all slices along dim, and will rescale them so that the elements
+    lie in the range `(0, 1)` and sum to 1.
+
+    See :class:`~torch.nn.WeightedSoftmax` for more details.
+
+    Arguments:
+        input (Variable): input
+        dim (int): A dimension along which weighted_softmax will be computed.
+
+    """
+    if dim is None:
+        raise ValueError('dimension needs to be defined!')
+
+    sz = input.size()
+    if weights is None: # just make them all one; this is the default softmax
+        weights = [1.]*sz[dim]
+
+    nr_of_weights = len(weights)
+    assert( sz[dim]==nr_of_weights )
+
+    ret = torch.zeros_like(input)
+
+    if dim==0:
+        norm_sqr = torch.zeros_like(input[0,...])
+        for c in range(sz[0]):
+            norm_sqr += weights[c]*(torch.exp(input[c,...]))**2
+        norm = torch.sqrt(norm_sqr)
+        for c in range(sz[0]):
+            ret[c,...] = torch.sqrt(weights[c])*torch.exp(input[c,...])/norm
+    elif dim==1:
+        norm_sqr = torch.zeros_like(input[:,0, ...])
+        for c in range(sz[1]):
+            norm_sqr += weights[c] * (torch.exp(input[:,c, ...]))**2
+        norm = torch.sqrt(norm_sqr)
+        for c in range(sz[1]):
+            ret[:,c, ...] = torch.sqrt(weights[c]) * torch.exp(input[:,c, ...]) / norm
+    elif dim==2:
+        norm_sqr = torch.zeros_like(input[:,:,0, ...])
+        for c in range(sz[2]):
+            norm_sqr += weights[c] * (torch.exp(input[:,:,c, ...]))**2
+        norm = torch.sqrt(norm_sqr)
+        for c in range(sz[2]):
+            ret[:,:,c, ...] = torch.sqrt(weights[c]) * torch.exp(input[:,:,c, ...]) / norm
+    elif dim==3:
+        norm_sqr = torch.zeros_like(input[:,:,:,0, ...])
+        for c in range(sz[3]):
+            norm_sqr += weights[c] * (torch.exp(input[:,:,:,c, ...]))**2
+        norm = torch.sqrt(norm_sqr)
+        for c in range(sz[3]):
+            ret[:,:,:,c, ...] = torch.sqrt(weights[c]) * torch.exp(input[:,:,:,c, ...]) / norm
+    elif dim==4:
+        norm_sqr = torch.zeros_like(input[:,:,:,:,0, ...])
+        for c in range(sz[4]):
+            norm_sqr += weights[c] * (torch.exp(input[:,:,:,:,c, ...]))**2
+        norm = torch.sqrt(norm_sqr)
+        for c in range(sz[4]):
+            ret[:,:,:,:,c, ...] = torch.sqrt(weights[c]) * torch.exp(input[:,:,:,:,c, ...]) / norm
+    else:
+        raise ValueError('weighted_softmax is only supported for dimensions 0, 1, 2, 3, and 4.')
+
+    return ret
+
+class WeightedSqrtSoftmax(nn.Module):
+    r"""Applies the WeightedSqrtSoftmax function to an n-dimensional input Tensor
+    rescaling them so that the elements of the n-dimensional output Tensor
+    lie in the range (0,1) and their squares sum to 1
+
+    WeightedSoftmax is defined as
+    :math:`f_i(x) = \frac{\sqrt{w_i}\exp(x_i)}{\sqrt{\sum_j w_j\exp(x_j)^2}}`
+
+    It is assumed that w_i>=0 and that the weights sum up to one.
+    The effect of this weighting is that for a zero input (x=0) the output for f_i(x) will be \sqrt{w_i}.
+    I.e., we can obtain a default output which is not 1/n and if we sqaure the outputs we are back
+    to the original weights for zero (input). This is useful behavior to implement, for example, local
+    kernel weightings while avoiding square roots of weights that may be close to zero (and hence potential
+    numerical issues with the gradient). The assumption is, of course, here that the weights are fixed and are not being
+    optimized over, otherwise there would still be numerical issues. TODO: check that this is indeed working as planned.
+
+    Shape:
+        - Input: any shape
+        - Output: same as input
+
+    Returns:
+        a Tensor of the same dimension and shape as the input with
+        positive values such that their squares sum up to one.
+
+    Arguments:
+        dim (int): A dimension along which WeightedSqrtSoftmax will be computed (so every slice
+            along dim will sum to 1).
+
+    Examples::
+
+        >>> m = nn.WeightedSqrtSoftmax()
+        >>> input = autograd.Variable(torch.randn(2, 3))
+        >>> print(input)
+        >>> print(m(input))
+    """
+
+    def __init__(self, dim=None, weights=None):
+        super(WeightedSqrtSoftmax, self).__init__()
+        self.dim = dim
+        self.weights = weights
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if not hasattr(self, 'dim'):
+            self.dim = None
+        if not hasattr(self, 'weights'):
+            self.weights = None
+
+    def forward(self, input):
+
+        return weighted_sqrt_softmax(input, self.dim, self.weights, _stacklevel=5)
+
+    def __repr__(self):
+
+        return self.__class__.__name__ + '()'
+
 
 
 class DeepSmoothingModel(nn.Module):
@@ -737,7 +862,7 @@ class DeepSmoothingModel(nn.Module):
 
     """
 
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=2.0,params=None):
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=1.0,params=None):
         super(DeepSmoothingModel, self).__init__()
 
         self.nr_of_image_channels = nr_of_image_channels
@@ -762,8 +887,11 @@ class DeepSmoothingModel(nn.Module):
                                                         'If set to true the standard deviations are log transformed for the computation of OMT')]
         """if set to true the standard deviations are log transformed for the OMT computation"""
 
-        self.omt_power = params[('omt_power', 2.0, 'Power for the optimal mass transport (i.e., to which power distances are penalized')]
+        self.omt_power = params[('omt_power', 1.0, 'Power for the optimal mass transport (i.e., to which power distances are penalized')]
         """optimal mass transport power"""
+
+        self.gaussianWeight_min = params[('gaussian_weight_min', 0.001, 'minimal allowed weight for the Gaussians')]
+        """minimal allowed weight during optimization"""
 
         cparams = params[('deep_smoother',{})]
         self.params = cparams
@@ -771,15 +899,17 @@ class DeepSmoothingModel(nn.Module):
         self.use_square_root_weighting = self.params[('use_square_root_weighting', True, 'If set to true uses the square root of the weights to multiply the Gaussian on the left and the right')]
         """If True the velocity field is computed by \sum_i w_i^0.5 K_i*(w_i^0.5 m), otherwise w_i is used directly"""
 
+        #self.use_sqrt_weighted_softmax = self.params[('use_sqrt_weighted_softmax',True,'If set to true a modified softmax is used to outputs directly the square roots of the weights; i.e., values whose squares sum to one; may be good for numerical stability')]
+        #"""If True the square root weights are directly produced by a modified weighted softmax, otherwise the standard weighted softmax is used"""
+
         self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty', 0.0, 'Penalized the squared gradient of the weights')]
-        self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 1.0, 'Penalize the total variation of the weights if desired')]
+        self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 0.1, 'Penalize the total variation of the weights if desired')]
 
         self.do_input_standardization = self.params[('do_input_standardization',True,'if true, subtracts the mean from any image input and leaves momentum as is')]
         """if true subtracts the mean from all image input before running it through the network"""
 
         self.nr_of_gaussians = nr_of_gaussians
         self.gaussian_stds = gaussian_stds
-        self.min_weight = 0.0001
 
         self.computed_weights = None
         """stores the computed weights if desired"""
@@ -1074,7 +1204,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
     """
     Similar to the model used in Quicksilver
     """
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=2.0, params=None ):
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=1.0, params=None ):
         super(EncoderDecoderSmoothingModel, self).__init__(nr_of_gaussians=nr_of_gaussians,\
                                                                      gaussian_stds=gaussian_stds,\
                                                                      dim=dim,\
@@ -1230,6 +1360,25 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         else:
             weights = F.softmax(decoder_output, dim=1)
 
+        # enforce minimum weight for numerical reasons
+        # weights = torch.clamp(weights,0.0,1.0)
+        weights = _project_weights_to_min(weights, self.gaussianWeight_min)
+
+        # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
+        if self.deep_network_local_weight_smoothing > 0 and self.deep_network_weight_smoother is None:
+            import pyreg.smoother_factory as sf
+            s_m_params = pars.ParameterDict()
+            s_m_params['smoother']['type'] = 'gaussian'
+            s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
+            self.deep_network_weight_smoother = sf.SmootherFactory(ret.size()[2::], self.spacing).create_smoother(
+                s_m_params)
+
+        if self.deep_network_local_weight_smoothing > 0:  # and retain_weights:
+            # now we smooth all the weights
+            weights = self.deep_network_weight_smoother.smooth(weights)
+            # make sure they are all still positive (#todo: may not be necessary, since we set a minumum weight above now)
+            weights = torch.clamp(weights, 0.0, 1.0)
+
         # compute the total variation penalty
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
@@ -1250,20 +1399,6 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
 
         # multiply the velocity fields by the weights and sum over them
         # this is then the multi-Gaussian output
-
-        # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
-        if self.deep_network_local_weight_smoothing > 0 and self.deep_network_weight_smoother is None:
-            import pyreg.smoother_factory as sf
-            s_m_params = pars.ParameterDict()
-            s_m_params['smoother']['type'] = 'gaussian'
-            s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
-            self.deep_network_weight_smoother = sf.SmootherFactory(ret.size()[2::], self.spacing).create_smoother(s_m_params)
-
-        if self.deep_network_local_weight_smoothing > 0: # and retain_weights:
-            # now we smooth all the weights
-            weights = self.deep_network_weight_smoother.smooth(weights)
-            # make sure they are all still positive
-            weights = torch.clamp(weights, 0.0, 1.0)
 
         if self.use_square_root_weighting:
             sqrt_weights = torch.sqrt(weights)
@@ -1340,6 +1475,27 @@ def compute_weighted_multi_smooth_v(momentum, weights, gaussian_stds, gaussian_f
 
     return weighted_multi_smooth_v
 
+def _project_weights_to_min(weights,min_val):
+    clamped_weights = torch.clamp(weights,min_val,1.0)
+    clamped_weight_sum = torch.sum(clamped_weights, dim=1)
+    sz = clamped_weights.size()
+    nr_of_weights = sz[1]
+    projected_weights = torch.zeros_like(clamped_weights)
+    for n in range(nr_of_weights):
+        projected_weights[:,n,...] = clamped_weights[:,n,...]/clamped_weight_sum
+
+    #plt.clf()
+    #plt.subplot(1,2,1)
+    #plt.imshow(weights[0,nr_of_weights-1,...].data.cpu().numpy())
+    #plt.colorbar()
+    #plt.subplot(1, 2, 2)
+    #plt.imshow(projected_weights[0, nr_of_weights - 1, ...].data.cpu().numpy())
+    #plt.colorbar()
+    #plt.show()
+
+
+    return clamped_weights
+
 class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
     """
     Mini neural network which takes as an input a set of smoothed velocity field as
@@ -1347,7 +1503,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
     Enforces the same weighting for all the dimensions of the vector field to be smoothed
 
     """
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=2.0, params=None ):
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=1.0, params=None ):
         super(SimpleConsistentWeightedSmoothingModel, self).__init__(nr_of_gaussians=nr_of_gaussians,\
                                                                      gaussian_stds=gaussian_stds,\
                                                                      dim=dim,\
@@ -1532,6 +1688,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             y = x
 
         # now we are ready for the weighted softmax (will be like softmax if no weights are specified)
+
         if self.estimate_around_global_weights:
             weights = weighted_softmax(y, dim=1, weights=global_multi_gaussian_weights)
             #plt.clf()
@@ -1542,6 +1699,24 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             #plt.show()
         else:
             weights = F.softmax(y, dim=1)
+
+        # enforce minimum weight for numerical reasons
+        weights = _project_weights_to_min(weights, self.gaussianWeight_min)
+
+        # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
+        if self.deep_network_local_weight_smoothing > 0 and self.deep_network_weight_smoother is None:
+            import pyreg.smoother_factory as sf
+            s_m_params = pars.ParameterDict()
+            s_m_params['smoother']['type'] = 'gaussian'
+            s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
+            self.deep_network_weight_smoother = sf.SmootherFactory(ret.size()[2::], self.spacing).create_smoother(
+                s_m_params)
+
+        if self.deep_network_local_weight_smoothing>0:
+            # now we smooth all the weights
+            weights = self.deep_network_weight_smoother.smooth(weights)
+            # make sure they are all still positive (#todo: may not be necessary, since we set a minumum weight above now; but risky as we take the square root below)
+            weights = torch.clamp(weights,0.0,1.0)
 
         # compute the total variation penalty
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
@@ -1561,20 +1736,6 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
 
         # multiply the velocity fields by the weights and sum over them
         # this is then the multi-Gaussian output
-
-        # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
-        if self.deep_network_local_weight_smoothing>0 and self.deep_network_weight_smoother is None:
-            import pyreg.smoother_factory as sf
-            s_m_params = pars.ParameterDict()
-            s_m_params['smoother']['type'] = 'gaussian'
-            s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
-            self.deep_network_weight_smoother = sf.SmootherFactory(ret.size()[2::], self.spacing).create_smoother(s_m_params)
-
-        if self.deep_network_local_weight_smoothing>0:
-            # now we smooth all the weights
-            weights = self.deep_network_weight_smoother.smooth(weights)
-            # make sure they are all still positive
-            weights = torch.clamp(weights,0.0,1.0)
 
         if self.use_square_root_weighting:
             sqrt_weights = torch.sqrt(weights)
