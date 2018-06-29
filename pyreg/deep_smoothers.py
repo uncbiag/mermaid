@@ -768,7 +768,7 @@ class DeepSmoothingModel(nn.Module):
         cparams = params[('deep_smoother',{})]
         self.params = cparams
 
-        self.use_square_root_weighting = self.params[('use_square_root_weighting', True, 'If set to true uses the square root of the weights to multiply the Gaussian on the left and the right')]
+        self.use_square_root_weighting = self.params[('use_square_root_weighting', False, 'If set to true uses the square root of the weights to multiply the Gaussian on the left and the right')]
         """If True the velocity field is computed by \sum_i w_i^0.5 K_i*(w_i^0.5 m), otherwise w_i is used directly"""
 
         self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty', 0.0, 'Penalized the squared gradient of the weights')]
@@ -1534,6 +1534,12 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         # now we are ready for the weighted softmax (will be like softmax if no weights are specified)
         if self.estimate_around_global_weights:
             weights = weighted_softmax(y, dim=1, weights=global_multi_gaussian_weights)
+            #plt.clf()
+            #for sf in range(4):
+            #    plt.subplot(2,2,sf+1)
+            #    plt.imshow(weights[0,sf,...].data.cpu().numpy())
+            #    plt.colorbar()
+            #plt.show()
         else:
             weights = F.softmax(y, dim=1)
 
@@ -1613,6 +1619,9 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         current_omt_penalty = self.omt_weight_penalty*compute_omt_penalty(weights,self.gaussian_stds,self.volumeElement,self.omt_power,self.omt_use_log_transformed_std)
         current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
         self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
+
+        if current_omt_penalty.data.cpu().numpy()>=0.007:
+            print('Hello')
 
         print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
               '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \

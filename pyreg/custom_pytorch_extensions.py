@@ -587,7 +587,7 @@ class GaussianFourierFilterGenerator(object):
 
                 # keep track of the one with the closest distance
                 new_dist_sqr = (s-sigma)**2
-                if current_dist_sqr==None:
+                if current_dist_sqr is None:
                     current_dist_sqr = new_dist_sqr
                     closest_i = i
                 else:
@@ -598,11 +598,11 @@ class GaussianFourierFilterGenerator(object):
                 # also check if this is the same
                 # if it is records the first occurrence
                 if np.isclose(sigma,s):
-                    if same_i is not None:
+                    if same_i is None:
                         same_i = i
             else:
                 # found an empty slot, record it if it is the first one that was found
-                if empty_slot_i is not None:
+                if empty_slot_i is None:
                     empty_slot_i = i
 
         # if we found the same we return it
