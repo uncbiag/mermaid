@@ -331,7 +331,7 @@ def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,sp
 
     nr_of_gaussians = len(multi_gaussian_stds)
     # create a velocity field from this momentum using a multi-Gaussian kernel
-    gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz[2:], spacing, nr_of_gaussians)
+    gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz[2:], spacing, nr_of_slots=nr_of_gaussians)
 
     t_weights = Variable(torch.from_numpy(weights),requires_grad=False)
     t_momentum = Variable(torch.from_numpy(m),requires_grad=False)

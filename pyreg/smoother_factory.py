@@ -677,7 +677,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         npt.assert_almost_equal((np.array(self.multi_gaussian_weights)).sum(),1.)
         assert len(self.multi_gaussian_weights) == len(self.multi_gaussian_stds)
 
-        self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, self.nr_of_gaussians)
+        self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, nr_of_slots=self.nr_of_gaussians)
         """creates the smoothed vector fields"""
 
         self.multi_gaussian_stds_optimizer_params = self._create_multi_gaussian_stds_optimization_vector_parameters()
@@ -903,7 +903,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.gaussianWeight_min = params[('gaussian_weight_min', 0.0001, 'minimal allowed weight for the Gaussians')]
         """minimal allowed weight during optimization"""
 
-        self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, self.nr_of_gaussians)
+        self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, nr_of_slots=self.nr_of_gaussians)
         """creates the smoothed vector fields"""
 
         self.multi_gaussian_stds_optimizer_params = self._create_multi_gaussian_stds_optimization_vector_parameters()

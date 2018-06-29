@@ -520,7 +520,7 @@ def inverse_fourier_convolution(input, complex_fourier_filter):
 
 
 class GaussianFourierFilterGenerator(object):
-    def __init__(self, sz, spacing, nr_of_gaussians=1):
+    def __init__(self, sz, spacing, nr_of_slots=1):
         self.sz = sz
         """image size"""
         self.spacing = spacing
@@ -529,21 +529,29 @@ class GaussianFourierFilterGenerator(object):
         """volume of pixel/voxel"""
         self.dim = len(spacing)
         """dimension"""
-        self.nr_of_gaussians = nr_of_gaussians
-        """number of Gaussians (to be able to support multi-Gaussian)"""
+        self.nr_of_slots = nr_of_slots
+        """number of slots to hold Gaussians (to be able to support multi-Gaussian); this is related to storage"""
+        """typically should be set to the number of total desired Gaussians (so that none of them need to be recomputed)"""
 
         self.mus = np.zeros(self.dim)
         # TODO: storing the identity map may be a little wasteful
         self.centered_id = utils.centered_identity_map(self.sz,self.spacing)
 
-        self.complex_gaussian_fourier_filters = [None] * self.nr_of_gaussians
-        self.max_indices = [None]*self.nr_of_gaussians
-        self.sigmas_complex_gaussian_fourier_filters = [None]*self.nr_of_gaussians
-        self.complex_gaussian_fourier_xsqr_filters = [None]*self.nr_of_gaussians
-        self.sigmas_complex_gaussian_fourier_xsqr_filters = [None]*self.nr_of_gaussians
+        self.complex_gaussian_fourier_filters = [None] * self.nr_of_slots
+        self.max_indices = [None]*self.nr_of_slots
+        self.sigmas_complex_gaussian_fourier_filters = [None]*self.nr_of_slots
+        self.complex_gaussian_fourier_xsqr_filters = [None]*self.nr_of_slots
+        self.sigmas_complex_gaussian_fourier_xsqr_filters = [None]*self.nr_of_slots
 
-    def get_number_of_gaussians(self):
-        return self.nr_of_gaussians
+    def get_number_of_slots(self):
+        return self.nr_of_slots
+
+    def get_number_of_currently_stored_gaussians(self):
+        nr_of_gaussians = 0
+        for s in self.sigmas_complex_gaussian_fourier_filters:
+            if s is not None:
+                nr_of_gaussians += 1
+        return  nr_of_gaussians
 
     def get_dimension(self):
         return self.dim
@@ -625,8 +633,10 @@ class GaussianFourierFilterGenerator(object):
         Returns complex Gaussian Fourier filter multiplied with x**2 with standard deviation sigma. 
         Only recomputes the filter if sigma has changed.
         :param sigmas: standard deviation of the filter as a list
-        :return: Returns the complex Gaussian Fourier filter
+        :return: Returns the complex Gaussian Fourier filters as a list (in the same order as requested)
         """
+
+        current_complex_gaussian_fourier_xsqr_filters = []
 
         # only recompute the ones that need to be recomputed
         for sigma in sigmas:
@@ -649,7 +659,9 @@ class GaussianFourierFilterGenerator(object):
                 self.sigmas_complex_gaussian_fourier_xsqr_filters[i] = sigma #.clone()
                 self.complex_gaussian_fourier_xsqr_filters[i],_ = self._compute_complex_gaussian_fourier_xsqr_filter(sigma,self.max_indices[i])
 
-        return self.complex_gaussian_fourier_xsqr_filters
+            current_complex_gaussian_fourier_xsqr_filters.append(self.complex_gaussian_fourier_xsqr_filters[i])
+
+        return current_complex_gaussian_fourier_xsqr_filters
 
 
     def get_gaussian_filters(self,sigmas):
@@ -659,6 +671,8 @@ class GaussianFourierFilterGenerator(object):
         :param sigma: standard deviation of filter.
         :return: Returns the complex Gaussian Fourier filter
         """
+
+        current_complex_gaussian_fourier_filters = []
 
         # only recompute the ones that need to be recomputed
         for sigma in sigmas:
@@ -681,7 +695,9 @@ class GaussianFourierFilterGenerator(object):
                 self.sigmas_complex_gaussian_fourier_filters[i] = sigma #.clone()
                 self.complex_gaussian_fourier_filters[i], self.max_indices[i] = self._compute_complex_gaussian_fourier_filter(sigma)
 
-        return self.complex_gaussian_fourier_filters
+            current_complex_gaussian_fourier_filters.append(self.complex_gaussian_fourier_filters[i])
+
+        return current_complex_gaussian_fourier_filters
 
 class FourierGaussianConvolution(Function):
     """
@@ -917,14 +933,14 @@ class FourierMultiGaussianConvolution(FourierGaussianConvolution):
         super(FourierMultiGaussianConvolution, self).__init__(gaussian_fourier_filter_generator)
 
         self.gaussian_fourier_filter_generator = gaussian_fourier_filter_generator
-        self.nr_of_gaussians = gaussian_fourier_filter_generator.get_number_of_gaussians()
 
-        self.complex_fourier_filters = [None]*self.nr_of_gaussians
-        self.complex_fourier_xsqr_filters = [None]*self.nr_of_gaussians
+        self.complex_fourier_filters = None
+        self.complex_fourier_xsqr_filters = None
 
         self.input = None
         self.weights = None
         self.sigmas = None
+        self.nr_of_gaussians = None
 
         self.compute_std_gradients = compute_std_gradients
         self.compute_weight_gradients = compute_weight_gradients
@@ -944,8 +960,10 @@ class FourierMultiGaussianConvolution(FourierGaussianConvolution):
         self.sigmas = sigmas
         self.weights = weights
 
-        assert(len(self.sigmas)==len(self.weights))
-        assert(len(self.sigmas)==self.nr_of_gaussians)
+        self.nr_of_gaussians = len(self.sigmas)
+        nr_of_weights = len(self.weights)
+
+        assert(self.nr_of_gaussians==nr_of_weights)
 
         self.complex_fourier_filters = self.gaussian_fourier_filter_generator.get_gaussian_filters(self.sigmas)
         self.complex_fourier_xsqr_filters = self.gaussian_fourier_filter_generator.get_gaussian_xsqr_filters(self.sigmas)
@@ -1104,14 +1122,13 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
         super(FourierSetOfGaussianConvolutions, self).__init__(gaussian_fourier_filter_generator)
 
         self.gaussian_fourier_filter_generator = gaussian_fourier_filter_generator
-        #self.nr_of_gaussians = gaussian_fourier_filter_generator.get_number_of_gaussians()
-        self.nr_of_gaussians = None
 
-        self.complex_fourier_filters = None #[None]*self.nr_of_gaussians
-        self.complex_fourier_xsqr_filters = None #[None]*self.nr_of_gaussians
+        self.complex_fourier_filters = None
+        self.complex_fourier_xsqr_filters = None
 
         self.input = None
         self.sigmas = None
+        self.nr_of_gaussians = None
 
         self.compute_std_gradients = compute_std_gradients
 
@@ -1129,7 +1146,6 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
         self.input = input
         self.sigmas = sigmas
 
-        #assert(len(self.sigmas)==self.nr_of_gaussians)
         self.nr_of_gaussians = len(self.sigmas)
 
         self.complex_fourier_filters = self.gaussian_fourier_filter_generator.get_gaussian_filters(self.sigmas)

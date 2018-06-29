@@ -1620,9 +1620,6 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
         self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
 
-        if current_omt_penalty.data.cpu().numpy()>=0.007:
-            print('Hello')
-
         print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
               '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \
               '; diffusion_penalty = ' + str(current_diffusion_penalty.data.cpu().numpy()))
