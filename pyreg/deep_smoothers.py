@@ -768,7 +768,7 @@ class DeepSmoothingModel(nn.Module):
         cparams = params[('deep_smoother',{})]
         self.params = cparams
 
-        self.use_square_root_weighting = self.params[('use_square_root_weighting', False, 'If set to true uses the square root of the weights to multiply the Gaussian on the left and the right')]
+        self.use_square_root_weighting = self.params[('use_square_root_weighting', True, 'If set to true uses the square root of the weights to multiply the Gaussian on the left and the right')]
         """If True the velocity field is computed by \sum_i w_i^0.5 K_i*(w_i^0.5 m), otherwise w_i is used directly"""
 
         self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty', 0.0, 'Penalized the squared gradient of the weights')]
