@@ -641,7 +641,7 @@ if __name__ == "__main__":
         for stage in stage_nr:
 
             parts_to_run_for_current_stage = parts_to_run.copy()
-            if args.run_vizval_only_for_stage_2 and stage==2:
+            if args.run_vizval_only_for_stage_2 and stage!=2:
                 parts_to_run_for_current_stage['run_visualization'] = False
                 parts_to_run_for_current_stage['run_validation'] = False
                 parts_to_run_for_current_stage['run_extra_validation'] = False
@@ -692,7 +692,7 @@ if __name__ == "__main__":
             for stage in stage_nr:
 
                 parts_to_run_for_current_stage = parts_to_run.copy()
-                if args.run_vizval_only_for_stage_2 and stage == 2:
+                if args.run_vizval_only_for_stage_2 and stage != 2:
                     parts_to_run_for_current_stage['run_visualization'] = False
                     parts_to_run_for_current_stage['run_validation'] = False
                     parts_to_run_for_current_stage['run_extra_validation'] = False
