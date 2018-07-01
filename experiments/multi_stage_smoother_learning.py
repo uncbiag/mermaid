@@ -219,6 +219,7 @@ if __name__ == "__main__":
     parser.add_argument('--config', required=True, default=None, help='Configuration file to read in')
 
     parser.add_argument('--stage_nr', required=False, type=str, default=None, help='Which stages should be run {0,1,2} as a comma separated list')
+    parser.add_argument('--skip_stage_1_and_start_stage_2_from_stage_0', action='store_true', help='If set, stage 2 is initialized from stage 0, without computing stage 1')
 
     parser.add_argument('--seed', required=False, type=int, default=None, help='Sets the random seed which affects data shuffling')
 
@@ -346,7 +347,6 @@ if __name__ == "__main__":
         used_image_pairs_filename_pt_in = used_image_pairs_filename_pt
         alternate_previous_results_output_directory = None
         use_alternate_previous_input_directory = False
-
 
 
     create_new_image_pairs = False
@@ -506,7 +506,10 @@ if __name__ == "__main__":
 
         out_json_stage_1 = os.path.join(args.output_directory,'out_stage_1_' + os.path.split(args.config)[1])
 
-        if 1 in stage_nr:
+        if 1 in stage_nr and args.skip_stage_1_and_start_stage_2_from_stage_0:
+            print('INFO: Skipping stage 1; stage 2 will be initialized by stage 0')
+
+        if 1 in stage_nr and not args.skip_stage_1_and_start_stage_2_from_stage_0:
 
             if not args.only_compute_frozen_epochs:
 
@@ -599,13 +602,21 @@ if __name__ == "__main__":
             if not args.only_compute_frozen_epochs:
 
                 print('Running stage 2: now optimize over the network (keeping everything else fixed)')
-                in_json = out_json_stage_1
 
-                backup_dir_stage_1 = os.path.realpath(results_output_directory) + '_after_stage_1'
-                if os.path.exists(backup_dir_stage_1):
-                    print('Copying ' + backup_dir_stage_1 + ' to ' + results_output_directory)
+                if args.skip_stage_1_and_start_stage_2_from_stage_0:
+                    in_json = out_json_stage_0
+                else:
+                    in_json = out_json_stage_1
+
+                if args.skip_stage_1_and_start_stage_2_from_stage_0:
+                    backup_dir_from_stage = os.path.realpath(results_output_directory) + '_after_stage_0'
+                else:
+                    backup_dir_from_stage = os.path.realpath(results_output_directory) + '_after_stage_1'
+
+                if os.path.exists(backup_dir_from_stage):
+                    print('Copying ' + backup_dir_from_stage + ' to ' + results_output_directory)
                     shutil.rmtree(results_output_directory)
-                    shutil.copytree(backup_dir_stage_1, results_output_directory)
+                    shutil.copytree(backup_dir_from_stage, results_output_directory)
 
                 do_registration(
                     source_images=source_images,

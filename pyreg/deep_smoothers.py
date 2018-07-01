@@ -1364,21 +1364,6 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         # weights = torch.clamp(weights,0.0,1.0)
         weights = _project_weights_to_min(weights, self.gaussianWeight_min)
 
-        # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
-        if self.deep_network_local_weight_smoothing > 0 and self.deep_network_weight_smoother is None:
-            import pyreg.smoother_factory as sf
-            s_m_params = pars.ParameterDict()
-            s_m_params['smoother']['type'] = 'gaussian'
-            s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
-            self.deep_network_weight_smoother = sf.SmootherFactory(ret.size()[2::], self.spacing).create_smoother(
-                s_m_params)
-
-        if self.deep_network_local_weight_smoothing > 0:  # and retain_weights:
-            # now we smooth all the weights
-            weights = self.deep_network_weight_smoother.smooth(weights)
-            # make sure they are all still positive (#todo: may not be necessary, since we set a minumum weight above now)
-            weights = torch.clamp(weights, 0.0, 1.0)
-
         # compute the total variation penalty
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
@@ -1394,6 +1379,21 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         if self.diffusion_weight_penalty > 0:
             for g in range(self.nr_of_gaussians):
                 diffusion_penalty += self.compute_diffusion(weights[:, g, ...])
+
+        # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
+        if self.deep_network_local_weight_smoothing > 0 and self.deep_network_weight_smoother is None:
+            import pyreg.smoother_factory as sf
+            s_m_params = pars.ParameterDict()
+            s_m_params['smoother']['type'] = 'gaussian'
+            s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
+            self.deep_network_weight_smoother = sf.SmootherFactory(ret.size()[2::], self.spacing).create_smoother(
+                s_m_params)
+
+        if self.deep_network_local_weight_smoothing > 0:  # and retain_weights:
+            # now we smooth all the weights
+            weights = self.deep_network_weight_smoother.smooth(weights)
+            # make sure they are all still positive (#todo: may not be necessary, since we set a minumum weight above now)
+            weights = torch.clamp(weights, 0.0, 1.0)
 
         # ends here
 
@@ -1700,6 +1700,22 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         else:
             weights = F.softmax(y, dim=1)
 
+        # compute the total variation penalty; compute this on the pre (non-smoothed) weights
+        total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        if self.total_variation_weight_penalty > 0:
+            # first compute the edge map
+            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing, self.params)
+            batch_size = I.size()[0]
+            for g in range(self.nr_of_gaussians):
+                # total_variation_penalty += self.compute_total_variation(weights[:,g,...])
+                c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
+                total_variation_penalty += (g_I * c_local_norm_grad).sum() * self.volumeElement / batch_size
+
+        diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        if self.diffusion_weight_penalty > 0:
+            for g in range(self.nr_of_gaussians):
+                diffusion_penalty += self.compute_diffusion(weights[:, g, ...])
+
         # enforce minimum weight for numerical reasons
         weights = _project_weights_to_min(weights, self.gaussianWeight_min)
 
@@ -1717,22 +1733,6 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             weights = self.deep_network_weight_smoother.smooth(weights)
             # make sure they are all still positive (#todo: may not be necessary, since we set a minumum weight above now; but risky as we take the square root below)
             weights = torch.clamp(weights,0.0,1.0)
-
-        # compute the total variation penalty
-        total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
-        if self.total_variation_weight_penalty > 0:
-            # first compute the edge map
-            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing, self.params)
-            batch_size = I.size()[0]
-            for g in range(self.nr_of_gaussians):
-                #total_variation_penalty += self.compute_total_variation(weights[:,g,...])
-                c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
-                total_variation_penalty += (g_I*c_local_norm_grad).sum()*self.volumeElement/batch_size
-
-        diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
-        if self.diffusion_weight_penalty > 0:
-            for g in range(self.nr_of_gaussians):
-                diffusion_penalty += self.compute_diffusion(weights[:, g, ...])
 
         # multiply the velocity fields by the weights and sum over them
         # this is then the multi-Gaussian output

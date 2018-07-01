@@ -75,6 +75,7 @@ def add_to_config_string(cs,cs_to_add):
 
 def run_optimization(stage,nr_of_epochs,image_pair_config_pt,nr_of_image_pairs,
                      only_run_stage0_with_unchanged_config,
+                     skip_stage_1_and_start_stage_2_from_stage_0,
                      input_image_directory,output_directory,
                      main_json,seed,
                      key_value_overwrites=dict(),string_key_value_overwrites=dict(),
@@ -116,6 +117,9 @@ def run_optimization(stage,nr_of_epochs,image_pair_config_pt,nr_of_image_pairs,
 
     if only_run_stage0_with_unchanged_config:
         args['only_run_stage0_with_unchanged_config']=''
+
+    if skip_stage_1_and_start_stage_2_from_stage_0:
+        args['skip_stage_1_and_start_stage_2_from_stage_0']=''
 
     # now run the command
     cmd_arg_list = _make_arg_list(args)
@@ -203,6 +207,7 @@ def run(stage,nr_of_epochs,main_json,
         parts_to_run=None,
         compute_only_pair_nr=None,
         only_run_stage0_with_unchanged_config=False,
+        skip_stage_1_and_start_stage_2_from_stage_0=False,
         only_recompute_validation_measures=False
         ):
 
@@ -229,6 +234,7 @@ def run(stage,nr_of_epochs,main_json,
                          image_pair_config_pt=image_pair_config_pt,
                          nr_of_image_pairs=nr_of_image_pairs,
                          only_run_stage0_with_unchanged_config=only_run_stage0_with_unchanged_config,
+                         skip_stage_1_and_start_stage_2_from_stage_0=skip_stage_1_and_start_stage_2_from_stage_0,
                          input_image_directory=input_image_directory,
                          output_directory=output_directory,
                          main_json=main_json,
@@ -242,43 +248,48 @@ def run(stage,nr_of_epochs,main_json,
 
     if not only_run_stage0_with_unchanged_config:
 
-        if parts_to_run['run_visualization']:
-            run_visualization(stage=stage,
-                              output_directory=output_directory,
-                              main_json=main_json,
-                              cuda_visible_devices=cuda_visible_devices,
-                              pre_command=pre_command,
-                              compute_only_pair_nr=compute_only_pair_nr,
-                              only_recompute_validation_measures=only_recompute_validation_measures)
-        else:
-            print('INFO: Visualization will not be run')
+        if not (stage==1 and skip_stage_1_and_start_stage_2_from_stage_0):
 
-        if (validation_dataset_directory is not None) and (validation_dataset_name is not None):
-
-            if parts_to_run['run_validation']:
-                run_validation(stage=stage,
-                               output_directory=output_directory,
-                               validation_dataset_directory=validation_dataset_directory,
-                               validation_dataset_name=validation_dataset_name,
-                               cuda_visible_devices=cuda_visible_devices,
-                               pre_command=pre_command)
+            if parts_to_run['run_visualization']:
+                run_visualization(stage=stage,
+                                  output_directory=output_directory,
+                                  main_json=main_json,
+                                  cuda_visible_devices=cuda_visible_devices,
+                                  pre_command=pre_command,
+                                  compute_only_pair_nr=compute_only_pair_nr,
+                                  only_recompute_validation_measures=only_recompute_validation_measures)
             else:
-                print('INFO: Validation will not be run')
+                print('INFO: Visualization will not be run')
 
-            if validation_dataset_name=='SYNTH':
-                if parts_to_run['run_extra_validation']:
-                    run_extra_validation(stage=stage,
-                                         input_image_directory=input_image_directory,
-                                         output_directory=output_directory,
-                                         main_json=main_json,
-                                         cuda_visible_devices=cuda_visible_devices,
-                                         pre_command=pre_command,
-                                         compute_only_pair_nr=compute_only_pair_nr)
+            if (validation_dataset_directory is not None) and (validation_dataset_name is not None):
+
+                if parts_to_run['run_validation']:
+                    run_validation(stage=stage,
+                                   output_directory=output_directory,
+                                   validation_dataset_directory=validation_dataset_directory,
+                                   validation_dataset_name=validation_dataset_name,
+                                   cuda_visible_devices=cuda_visible_devices,
+                                   pre_command=pre_command)
                 else:
-                    print('INFO: Extra validation will not be run')
+                    print('INFO: Validation will not be run')
+
+                if validation_dataset_name=='SYNTH':
+                    if parts_to_run['run_extra_validation']:
+                        run_extra_validation(stage=stage,
+                                             input_image_directory=input_image_directory,
+                                             output_directory=output_directory,
+                                             main_json=main_json,
+                                             cuda_visible_devices=cuda_visible_devices,
+                                             pre_command=pre_command,
+                                             compute_only_pair_nr=compute_only_pair_nr)
+                    else:
+                        print('INFO: Extra validation will not be run')
+
+            else:
+                print('Validation not computed, because validation dataset is not specified')
 
         else:
-            print('Validation not computed, because validation dataset is not specified')
+            print('INFO: stage 1 is skipped, because stage 2 would be computed from stage 0')
 
 
 
@@ -416,6 +427,7 @@ if __name__ == "__main__":
     parser.add_argument('--only_recompute_validation_measures', action='store_true', help='When set only the valiation measures are recomputed (nothing else; no images are written and no PDFs except for the validation boxplot are created)')
 
     parser.add_argument('--only_run_stage0_with_unchanged_config', action='store_true', help='This is a convenience setting which allows using the script to run any json config file unchanged (as if it were stage 0); i.e., it will optimize over the smoother if set as such; should only be used for debugging; will terminate after stage 0.')
+    parser.add_argument('--skip_stage_1_and_start_stage_2_from_stage_0', action='store_true', help='If set, stage 2 is initialized from stage 0, without computing stage 1')
 
     parser.add_argument('--move_to_directory', required=False, default=None, help='If specified results will be move to this directory after computation (for example to move from SSD to slower storage)')
 
@@ -664,6 +676,7 @@ if __name__ == "__main__":
                 pre_command=args.precommand,
                 compute_only_pair_nr=compute_only_pair_nr,
                 only_run_stage0_with_unchanged_config=args.only_run_stage0_with_unchanged_config,
+                skip_stage_1_and_start_stage_2_from_stage_0=args.skip_stage_1_and_start_stage_2_from_stage_0,
                 only_recompute_validation_measures=args.only_recompute_validation_measures
                 )
 
@@ -715,6 +728,7 @@ if __name__ == "__main__":
                     parts_to_run=parts_to_run_for_current_stage,
                     compute_only_pair_nr=compute_only_pair_nr,
                     only_run_stage0_with_unchanged_config=args.only_run_stage0_with_unchanged_config,
+                    skip_stage_1_and_start_stage_2_from_stage_0=args.skip_stage_1_and_start_stage_2_from_stage_0,
                     only_recompute_validation_measures=args.only_recompute_validation_measures
                     )
 
