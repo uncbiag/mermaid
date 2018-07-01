@@ -449,6 +449,8 @@ if __name__ == "__main__":
     parser.add_argument('--run_validation', action='store_true', help='If specified then only specified parts of the pipline are run')
     parser.add_argument('--run_extra_validation', action='store_true', help='If specified then only specified parts of the pipline are run')
 
+    parser.add_argument('--run_vizval_only_for_stage_2', action='store_true', help='If set to True the costly visualization and evaluation is only run for stage 2')
+
     args = parser.parse_args()
 
     if args.nr_of_image_pairs==0:
@@ -638,6 +640,12 @@ if __name__ == "__main__":
 
         for stage in stage_nr:
 
+            parts_to_run_for_current_stage = parts_to_run.copy()
+            if args.run_vizval_only_for_stage_2 and stage==2:
+                parts_to_run_for_current_stage['run_visualization'] = False
+                parts_to_run_for_current_stage['run_validation'] = False
+                parts_to_run_for_current_stage['run_extra_validation'] = False
+
             run(stage=stage,
                 nr_of_epochs=nr_of_epochs[stage],
                 main_json=main_json,
@@ -652,7 +660,7 @@ if __name__ == "__main__":
                 string_key_value_overwrites=kvos_str,
                 seed=seed,
                 cuda_visible_devices=cuda_visible_devices,
-                parts_to_run=parts_to_run,
+                parts_to_run=parts_to_run_for_current_stage,
                 pre_command=args.precommand,
                 compute_only_pair_nr=compute_only_pair_nr,
                 only_run_stage0_with_unchanged_config=args.only_run_stage0_with_unchanged_config,
@@ -682,6 +690,13 @@ if __name__ == "__main__":
             print('Computing sweep {:d}/{:d} for {:s}'.format(counter+1,nr_of_sweep_values,current_label))
 
             for stage in stage_nr:
+
+                parts_to_run_for_current_stage = parts_to_run.copy()
+                if args.run_vizval_only_for_stage_2 and stage == 2:
+                    parts_to_run_for_current_stage['run_visualization'] = False
+                    parts_to_run_for_current_stage['run_validation'] = False
+                    parts_to_run_for_current_stage['run_extra_validation'] = False
+
                 run(stage=stage,
                     nr_of_epochs=nr_of_epochs[stage],
                     main_json=main_json,
@@ -697,7 +712,7 @@ if __name__ == "__main__":
                     seed=seed,
                     cuda_visible_devices=cuda_visible_devices,
                     pre_command=args.precommand,
-                    parts_to_run=parts_to_run,
+                    parts_to_run=parts_to_run_for_current_stage,
                     compute_only_pair_nr=compute_only_pair_nr,
                     only_run_stage0_with_unchanged_config=args.only_run_stage0_with_unchanged_config,
                     only_recompute_validation_measures=args.only_recompute_validation_measures
