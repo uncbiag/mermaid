@@ -157,7 +157,7 @@ class Smoother(with_metaclass(ABCMeta, object)):
         return None
 
     @abstractmethod
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
         """
         Abstract method to smooth a vector field. Only this method should be overwritten in derived classes.
 
@@ -166,13 +166,15 @@ class Smoother(with_metaclass(ABCMeta, object)):
         :param pars: dictionary that can contain various extra variables; for smoother this will for example be
             the current image 'I' or the current map 'phi'. typically not used.
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
+        :param smooth_to_compute_regularizer_energy: in certain cases smoothing to compute a smooth velocity field should
+                be different than the smoothing for the regularizer (this flag allows smoother implementations reacting to this difference)
         :return: should return the a smoothed scalar field, image dimension BxCXxYxZ
         """
         pass
 
 
 
-    def smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
+    def smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
         """
         Smoothes a vector field of dimension BxCxXxYxZ,
 
@@ -181,6 +183,8 @@ class Smoother(with_metaclass(ABCMeta, object)):
         :param pars: dictionary that can contain various extra variables; for smoother this will for example be
             the current image 'I' or the current map 'phi'. typically not used.
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
+        :param smooth_to_compute_regularizer_energy: in certain cases smoothing to compute a smooth velocity field should
+                be different than the smoothing for the regularizer (this flag allows smoother implementations reacting to this difference)
         :return: smoothed vector field BxCxXxYxZ
         """
         sz = v.size()
@@ -189,7 +193,7 @@ class Smoother(with_metaclass(ABCMeta, object)):
         else:
             Sv = Variable(MyTensor(v.size()).zero_())
 
-        Sv[:] = self.apply_smooth(v,vout,pars,variables_from_optimizer)    # here must use :, very important !!!!
+        Sv[:] = self.apply_smooth(v,vout,pars,variables_from_optimizer, smooth_to_compute_regularizer_energy)    # here must use :, very important !!!!
         return Sv
 
 
@@ -221,7 +225,7 @@ class DiffusionSmoother(Smoother):
         """
         return self.iter
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
         """
         Smoothes a scalar field of dimension XxYxZ
 
@@ -350,7 +354,7 @@ class GaussianSpatialSmoother(GaussianSmoother):
         else:
             raise ValueError('Can only perform padding in dimensions 1-3')
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
         """
         Smooth the scalar field using Gaussian smoothing in the spatial domain
 
@@ -388,7 +392,7 @@ class GaussianFourierSmoother(with_metaclass(ABCMeta, GaussianSmoother)):
         """
         pass
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
@@ -479,7 +483,7 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         gaussianStd = self._get_gaussian_std_from_optimizer_params()
         return gaussianStd
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
@@ -821,7 +825,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
 
         return penalty
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
@@ -867,6 +871,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         """standard deviations of Gaussians"""
         self.gaussianStd_min = params[('gaussian_std_min', 0.001, 'minimal allowed std for the Gaussians')]
         """minimal allowed standard deviation during optimization"""
+        self.smallest_gaussian_std = self.multi_gaussian_stds.min()
+        """The smallest of the standard deviations"""
 
         self.network_penalty = params[('network_penalty', 0.0, 'factor by which the L2 norm of network weights is penalized')]
         """penalty factor for L2 norm of network weights"""
@@ -882,6 +888,10 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         self.optimize_over_deep_network = params[('optimize_over_deep_network', False, 'if set to true the smoother will optimize over the deep network parameters; otherwise will ignore the deep network')]
         """determines if we should optimize over the smoother global weights"""
+
+        self.only_use_smallest_standard_deviation_for_regularization_energy = \
+            params[('only_use_smallest_standard_deviation_for_regularization_energy',True,
+                    'When set to True the regularization energy only used the Gaussian with smallest standard deviation to compute the velocity field for the energy computation')]
 
         self.freeze_parameters = params[('freeze_parameters', False, 'if set to true then all the parameters that are optimized over are frozen (but they still influence the optimization indirectly; they just do not change themselves)')]
         """Freezes parameters; this, for example, allows optimizing for a few extra steps without changing their current value"""
@@ -1115,7 +1125,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         return penalty
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
@@ -1166,7 +1176,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             self._is_optimizing_over_deep_network = False
 
         # we are ready to optimize over the deep network and want to optimize over it
-        if self._is_optimizing_over_deep_network:
+        if self._is_optimizing_over_deep_network and not smooth_to_compute_regularizer_energy:
             # here the deep learning model kicks in
             if self.debug_retain_computed_local_weights:
                 # v is actually the vector-valued momentum here; changed the interface to pass this also
@@ -1181,15 +1191,24 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                                      gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
                                      encourage_spatial_weight_consistency=self.encourage_spatial_weight_consistency)
         else:
+            # if we are either not optimizing over the deep network or we are computing the energy of the regularizer
 
-            # collection of smoothed vector fields
-            vcollection = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
-                                                                  self.get_gaussian_stds(), compute_std_gradients)
+            if smooth_to_compute_regularizer_energy and self.only_use_smallest_standard_deviation_for_regularization_energy:
+                # only smooth with the smallest standard deviation
+                smoothed_v = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
+                                                                     Variable(torch.from_numpy(np.array([self.smallest_gaussian_std])),requires_grad=False),
+                                                                     compute_std_gradients)
 
-            # just do global weighting here
-            smoothed_v = torch.zeros_like(vcollection[0, ...])
-            for i, w in enumerate(self.get_gaussian_weights()):
-                smoothed_v += w * vcollection[i, ...]
+            else:
+                # we can smooth over everything
+                # collection of smoothed vector fields
+                vcollection = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
+                                                                      self.get_gaussian_stds(), compute_std_gradients)
+
+                # just do global weighting here
+                smoothed_v = torch.zeros_like(vcollection[0, ...])
+                for i, w in enumerate(self.get_gaussian_weights()):
+                    smoothed_v += w * vcollection[i, ...]
 
         if vout is not None:
             vout[:] = smoothed_v
@@ -1241,7 +1260,7 @@ class AdaptiveSmoother(Smoother):
         return v
 
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
         pass
 
 

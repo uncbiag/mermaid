@@ -644,18 +644,17 @@ class GaussianFourierFilterGenerator(object):
             # now find the index that corresponds to this
             i = self._find_closest_sigma_index(sigma, self.sigmas_complex_gaussian_fourier_xsqr_filters)
 
-            need_to_recompute = False
             if self.sigmas_complex_gaussian_fourier_xsqr_filters[i] is None:
                 need_to_recompute = True
             elif self.complex_gaussian_fourier_xsqr_filters[i] is None:
                 need_to_recompute = True
-            #elif not torch.equal(sigma,self.sigmas_complex_gaussian_fourier_xsqr_filters[i]):
-            elif sigma!=self.sigmas_complex_gaussian_fourier_xsqr_filters[i]:
-                need_to_recompute = True
-            else:
+            elif np.isclose(sigma,self.sigmas_complex_gaussian_fourier_xsqr_filters[i]):
                 need_to_recompute = False
+            else:
+                need_to_recompute = True
 
             if need_to_recompute:
+                print('INFO: Recomputing gaussian xsqr filter for sigma={:.2f}'.format(sigma))
                 self.sigmas_complex_gaussian_fourier_xsqr_filters[i] = sigma #.clone()
                 self.complex_gaussian_fourier_xsqr_filters[i],_ = self._compute_complex_gaussian_fourier_xsqr_filter(sigma,self.max_indices[i])
 
@@ -680,18 +679,17 @@ class GaussianFourierFilterGenerator(object):
             # now find the index that corresponds to this
             i = self._find_closest_sigma_index(sigma,self.sigmas_complex_gaussian_fourier_filters)
 
-            need_to_recompute = False
             if self.sigmas_complex_gaussian_fourier_filters[i] is None:
                 need_to_recompute = True
             elif self.complex_gaussian_fourier_filters[i] is None:
                 need_to_recompute = True
-            #elif not torch.equal(sigma,self.sigmas_complex_gaussian_fourier_filters[i]):
-            elif sigma!=self.sigmas_complex_gaussian_fourier_filters[i]:
-                need_to_recompute = True
-            else:
+            elif np.isclose(sigma,self.sigmas_complex_gaussian_fourier_filters[i]):
                 need_to_recompute = False
+            else:
+                need_to_recompute = True
 
             if need_to_recompute:
+                print('INFO: Recomputing gaussian filter for sigma={:.2f}'.format(sigma))
                 self.sigmas_complex_gaussian_fourier_filters[i] = sigma #.clone()
                 self.complex_gaussian_fourier_filters[i], self.max_indices[i] = self._compute_complex_gaussian_fourier_filter(sigma)
 

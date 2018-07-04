@@ -327,7 +327,7 @@ def _compute_ring_radii(extent, nr_of_rings, randomize_radii, randomize_factor=0
 
     return rings_at
 
-def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,spacing,use_square_root_weighting=True,visualize=False):
+def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,spacing,kernel_weighting_type='w_K',visualize=False):
 
     nr_of_gaussians = len(multi_gaussian_stds)
     # create a velocity field from this momentum using a multi-Gaussian kernel
@@ -336,16 +336,21 @@ def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,sp
     t_weights = Variable(torch.from_numpy(weights),requires_grad=False)
     t_momentum = Variable(torch.from_numpy(m),requires_grad=False)
 
-    if use_square_root_weighting:
+    if kernel_weighting_type=='sqrt_w_K_sqrt_w':
         sqrt_weights = torch.sqrt(t_weights)
         sqrt_weighted_multi_smooth_v = ds.compute_weighted_multi_smooth_v(momentum=t_momentum, weights=sqrt_weights,
                                                                        gaussian_stds=multi_gaussian_stds,
                                                                        gaussian_fourier_filter_generator=gaussian_fourier_filter_generator)
-    else:
+    elif kernel_weighting_type=='w_K_w':
         # now create the weighted multi-smooth-v
         weighted_multi_smooth_v = ds.compute_weighted_multi_smooth_v(momentum=t_momentum, weights=t_weights,
                                                                   gaussian_stds=multi_gaussian_stds,
                                                                   gaussian_fourier_filter_generator=gaussian_fourier_filter_generator)
+    elif kernel_weighting_type=='w_K':
+        multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(t_momentum,
+                                                                 gaussian_fourier_filter_generator=gaussian_fourier_filter_generator,
+                                                                 sigma=Variable(torch.from_numpy(multi_gaussian_stds),requires_grad=False),
+                                                                 compute_std_gradients=False)
 
     # now compute the localized_velocity
     # compute velocity based on localized weights
@@ -363,14 +368,20 @@ def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,sp
         # let's smooth this on the fly, as the smoothing will be of form
         # w_i*K_i*(w_i m)
 
-        if use_square_root_weighting:
+        if kernel_weighting_type=='sqrt_w_K_sqrt_w':
             # roc should be: batch x multi_v x X x Y
             roc = torch.transpose(sqrt_weighted_multi_smooth_v[:, :, n, ...], 0, 1)
             yc = torch.sum(roc * sqrt_weights, dim=1)
-        else:
+        elif kernel_weighting_type=='w_K_w':
             # roc should be: batch x multi_v x X x Y
             roc = torch.transpose(weighted_multi_smooth_v[:, :, n, ...], 0, 1)
             yc = torch.sum(roc * t_weights, dim=1)
+        elif kernel_weighting_type=='w_K':
+            # roc should be: batch x multi_v x X x Y
+            roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
+            yc = torch.sum(roc * t_weights, dim=1)
+        else:
+            raise ValueError('Unknown kernel type: {}'.format(kernel_weighting_type))
 
         localized_v[:, n, ...] = yc.data.cpu().numpy()  # ret is: batch x channels x X x Y
 
@@ -426,7 +437,7 @@ def add_texture(im_orig):
     return im
 
 def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,weight_smoothing_std,multi_gaussian_stds,
-                             use_square_root_weighting,
+                             kernel_weighting_type,
                              randomize_momentum_on_circle,randomize_in_sectors,
                              put_weights_between_circles,
                              start_with_fluid_weight,
@@ -509,7 +520,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
                         publication_prefix='circle_init',
                         image_pair_nr=image_pair_nr)
 
-    localized_v_orig = compute_localized_velocity_from_momentum(m=m_orig,weights=weights_orig,multi_gaussian_stds=multi_gaussian_stds,sz=sz,spacing=spacing,use_square_root_weighting=use_square_root_weighting)
+    localized_v_orig = compute_localized_velocity_from_momentum(m=m_orig,weights=weights_orig,multi_gaussian_stds=multi_gaussian_stds,sz=sz,spacing=spacing,kernel_weighting_type=kernel_weighting_type)
 
     if publication_figures_directory is not None:
         plt.clf()
@@ -570,7 +581,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
 
         localized_v_warped = compute_localized_velocity_from_momentum(m=m_warped_source, weights=weights_warped,
                                                                       multi_gaussian_stds=multi_gaussian_stds, sz=sz,
-                                                                      spacing=spacing,use_square_root_weighting=use_square_root_weighting)
+                                                                      spacing=spacing,kernel_weighting_type=kernel_weighting_type)
 
         if publication_figures_directory is not None:
             plt.clf()
@@ -747,7 +758,8 @@ if __name__ == "__main__":
     parser.add_argument('--weights_not_fluid', required=False,type=str, default=None, help='weights for a non fluid circle; default=[0,0,0,1]')
     parser.add_argument('--weights_fluid', required=False,type=str, default=None, help='weights for a fluid circle; default=[0.2,0.5,0.2,0.1]')
     parser.add_argument('--weights_background', required=False,type=str, default=None, help='weights for the background; default=[0,0,0,1]')
-    parser.add_argument('--do_not_use_square_root_weighting', action='store_true', help='if set, square root weighting is not used when converting from momentum to velocity (otherwise (default) it is)')
+
+    parser.add_argument('--kernel_weighting_type', required=False, type=str, default='w_K', help='Which kernel weighting to use for integration. Specify as [w_K|w_K_w|sqrt_w_K_sqrt_w]; w_K is the default')
 
     parser.add_argument('--nr_of_angles', required=False, default=None, type=int, help='number of angles for randomize in sector') #10
     parser.add_argument('--multiplier_factor', required=False, default=None, type=float, help='value the random momentum is multiplied by') #1.0
@@ -789,10 +801,6 @@ if __name__ == "__main__":
 
     use_random_source = get_parameter_value_flag(args.use_random_source, params=params, params_name='use_random_source',
                                             default_val=False, params_description='if set then source image is already deformed (and no longer circular)')
-
-    use_square_root_weighting = not get_parameter_value_flag(args.do_not_use_square_root_weighting, params=params, params_name='do_not_use_square_root_weighting',
-                                                 default_val=False,
-                                                 params_description='if set then square root weighting for the kernel is not used, otherwise (default), it will be used')
 
     nr_of_angles = get_parameter_value(args.nr_of_angles,params,'nr_of_angles',10,'number of angles for randomize in sector')
     multiplier_factor = get_parameter_value(args.multiplier_factor,params,'multiplier_factor',0.5,'value the random momentum is multiplied by')
@@ -919,7 +927,7 @@ if __name__ == "__main__":
                                      weights_neutral=weights_neutral,
                                      weight_smoothing_std=args.weight_smoothing_std,
                                      multi_gaussian_stds=multi_gaussian_stds,
-                                     use_square_root_weighting=use_square_root_weighting,
+                                     kernel_weighting_type=args.kernel_weighting_type,
                                      randomize_momentum_on_circle=randomize_momentum_on_circle,
                                      randomize_in_sectors=randomize_in_sectors,
                                      put_weights_between_circles=put_weights_between_circles,
