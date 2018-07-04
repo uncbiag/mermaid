@@ -913,9 +913,6 @@ class DeepSmoothingModel(nn.Module):
         if self.weighting_type not in admissible_weighting_types:
             raise ValueError('Unknown weighting_type: needs to be  w_K|w_K_w|sqrt_w_K_sqrt_w')
 
-        self.use_square_root_weighting = self.params[('use_square_root_weighting', True, 'If set to true uses the square root of the weights to multiply the Gaussian on the left and the right')]
-        """If True the velocity field is computed by \sum_i w_i^0.5 K_i*(w_i^0.5 m), otherwise w_i is used directly"""
-
         self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty', 0.0, 'Penalized the squared gradient of the weights')]
         self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 0.1, 'Penalize the total variation of the weights if desired')]
 
@@ -1414,16 +1411,21 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         # multiply the velocity fields by the weights and sum over them
         # this is then the multi-Gaussian output
 
-        if self.use_square_root_weighting:
+        if self.weighting_type=='sqrt_w_K_sqrt_w':
             sqrt_weights = torch.sqrt(weights)
-            sqrt_weighted_multi_smooth_v = compute_weighted_multi_smooth_v(momentum=momentum, weights=sqrt_weights,
-                                                                           gaussian_stds=self.gaussian_stds,
-                                                                           gaussian_fourier_filter_generator=gaussian_fourier_filter_generator)
-        else:
+            sqrt_weighted_multi_smooth_v = compute_weighted_multi_smooth_v( momentum=momentum, weights=sqrt_weights, gaussian_stds=self.gaussian_stds,
+                                                                   gaussian_fourier_filter_generator=gaussian_fourier_filter_generator )
+        elif self.weighting_type=='w_K_w':
             # now create the weighted multi-smooth-v
-            weighted_multi_smooth_v = compute_weighted_multi_smooth_v(momentum=momentum, weights=weights,
-                                                                      gaussian_stds=self.gaussian_stds,
-                                                                      gaussian_fourier_filter_generator=gaussian_fourier_filter_generator)
+            weighted_multi_smooth_v = compute_weighted_multi_smooth_v( momentum=momentum, weights=weights, gaussian_stds=self.gaussian_stds,
+                                                                       gaussian_fourier_filter_generator=gaussian_fourier_filter_generator )
+        elif self.weighting_type=='w_K':
+            multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(momentum,
+                                                                     gaussian_fourier_filter_generator=gaussian_fourier_filter_generator,
+                                                                     sigma=Variable(torch.from_numpy(self.gaussian_stds),requires_grad=False),
+                                                                     compute_std_gradients=False)
+        else:
+            raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
 
         # now we apply this weight across all the channels; weight output is B x weights x X x Y
         for n in range(self.dim):
@@ -1436,14 +1438,20 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             # let's smooth this on the fly, as the smoothing will be of form
             # w_i*K_i*(w_i m)
 
-            if self.use_square_root_weighting:
+            if self.weighting_type == 'sqrt_w_K_sqrt_w':
                 # roc should be: batch x multi_v x X x Y
                 roc = torch.transpose(sqrt_weighted_multi_smooth_v[:, :, n, ...], 0, 1)
                 yc = torch.sum(roc * sqrt_weights, dim=1)
-            else:
+            elif self.weighting_type == 'w_K_w':
                 # roc should be: batch x multi_v x X x Y
                 roc = torch.transpose(weighted_multi_smooth_v[:, :, n, ...], 0, 1)
                 yc = torch.sum(roc * weights, dim=1)
+            elif self.weighting_type == 'w_K':
+                # roc should be: batch x multi_v x X x Y
+                roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
+                yc = torch.sum(roc * weights, dim=1)
+            else:
+                raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
 
             ret[:, n, ...] = yc  # ret is: batch x channels x X x Y
 
