@@ -549,7 +549,7 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
         plt.suptitle('Pre-Weights: pair id {:03d}'.format(print_figure_id))
 
         if print_figure_id is not None:
-            plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + 'weights_pre.pdf'))
+            plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + '_weights_pre.pdf'))
         else:
             plt.show()
 
