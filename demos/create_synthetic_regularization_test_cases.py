@@ -1,4 +1,6 @@
 from __future__ import print_function
+from future.utils import native_str
+
 from builtins import str
 from builtins import range
 
@@ -785,7 +787,7 @@ if __name__ == "__main__":
     nr_of_pairs_to_generate = args.nr_of_pairs_to_generate
 
     nr_of_circles_to_generate = get_parameter_value(args.nr_of_circles_to_generate, params,'nr_of_circles_to_generate', 2, 'number of circles for the synthetic data')
-    circle_extent = get_parameter_value(args.circle_extent, params, 'circle_extent', 0.02, 'Size of largest circle; image is [-0.5,0.5]^2')
+    circle_extent = get_parameter_value(args.circle_extent, params, 'circle_extent', 0.2, 'Size of largest circle; image is [-0.5,0.5]^2')
 
     randomize_momentum_on_circle = get_parameter_value_flag(not args.do_not_randomize_momentum,params=params, params_name='randomize_momentum_on_circle',
                                                             default_val=True, params_description='randomizes the momentum on the circles')
@@ -865,7 +867,7 @@ if __name__ == "__main__":
     sz = [1, 1, sz[0], sz[1]]
     spacing = 1.0 / (np.array(sz[2:]) - 1)
 
-    output_dir = args.output_directory
+    output_dir = os.path.normpath(args.output_directory)+'_kernel_weighting_type_' + native_str(args.kernel_weighting_type)
 
     image_output_dir = os.path.join(output_dir,'brain_affine_icbm')
     label_output_dir = os.path.join(output_dir,'label_affine_icbm')

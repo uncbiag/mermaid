@@ -916,14 +916,36 @@ class DeepSmoothingModel(nn.Module):
         self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty', 0.0, 'Penalized the squared gradient of the weights')]
         self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 0.1, 'Penalize the total variation of the weights if desired')]
 
-        self.do_input_standardization = self.params[('do_input_standardization',True,'if true, subtracts the mean from any image input and leaves momentum as is')]
-        """if true subtracts the mean from all image input before running it through the network"""
+        self.standardize_input_images = self.params[('standardize_input_images',True,'if true, subtracts the value specified by standardize_subtract_from_input_images followed by division by standardize_divide_input_images from all input images to the network')]
+        """if true then we subtract standardize_subtract_from_input_images from all network input images"""
+
+        self.standardize_subtract_from_input_images = self.params[('standardize_subtract_from_input_images',0.5,'Subtracts this value from all images input into a network')]
+        """Subtracts this value from all images input into a network"""
+
+        self.standardize_divide_input_images = self.params[('standardize_divide_input_images',1.0,'Value to divide the input images by *AFTER* subtraction')]
+        """Value to divide the input images by *AFTER* subtraction"""
+
+        self.standardize_input_momentum = self.params[('standardize_input_momentum', True, 'if true, subtracts the value specified by standardize_subtract_from_input_momentum followed by division by standardize_divide_input_momentum from the input momentum to the network')]
+        """if true then we subtract standardize_subtract_from_input_momentum from the network input momentum"""
+
+        self.standardize_subtract_from_input_momentum = self.params[('standardize_subtract_from_input_momentum', 0.0, 'Subtracts this value from the input momentum into a network')]
+        """Subtracts this value from the momentum input to a network"""
+
+        self.standardize_divide_input_momentum = self.params[('standardize_divide_input_momentum', 1.0, 'Value to divide the input momentum by *AFTER* subtraction')]
+        """Value to divide the input momentum by *AFTER* subtraction"""
+
+        self.standardize_display_standardization = self.params[('standardize_display_standardization',True,'Outputs statistical values before and after standardization')]
+        """Outputs statistical values before and after standardization"""
 
         self.nr_of_gaussians = nr_of_gaussians
         self.gaussian_stds = gaussian_stds
 
         self.computed_weights = None
         """stores the computed weights if desired"""
+
+        self.computed_pre_weights = None
+        """stores the computed pre weights if desired"""
+
         self.current_penalty = None
         """to stores the current penalty (for example OMT) after running through the model"""
 
@@ -933,6 +955,78 @@ class DeepSmoothingModel(nn.Module):
         self.deep_network_weight_smoother = None
         """The smoother that does the smoothing of the weights; needs to be initialized in the forward model"""
 
+
+    def _display_stats_before_after(self, Ib, Ia, iname):
+
+        Ib_min = Ib.min().data.cpu().numpy()[0]
+        Ib_max = Ib.max().data.cpu().numpy()[0]
+        Ib_mean = Ib.mean().data.cpu().numpy()[0]
+        Ib_std = Ib.std().data.cpu().numpy()[0]
+
+        Ia_min = Ia.min().data.cpu().numpy()[0]
+        Ia_max = Ia.max().data.cpu().numpy()[0]
+        Ia_mean = Ia.mean().data.cpu().numpy()[0]
+        Ia_std = Ia.std().data.cpu().numpy()[0]
+
+        print('{}: before: [{:.2f},{:.2f},{:.2f}]({:.2f}); after: [{:.2f},{:.2f},{:.2f}]({:.2f})'.format(iname, Ib_min,Ib_mean,Ib_max,Ib_std,Ia_min,Ia_mean,Ia_max,Ia_std))
+
+    def _standardize_input_if_necessary(self, I, momentum, I0, I1):
+
+        sI = None
+        sM = None
+        sI0 = None
+        sI1 = None
+
+        # first standardize the input images
+
+        if self.standardize_input_images:
+
+            if not np.isclose(self.standardize_divide_input_images,1.0):
+                sI = (I - self.standardize_subtract_from_input_images)/self.standardize_divide_input_images
+                if self.use_source_image_as_input:
+                    sI0 =  (I0 - self.standardize_subtract_from_input_images)/self.standardize_divide_input_images
+                if self.use_target_image_as_input:
+                    sI1 = (I1 - self.standardize_subtract_from_input_images)/self.standardize_divide_input_images
+            else:
+                sI = I - self.standardize_subtract_from_input_images
+                if self.use_source_image_as_input:
+                    sI0 = I0 - self.standardize_subtract_from_input_images
+                if self.use_target_image_as_input:
+                    sI1 = I1 - self.standardize_subtract_from_input_images
+
+            if self.standardize_display_standardization:
+                self._display_stats_before_after(I,sI,'I')
+                if self.use_source_image_as_input:
+                    self._display_stats_before_after(I0, sI0, 'I0')
+                if self.use_target_image_as_input:
+                    self._display_stats_before_after(I1, sI1, 'I1')
+
+        else: # if we do not standardize the input images, just do the I/O mapping
+
+            sI = I
+            if self.use_source_image_as_input:
+                sI0 = I0
+            if self.use_target_image_as_input:
+                sI1 = I1
+
+        # now standardize the input momentum
+
+        if self.use_momentum_as_input:
+            if self.standardize_input_momentum:
+                if not np.isclose(self.standardize_divide_input_momentum, 1.0):
+                    sM = (momentum - self.standardize_subtract_from_input_momentum)/self.standardize_divide_input_momentum
+                else:
+                    sM = momentum - self.standardize_subtract_from_input_momentum
+
+                if self.standardize_display_standardization:
+                    self._display_stats_before_after(momentum,sM,'m')
+
+            else:
+                sM = momentum
+
+        return sI, sM, sI0, sI1
+
+
     def get_omt_weight_penalty(self):
         return self.omt_weight_penalty
 
@@ -941,19 +1035,21 @@ class DeepSmoothingModel(nn.Module):
 
     def _initialize_weights(self):
 
-        self.weight_initalization_constant = self.params[('weight_initialization_constant', 0.01, 'Weights are initialized via normal_(0, math.sqrt(weight_initialization_constant / n))')]
-        print('WARNING: weight initialization ENABLED')
+        print('WARNING: weight initialization DISABLED; using pyTorch default network initialization, which is probably good enough (famous last words).')
 
-        for m in self.modules():
-            if isinstance(m, DimConv(self.dim)):
-                n = m.out_channels
-                for d in range(self.dim):
-                    n *= m.kernel_size[d]
-                m.weight.data.normal_(0, math.sqrt(self.weight_initalization_constant / n))
-            elif isinstance(m, DimBatchNorm(self.dim)):
-                pass
-            elif isinstance(m, nn.Linear):
-                pass
+        # self.weight_initalization_constant = self.params[('weight_initialization_constant', 0.01, 'Weights are initialized via normal_(0, math.sqrt(weight_initialization_constant / n))')]
+        # print('WARNING: weight initialization ENABLED')
+        #
+        # for m in self.modules():
+        #     if isinstance(m, DimConv(self.dim)):
+        #         n = m.out_channels
+        #         for d in range(self.dim):
+        #             n *= m.kernel_size[d]
+        #         m.weight.data.normal_(0, math.sqrt(self.weight_initalization_constant / n))
+        #     elif isinstance(m, DimBatchNorm(self.dim)):
+        #         pass
+        #     elif isinstance(m, nn.Linear):
+        #         pass
 
     def get_number_of_image_channels_from_state_dict(self, state_dict, dim):
         """legacy; to support velocity fields as input channels"""
@@ -1313,31 +1409,29 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         sz_weight = [sz_weight[1]] + [sz_weight[0]] + sz_weight[3:]
 
         # if the weights should be stored (for debugging), create the tensor to store them here
-        if retain_weights and self.computed_weights is None:
-            print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')
-            # create storage; batch x size v x X x Y
-            self.computed_weights = MyTensor(*sz_weight)
+        if retain_weights:
+            if self.computed_weights is None:
+                print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')
+                # create storage; batch x size v x X x Y
+                self.computed_weights = MyTensor(*sz_weight)
+
+            if self.deep_network_local_weight_smoothing > 0:
+                if self.computed_pre_weights is None:
+                    print('DEBUG: retaining smoother pre weights - turn off to minimize memory consumption')
+                    self.computed_pre_weights = MyTensor(*sz_weight)
 
         # here is the actual network; maybe abstract this out later
-        if self.do_input_standardization:
-            # network input
-            x = I - I.mean()
-            if self.use_momentum_as_input:
-                # let's not remove the mean from the momentum
-                x = torch.cat([x, momentum], dim=1)
-            if self.use_source_image_as_input:
-                x = torch.cat([x, additional_inputs['I0'] - additional_inputs['I0'].mean()], dim=1)
-            if self.use_target_image_as_input:
-                x = torch.cat([x, additional_inputs['I1'] - additional_inputs['I1'].mean()], dim=1)
-        else:
-            # network input
-            x = I
-            if self.use_momentum_as_input:
-                x = torch.cat([x, momentum], dim=1)
-            if self.use_source_image_as_input:
-                x = torch.cat([x, additional_inputs['I0']], dim=1)
-            if self.use_target_image_as_input:
-                x = torch.cat([x, additional_inputs['I1']], dim=1)
+
+        sI,sM,sI0,sI1 = self._standardize_input_if_necessary(I,momentum,additional_inputs['I0'],additional_inputs['I1'])
+
+        # network input
+        x = sI
+        if self.use_momentum_as_input:
+            x = torch.cat([x, sM], dim=1)
+        if self.use_source_image_as_input:
+            x = torch.cat([x, sI0], dim=1)
+        if self.use_target_image_as_input:
+            x = torch.cat([x, sI1], dim=1)
 
         if self.use_one_encoder_decoder_block:
             encoder_output = self.encoder_1(x)
@@ -1371,10 +1465,6 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         else:
             weights = F.softmax(decoder_output, dim=1)
 
-        # enforce minimum weight for numerical reasons
-        # weights = torch.clamp(weights,0.0,1.0)
-        weights = _project_weights_to_min(weights, self.gaussianWeight_min)
-
         # compute the total variation penalty
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
@@ -1391,6 +1481,9 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             for g in range(self.nr_of_gaussians):
                 diffusion_penalty += self.compute_diffusion(weights[:, g, ...])
 
+        # enforce minimum weight for numerical reasons
+        weights = _project_weights_to_min(weights, self.gaussianWeight_min)
+
         # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
         if self.deep_network_local_weight_smoothing > 0 and self.deep_network_weight_smoother is None:
             import pyreg.smoother_factory as sf
@@ -1402,6 +1495,11 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
 
         if self.deep_network_local_weight_smoothing > 0:  # and retain_weights:
             # now we smooth all the weights
+            if retain_weights:
+                # todo: change visualization to work with this new format:
+                # B x weights x X x Y instead of weights x B x X x Y
+                self.computed_pre_weights[:] = weights.data
+
             weights = self.deep_network_weight_smoother.smooth(weights)
             # make sure they are all still positive (#todo: may not be necessary, since we set a minumum weight above now)
             weights = torch.clamp(weights, 0.0, 1.0)
@@ -1653,31 +1751,27 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         sz_weight = [sz_weight[1]] + [sz_weight[0]] + sz_weight[3:]
 
         # if the weights should be stored (for debugging), create the tensor to store them here
-        if retain_weights and self.computed_weights is None:
-            print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')
-            # create storage; batch x size v x X x Y
-            self.computed_weights = MyTensor(*sz_weight)
+        if retain_weights:
+            if self.computed_weights is None:
+                print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')
+                # create storage; batch x size v x X x Y
+                self.computed_weights = MyTensor(*sz_weight)
 
-        if self.do_input_standardization:
-            # network input
-            x = I-I.mean()
-            if self.use_momentum_as_input:
-                # let's not remove the mean from the momentum
-                x = torch.cat([x, momentum], dim=1)
-            if self.use_source_image_as_input:
-                x = torch.cat([x, additional_inputs['I0']-additional_inputs['I0'].mean()], dim=1)
-            if self.use_target_image_as_input:
-                x = torch.cat([x, additional_inputs['I1']-additional_inputs['I1'].mean()], dim=1)
-        else:
-            # network input
-            x = I
-            if self.use_momentum_as_input:
-                x = torch.cat([x,momentum],dim=1)
-            if self.use_source_image_as_input:
-                x = torch.cat([x, additional_inputs['I0']], dim=1)
-            if self.use_target_image_as_input:
-                x = torch.cat([x,additional_inputs['I1']],dim=1)
+            if self.deep_network_local_weight_smoothing > 0:
+                if self.computed_pre_weights is None:
+                    print('DEBUG: retaining smoother pre weights - turn off to minimize memory consumption')
+                    self.computed_pre_weights = MyTensor(*sz_weight)
 
+        sI, sM, sI0, sI1 = self._standardize_input_if_necessary(I, momentum, additional_inputs['I0'],additional_inputs['I1'])
+
+        # network input
+        x = sI
+        if self.use_momentum_as_input:
+            x = torch.cat([x, sM], dim=1)
+        if self.use_source_image_as_input:
+            x = torch.cat([x, sI0], dim=1)
+        if self.use_target_image_as_input:
+            x = torch.cat([x, sI1], dim=1)
 
         # now let's apply all the convolution layers, until the last
         # (because the last one is not relu-ed
@@ -1753,6 +1847,11 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
 
         if self.deep_network_local_weight_smoothing>0:
             # now we smooth all the weights
+            if retain_weights:
+                # todo: change visualization to work with this new format:
+                # B x weights x X x Y instead of weights x B x X x Y
+                self.computed_pre_weights[:] = weights.data
+
             weights = self.deep_network_weight_smoother.smooth(weights)
             # make sure they are all still positive (#todo: may not be necessary, since we set a minumum weight above now; but risky as we take the square root below)
             weights = torch.clamp(weights,0.0,1.0)
