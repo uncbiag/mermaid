@@ -1066,6 +1066,9 @@ class DeepSmoothingModel(nn.Module):
     def get_computed_weights(self):
         return self.computed_weights
 
+    def get_computed_pre_weights(self):
+        return self.computed_pre_weights
+
     def compute_diffusion(self, d):
         # just do the standard component-wise Euclidean squared norm of the gradient
 

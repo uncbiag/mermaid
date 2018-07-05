@@ -940,6 +940,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         self.debug_retain_computed_local_weights = False
         self.debug_computed_local_weights = None
+        self.debug_computed_local_pre_weights = None
 
         self._is_optimizing_over_deep_network = True
 
@@ -949,6 +950,9 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
     def get_debug_computed_local_weights(self):
         return self.debug_computed_local_weights
+
+    def get_debug_computed_local_pre_weights(self):
+        return self.debug_computed_local_pre_weights
 
     def set_debug_retain_computed_local_weights(self,val=True):
         self.debug_retain_computed_local_weights = val
@@ -1186,6 +1190,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                                      retain_weights=self.debug_retain_computed_local_weights)
 
                 self.debug_computed_local_weights = self.ws.get_computed_weights()
+                self.debug_computed_local_pre_weights = self.ws.get_computed_pre_weights()
             else:
                 smoothed_v = self.ws(I=I, additional_inputs=additional_inputs, global_multi_gaussian_weights=self.get_gaussian_weights(),
                                      gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
