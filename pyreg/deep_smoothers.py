@@ -955,6 +955,14 @@ class DeepSmoothingModel(nn.Module):
         self.deep_network_weight_smoother = None
         """The smoother that does the smoothing of the weights; needs to be initialized in the forward model"""
 
+        """These are parameters for the edge detector; put them here so that they are generated in the json file"""
+        """This allows propagating the parameter between stages"""
+        """There are not used for anything directly here"""
+        self.params[('edge_penalty_gamma', 10.0, 'Constant for edge penalty: 1.0/(1.0+gamma*||\\nabla I||*min(spacing)')]
+        self.params[('edge_penalty_write_to_file', False,'If set to True the edge penalty is written into a file so it can be debugged')]
+        self.params[('edge_penalty_filename', 'DEBUG_edge_penalty.nrrd', 'Edge penalty image')]
+        self.params[('edge_penalty_terminate_after_writing', False,
+                                                       'Terminates the program after the edge file has been written; otherwise file may be constantly overwritten')]
 
     def _display_stats_before_after(self, Ib, Ia, iname):
 

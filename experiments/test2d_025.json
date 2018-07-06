@@ -17,6 +17,10 @@
                     "deep_smoother": {
                         "deep_network_local_weight_smoothing": 0.02, 
                         "diffusion_weight_penalty": 0.0, 
+                        "edge_penalty_filename": "DEBUG_edge_penalty.nrrd", 
+                        "edge_penalty_gamma": 15.0, 
+                        "edge_penalty_terminate_after_writing": true, 
+                        "edge_penalty_write_to_file": true, 
                         "estimate_around_global_weights": true, 
                         "kernel_sizes": [
                             7, 
@@ -63,7 +67,7 @@
                     "omt_use_log_transformed_std": true, 
                     "omt_weight_penalty": 10.0, 
                     "only_use_smallest_standard_deviation_for_regularization_energy": true, 
-                    "optimize_over_deep_network": false, 
+                    "optimize_over_deep_network": true, 
                     "optimize_over_smoother_stds": false, 
                     "optimize_over_smoother_weights": false, 
                     "start_optimize_over_smoother_parameters_at_iteration": 0, 
@@ -93,7 +97,7 @@
             "parameter_output_dir": "experimental_results_synth_2d/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_10.000000/results", 
             "show_sample_optimizer_output": true, 
             "shuffle": true, 
-            "start_from_previously_saved_parameters": false, 
+            "start_from_previously_saved_parameters": true, 
             "verbose_output": false
         }, 
         "name": "sgd", 
