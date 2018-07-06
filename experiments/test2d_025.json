@@ -1,116 +1,128 @@
 {
     "data_loader": {
-        "intensity_normalize": true,
-        "normalize_spacing": true,
+        "intensity_normalize": false, 
+        "normalize_spacing": true, 
         "squeeze_image": true
-    },
+    }, 
     "model": {
         "deformation": {
-            "map_low_res_factor": 0.50,
+            "compute_similarity_measure_at_low_res": false, 
+            "map_low_res_factor": 0.5, 
             "use_map": true
-        },
+        }, 
         "registration_model": {
             "forward_model": {
-                "number_of_time_steps": 15,
+                "number_of_time_steps": 15, 
                 "smoother": {
                     "deep_smoother": {
-                        "diffusion_weight_penalty": 0.0,
-                        "do_input_standardization": true,
-                        "estimate_around_global_weights": true,
+                        "deep_network_local_weight_smoothing": 0.02, 
+                        "diffusion_weight_penalty": 0.0, 
+                        "estimate_around_global_weights": true, 
                         "kernel_sizes": [
-                            7,
+                            7, 
                             7
-                        ],
+                        ], 
                         "number_of_features_per_layer": [
                             20
-                        ],
-                        "total_variation_weight_penalty": 0.1,
-                        "type": "simple_consistent",
-                        "use_batch_normalization": false,
-                        "use_momentum_as_input": true,
-                        "use_relu": true,
-                        "use_source_image_as_input": false,
-                        "use_target_image_as_input": false
-
-                    },
-                    "encourage_spatial_weight_consistency": false,
-                    "gaussian_std_min": 0.01,
-                    "gaussian_weight_min": 0.0001,
+                        ], 
+                        "standardize_display_standardization": true, 
+                        "standardize_divide_input_images": 2.0, 
+                        "standardize_divide_input_momentum": 1.0, 
+                        "standardize_input_images": true, 
+                        "standardize_input_momentum": true, 
+                        "standardize_subtract_from_input_images": 1.0, 
+                        "standardize_subtract_from_input_momentum": 0.0, 
+                        "total_variation_weight_penalty": 0.1, 
+                        "type": "simple_consistent", 
+                        "use_batch_normalization": false, 
+                        "use_momentum_as_input": true, 
+                        "use_relu": true, 
+                        "use_source_image_as_input": false, 
+                        "use_target_image_as_input": false, 
+                        "weighting_type": "w_K"
+                    }, 
+                    "encourage_spatial_weight_consistency": false, 
+                    "freeze_parameters": false, 
+                    "gaussian_std_min": 0.01, 
+                    "gaussian_weight_min": 0.0001, 
+                    "load_dnn_parameters_from_this_file": "", 
                     "multi_gaussian_stds": [
-                        0.01,
-                        0.05,
-                        0.10,
-			0.2
-                    ],
+                        0.01, 
+                        0.05, 
+                        0.1, 
+                        0.2
+                    ], 
                     "multi_gaussian_weights": [
-                        0.25,
-			0.25,
-			0.25,
-			0.25
-                    ],
-                    "network_penalty": 0.0,
-		    "omt_power": 1.0,
-                    "omt_use_log_transformed_std": true,
-                    "omt_weight_penalty": 10.0,
-                    "optimize_over_deep_network": false,
-                    "optimize_over_smoother_stds": false,
-                    "optimize_over_smoother_weights": false,
-                    "start_optimize_over_smoother_parameters_at_iteration": 0,
+                        0.0, 
+                        0.0, 
+                        0.0, 
+                        1.0
+                    ], 
+                    "network_penalty": 0.0, 
+                    "omt_power": 1.0, 
+                    "omt_use_log_transformed_std": true, 
+                    "omt_weight_penalty": 10.0, 
+                    "only_use_smallest_standard_deviation_for_regularization_energy": true, 
+                    "optimize_over_deep_network": false, 
+                    "optimize_over_smoother_stds": false, 
+                    "optimize_over_smoother_weights": false, 
+                    "start_optimize_over_smoother_parameters_at_iteration": 0, 
                     "type": "learned_multiGaussianCombination"
                 }
-            },
+            }, 
             "loss": {
-                "display_max_displacement": false,
-                "limit_displacement": false,
+                "display_max_displacement": false, 
+                "limit_displacement": false, 
                 "max_displacement": 0.25
-            },
+            }, 
             "similarity_measure": {
-                "develop_mod_on": false,
-                "sigma": 0.1,
+                "develop_mod_on": false, 
+                "sigma": 0.1, 
                 "type": "ncc"
-            },
+            }, 
+            "spline_order": 1, 
             "type": "svf_vector_momentum_map"
         }
-    },
+    }, 
     "optimizer": {
         "batch_settings": {
-            "batch_size": 100,
-            "checkpoint_interval": 0,
-            "nr_of_epochs": 10,
-            "num_workers": 0,
-            "parameter_output_dir": "test_out",
-            "show_sample_optimizer_output": true,
-            "shuffle": true,
-            "start_from_previously_saved_parameters": false,
+            "batch_size": 100, 
+            "checkpoint_interval": 0, 
+            "nr_of_epochs": 1, 
+            "num_workers": 0, 
+            "parameter_output_dir": "experimental_results_synth_2d/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_10.000000/results", 
+            "show_sample_optimizer_output": true, 
+            "shuffle": true, 
+            "start_from_previously_saved_parameters": false, 
             "verbose_output": false
-        },
-        "name": "sgd",
+        }, 
+        "name": "sgd", 
         "scheduler": {
-            "factor": 0.75,
-            "patience": 2,
+            "factor": 0.75, 
+            "patience": 2, 
             "verbose": true
-        },
+        }, 
         "sgd": {
-            "also_eliminate_shared_state_between_samples_during_first_epoch": false,
+            "also_eliminate_shared_state_between_samples_during_first_epoch": false, 
             "individual": {
-                "dampening": 0.0,
-                "lr": 1e-03,
-                "momentum": 0.9,
-                "nesterov": true,
+                "dampening": 0.0, 
+                "lr": 0.01, 
+                "momentum": 0.9, 
+                "nesterov": true, 
                 "weight_decay": 0.0
-            },
+            }, 
             "shared": {
-                "dampening": 0.0,
-                "lr": 1e-03,
-                "momentum": 0.9,
-                "nesterov": true,
+                "dampening": 0.0, 
+                "lr": 0.01, 
+                "momentum": 0.9, 
+                "nesterov": true, 
                 "weight_decay": 0.0
             }
-        },
+        }, 
         "single_scale": {
-            "nr_of_iterations": 5,
+            "nr_of_iterations": 5, 
             "rel_ftol": 1e-15
-        },
+        }, 
         "use_step_size_scheduler": true
     }
 }

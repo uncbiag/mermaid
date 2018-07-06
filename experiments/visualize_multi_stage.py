@@ -520,7 +520,31 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
         plt.suptitle('Weights: pair id {:03d}'.format(print_figure_id))
 
         if print_figure_id is not None:
-            plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + '_weights.pdf'))
+            plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + '_weights_adaptive_range.pdf'))
+        else:
+            plt.show()
+
+    if clean_print_path is None and local_weights is not None:
+        plt.clf()
+
+        nr_of_gaussians = local_weights.size()[1]
+
+        for g in range(nr_of_gaussians):
+            plt.subplot(2, 4, g + 1)
+            clw = local_weights[0, g, ...].cpu().numpy()
+            plt.imshow(cond_flip((local_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask,flip_axes), vmin=0.0, vmax=1.0)
+            plt.title("{:.2f}".format(stds.data.cpu()[g]))
+            plt.colorbar()
+
+        plt.subplot(2, 4, 8)
+        osw = compute_overall_std(local_weights[0, ...].cpu(), stds.data.cpu())
+
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), vmin=0, vmax=(stds.data.cpu().numpy()).max())
+        plt.colorbar()
+        plt.suptitle('Weights: pair id {:03d}'.format(print_figure_id))
+
+        if print_figure_id is not None:
+            plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + '_weights_01_range.pdf'))
         else:
             plt.show()
 

@@ -7,9 +7,9 @@ from builtins import range
 import set_pyreg_paths
 
 import matplotlib as matplt
-from pyreg.config_parser import MATPLOTLIB_AGG
-if MATPLOTLIB_AGG:
-    matplt.use('Agg')
+#from pyreg.config_parser import MATPLOTLIB_AGG
+#if MATPLOTLIB_AGG:
+#    matplt.use('Agg')
 
 import matplotlib.pyplot as plt
 import scipy.ndimage as ndimage
@@ -424,15 +424,15 @@ def compute_map_from_v(localized_v,sz,spacing):
 
 def add_texture(im_orig):
     sz = im_orig.shape
-    rand_noise = np.random.random(sz[2:])
+    rand_noise = np.random.random(sz[2:])-0.5
     rand_noise = rand_noise.view().reshape(sz)
     r_params = pars.ParameterDict()
     r_params['smoother']['type'] = 'gaussian'
-    r_params['smoother']['gaussian_std'] = 0.015
+    r_params['smoother']['gaussian_std'] = 0.02
     s_r = sf.SmootherFactory(sz[2::], spacing).create_smoother(r_params)
 
     rand_noise_smoothed = s_r.smooth(AdaptVal(Variable(torch.from_numpy(rand_noise), requires_grad=False))).data.cpu().numpy()
-    rand_noise_smoothed /= rand_noise_smoothed.max()
+    rand_noise_smoothed /= 2*rand_noise_smoothed.max()
 
     im = im_orig + rand_noise_smoothed
 
@@ -541,6 +541,15 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
             plt.imshow(ring_im[0, 0, ...],origin='lower')
             plt.axis('off')
             plt.savefig(os.path.join(publication_figures_directory, 'ring_im_orig_textured_{:d}.pdf'.format(image_pair_nr)),bbox_inches='tight',pad_inches=0)
+
+        # plt.clf()
+        # plt.subplot(1,2,1)
+        # plt.imshow(ring_im[0,0,...],clim=(-0.5,2.5))
+        # plt.colorbar()
+        # plt.subplot(1,2,2)
+        # plt.imshow(ring_im_orig[0, 0, ...], clim=(-0.5, 2.5))
+        # plt.colorbar()
+        # plt.show()
 
     else:
         ring_im = ring_im_orig
