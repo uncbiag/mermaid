@@ -14,6 +14,7 @@ import pyreg.finite_differences as fd
 import pyreg.module_parameters as pars
 import pyreg.fileio as fio
 import pyreg.custom_pytorch_extensions as ce
+import pyreg.utils as utils
 
 import os
 import matplotlib.pyplot as plt
@@ -1485,7 +1486,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             for g in range(self.nr_of_gaussians):
                 # total_variation_penalty += self.compute_total_variation(weights[:,g,...])
                 c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
-                total_variation_penalty += (g_I * c_local_norm_grad).sum() * self.volumeElement / batch_size
+                total_variation_penalty += (utils.remove_infs_from_variable(g_I * c_local_norm_grad)).sum() * self.volumeElement / batch_size
 
         diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.diffusion_weight_penalty > 0:
@@ -1837,7 +1838,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             for g in range(self.nr_of_gaussians):
                 # total_variation_penalty += self.compute_total_variation(weights[:,g,...])
                 c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
-                total_variation_penalty += (g_I * c_local_norm_grad).sum() * self.volumeElement / batch_size
+                total_variation_penalty += (utils.remove_infs_from_variable(g_I * c_local_norm_grad)).sum() * self.volumeElement / batch_size
 
         diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.diffusion_weight_penalty > 0:
