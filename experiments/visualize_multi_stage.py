@@ -324,6 +324,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     v = smoother.smooth(m, None, dictionary_to_pass_to_smoother)
 
     local_weights = smoother.get_debug_computed_local_weights()
+    local_pre_weights = smoother.get_debug_computed_local_pre_weights()
     default_multi_gaussian_weights = smoother.get_default_multi_gaussian_weights()
 
     model_dict = dict()
@@ -333,6 +334,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     model_dict['lowResSpacing'] = lowResSpacing
     model_dict['lowResSize'] = lowResSize
     model_dict['local_weights'] = local_weights
+    model_dict['local_pre_weights'] = local_pre_weights
     model_dict['default_multi_gaussian_weights'] = default_multi_gaussian_weights
     model_dict['stds'] = smoother.get_gaussian_stds()
     model_dict['model'] = model
@@ -397,7 +399,7 @@ def cond_flip(v,f):
     else:
         return v
 
-def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,print_path=None, clean_print_path=None, print_figure_id = None, slice_mode=0,flip_axes=False,params=None):
+def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,spacing,lowResSize,print_path=None, clean_print_path=None, print_figure_id = None, slice_mode=0,flip_axes=False,params=None):
 
     if local_weights is not None:
         osw = compute_overall_std(local_weights[0,...].cpu(), stds.data.cpu())
@@ -515,10 +517,63 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
         cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
         plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
         plt.colorbar()
-        plt.suptitle('Weights')
+        plt.suptitle('Weights: pair id {:03d}'.format(print_figure_id))
 
         if print_figure_id is not None:
-            plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + '_weights.pdf'))
+            plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + '_weights_adaptive_range.pdf'))
+        else:
+            plt.show()
+
+    if clean_print_path is None and local_weights is not None:
+        plt.clf()
+
+        nr_of_gaussians = local_weights.size()[1]
+
+        for g in range(nr_of_gaussians):
+            plt.subplot(2, 4, g + 1)
+            clw = local_weights[0, g, ...].cpu().numpy()
+            plt.imshow(cond_flip((local_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask,flip_axes), vmin=0.0, vmax=1.0)
+            plt.title("{:.2f}".format(stds.data.cpu()[g]))
+            plt.colorbar()
+
+        plt.subplot(2, 4, 8)
+        osw = compute_overall_std(local_weights[0, ...].cpu(), stds.data.cpu())
+
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), vmin=0, vmax=(stds.data.cpu().numpy()).max())
+        plt.colorbar()
+        plt.suptitle('Weights: pair id {:03d}'.format(print_figure_id))
+
+        if print_figure_id is not None:
+            plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + '_weights_01_range.pdf'))
+        else:
+            plt.show()
+
+    if clean_print_path is None and local_pre_weights is not None:
+        plt.clf()
+
+        nr_of_gaussians = local_pre_weights.size()[1]
+
+        for g in range(nr_of_gaussians):
+            plt.subplot(2, 4, g + 1)
+            clw = local_pre_weights[0, g, ...].cpu().numpy()
+            cmin = clw[lowRes_source_mask == 1].min()
+            cmax = clw[lowRes_source_mask == 1].max()
+            plt.imshow(cond_flip((local_pre_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
+            plt.title("{:.2f}".format(stds.data.cpu()[g]))
+            plt.colorbar()
+
+        plt.subplot(2, 4, 8)
+        osw = compute_overall_std(local_pre_weights[0, ...].cpu(), stds.data.cpu())
+
+        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
+        plt.colorbar()
+
+        plt.suptitle('Pre-Weights: pair id {:03d}'.format(print_figure_id))
+
+        if print_figure_id is not None:
+            plt.savefig(os.path.join(print_path,'{:0>3d}_sm{:d}'.format(print_figure_id,slice_mode) + '_weights_pre.pdf'))
         else:
             plt.show()
 
@@ -558,6 +613,43 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,spacing,lowResSize,
         plt.axis('image')
         plt.axis('off')
         plt.savefig(os.path.join(clean_print_path, 'weight_image_overall_std_with_colorbar_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
+
+    if clean_print_path is not None and local_pre_weights is not None:
+        # now also create clean prints
+        nr_of_gaussians = local_pre_weights.size()[1]
+
+        for g in range(nr_of_gaussians):
+            plt.clf()
+            clw = local_pre_weights[0, g, ...].cpu().numpy()
+            #cmin = clw[lowRes_source_mask == 1].min()
+            #cmax = clw[lowRes_source_mask == 1].max()
+            cmin = 0.
+            cmax = 1.
+            plt.imshow(cond_flip((local_pre_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin,
+                       vmax=cmax)
+            #plt.colorbar()
+            plt.axis('image')
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_print_path, 'weight_pre_image_g{:d}_{:0>3d}.pdf'.format(g,print_figure_id)),bbox_inches='tight',pad_inches=0)
+
+        osw = compute_overall_std(local_pre_weights[0, ...].cpu(), stds.data.cpu())
+
+        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
+
+        plt.clf()
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
+        #plt.colorbar()
+        plt.axis('image')
+        plt.axis('off')
+        plt.savefig(os.path.join(clean_print_path, 'weight_pre_image_overall_std_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
+
+        plt.clf()
+        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
+        plt.colorbar()
+        plt.axis('image')
+        plt.axis('off')
+        plt.savefig(os.path.join(clean_print_path, 'weight_pre_image_overall_std_with_colorbar_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
 
 def compute_and_visualize_results(json_file,output_dir,
@@ -712,6 +804,7 @@ def compute_and_visualize_results(json_file,output_dir,
             wd = dict()
             if stage==2:
                 wd['local_weights'] = model_dict['local_weights']
+                wd['local_pre_weights'] = model_dict['local_pre_weights']
             wd['default_multi_gaussian_weights'] = model_dict['default_multi_gaussian_weights']
             torch.save(wd,weights_output_filename_pt)
 
@@ -723,12 +816,14 @@ def compute_and_visualize_results(json_file,output_dir,
                 if print_images:
                     visualize_weights(ISource,ITarget,IWarped,phi,
                                       norm_m,model_dict['local_weights'],model_dict['stds'],
+                                      model_dict['local_pre_weights'],
                                       spacing,model_dict['lowResSize'],
                                       print_path=print_output_dir,clean_print_path=clean_publication_dir,print_figure_id=pair_nr,
                                       params=params)
                 else:
                     visualize_weights(ISource,ITarget,IWarped,phi,
                                       norm_m,model_dict['local_weights'],model_dict['stds'],
+                                      model_dict['local_pre_weights'],
                                       spacing,model_dict['lowResSize'],
                                       params=params)
             elif image_dim==3:
@@ -749,10 +844,16 @@ def compute_and_visualize_results(json_file,output_dir,
                         IW_slice = IWarped[:, :, slice_I, ...]
                         phi_slice = phi[:, 1:, slice_I, ...]
                         norm_m_slice = norm_m[:, :, slice_norm_m, ...]
+
                         lw_slice = None
                         if 'local_weights' in model_dict:
                             if model_dict['local_weights'] is not None:
                                 lw_slice = model_dict['local_weights'][:, :, slice_norm_m, ...]
+                        lw_preweight_slice = None
+                        if 'local_pre_weights' in model_dict:
+                            if model_dict['local_pre_weights'] is not None:
+                                lw_preweight_slice = model_dict['local_pre_weights'][:, :, slice_norm_m, ...]
+
                         spacing_slice = spacing[1:]
                         lowResSize = list(model_dict['lowResSize'])
                         lowResSize_slice = np.array(lowResSize[0:2] + lowResSize[3:])
@@ -764,10 +865,17 @@ def compute_and_visualize_results(json_file,output_dir,
                         phi_slice[:,0,...] = phi[:,0,:,slice_I,:]
                         phi_slice[:,1,...] = phi[:,2,:,slice_I,:]
                         norm_m_slice = norm_m[:, :, :, slice_norm_m, :]
+
                         lw_slice = None
                         if 'local_weights' in model_dict:
                             if model_dict['local_weights'] is not None:
                                 lw_slice = model_dict['local_weights'][:, :, :, slice_norm_m, :]
+
+                        lw_preweight_slice = None
+                        if 'local_pre_weights' in model_dict:
+                            if model_dict['local_pre_weights'] is not None:
+                                lw_slice = model_dict['local_pre_weights'][:, :, :, slice_norm_m, :]
+
                         spacing_slice = np.array([spacing[0],spacing[2]])
                         lowResSize = list(model_dict['lowResSize'])
                         lowResSize_slice = np.array(lowResSize[0:3] + [lowResSize[-1]])
@@ -777,23 +885,31 @@ def compute_and_visualize_results(json_file,output_dir,
                         IW_slice = IWarped[:,:,:,:,slice_I]
                         phi_slice = phi[:,0:2,:,:,slice_I]
                         norm_m_slice = norm_m[:,:,:,:,slice_norm_m]
+
                         lw_slice = None
                         if 'local_weights' in model_dict:
                             if model_dict['local_weights'] is not None:
                                 lw_slice = model_dict['local_weights'][:,:,:,:,slice_norm_m]
+
+                        lw_preweight_slice = None
+                        if 'local_pre_weights' in model_dict:
+                            if model_dict['local_pre_weights'] is not None:
+                                lw_slice = model_dict['local_pre_weights'][:, :, :, :, slice_norm_m]
+
                         spacing_slice = spacing[0:-1]
                         lowResSize_slice = model_dict['lowResSize'][0:-1]
 
                     if print_images:
                         visualize_weights(IS_slice,IT_slice,IW_slice,phi_slice,
                                           norm_m_slice,lw_slice,model_dict['stds'],
+                                          lw_preweight_slice,
                                           spacing_slice,lowResSize_slice,
                                           print_path=print_output_dir, clean_print_path=clean_publication_dir,
                                           print_figure_id=pair_nr, slice_mode=slice_mode_3d[sm],
                                           flip_axes=flip_axes_3d[sm],params=params)
                     else:
                         visualize_weights(IS_slice, IT_slice, IW_slice, phi_slice,
-                                          norm_m_slice, lw_slice, model_dict['stds'],
+                                          norm_m_slice, lw_slice, model_dict['stds'], lw_preweight_slice,
                                           spacing_slice, lowResSize_slice,flip_axes=flip_axes_3d[sm],params=params)
 
             else:
