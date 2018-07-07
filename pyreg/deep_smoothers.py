@@ -1190,6 +1190,24 @@ class DeepSmoothingModel(nn.Module):
         return self.current_penalty
 
 
+    def compute_local_weighted_tv_norm(self, I, weights):
+
+        sum_square_of_total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        # first compute the edge map
+        g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing, self.params)
+        batch_size = I.size()[0]
+
+        # now computed weighted TV norm channel-by-channel, square it and then take the square root (this is like in color TV)
+        for g in range(self.nr_of_gaussians):
+            c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
+            current_tv = (utils.remove_infs_from_variable(g_I * c_local_norm_grad)).sum() * self.volumeElement / batch_size
+            sum_square_of_total_variation_penalty += current_tv**2
+
+        total_variation_penalty = torch.sqrt(sum_square_of_total_variation_penalty)
+
+        return total_variation_penalty
+
+
 class encoder_block_2d(nn.Module):
     def __init__(self, input_feature, output_feature, use_dropout, use_batch_normalization):
         super(encoder_block_2d, self).__init__()
@@ -1480,13 +1498,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         # compute the total variation penalty
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
-            # first compute the edge map
-            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing, self.params)
-            batch_size = I.size()[0]
-            for g in range(self.nr_of_gaussians):
-                # total_variation_penalty += self.compute_total_variation(weights[:,g,...])
-                c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
-                total_variation_penalty += (utils.remove_infs_from_variable(g_I * c_local_norm_grad)).sum() * self.volumeElement / batch_size
+            total_variation_penalty += self.compute_local_weighted_tv_norm(I, weights)
 
         diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.diffusion_weight_penalty > 0:
@@ -1832,13 +1844,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         # compute the total variation penalty; compute this on the pre (non-smoothed) weights
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
-            # first compute the edge map
-            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing, self.params)
-            batch_size = I.size()[0]
-            for g in range(self.nr_of_gaussians):
-                # total_variation_penalty += self.compute_total_variation(weights[:,g,...])
-                c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
-                total_variation_penalty += (utils.remove_infs_from_variable(g_I * c_local_norm_grad)).sum() * self.volumeElement / batch_size
+            total_variation_penalty += self.compute_local_weighted_tv_norm(I=I,weights=weights)
 
         diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.diffusion_weight_penalty > 0:
