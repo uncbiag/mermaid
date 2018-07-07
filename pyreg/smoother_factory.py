@@ -156,8 +156,39 @@ class Smoother(with_metaclass(ABCMeta, object)):
         """
         return None
 
+    def _do_CFL_clamping_if_necessary(self,v, clampCFL_dt):
+        """
+        Takes a velocity field and clamps it according to the CFL condition (assuming Runge-Kutta 4)
+        :param v: velocity field; dimension BxCxXxYxZ
+        :return: clampled velocity field
+        """
+
+        rk4_factor = 2*np.sqrt(2)/self.dim*0.9 # 0.9 is saftey margin (see paper by Polzin et al. for this RK4 stability condition)
+
+        if clampCFL_dt is not None:
+
+            # only clamp if necessary
+            need_to_clamp = False
+            for d in range(self.dim):
+                if (torch.abs(v[:,d,...].data)).max()>=self.spacing[d]/clampCFL_dt*rk4_factor:
+                    need_to_clamp = True
+                    break
+
+            if need_to_clamp:
+                v_ret = torch.zeros_like(v)
+                for d in range(self.dim):
+                    cmax = self.spacing[d]/clampCFL_dt*rk4_factor
+                    v_ret[:,d,...] = torch.clamp(v[:,d,...],-cmax,cmax)
+                return v_ret
+            else:
+                # clamping was not necessary
+                return v
+
+        else:
+            return v
+
     @abstractmethod
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
         """
         Abstract method to smooth a vector field. Only this method should be overwritten in derived classes.
 
@@ -168,13 +199,14 @@ class Smoother(with_metaclass(ABCMeta, object)):
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :param smooth_to_compute_regularizer_energy: in certain cases smoothing to compute a smooth velocity field should
                 be different than the smoothing for the regularizer (this flag allows smoother implementations reacting to this difference)
+        :param clampCFL_dt: If specified the result of the smoother is clampled according to the CFL condition, based on the given time-step
         :return: should return the a smoothed scalar field, image dimension BxCXxYxZ
         """
         pass
 
 
 
-    def smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
+    def smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
         """
         Smoothes a vector field of dimension BxCxXxYxZ,
 
@@ -185,6 +217,7 @@ class Smoother(with_metaclass(ABCMeta, object)):
         :param variables_from_optimizer: variables that can be passed from the optimizer (for example iteration count)
         :param smooth_to_compute_regularizer_energy: in certain cases smoothing to compute a smooth velocity field should
                 be different than the smoothing for the regularizer (this flag allows smoother implementations reacting to this difference)
+        :param clampCFL_dt: If specified the result of the smoother is clampled according to the CFL condition, based on the given time-step
         :return: smoothed vector field BxCxXxYxZ
         """
         sz = v.size()
@@ -193,7 +226,7 @@ class Smoother(with_metaclass(ABCMeta, object)):
         else:
             Sv = Variable(MyTensor(v.size()).zero_())
 
-        Sv[:] = self.apply_smooth(v,vout,pars,variables_from_optimizer, smooth_to_compute_regularizer_energy)    # here must use :, very important !!!!
+        Sv[:] = self.apply_smooth(v,vout,pars,variables_from_optimizer, smooth_to_compute_regularizer_energy, clampCFL_dt)    # here must use :, very important !!!!
         return Sv
 
 
@@ -225,7 +258,7 @@ class DiffusionSmoother(Smoother):
         """
         return self.iter
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
         """
         Smoothes a scalar field of dimension XxYxZ
 
@@ -248,6 +281,10 @@ class DiffusionSmoother(Smoother):
             # multiply with smallest h^2 and divide by 2^dim to assure stability
             for c in range(Sv.size()[1]):
                 Sv[:,c] = Sv[:,c] + 0.5/(2**self.dim)*self.fdt.lap(Sv[:,c])*self.spacing.min()**2 # multiply with smallest h^2 to assure stability
+
+
+        Sv = self._do_CFL_clamping_if_necessary(Sv,clampCFL_dt=clampCFL_dt)
+
         return Sv
 
 
@@ -354,7 +391,7 @@ class GaussianSpatialSmoother(GaussianSmoother):
         else:
             raise ValueError('Can only perform padding in dimensions 1-3')
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
         """
         Smooth the scalar field using Gaussian smoothing in the spatial domain
 
@@ -369,7 +406,11 @@ class GaussianSpatialSmoother(GaussianSmoother):
         if self.filter is None:
             self._create_filter()
         # just doing a Gaussian smoothing
-        return self._filter_input_with_padding(v, vout)
+
+        smoothed_v = self._filter_input_with_padding(v, vout)
+        smoothed_v = self._do_CFL_clamping_if_necessary(smoothed_v,clampCFL_dt=clampCFL_dt)
+
+        return smoothed_v
 
 
 
@@ -392,7 +433,7 @@ class GaussianFourierSmoother(with_metaclass(ABCMeta, GaussianSmoother)):
         """
         pass
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
@@ -408,13 +449,15 @@ class GaussianFourierSmoother(with_metaclass(ABCMeta, GaussianSmoother)):
         # we need to instantiate a new filter function here every time for the autograd to work
         if self.FFilter is None:
             self._create_filter()
+
+        smoothed_v = ce.fourier_convolution(v, self.FFilter)
+        smoothed_v = self._do_CFL_clamping_if_necessary(smoothed_v,clampCFL_dt=clampCFL_dt)
+
         if vout is not None:
-            vout[:] = ce.fourier_convolution(v, self.FFilter)
+            vout[:] = smoothed_v
             return vout
         else:
-            return ce.fourier_convolution(v, self.FFilter)
-
-
+            return smoothed_v
 
 class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
     """
@@ -483,7 +526,7 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
         gaussianStd = self._get_gaussian_std_from_optimizer_params()
         return gaussianStd
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
@@ -503,13 +546,15 @@ class AdaptiveSingleGaussianFourierSmoother(GaussianSmoother):
             else:
                 compute_std_gradient = False
 
+        smoothed_v = ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std(),compute_std_gradient)
+        smoothed_v = self._do_CFL_clamping_if_necessary(smoothed_v,clampCFL_dt=clampCFL_dt)
+
         # just doing a Gaussian smoothing
         if vout is not None:
-            vout[:] = ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std(),compute_std_gradient)
+            vout[:] = smoothed_v
             return vout
         else:
-            return ce.fourier_single_gaussian_convolution(v,self.gaussian_fourier_filter_generator,self.get_gaussian_std(),compute_std_gradient)
-
+            return smoothed_v
 
     def _create_optimization_vector_parameters(self):
         self.optimizer_params = utils.create_vector_parameter(1)
@@ -825,7 +870,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
 
         return penalty
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
@@ -846,17 +891,18 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
                 compute_std_gradients = False
                 compute_weight_gradients = False
 
-        if vout is not None:
-            vout[:] = ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,
+        smoothed_v = ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,
                                                          self.get_gaussian_stds(),self.get_gaussian_weights(),
                                                             compute_std_gradients=compute_std_gradients,
                                                             compute_weight_gradients=compute_weight_gradients)
+
+        smoothed_v = self._do_CFL_clamping_if_necessary(smoothed_v,clampCFL_dt=clampCFL_dt)
+
+        if vout is not None:
+            vout[:] = smoothed_v
             return vout
         else:
-            return ce.fourier_multi_gaussian_convolution(v,self.gaussian_fourier_filter_generator,
-                                                         self.get_gaussian_stds(),self.get_gaussian_weights(),
-                                                         compute_std_gradients=compute_std_gradients,
-                                                         compute_weight_gradients=compute_weight_gradients)
+            return smoothed_v
 
 
 class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
@@ -1129,7 +1175,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         return penalty
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
 
@@ -1215,6 +1261,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                 for i, w in enumerate(self.get_gaussian_weights()):
                     smoothed_v += w * vcollection[i, ...]
 
+        smoothed_v = self._do_CFL_clamping_if_necessary(smoothed_v,clampCFL_dt=clampCFL_dt)
+
         if vout is not None:
             vout[:] = smoothed_v
             return vout
@@ -1265,7 +1313,7 @@ class AdaptiveSmoother(Smoother):
         return v
 
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False):
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
         pass
 
 
