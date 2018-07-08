@@ -238,6 +238,7 @@ if __name__ == "__main__":
     if args.seed is not None:
         print('Setting the random seed to {:}'.format(args.seed))
         random.seed(args.seed)
+        torch.manual_seed(args.seed)
 
     print('Loading settings from file: ' + args.config)
     params = pars.ParameterDict()
