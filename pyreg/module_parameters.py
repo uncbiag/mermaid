@@ -31,6 +31,9 @@ class ParameterDict(object):
             'com = ' + self.com.__str__() + "\n" + \
             'currentCategoryName = ' + str( self.currentCategoryName) +"\n"
 
+    def isempty(self):
+        return self.int=={}
+
     def load_JSON(self, fileName):
         """
         Loads a JSON configuration file

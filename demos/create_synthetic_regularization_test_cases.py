@@ -1,20 +1,24 @@
 from __future__ import print_function
+from future.utils import native_str
+
 from builtins import str
 from builtins import range
 
 import set_pyreg_paths
 
 import matplotlib as matplt
-from pyreg.config_parser import MATPLOTLIB_AGG
-if MATPLOTLIB_AGG:
-    matplt.use('Agg')
+#from pyreg.config_parser import MATPLOTLIB_AGG
+#if MATPLOTLIB_AGG:
+#    matplt.use('Agg')
 
 import matplotlib.pyplot as plt
+import scipy.ndimage as ndimage
 
 import pyreg.utils as utils
 import pyreg.finite_differences as fd
 import pyreg.custom_pytorch_extensions as ce
 import pyreg.smoother_factory as sf
+import pyreg.deep_smoothers as ds
 
 from pyreg.data_wrapper import AdaptVal
 
@@ -31,11 +35,21 @@ from torch.autograd import Variable
 import numpy as np
 
 import os
+import random
+
+def subsampled_quiver(u,v,color='red', scale=1, subsample=3):
+    sz = u.shape
+    xc,yc = np.meshgrid(range(sz[0]),range(sz[1]))
+    plt.quiver(xc[::subsample,::subsample],yc[::subsample,::subsample],u[::subsample,::subsample], v[::subsample,::subsample], color=color, scale=scale)
+
 
 def create_momentum(input_im,centered_map,
                     randomize_momentum_on_circle,randomize_in_sectors,
                     smooth_initial_momentum,
-                    sz,spacing,nr_of_angles=10,multiplier_factor=1.0,momentum_smoothing=0.05,visualize=False):
+                    sz,spacing,nr_of_angles=10,multiplier_factor=1.0,momentum_smoothing=0.05,visualize=False,
+                    publication_figures_directory=None,
+                    publication_prefix=None,
+                    image_pair_nr=None):
 
     # assumes an input image is given (at least roughly centered in the middle of the image)
     # and computes a random momentum
@@ -58,15 +72,21 @@ def create_momentum(input_im,centered_map,
     dxc_d[ind_zero] = 0
     dyc_d[ind_zero] = 0
 
+    #plt.clf()
+    #plt.quiver(dyc_d[0,...],dxc_d[0,...],scale=5)
+    #plt.show()
+
     # and now randomly flip the sign ring by ring
     maxr = int(input_im.max())
 
     # identity map to define the sectors
     id_c = utils.centered_identity_map_multiN(sz, spacing, dtype='float32')
 
-    for r in range(maxr):
-        fromval = r
-        toval = r + 1
+    already_flipped = np.zeros_like(dxc_d)
+
+    for r in range(1,maxr+1):
+
+        cur_ring_val = r
 
         if randomize_momentum_on_circle:
 
@@ -85,7 +105,9 @@ def create_momentum(input_im,centered_map,
                     nx_to = -np.sin(angles[ato])
                     ny_to = np.cos(angles[ato])
 
-                    indx = ((input_im[:, 0, ...] >= fromval - 0.1) & (input_im[:, 0, ...] <= toval + 0.1) & (dxc ** 2 + dyc ** 2 != 0)
+                    dilated_input_im = ndimage.binary_dilation(input_im[:,0,...]==cur_ring_val)
+
+                    indx = ((dilated_input_im!=0) & (already_flipped==0) & (dxc ** 2 + dyc ** 2 != 0)
                             & (id_c[:, 0, ...] * nx_from + id_c[:, 1, ...] * ny_from >= 0)
                             & (id_c[:, 0, ...] * nx_to + id_c[:, 1, ...] * ny_to < 0))
 
@@ -102,15 +124,31 @@ def create_momentum(input_im,centered_map,
                     dxc_d[indx] = dxc_d[indx] * c_rand_val_field[indx]
                     dyc_d[indx] = dyc_d[indx] * c_rand_val_field[indx]
 
+                    already_flipped[indx] = 1
+
+                    #print(c_rand_choice)
+                    #plt.clf()
+                    #plt.subplot(121)
+                    #plt.quiver(dyc_d[0, ...], dxc_d[0, ...], scale=5)
+                    #plt.subplot(122)
+                    #plt.imshow(indx[0,...])
+                    #plt.show()
+
             else:
-                indx = ((input_im[:, 0, ...] >= fromval - 0.1) & (input_im[:, 0, ...] <= toval + 0.1) & (dxc ** 2 + dyc ** 2 != 0))
+                dilated_input_im = ndimage.binary_dilation(input_im[:, 0, ...] == cur_ring_val)
+
+                indx = ((dilated_input_im!=0) & (already_flipped==0) & (dxc ** 2 + dyc ** 2 != 0))
+                already_flipped[indx] = 1
                 c_rand_val_field = 2 * 2 * (np.random.rand(*list(indx.shape)) - 0.5)
 
                 dxc_d[indx] = dxc_d[indx] * c_rand_val_field[indx]
                 dyc_d[indx] = dyc_d[indx] * c_rand_val_field[indx]
 
         else:
-            indx = ((input_im[:, 0, ...] >= fromval - 0.1) & (input_im[:, 0, ...] <= toval + 0.1) & (dxc ** 2 + dyc ** 2 != 0))
+            dilated_input_im = ndimage.binary_dilation(input_im[:, 0, ...] == cur_ring_val)
+
+            indx = ((dilated_input_im!=0) & (already_flipped==0) & (dxc ** 2 + dyc ** 2 != 0))
+            already_flipped[indx] = 1
 
             # multiply by a random number in [-1,1]
             c_rand_val = 2 * (np.random.rand() - 0.5)*multiplier_factor
@@ -125,9 +163,18 @@ def create_momentum(input_im,centered_map,
 
     if visualize:
         plt.clf()
-        plt.quiver(m_orig[0, 1, ...], m_orig[0, 0, ...])
+        plt.quiver(m_orig[0, 1, ...], m_orig[0, 0, ...],color='red',scale=5)
         plt.axis('equal')
         plt.show()
+
+    if publication_figures_directory is not None:
+
+        plt.clf()
+        plt.imshow(input_im[0, 0, ...],origin='lower')
+        plt.quiver(m_orig[0, 1, ...], m_orig[0, 0, ...],color='red',scale=5)
+        plt.axis('image')
+        plt.axis('off')
+        plt.savefig(os.path.join(publication_figures_directory, '{:s}_m_orig_{:d}.pdf'.format(publication_prefix,image_pair_nr)),bbox_inches='tight',pad_inches=0)
 
     if smooth_initial_momentum:
         s_m_params = pars.ParameterDict()
@@ -145,6 +192,15 @@ def create_momentum(input_im,centered_map,
             plt.imshow(m[0, 0, ...])
             plt.suptitle('smoothed mx')
             plt.show()
+
+        if publication_figures_directory is not None:
+            plt.clf()
+            plt.imshow(input_im[0,0,...],origin='lower')
+            subsampled_quiver(m[0, 1, ...], m[0, 0, ...], color='red', scale=1,subsample=3)
+            plt.axis('image')
+            plt.axis('off')
+            plt.savefig(os.path.join(publication_figures_directory, '{:s}_m_smoothed_orig_{:d}.pdf'.format(publication_prefix,image_pair_nr)),bbox_inches='tight')
+
     else:
         m = m_orig
 
@@ -224,7 +280,7 @@ def create_rings(levels_in,multi_gaussian_weights,default_multi_gaussian_weights
 
     if visualize:
 
-        grad_norm_sqr = dxc**2 + dyc**2
+        #grad_norm_sqr = dxc**2 + dyc**2
 
         plt.clf()
         plt.subplot(221)
@@ -237,8 +293,8 @@ def create_rings(levels_in,multi_gaussian_weights,default_multi_gaussian_weights
         plt.imshow(ring_im[0,0,...])
         plt.colorbar()
         plt.subplot(224)
-        plt.imshow(grad_norm_sqr[0,...]>0)
-        plt.colorbar()
+        #plt.imshow(grad_norm_sqr[0,...]>0)
+        #plt.colorbar()
 
         plt.show()
 
@@ -258,7 +314,7 @@ def create_rings(levels_in,multi_gaussian_weights,default_multi_gaussian_weights
         plt.show()
 
 
-    return weights,ring_im
+    return weights,ring_im,std_im
 
 
 def _compute_ring_radii(extent, nr_of_rings, randomize_radii, randomize_factor=0.75):
@@ -273,24 +329,63 @@ def _compute_ring_radii(extent, nr_of_rings, randomize_radii, randomize_factor=0
 
     return rings_at
 
-def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,spacing,visualize=False):
+def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,spacing,kernel_weighting_type='w_K',visualize=False):
 
     nr_of_gaussians = len(multi_gaussian_stds)
     # create a velocity field from this momentum using a multi-Gaussian kernel
-    gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz[2:], spacing, nr_of_gaussians)
+    gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz[2:], spacing, nr_of_slots=nr_of_gaussians)
 
-    vs = ce.fourier_set_of_gaussian_convolutions(AdaptVal(Variable(torch.from_numpy(m), requires_grad=False)),
-                                                 gaussian_fourier_filter_generator,
-                                                 sigma=AdaptVal(Variable(torch.from_numpy(multi_gaussian_stds),
-                                                                         requires_grad=False)),
-                                                 compute_std_gradients=False)
+    t_weights = Variable(torch.from_numpy(weights),requires_grad=False)
+    t_momentum = Variable(torch.from_numpy(m),requires_grad=False)
 
+    if kernel_weighting_type=='sqrt_w_K_sqrt_w':
+        sqrt_weights = torch.sqrt(t_weights)
+        sqrt_weighted_multi_smooth_v = ds.compute_weighted_multi_smooth_v(momentum=t_momentum, weights=sqrt_weights,
+                                                                       gaussian_stds=multi_gaussian_stds,
+                                                                       gaussian_fourier_filter_generator=gaussian_fourier_filter_generator)
+    elif kernel_weighting_type=='w_K_w':
+        # now create the weighted multi-smooth-v
+        weighted_multi_smooth_v = ds.compute_weighted_multi_smooth_v(momentum=t_momentum, weights=t_weights,
+                                                                  gaussian_stds=multi_gaussian_stds,
+                                                                  gaussian_fourier_filter_generator=gaussian_fourier_filter_generator)
+    elif kernel_weighting_type=='w_K':
+        multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(t_momentum,
+                                                                 gaussian_fourier_filter_generator=gaussian_fourier_filter_generator,
+                                                                 sigma=Variable(torch.from_numpy(multi_gaussian_stds),requires_grad=False),
+                                                                 compute_std_gradients=False)
+
+    # now compute the localized_velocity
     # compute velocity based on localized weights
     localized_v = np.zeros([1, 2] + sz[2:], dtype='float32')
     dims = localized_v.shape[1]
-    for g in range(nr_of_gaussians):
-        for d in range(dims):
-            localized_v[0, d, ...] += weights[0, g, ...] * vs[g, 0, d, ...].data.cpu().numpy()
+
+    # now we apply this weight across all the channels; weight output is B x weights x X x Y
+    for n in range(dims):
+        # reverse the order so that for a given channel we have batch x multi_velocity x X x Y
+        # i.e., the multi-velocity field output is treated as a channel
+        # reminder: # format of multi_smooth_v is multi_v x batch x channels x X x Y
+        # (channels here are the vector field components); i.e. as many as there are dimensions
+        # each one of those should be smoothed the same
+
+        # let's smooth this on the fly, as the smoothing will be of form
+        # w_i*K_i*(w_i m)
+
+        if kernel_weighting_type=='sqrt_w_K_sqrt_w':
+            # roc should be: batch x multi_v x X x Y
+            roc = torch.transpose(sqrt_weighted_multi_smooth_v[:, :, n, ...], 0, 1)
+            yc = torch.sum(roc * sqrt_weights, dim=1)
+        elif kernel_weighting_type=='w_K_w':
+            # roc should be: batch x multi_v x X x Y
+            roc = torch.transpose(weighted_multi_smooth_v[:, :, n, ...], 0, 1)
+            yc = torch.sum(roc * t_weights, dim=1)
+        elif kernel_weighting_type=='w_K':
+            # roc should be: batch x multi_v x X x Y
+            roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
+            yc = torch.sum(roc * t_weights, dim=1)
+        else:
+            raise ValueError('Unknown kernel type: {}'.format(kernel_weighting_type))
+
+        localized_v[:, n, ...] = yc.data.cpu().numpy()  # ret is: batch x channels x X x Y
 
     if visualize:
 
@@ -299,7 +394,7 @@ def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,sp
         plt.clf()
         plt.subplot(121)
         plt.imshow(norm_localized_v)
-        plt.axis('equal')
+        plt.axis('image')
         plt.colorbar()
         plt.subplot(121)
         plt.quiver(m[0,1,...],m[0,0,...])
@@ -313,7 +408,7 @@ def compute_map_from_v(localized_v,sz,spacing):
     # now compute the deformation that belongs to this velocity field
 
     params = pars.ParameterDict()
-    params['number_of_time_steps'] = 20
+    params['number_of_time_steps'] = 40
 
     advectionMap = fm.AdvectMap( sz[2:], spacing )
     pars_to_pass = utils.combine_dict({'v':AdaptVal(Variable(torch.from_numpy(localized_v),requires_grad=False))}, dict() )
@@ -329,21 +424,22 @@ def compute_map_from_v(localized_v,sz,spacing):
 
 def add_texture(im_orig):
     sz = im_orig.shape
-    rand_noise = np.random.random(sz[2:])
+    rand_noise = np.random.random(sz[2:])-0.5
     rand_noise = rand_noise.view().reshape(sz)
     r_params = pars.ParameterDict()
     r_params['smoother']['type'] = 'gaussian'
-    r_params['smoother']['gaussian_std'] = 0.015
+    r_params['smoother']['gaussian_std'] = 0.02
     s_r = sf.SmootherFactory(sz[2::], spacing).create_smoother(r_params)
 
     rand_noise_smoothed = s_r.smooth(AdaptVal(Variable(torch.from_numpy(rand_noise), requires_grad=False))).data.cpu().numpy()
-    rand_noise_smoothed /= rand_noise_smoothed.max()
+    rand_noise_smoothed /= 2*rand_noise_smoothed.max()
 
     im = im_orig + rand_noise_smoothed
 
     return im
 
-def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,multi_gaussian_stds,
+def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,weight_smoothing_std,multi_gaussian_stds,
+                             kernel_weighting_type,
                              randomize_momentum_on_circle,randomize_in_sectors,
                              put_weights_between_circles,
                              start_with_fluid_weight,
@@ -352,7 +448,9 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
                              circle_extent,
                              sz,spacing,
                              nr_of_angles=10,multiplier_factor=1.0,momentum_smoothing=0.05,
-                             visualize=False,visualize_warped=False,print_warped_name=None):
+                             visualize=False,visualize_warped=False,print_warped_name=None,
+                             publication_figures_directory=None,
+                             image_pair_nr=None):
 
     nr_of_rings = nr_of_circles_to_generate
     extent = circle_extent
@@ -379,12 +477,38 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
 
     rings_at = _compute_ring_radii(extent=extent, nr_of_rings=nr_of_rings, randomize_radii=randomize_radii, randomize_factor=randomize_factor)
 
-    weights_orig,ring_im_orig = create_rings(rings_at,multi_gaussian_weights=multi_gaussian_weights,
+    weights_orig,ring_im_orig,std_im_orig = create_rings(rings_at,multi_gaussian_weights=multi_gaussian_weights,
                     default_multi_gaussian_weights=weights_neutral,
                     multi_gaussian_stds=multi_gaussian_stds,
                     put_weights_between_circles=put_weights_between_circles,
                     sz=sz,spacing=spacing,
                     visualize=visualize)
+
+    if weight_smoothing_std is not None:
+        if weight_smoothing_std>0:
+            s_m_params = pars.ParameterDict()
+            s_m_params['smoother']['type'] = 'gaussian'
+            s_m_params['smoother']['gaussian_std'] = weight_smoothing_std
+            # smooth the weights
+            smoother = sf.SmootherFactory(weights_orig.shape[2::], spacing).create_smoother(s_m_params)
+            #weights_old = np.zeros_like(weights_orig)
+            #weights_old[:] = weights_orig
+            weights_orig = (smoother.smooth(Variable(torch.from_numpy(weights_orig),requires_grad=False))).data.cpu().numpy()
+            # make sure they are strictly positive
+            weights_orig[weights_orig<0] = 0
+
+    if publication_figures_directory is not None:
+        plt.clf()
+        plt.imshow(ring_im_orig[0,0,...],origin='lower')
+        plt.axis('off')
+        plt.savefig(os.path.join(publication_figures_directory,'ring_im_orig_{:d}.pdf'.format(image_pair_nr)),bbox_inches='tight',pad_inches=0)
+
+        plt.clf()
+        plt.imshow(std_im_orig,origin='lower')
+        plt.axis('off')
+        plt.colorbar()
+        plt.savefig(os.path.join(publication_figures_directory,'std_im_orig_{:d}.pdf'.format(image_pair_nr)),bbox_inches='tight',pad_inches=0)
+
 
     id_c = utils.centered_identity_map_multiN(sz, spacing, dtype='float32')
     m_orig = create_momentum(ring_im_orig, centered_map=id_c, randomize_momentum_on_circle=randomize_momentum_on_circle,
@@ -393,14 +517,40 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
                         sz=sz, spacing=spacing,
                         nr_of_angles=nr_of_angles,
                         multiplier_factor=multiplier_factor,
-                        momentum_smoothing=momentum_smoothing)
+                        momentum_smoothing=momentum_smoothing,
+                        publication_figures_directory=publication_figures_directory,
+                        publication_prefix='circle_init',
+                        image_pair_nr=image_pair_nr)
 
-    localized_v_orig = compute_localized_velocity_from_momentum(m=m_orig,weights=weights_orig,multi_gaussian_stds=multi_gaussian_stds,sz=sz,spacing=spacing)
+    localized_v_orig = compute_localized_velocity_from_momentum(m=m_orig,weights=weights_orig,multi_gaussian_stds=multi_gaussian_stds,sz=sz,spacing=spacing,kernel_weighting_type=kernel_weighting_type)
+
+    if publication_figures_directory is not None:
+        plt.clf()
+        plt.imshow(ring_im_orig[0, 0, ...], origin='lower')
+        subsampled_quiver(localized_v_orig[0,1,...],localized_v_orig[0,0,...],color='red', scale=1, subsample=3)
+        plt.axis('image')
+        plt.axis('off')
+        plt.savefig(os.path.join(publication_figures_directory,'{:s}_{:d}.pdf'.format('localized_v_orig', image_pair_nr)),bbox_inches='tight',pad_inches=0)
 
     phi0_orig,phi1_orig = compute_map_from_v(localized_v_orig,sz,spacing)
 
     if add_texture_to_image:
         ring_im = add_texture(ring_im_orig)
+        if publication_figures_directory is not None:
+            plt.clf()
+            plt.imshow(ring_im[0, 0, ...],origin='lower')
+            plt.axis('off')
+            plt.savefig(os.path.join(publication_figures_directory, 'ring_im_orig_textured_{:d}.pdf'.format(image_pair_nr)),bbox_inches='tight',pad_inches=0)
+
+        # plt.clf()
+        # plt.subplot(1,2,1)
+        # plt.imshow(ring_im[0,0,...],clim=(-0.5,2.5))
+        # plt.colorbar()
+        # plt.subplot(1,2,2)
+        # plt.imshow(ring_im_orig[0, 0, ...], clim=(-0.5, 2.5))
+        # plt.colorbar()
+        # plt.show()
+
     else:
         ring_im = ring_im_orig
 
@@ -412,12 +562,20 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
     I0_label_orig = AdaptVal(Variable(torch.from_numpy(ring_im_orig),requires_grad=False))
     I1_label_orig = utils.get_warped_label_map(I0_label_orig, phi1_orig, spacing )
 
+    if publication_figures_directory is not None:
+        plt.clf()
+        plt.imshow(I1_label_orig[0, 0, ...].data.cpu().numpy(),origin='lower')
+        plt.axis('off')
+        plt.savefig(os.path.join(publication_figures_directory, 'ring_im_warped_source_{:d}.pdf'.format(image_pair_nr)),bbox_inches='tight',pad_inches=0)
+
     if use_random_source:
         # the initially created target will become the source
         id_c_warped_t = utils.compute_warped_image_multiNC(AdaptVal(Variable(torch.from_numpy(id_c),requires_grad=False)), phi1_orig, spacing, spline_order=1)
         id_c_warped = id_c_warped_t.data.cpu().numpy()
         weights_warped_t = utils.compute_warped_image_multiNC(AdaptVal(Variable(torch.from_numpy(weights_orig),requires_grad=False)), phi1_orig, spacing, spline_order=1)
         weights_warped = weights_warped_t.data.cpu().numpy()
+        # make sure they are stirctly positive
+        weights_warped[weights_warped<0] = 0
 
         warped_source_im_orig = I1_label_orig.data.cpu().numpy()
 
@@ -427,16 +585,33 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
                                           sz=sz, spacing=spacing,
                                           nr_of_angles=nr_of_angles,
                                           multiplier_factor=multiplier_factor,
-                                          momentum_smoothing=momentum_smoothing)
+                                          momentum_smoothing=momentum_smoothing,
+                                          publication_figures_directory=publication_figures_directory,
+                                          publication_prefix='random_source',
+                                          image_pair_nr=image_pair_nr)
 
         localized_v_warped = compute_localized_velocity_from_momentum(m=m_warped_source, weights=weights_warped,
                                                                       multi_gaussian_stds=multi_gaussian_stds, sz=sz,
-                                                                      spacing=spacing)
+                                                                      spacing=spacing,kernel_weighting_type=kernel_weighting_type)
+
+        if publication_figures_directory is not None:
+            plt.clf()
+            plt.imshow(warped_source_im_orig[0, 0, ...], origin='lower')
+            subsampled_quiver(localized_v_warped[0, 1, ...], localized_v_warped[0, 0, ...], color='red', scale=1,subsample=3)
+            plt.axis('image')
+            plt.axis('off')
+            plt.savefig(os.path.join(publication_figures_directory,'{:s}_{:d}.pdf'.format('random_source_localized_v', image_pair_nr)),bbox_inches='tight',pad_inches=0)
 
         phi0_w, phi1_w = compute_map_from_v(localized_v_warped, sz, spacing)
 
         if add_texture_to_image:
             warped_source_im = add_texture(warped_source_im_orig)
+            if publication_figures_directory is not None:
+                plt.clf()
+                plt.imshow(ring_im[0, 0, ...],origin='lower')
+                plt.axis('off')
+                plt.savefig(os.path.join(publication_figures_directory, 'random_source_im_textured_{:d}.pdf'.format(image_pair_nr)),bbox_inches='tight',pad_inches=0)
+
         else:
             warped_source_im = warped_source_im_orig
 
@@ -505,6 +680,41 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
         else:
             plt.show()
 
+    if publication_figures_directory is not None:
+        plt.clf()
+        plt.imshow(I0_source[0, 0, ...].data.cpu().numpy(),origin='lower')
+        plt.axis('image')
+        plt.axis('off')
+        plt.savefig(os.path.join(publication_figures_directory, '{:s}_{:d}.pdf'.format('source_image', image_pair_nr)),bbox_inches='tight',pad_inches=0)
+
+        plt.clf()
+        plt.imshow(I1_warped[0, 0, ...].data.cpu().numpy(),origin='lower')
+        plt.axis('image')
+        plt.axis('off')
+        plt.savefig(os.path.join(publication_figures_directory, '{:s}_{:d}.pdf'.format('target_image', image_pair_nr)),bbox_inches='tight',pad_inches=0)
+
+        plt.clf()
+        plt.imshow(I0_source[0, 0, ...].data.cpu().numpy(),origin='lower')
+        plt.contour(phi0[0, 0, ...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
+        plt.contour(phi0[0, 1, ...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
+        plt.axis('image')
+        plt.axis('off')
+        plt.savefig(os.path.join(publication_figures_directory, '{:s}_{:d}.pdf'.format('source_image_with_grid', image_pair_nr)),bbox_inches='tight',pad_inches=0)
+
+        plt.clf()
+        plt.imshow(I1_warped[0, 0, ...].data.cpu().numpy(),origin='lower')
+        plt.contour(phi1[0, 0, ...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
+        plt.contour(phi1[0, 1, ...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
+        plt.axis('image')
+        plt.axis('off')
+        plt.savefig(os.path.join(publication_figures_directory,'{:s}_{:d}.pdf'.format('target_image_with_grid', image_pair_nr)), bbox_inches='tight',pad_inches=0)
+
+        plt.clf()
+        plt.imshow(std_im,origin='lower')
+        plt.colorbar()
+        plt.axis('image')
+        plt.axis('off')
+        plt.savefig(os.path.join(publication_figures_directory, '{:s}_{:d}.pdf'.format('std_im_source', image_pair_nr)),bbox_inches='tight',pad_inches=0)
 
     return I0_source.data.cpu().numpy(), I1_warped.data.cpu().numpy(), weights, \
            I0_label.data.cpu().numpy(), I1_label.data.cpu().numpy(), phi1.data.cpu().numpy(), m
@@ -513,6 +723,16 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,mul
 def get_parameter_value(command_line_par,params, params_name, default_val, params_description):
 
     if command_line_par is None:
+        ret = params[(params_name, default_val, params_description)]
+    else:
+        params[params_name]=command_line_par
+        ret = command_line_par
+
+    return ret
+
+def get_parameter_value_flag(command_line_par,params, params_name, default_val, params_description):
+
+    if command_line_par==default_val:
         ret = params[(params_name, default_val, params_description)]
     else:
         params[params_name]=command_line_par
@@ -533,6 +753,10 @@ if __name__ == "__main__":
     parser.add_argument('--nr_of_circles_to_generate', required=False, default=None, type=int, help='number of circles to generate in an image') #2
     parser.add_argument('--circle_extent', required=False, default=None, type=float, help='Size of largest circle; image is [-0.5,0.5]^2') # 0.25
 
+    parser.add_argument('--seed', required=False, type=int, default=None, help='Sets the random seed which affects data shuffling')
+
+    parser.add_argument('--create_publication_figures', action='store_true', help='If set writes out figures illustrating the generation approach of first example')
+
     parser.add_argument('--use_random_source', action='store_true', help='if set then inital source is warped randomly, otherwise it is circular')
 
     parser.add_argument('--do_not_randomize_momentum', action='store_true', help='if set, momentum is deterministic')
@@ -540,10 +764,13 @@ if __name__ == "__main__":
     parser.add_argument('--put_weights_between_circles', action='store_true', help='if set, the weights will change in-between circles, otherwise they will be colocated with the circles')
     parser.add_argument('--start_with_fluid_weight', action='store_true', help='if set then the innermost circle is not fluid, otherwise it is fluid')
 
+    parser.add_argument('--weight_smoothing_std',required=False,default=0.02,type=float,help='Standard deviation to smooth the weights with; to assure sufficient regularity')
     parser.add_argument('--stds', required=False,type=str, default=None, help='standard deviations for the multi-Gaussian; default=[0.01,0.05,0.1,0.2]')
     parser.add_argument('--weights_not_fluid', required=False,type=str, default=None, help='weights for a non fluid circle; default=[0,0,0,1]')
     parser.add_argument('--weights_fluid', required=False,type=str, default=None, help='weights for a fluid circle; default=[0.2,0.5,0.2,0.1]')
     parser.add_argument('--weights_background', required=False,type=str, default=None, help='weights for the background; default=[0,0,0,1]')
+
+    parser.add_argument('--kernel_weighting_type', required=False, type=str, default='w_K', help='Which kernel weighting to use for integration. Specify as [w_K|w_K_w|sqrt_w_K_sqrt_w]; w_K is the default')
 
     parser.add_argument('--nr_of_angles', required=False, default=None, type=int, help='number of angles for randomize in sector') #10
     parser.add_argument('--multiplier_factor', required=False, default=None, type=float, help='value the random momentum is multiplied by') #1.0
@@ -552,6 +779,10 @@ if __name__ == "__main__":
     parser.add_argument('--sz', required=False, type=str, default=None, help='Desired size of synthetic example; default=[128,128]')
 
     args = parser.parse_args()
+
+    if args.seed is not None:
+        print('Setting the random seed to {:}'.format(args.seed))
+        random.seed(args.seed)
 
     params = pars.ParameterDict()
     if args.config is not None:
@@ -565,14 +796,25 @@ if __name__ == "__main__":
     nr_of_pairs_to_generate = args.nr_of_pairs_to_generate
 
     nr_of_circles_to_generate = get_parameter_value(args.nr_of_circles_to_generate, params,'nr_of_circles_to_generate', 2, 'number of circles for the synthetic data')
-    circle_extent = get_parameter_value(args.circle_extent, params, 'circle_extent', 0.25, 'Size of largest circle; image is [-0.5,0.5]^2')
-    randomize_momentum_on_circle = get_parameter_value(not args.do_not_randomize_momentum, params, 'randomize_momentum_on_circle', True, 'randomizes the momentum on the circles')
-    randomize_in_sectors = get_parameter_value(not args.do_not_randomize_in_sectors, params, 'randomize_in_sectors', True, 'randomized the momentum sector by sector')
-    put_weights_between_circles = get_parameter_value(args.put_weights_between_circles, params, 'put_weights_between_circles', False, 'if set, the weights will change in-between circles, otherwise they will be colocated with the circles')
-    start_with_fluid_weight = get_parameter_value(args.start_with_fluid_weight, params, 'start_with_fluid_weight', False, 'if set then the innermost circle is not fluid, otherwise it is fluid')
-    use_random_source = get_parameter_value(args.use_random_source, params, 'use_random_source', True, 'if set then source image is already deformed (and no longer circular)')
+    circle_extent = get_parameter_value(args.circle_extent, params, 'circle_extent', 0.2, 'Size of largest circle; image is [-0.5,0.5]^2')
+
+    randomize_momentum_on_circle = get_parameter_value_flag(not args.do_not_randomize_momentum,params=params, params_name='randomize_momentum_on_circle',
+                                                            default_val=True, params_description='randomizes the momentum on the circles')
+
+    randomize_in_sectors = get_parameter_value_flag(not args.do_not_randomize_in_sectors, params=params, params_name='randomize_in_sectors',
+                                               default_val=True, params_description='randomized the momentum sector by sector')
+
+    put_weights_between_circles = get_parameter_value_flag(args.put_weights_between_circles, params=params, params_name='put_weights_between_circles',
+                                                      default_val=False, params_description='if set, the weights will change in-between circles, otherwise they will be colocated with the circles')
+
+    start_with_fluid_weight = get_parameter_value_flag(args.start_with_fluid_weight, params=params, params_name='start_with_fluid_weight',
+                                                  default_val=False, params_description='if set then the innermost circle is not fluid, otherwise it is fluid')
+
+    use_random_source = get_parameter_value_flag(args.use_random_source, params=params, params_name='use_random_source',
+                                            default_val=False, params_description='if set then source image is already deformed (and no longer circular)')
+
     nr_of_angles = get_parameter_value(args.nr_of_angles,params,'nr_of_angles',10,'number of angles for randomize in sector')
-    multiplier_factor = get_parameter_value(args.multiplier_factor,params,'multiplier_factor',1.0,'value the random momentum is multiplied by')
+    multiplier_factor = get_parameter_value(args.multiplier_factor,params,'multiplier_factor',0.5,'value the random momentum is multiplied by')
     momentum_smoothing = get_parameter_value(args.momentum_smoothing,params,'momentum_smoothing',0.05,'how much the randomly generated momentum is smoothed')
 
     if args.stds is None:
@@ -634,12 +876,13 @@ if __name__ == "__main__":
     sz = [1, 1, sz[0], sz[1]]
     spacing = 1.0 / (np.array(sz[2:]) - 1)
 
-    output_dir = args.output_directory
+    output_dir = os.path.normpath(args.output_directory)+'_kernel_weighting_type_' + native_str(args.kernel_weighting_type)
 
     image_output_dir = os.path.join(output_dir,'brain_affine_icbm')
     label_output_dir = os.path.join(output_dir,'label_affine_icbm')
     misc_output_dir = os.path.join(output_dir,'misc')
     pdf_output_dir = os.path.join(output_dir,'pdf')
+    publication_figs = os.path.join(output_dir,'publication_figs')
 
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
@@ -655,6 +898,10 @@ if __name__ == "__main__":
 
     if not os.path.isdir(pdf_output_dir):
         os.makedirs(pdf_output_dir)
+
+    if args.create_publication_figures:
+        if not os.path.isdir(publication_figs):
+            os.makedirs(publication_figs)
 
     pt = dict()
     pt['source_images'] = []
@@ -681,11 +928,17 @@ if __name__ == "__main__":
         else:
             print_warped_name = None
 
+        publication_figures_directory = None
+        if args.create_publication_figures and (n==0):
+            publication_figures_directory = publication_figs
+
         I0Source, I1Target, weights, I0Label, I1Label, gt_map, gt_m = \
             create_random_image_pair(weights_not_fluid=weights_not_fluid,
                                      weights_fluid=weights_fluid,
                                      weights_neutral=weights_neutral,
+                                     weight_smoothing_std=args.weight_smoothing_std,
                                      multi_gaussian_stds=multi_gaussian_stds,
+                                     kernel_weighting_type=args.kernel_weighting_type,
                                      randomize_momentum_on_circle=randomize_momentum_on_circle,
                                      randomize_in_sectors=randomize_in_sectors,
                                      put_weights_between_circles=put_weights_between_circles,
@@ -699,7 +952,9 @@ if __name__ == "__main__":
                                      momentum_smoothing=momentum_smoothing,
                                      visualize=visualize,
                                      visualize_warped=visualize_warped,
-                                     print_warped_name=print_warped_name)
+                                     print_warped_name=print_warped_name,
+                                     publication_figures_directory=publication_figures_directory,
+                                     image_pair_nr=n)
 
         source_filename = os.path.join(image_output_dir,'m{:d}.nii'.format(2*n+1))
         target_filename = os.path.join(image_output_dir,'m{:d}.nii'.format(2*n+1+1))

@@ -66,6 +66,15 @@ class RKIntegrator(with_metaclass(ABCMeta, object)):
         """
         return self.nrOfTimeSteps_perUnitTimeInterval
 
+    def get_dt(self):
+        """
+        Returns the time-step
+        :return: timestep dt
+        """
+
+        dt = 1.0/self.nrOfTimeSteps_perUnitTimeInterval
+        return dt
+
     def solve(self,x,fromT,toT,variables_from_optimizer=None):
         """
         Solves the differential equation.
