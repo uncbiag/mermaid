@@ -18,7 +18,7 @@
                         "deep_network_local_weight_smoothing": 0.02, 
                         "diffusion_weight_penalty": 0.0, 
                         "edge_penalty_filename": "DEBUG_edge_penalty.nrrd", 
-                        "edge_penalty_gamma": 15.0, 
+                        "edge_penalty_gamma": 12.5,
                         "edge_penalty_terminate_after_writing": true, 
                         "edge_penalty_write_to_file": true, 
                         "estimate_around_global_weights": true, 

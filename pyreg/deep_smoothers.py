@@ -1192,7 +1192,7 @@ class DeepSmoothingModel(nn.Module):
 
     def compute_local_weighted_tv_norm(self, I, weights):
 
-        sum_square_of_total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        sum_square_of_total_variation_penalty = Variable(MyTensor(self.nr_of_gaussians).zero_(), requires_grad=False)
         # first compute the edge map
         g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing, self.params)
         batch_size = I.size()[0]
@@ -1201,12 +1201,11 @@ class DeepSmoothingModel(nn.Module):
         for g in range(self.nr_of_gaussians):
             c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
             current_tv = (utils.remove_infs_from_variable(g_I * c_local_norm_grad)).sum() * self.volumeElement / batch_size
-            sum_square_of_total_variation_penalty += current_tv**2
+            sum_square_of_total_variation_penalty[g] = current_tv**2
 
-        total_variation_penalty = torch.sqrt(sum_square_of_total_variation_penalty)
+        total_variation_penalty = torch.norm(sum_square_of_total_variation_penalty,p=2)
 
         return total_variation_penalty
-
 
 class encoder_block_2d(nn.Module):
     def __init__(self, input_feature, output_feature, use_dropout, use_batch_normalization):
