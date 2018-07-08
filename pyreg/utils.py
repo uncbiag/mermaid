@@ -103,8 +103,9 @@ def remove_infs_from_variable(v):
     # but values of this size should not occur in practice anyway
     sz = v.size()
     reduction_factor = np.prod(np.array(sz))
+    condition = True
 
-    if v.data.dtype==torch.float32: #########################################################
+    if  type(v.data) ==torch.cuda.FloatTensor or v.data.dtype==torch.float32: #########################################################
         return torch.clamp(v,
                            min=(np.asscalar(np.finfo('float32').min))/reduction_factor,
                            max=(np.asscalar(np.finfo('float32').max))/reduction_factor)

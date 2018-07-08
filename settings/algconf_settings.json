@@ -10,7 +10,7 @@
         "model": {
             "deformation": {
                 "map_low_res_factor": 1.0, 
-                "name": "lddmm_shooting", 
+                "name": "lddmm_shooting",
                 "use_map": true
             }, 
             "registration_model": {
@@ -23,7 +23,7 @@
                             0.15, 
                             0.2, 
                             0.25
-                        ], 
+                        ],
                         "type": "multiGaussian"
                     }
                 }, 
@@ -35,11 +35,11 @@
                         }
                     }, 
                     "develop_mod_on": false, 
-                    "sigma": 0.1, 
+                    "sigma": 0.1,
                     "type": "ssd"
                 }
             }
-        }, 
+        },
         "optimizer": {
             "multi_scale": {
                 "scale_factors": [

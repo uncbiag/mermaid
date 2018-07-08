@@ -618,7 +618,8 @@ class ImageIO(FileIO):
             if not silent_mode:
                 print('Using guessed spacing of ' + str(spacing))
 
-        spacing = hdr['spacing']
+        spacing = np.flipud( hdr['spacing'])
+
         squeezed_spacing = spacing # will be changed if image is squeezed
         sz = im.shape
         sz_squeezed = sz
@@ -670,10 +671,14 @@ class ImageIO(FileIO):
                 print('WARNING: Image was NOT intensity normalized when loading:' \
                       + ' [' + str(im.min()) + ',' + str(im.max()) + ']')
 
+
+
+
         if self.normalize_spacing:
             if not silent_mode:
                 print('INFO: Normalizing the spacing to [0,1] in the largest dimension. (Turn normalize_spacing off if this is not desired.)')
             hdr['original_spacing'] = spacing
+
 
             if hdr['is_vector_image']:
                 spacing = self._normalize_spacing(spacing, sz[1:], silent_mode)

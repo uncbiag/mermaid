@@ -2,6 +2,7 @@
 # from pyreg.config_parser import MATPLOTLIB_AGG
 # if MATPLOTLIB_AGG:
 #     matplt.use('Agg')
+import sys
 import numpy as np
 import os
 from glob import glob
@@ -9,7 +10,7 @@ from functools import reduce
 import set_pyreg_paths
 import torch
 import pyreg.module_parameters as pars
-from pyreg.data_utils import make_dir, get_file_name,sitk_read_img_to_std_tensor
+from pyreg.data_utils import make_dir, get_file_name, sitk_read_img_to_std_tensor, sitk_read_img_to_std_numpy
 import random
 import matplotlib.pyplot as plt
 import pyreg.simple_interface as SI
@@ -89,7 +90,7 @@ class Patient:
                 
                 function called outside:
                     check_if_taken(self, modality=None, specificity=None, len_time_range=None, has_label=None)
-                    get_slice_list(modality,specificity)
+                    get_slice_path_list(modality,specificity)
                     get_label_path_list(modality,specificity)
                     get_slice_num(modality,specificity)
                     
@@ -153,11 +154,30 @@ class OAILongitudeRegistration:
 
 """
 
+
+class Logger(object):
+    def __init__(self, task_path):
+        self.terminal = sys.stdout
+        if not os.path.exists(task_path ):
+            os.makedirs(task_path )
+        self.log = open("logfile.log", "a")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        # this flush method is needed for python 3 compatibility.
+        pass
+
+
+
 class OAILongitudeReisgtration(object):
     def __init__(self):
         self.patients = []
-        self.task_name='oai_reg'
+        self.task_name='debuglabel_affine_img_svf'
         self.expr_name='much_longer_iter'
+        self.recorder_saving_path = '../data'
         self.model0_name = 'affine_map'
         self.model1_name = 'svf_vector_momentum_map'
         self.map0_low_res_factor =0.3
@@ -171,6 +191,8 @@ class OAILongitudeReisgtration(object):
         self.light_analysis_on=False
         self.par_respro=None
         self.recorder = None
+        self.img_label_channel_on = False
+        self.label_affine_img_svg = False
         """if the patient of certain mod and spec has no label, then the light_analysis will automatically on for this patient"""
 
         self.__initalize_model()
@@ -190,16 +212,18 @@ class OAILongitudeReisgtration(object):
                          +self.optimizer1_name+'_sm_'+ self.similarity_measure_type
 
     def __initalize_model(self):
+        print('start logging:')
         self.si = SI.RegisterImagePair()
         self.im_io = FIO.ImageIO()
         self.gen_expr_name()
         if not self.light_analysis_on:
             self.par_respro = self.get_analysis_setting()
             self.par_respro['respro']['expr_name'] = self.expr_name
+            self.recorder_saving_path = os.path.join(self.recorder_saving_path,self.expr_name)
+            sys.stdout = Logger(os.path.join(self.recorder_saving_path,self.expr_name))
+            print('start logging:')
             self.si.init_analysis_params(self.par_respro,self.task_name)
-            # self.recorder = XlsxRecorder(self.expr_name)
-            # self.set_recorder = self.recorder
-            # self.si.set_recorder(self.recorder)
+
 
 
 
@@ -244,19 +268,10 @@ class OAILongitudeReisgtration(object):
 
     def do_registration(self):
         for patient in self.patients:
-            if not self.light_analysis_on:
-                self.recorder = XlsxRecorder(self.expr_name,patient.patient_id)
-                self.set_recorder = self.recorder
-                self.si.set_recorder(self.recorder)
             self.do_single_patient_registration(patient)
-            if not self.light_analysis_on:
-                self.recorder = self.si.get_recorder()
-                self.recorder.set_summary_based_env()
-                self.recorder.saving_results(sched='summary')
 
 
         print("registration for {} patients, finished".format(len(self.patients)))
-
 
 
 
@@ -266,9 +281,18 @@ class OAILongitudeReisgtration(object):
             for spec in patient.specificity:
                 if patient.get_slice_num(mod,spec)>0:
                     print('---- start processing mod {}, spec {}'.format(mod, spec))
+                    if not self.light_analysis_on:
+                        self.recorder = XlsxRecorder(self.expr_name, self.recorder_saving_path, patient.patient_id+'_'+mod+'_'+spec)
+                        self.set_recorder = self.recorder
+                        self.si.set_recorder(self.recorder)
 
                     self.si.set_light_analysis_on(self.light_analysis_on)
-                    self.do_single_patient_mod_spec_registration(patient,mod,spec)
+                    need_analysis= self.do_single_patient_mod_spec_registration(patient,mod,spec)
+
+                    if need_analysis is not None:
+                        self.recorder = self.si.get_recorder()
+                        self.recorder.set_summary_based_env()
+                        self.recorder.saving_results(sched='summary')
 
 
 
@@ -276,7 +300,7 @@ class OAILongitudeReisgtration(object):
 
     def do_single_patient_mod_spec_registration(self,patient,mod,spec):
         patient_id = patient.patient_id
-        img_paths = patient.get_slice_list(mod,spec)
+        img_paths = patient.get_slice_path_list(mod,spec)
         img0_path = img_paths[0]
         img0_name = get_file_name(img0_path)
         extra_info ={}
@@ -288,10 +312,10 @@ class OAILongitudeReisgtration(object):
             label_path = None if not patient.patient_has_label_dic[mod][spec] else patient.get_label_path_list()
             if label_path:
                 try:
-                    LTarget= AdaptVal(Variable(sitk_read_img_to_std_tensor(label_path[0])))
+                    LTarget= sitk_read_img_to_std_numpy(label_path[0])
                 except:
                     LTarget, _, _, _ = self.im_io.read_to_nc_format(filename=label_path[0], intensity_normalize=False)
-                    LTarget = AdaptVal(Variable(LTarget))
+
             else:
                 print("complete analysis will be skipped for patient_id {}, modality{}, specificity{}".format(patient_id,mod, spec))
                 self.si.set_light_analysis_on(True)
@@ -300,7 +324,10 @@ class OAILongitudeReisgtration(object):
 
         saving_folder_path = self.__gen_img_saving_path(patient,mod, spec)
         self._update_saving_analysis_path(saving_folder_path)
-        #self.im_io.write(os.path.join(saving_folder_path, img0_name+'.nii.gz'), np.squeeze(Ic0), hdrc0)
+        self.im_io.write(os.path.join(saving_folder_path, img0_name+'.nii.gz'), np.squeeze(Ic0), hdrc0)
+
+        if self.img_label_channel_on:
+            Ic0 = np.concatenate((Ic0, LTarget), 1)
 
 
 
@@ -310,19 +337,17 @@ class OAILongitudeReisgtration(object):
             if i<1:
                 continue
             img1_name = get_file_name(img_path)
-            extra_info['pair_name']=[img1_name+'_'+img0_name +'_step1']
-            extra_info['batch_id']=img1_name+'_'+img0_name +'_step1'
-
+            extra_info['pair_name']=[img1_name+'_'+img0_name]
+            extra_info['batch_id']=img1_name+'_'+img0_name
 
             Ic1, hdrc, spacing, _ = self.im_io.read_to_nc_format(filename=img_path, intensity_normalize=True)
 
             if LTarget is not None:
                 if label_path:
                     try:
-                        LSource = AdaptVal(Variable(sitk_read_img_to_std_tensor(label_path[i])))
+                        LSource = sitk_read_img_to_std_numpy(label_path[i])
                     except:
                         LSource, _, _, _ = self.im_io.read_to_nc_format(filename=label_path[i], intensity_normalize=False)
-                        LSource = AdaptVal(Variable(LSource))
                 else:
                     assert("source label not find")
 
@@ -330,8 +355,17 @@ class OAILongitudeReisgtration(object):
                 self.record_cur_performance(LSource, LTarget, extra_info['pair_name'], extra_info['batch_id'],
                                             'no_registration')
 
+            if self.img_label_channel_on:
+                Ic1 = np.concatenate((Ic1, LSource), 1)
 
-            self.si.set_light_analysis_on(False)
+            if self.label_affine_img_svg:
+                Ic1_copy = Ic1
+                Ic0_copy = Ic0
+                Ic1 = LSource
+                Ic0 = LTarget
+
+
+            self.si.set_light_analysis_on(True)
             self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
                                     model_name=self.model0_name,
                                     map_low_res_factor=self.map0_low_res_factor,
@@ -339,40 +373,56 @@ class OAILongitudeReisgtration(object):
                                     visualize_step=None,
                                     optimizer_name=self.optimizer0_name,
                                     use_multi_scale=True,
-                                    rel_ftol=1e-9,
+                                    rel_ftol=0,
                                     similarity_measure_type=self.similarity_measure_type,
                                     similarity_measure_sigma=self.similarity_measure_sigma,
                                     json_config_out_filename='cur_settings.json',
                                     params ='cur_settings.json')
             wi = self.si.get_warped_image()
+            self.im_io.write(os.path.join(saving_folder_path, img1_name + '_affine.nii.gz'), torch.squeeze(wi[0:1,0:1,...]), hdrc0)
+
             wi=wi.cpu().data.numpy()
+            LSource_warped= None
+
             if not self.light_analysis_on:
-                self.si.opt.optimizer.ssOpt.set_source_label(LSource)
+                self.si.opt.optimizer.ssOpt.set_source_label(AdaptVal(Variable(torch.from_numpy(LSource))))
                 LSource_warped = self.si.get_warped_label()
                 self.record_cur_performance(LSource_warped, LTarget, extra_info['pair_name'], extra_info['batch_id'], 'affine_finished')
+            affine_param = self.si.opt.optimizer.ssOpt.model.Ab.data.cpu().numpy().reshape((4,3))
+            affine_param = np.transpose(affine_param)
+            print(" the affine param is {}".format(affine_param))
+            det_affine_param = np.linalg.det(affine_param[:,:3])
+            print("the determinant of the affine param is {}".format(det_affine_param))
 
 
 
-            # print("let's come to step 2 ")
-            # self.si.set_light_analysis_on(self.light_analysis_on)
-            # extra_info['pair_name'] = [img1_name + '_' + img0_name + '_step2']
-            # extra_info['batch_id'] = img1_name + '_' + img0_name + '_step2'
-            # self.si.register_images(wi, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
-            #                         model_name=self.model1_name,
-            #                         map_low_res_factor=self.map1_low_res_factor,
-            #                         nr_of_iterations=self.nr_of_iterations,
-            #                         visualize_step=self.visualize_step,
-            #                         optimizer_name=self.optimizer1_name,
-            #                         use_multi_scale=True,
-            #                         rel_ftol=1e-9,
-            #                         similarity_measure_type= self.similarity_measure_type,
-            #                         similarity_measure_sigma=self.similarity_measure_sigma,
-            #                         json_config_out_filename='output_settings_lbfgs.json',
-            #                         params='cur_settings_lbfgs.json')
-            #
-            # wi = self.si.get_warped_image()
-            # img_name = os.path.split(img_path)[1]
-            # self.im_io.write(os.path.join(saving_folder_path,img_name+'.nii.gz'), torch.squeeze(wi), hdrc)
+            if self.label_affine_img_svg:
+                self.si.opt.optimizer.ssOpt.set_source_image(AdaptVal(Variable(torch.from_numpy(Ic1_copy))))
+                wi = self.si.get_warped_image().cpu().data.numpy()
+                Ic0 = Ic0_copy
+
+            print("let's come to step 2 ")
+            self.si.set_light_analysis_on(self.light_analysis_on)
+            LSource_warped = LSource_warped.cpu().data.numpy()
+            # extra_info['pair_name'] = [img1_name + '_' + img0_name]
+            # extra_info['batch_id'] = img1_name + '_' + img0_name # + '_step2'
+            self.si.register_images(wi, Ic0, spacing,extra_info=extra_info,LSource=LSource_warped,LTarget=LTarget,
+                                    model_name=self.model1_name,
+                                    map_low_res_factor=self.map1_low_res_factor,
+                                    nr_of_iterations=self.nr_of_iterations,
+                                    visualize_step=self.visualize_step,
+                                    optimizer_name=self.optimizer1_name,
+                                    use_multi_scale=True,
+                                    rel_ftol=0,
+                                    similarity_measure_type= self.similarity_measure_type,
+                                    similarity_measure_sigma=self.similarity_measure_sigma,
+                                    json_config_out_filename='output_settings_lbfgs.json',
+                                    params='cur_settings_lbfgs.json')
+
+            wi = self.si.get_warped_image()
+            self.im_io.write(os.path.join(saving_folder_path,img1_name+'_warpped.nii.gz'), torch.squeeze(wi[0:1,0:1,...]), hdrc0)
+
+        return 1
 
 
 
@@ -536,7 +586,7 @@ class Patient():
         if_taken = modality_met and specificity_met and len_time_met and has_label_met
         return if_taken
 
-    def get_slice_list(self, modality=None, specificity=None):
+    def get_slice_path_list(self, modality=None, specificity=None):
         if modality==None and specificity==None:
             return self.patient_slices_path_dic[self.modality[0]][self.specificity[0]]
         elif modality in self.modality and specificity in self.specificity:
@@ -579,18 +629,20 @@ class Patient():
 class OAIDataPrepare():
     def __init__(self):
         self.raw_data_path = "/playpen/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled"
-        self.raw_label_path = "/playpen/zhenlinx/Data/OAI_segmentation/segmentations/images_6sets_right/Cascaded_2_AC_residual-1-s1_end2end_multi-out_UNet_bias_Nifti_rescaled_train1_patch_128_128_32_batch_2_sample_0.01-0.02_cross_entropy_lr_0.0005_scheduler_multiStep_02262018_013038"
+        self.raw_label_path = "/playpen/zhenlinx/Data/OAI_segmentation/segmentations/" #images_6sets_right/Cascaded_2_AC_residual-1-s1_end2end_multi-out_UNet_bias_Nifti_rescaled_train1_patch_128_128_32_batch_2_sample_0.01-0.02_cross_entropy_lr_0.0005_scheduler_multiStep_02262018_013038"
         self.output_root_path = "/playpen/zyshen/summer/oai_registration/data"
         self.output_data_path = "/playpen/zyshen/summer/oai_registration/data/patient_slice"
         self.raw_file_path_list = []
         self.raw_file_label_path_list= []
         self.patient_info_dic= {}
-        self.file_end = '*.nii.gz'
+        self.image_file_end = '*image.nii.gz'
+        self.label_file_end = '*reflect.nii.gz'
 
     def prepare_data(self):
         self.get_file_list()
         self.__factor_file_list()
         self.__build_and_write_in()
+
 
 
     def __filter_file(self, path, file_end):
@@ -604,8 +656,8 @@ class OAIDataPrepare():
 
     def get_file_list(self):
 
-        self.raw_file_path_list = self.__filter_file(self.raw_data_path,self.file_end)
-        self.raw_file_label_path_list = self.__filter_file(self.raw_label_path,self.file_end)
+        self.raw_file_path_list = self.__filter_file(self.raw_data_path,self.image_file_end)
+        self.raw_file_label_path_list = self.__filter_file(self.raw_label_path,self.label_file_end)
 
 
     def __factor_file(self, f_path):
@@ -696,7 +748,7 @@ class OAIDataPrepare():
 # test = OAIDataPrepare()
 # test.prepare_data()
 patients = Patients()
-filtered_patients = patients.get_filtered_patients_list(specificity='RIGHT',num_of_patients=1, len_time_range=[2,7], use_random=False)
+filtered_patients = patients.get_filtered_patients_list(specificity='RIGHT',num_of_patients=3, len_time_range=[2,7], use_random=False)
 oai_reg = OAILongitudeReisgtration()
 oai_reg.set_patients(filtered_patients)
 oai_reg.do_registration()

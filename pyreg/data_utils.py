@@ -416,3 +416,10 @@ def sitk_read_img_to_std_tensor(path):
     img_np = sitk.GetArrayFromImage(img)
     img_np = np.expand_dims(np.expand_dims(img_np,0),0).astype(np.float32)
     return torch.from_numpy(img_np)
+
+
+def sitk_read_img_to_std_numpy(path):
+    img = sitk.ReadImage(path)
+    img_np = sitk.GetArrayFromImage(img)
+    img_np = np.expand_dims(np.expand_dims(img_np,0),0).astype(np.float32)
+    return img_np

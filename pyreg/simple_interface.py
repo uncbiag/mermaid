@@ -537,8 +537,8 @@ class RegisterImagePair(object):
                 self.set_initial_map(self.delayed_initial_map)
 
             if not self.light_analysis_on and use_multi_scale:
-                self.opt.optimizer.set_source_label(LSource)
-                self.opt.optimizer.set_target_label(LTarget)
+                self.opt.optimizer.set_source_label( AdaptVal(Variable(torch.from_numpy(LSource))))
+                self.opt.optimizer.set_target_label( AdaptVal(Variable(torch.from_numpy(LTarget))))
                 self._set_analysis(self.opt.optimizer,extra_info)
 
             self.opt.register()

@@ -1436,7 +1436,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 else:
                     vizReg.show_current_images(iter, self.ISource, self.ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
 
-                if 0:#iter==self.nrOfIterations-1:
+                if 0 :#iter==self.nrOfIterations-1:
                     self._debugging_saving_intermid_img(self.ISource, append='source')
                     self._debugging_saving_intermid_img(self.LSource, is_label_map=True,append='source')
                     self._debugging_saving_intermid_img(self.ITarget, append='target')

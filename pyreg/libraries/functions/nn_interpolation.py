@@ -40,6 +40,7 @@ def get_nn_interpolation(input1, input2, spacing):
     elif ndim == 2:
         output = MyTensor(input1.size()[0], input1.size()[1], input2.size()[2], input2.size()[3]).zero_()
     elif ndim == 3:
+        #print(type(input1),type(input2))
         output = MyTensor(input1.size()[0], input1.size()[1], input2.size()[2], input2.size()[3], input2.size()[4]).zero_()
     else:
         raise ValueError('Can only process dimensions 1-3')
