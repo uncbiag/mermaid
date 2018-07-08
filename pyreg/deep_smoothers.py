@@ -164,7 +164,7 @@ def half_sigmoid(x,alpha=1):
 def _compute_localized_edge_penalty(I,spacing,gamma):
     # needs to be batch B x X x Y x Z format
     fdt = fd.FD_torch(spacing=spacing)
-    gnI = float(np.min(spacing)) * fdt.grad_norm_sqr(I) ** 0.5
+    gnI = float(np.min(spacing)) * fdt.grad_norm_sqr_f(I) ** 0.5
 
     # compute edge penalty
     localized_edge_penalty = 1.0 / (1.0 + gamma * gnI)  # this is what we weight the OMT values with
@@ -217,7 +217,7 @@ def _compute_weighted_total_variation_1d(d_in,w, spacing, bc_val, pnorm=2):
     # need to use torch.abs here to make sure the proper subgradient is computed at zero
     batch_size = d.size()[0]
     volumeElement = spacing.prod()
-    t0 = torch.abs(fdt.dXc(d))
+    t0 = torch.abs(fdt.dXf(d))
 
     tm = t0*w
 
@@ -238,7 +238,7 @@ def _compute_weighted_total_variation_2d(d_in,w, spacing, bc_val, pnorm=2):
     # need to use torch.norm here to make sure the proper subgradient is computed at zero
     batch_size = d.size()[0]
     volumeElement = spacing.prod()
-    t0 = torch.norm(torch.stack((fdt.dXc(d),fdt.dYc(d))),pnorm,0)
+    t0 = torch.norm(torch.stack((fdt.dXf(d),fdt.dYf(d))),pnorm,0)
 
     tm = t0*w
 
@@ -262,9 +262,9 @@ def _compute_weighted_total_variation_3d(d_in,w, spacing, bc_val, pnorm=2):
     batch_size = d.size()[0]
     volumeElement = spacing.prod()
 
-    t0 = torch.norm(torch.stack((fdt.dXc(d),
-                                 fdt.dYc(d),
-                                 fdt.dZc(d))), pnorm, 0)
+    t0 = torch.norm(torch.stack((fdt.dXf(d),
+                                 fdt.dYf(d),
+                                 fdt.dZf(d))), pnorm, 0)
 
     tm = t0*w
 
@@ -289,7 +289,7 @@ def _compute_local_norm_of_gradient_1d(d,spacing,pnorm=2):
 
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.abs here to make sure the proper subgradient is computed at zero
-    t0 = torch.abs(fdt.dXc(d))
+    t0 = torch.abs(fdt.dXf(d))
 
     return t0
 
@@ -299,8 +299,8 @@ def _compute_local_norm_of_gradient_2d(d,spacing,pnorm=2):
     # need to use torch.norm here to make sure the proper subgradient is computed at zero
     #t0 = torch.norm(torch.stack((fdt.dXc(d),fdt.dYc(d))),pnorm,0)
 
-    dX = fdt.dXc(d)
-    dY = fdt.dYc(d)
+    dX = fdt.dXf(d)
+    dY = fdt.dYf(d)
 
     t0 = torch.norm(torch.stack((dX, dY)), pnorm, 0)
 
@@ -318,9 +318,9 @@ def _compute_local_norm_of_gradient_3d(d,spacing, pnorm=2):
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.norm here to make sure the proper subgradient is computed at zero
 
-    t0 = torch.norm(torch.stack((fdt.dXc(d),
-                                 fdt.dYc(d),
-                                 fdt.dZc(d))), pnorm, 0)
+    t0 = torch.norm(torch.stack((fdt.dXf(d),
+                                 fdt.dYf(d),
+                                 fdt.dZf(d))), pnorm, 0)
 
     return t0
 
@@ -1131,7 +1131,7 @@ class DeepSmoothingModel(nn.Module):
 
         # need to use torch.abs here to make sure the proper subgradient is computed at zero
         batch_size = d.size()[0]
-        t0 = torch.abs(self.fdt.dXc(d))
+        t0 = torch.abs(self.fdt.dXf(d))
 
         return (t0).sum()*self.volumeElement/batch_size
 
@@ -1139,7 +1139,7 @@ class DeepSmoothingModel(nn.Module):
 
         # need to use torch.norm here to make sure the proper subgradient is computed at zero
         batch_size = d.size()[0]
-        t0 = torch.norm(torch.stack((self.fdt.dXc(d),self.fdt.dYc(d))),self.pnorm,0)
+        t0 = torch.norm(torch.stack((self.fdt.dXf(d),self.fdt.dYf(d))),self.pnorm,0)
 
         return t0.sum()*self.volumeElement/batch_size
 
@@ -1147,9 +1147,9 @@ class DeepSmoothingModel(nn.Module):
 
         # need to use torch.norm here to make sure the proper subgradient is computed at zero
         batch_size = d.size()[0]
-        t0 = torch.norm(torch.stack((self.fdt.dXc(d),
-                                     self.fdt.dYc(d),
-                                     self.fdt.dZc(d))), self.pnorm, 0)
+        t0 = torch.norm(torch.stack((self.fdt.dXf(d),
+                                     self.fdt.dYf(d),
+                                     self.fdt.dZf(d))), self.pnorm, 0)
 
         return t0.sum()*self.volumeElement/batch_size
 
