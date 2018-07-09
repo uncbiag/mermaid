@@ -47,8 +47,9 @@ assert( len(sz)==dim+2 )
 print ('Spacing = ' + str( spacing ) )
 
 # create the source and target image as pyTorch variables
-ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=True )
-ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
+ISource =  torch.from_numpy( I0.copy() )
+ISource.requires_grad=True
+ITarget =  torch.from_numpy( I1 )
 
 # smooth both a little bit
 #s = SF.SmootherFactory( spacing ).createSmoother('diffusion',{'iter':10})

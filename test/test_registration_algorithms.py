@@ -49,8 +49,8 @@ class Test_registration_algorithms(unittest.TestCase):
         self.sz = np.array(I0.shape)
 
         # create the source and target image as pyTorch variables
-        self.ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
-        self.ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
+        self.ISource = AdaptVal(torch.from_numpy(I0.copy()))
+        self.ITarget = AdaptVal(torch.from_numpy(I1))
 
         # smooth both a little bit
         self.params[('image_smoothing', {}, 'image smoothing settings')]

@@ -14,7 +14,6 @@ import set_pyreg_paths
 
 # first do the torch imports
 import torch
-from torch.autograd import Variable
 from time import time
 
 import numpy as np
@@ -73,8 +72,8 @@ def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scal
     sz = I0.shape
 
     # create the source and target image as pyTorch variables
-    ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
-    ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
+    ISource = AdaptVal(torch.from_numpy(I0.copy()))
+    ITarget = AdaptVal(torch.from_numpy(I1))
 
     smooth_images = par_image_smoothing['smooth_images']
     if smooth_images:

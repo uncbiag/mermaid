@@ -218,7 +218,10 @@ class XlsxRecorder(object):
         df = pd.DataFrame.from_dict(formated_data)
         df.index = pd.Index(row_index)
         df = df[column_index]
-        df.to_excel(self.xlsx_writer, sheet_name=self.sheet_name, startrow= self.start_row, index_label= iter_info)
+        try:
+            df.to_excel(self.xlsx_writer, sheet_name=self.sheet_name, startrow= self.start_row, index_label= iter_info)
+        except:
+            df.to_excel(self.xlsx_writer, sheet_name=self.sheet_name, startrow=self.start_row, index_label=iter_info)
         worksheet = self.xlsx_writer.sheets[self.sheet_name]
         #worksheet.set_column(1,1000, 30)
         self.xlsx_writer.save()

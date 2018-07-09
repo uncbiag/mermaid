@@ -184,9 +184,12 @@ d = torch.load('test_data_multi_gaussian.pt')
 # do everything in double for better numerical precision
 
 nr_of_gaussians = d['nr_of_gaussians']
-stds = Variable( d['std'].data.float(), requires_grad=True)
-weights = Variable( d['weights'].data.float(), requires_grad=True)
-m = Variable( d['m'].data.float(), requires_grad=True)
+stds =  d['std'].data.float()
+weights =  d['weights'].data.float()
+m =  d['m'].data.float()
+stds.requires_grad=True
+weights.requires_grad= True
+m. requires_grad = True
 
 gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(d['sz'], d['spacing'], nr_of_gaussians)
 

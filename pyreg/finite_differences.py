@@ -489,7 +489,7 @@ class FD_torch(FD):
         :param sz: size of the array, e.g., [3,4,2]
         :return: the zero array
         """
-        return  Variable(MyTensor(sz).zero_(), requires_grad=False)
+        return  MyTensor(sz).zero_()
 
     def get_size_of_array(self, A):
         """

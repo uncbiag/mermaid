@@ -10,7 +10,6 @@ from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import torch
-from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
@@ -224,7 +223,7 @@ class Smoother(with_metaclass(ABCMeta, object)):
         if vout is not None:
             Sv = vout
         else:
-            Sv = Variable(MyTensor(v.size()).zero_())
+            Sv = MyTensor(v.size()).zero_()
 
         Sv[:] = self.apply_smooth(v,vout,pars,variables_from_optimizer, smooth_to_compute_regularizer_energy, clampCFL_dt)    # here must use :, very important !!!!
         return Sv
@@ -338,11 +337,11 @@ class GaussianSpatialSmoother(GaussianSmoother):
         self.required_padding = (self.k_sz-1)//2
 
         if self.dim==1:
-            self.filter =AdaptVal(Variable(torch.from_numpy(self.smoothingKernel)))
+            self.filter =AdaptVal(torch.from_numpy(self.smoothingKernel))
         elif self.dim==2:
-            self.filter = AdaptVal(Variable(torch.from_numpy(self.smoothingKernel)))
+            self.filter = AdaptVal(torch.from_numpy(self.smoothingKernel))
         elif self.dim==3:
-            self.filter = AdaptVal(Variable(torch.from_numpy(self.smoothingKernel)))
+            self.filter = AdaptVal(torch.from_numpy(self.smoothingKernel))
         else:
             raise ValueError('Can only create the smoothing kernel in dimensions 1-3')
 
@@ -649,7 +648,7 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
 
 def _compute_omt_penalty_for_weight_vectors(weights,multi_gaussian_stds,omt_power=2.0,use_log_transform=False):
 
-    penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+    penalty = MyTensor(1).zero_()
 
     # todo: check that this is properly handled for the learned optimizer (i.e., as a variable for optimization opposed to a constant)
     max_std = torch.max(multi_gaussian_stds)
@@ -709,7 +708,7 @@ class AdaptiveMultiGaussianFourierSmoother(GaussianSmoother):
         """number of Gaussians"""
         # todo: maybe make this more generic; there is an explicit float here
 
-        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(np.ones(self.nr_of_gaussians) / self.nr_of_gaussians).float(),requires_grad=False))
+        self.default_multi_gaussian_weights = AdaptVal(torch.from_numpy(np.ones(self.nr_of_gaussians) / self.nr_of_gaussians).float())
         self.default_multi_gaussian_weights /= self.default_multi_gaussian_weights.sum()
 
         self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', self.default_multi_gaussian_weights.data.cpu().numpy().tolist(),'weights for the multiple Gaussians')])
@@ -951,7 +950,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         """number of Gaussians"""
         # todo: maybe make this more generic; there is an explicit float here
 
-        self.default_multi_gaussian_weights = AdaptVal(Variable(torch.from_numpy(np.ones(self.nr_of_gaussians)/self.nr_of_gaussians).float(),requires_grad=False))
+        self.default_multi_gaussian_weights = AdaptVal(torch.from_numpy(np.ones(self.nr_of_gaussians)/self.nr_of_gaussians).float())
         self.default_multi_gaussian_weights /= self.default_multi_gaussian_weights.sum()
 
         self.multi_gaussian_weights = np.array(params[('multi_gaussian_weights', self.default_multi_gaussian_weights.data.cpu().numpy().tolist(), 'weights for the multiple Gaussians')])
@@ -1165,7 +1164,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             #print('omt penalty = ' + str(penalty.data.cpu().numpy()))
 
             total_number_of_parameters = 1
-            par_penalty = Variable(MyTensor(1).zero_(),requires_grad=False)
+            par_penalty = MyTensor(1).zero_()
             for p in self.ws.parameters():
                 total_number_of_parameters += p.numel()
                 par_penalty += (p ** 2).sum()
@@ -1247,7 +1246,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             if smooth_to_compute_regularizer_energy and self.only_use_smallest_standard_deviation_for_regularization_energy:
                 # only smooth with the smallest standard deviation
                 smoothed_v = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
-                                                                     Variable(torch.from_numpy(np.array([self.smallest_gaussian_std])),requires_grad=False),
+                                                                     torch.from_numpy(np.array([self.smallest_gaussian_std])),
                                                                      compute_std_gradients)
 
             else:

@@ -35,9 +35,9 @@ def compute_average_image(images):
     for nr,im_name in enumerate(images):
         Ic,hdrc,spacing,_ = im_io.read_to_nc_format(filename=im_name)
         if nr==0:
-            Iavg = AdaptVal(Variable(torch.from_numpy(Ic), requires_grad=False))
+            Iavg = AdaptVal(torch.from_numpy(Ic))
         else:
-            Iavg += AdaptVal(Variable(torch.from_numpy(Ic), requires_grad=False))
+            Iavg += AdaptVal(torch.from_numpy(Ic))
     Iavg = Iavg/len(images)
     return Iavg,spacing
 

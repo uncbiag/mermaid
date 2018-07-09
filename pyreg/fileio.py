@@ -119,24 +119,7 @@ class FileIO(with_metaclass(ABCMeta, object)):
         return m_itk
 
     def _convert_data_to_numpy_if_needed(self,data):
-        if ( type( data ) == torch.autograd.variable.Variable ) or \
-                (type(data) == torch.torch.nn.parameter.Parameter) or \
-                (type(data) == torch.FloatTensor) or \
-                (type(data) == torch.DoubleTensor) or \
-                (type(data) == torch.HalfTensor) or \
-                (type(data) == torch.ByteTensor) or \
-                (type(data) == torch.CharTensor) or \
-                (type(data) == torch.ShortTensor) or \
-                (type(data) == torch.IntTensor) or \
-                (type(data) == torch.LongTensor) or \
-                (type(data) == torch.cuda.FloatTensor) or \
-                (type(data) == torch.cuda.DoubleTensor) or \
-                (type(data) == torch.cuda.HalfTensor) or \
-                (type(data) == torch.cuda.ByteTensor) or \
-                (type(data) == torch.cuda.CharTensor) or \
-                (type(data) == torch.cuda.ShortTensor) or \
-                (type(data) == torch.cuda.IntTensor) or \
-                (type(data) == torch.cuda.LongTensor):
+        if type( data ) == torch.Tensor:
             datar = utils.t2np(data)
         else:
             datar = data

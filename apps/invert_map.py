@@ -10,7 +10,6 @@ from builtins import str
 from builtins import range
 import set_pyreg_paths
 import torch
-from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 import pyreg.utils as utils
 from pyreg.data_wrapper import AdaptVal
@@ -24,11 +23,11 @@ def invert_map(map,spacing):
     :return: inverted map
     """
     # make pytorch arrays for subsequent processing
-    map_t = AdaptVal(Variable(torch.from_numpy(map), requires_grad=False))
+    map_t = AdaptVal(torch.from_numpy(map))
 
     # identity map
     id = utils.identity_map_multiN(map_t.data.shape,spacing)
-    id_t = AdaptVal(Variable(torch.from_numpy(id),requires_grad=False))
+    id_t = AdaptVal(torch.from_numpy(id))
 
     # parameter to store the inverse map
     invmap_t = AdaptVal(Parameter(torch.from_numpy(id.copy())))

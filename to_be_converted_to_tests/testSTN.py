@@ -38,8 +38,8 @@ grid = np.zeros([1,sz,sz,2], dtype='float32')
 grid[0,:,:,0] = XX + 0.2
 grid[0,:,:,1] = YY
 
-ISource = Variable( torch.from_numpy( I0 ), requires_grad=False )
-gridV = Variable( torch.from_numpy( grid ), requires_grad=True )
+ISource = torch.from_numpy( I0 )
+gridV =  torch.from_numpy( grid )
 
 #print input2.data
 #s = STN(layout = 'BCHW')

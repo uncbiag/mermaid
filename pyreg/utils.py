@@ -207,7 +207,7 @@ def apply_affine_transform_to_map(Ab,phi):
     if dim not in [1,2,3]:
         raise ValueError('Only supports dimensions 1, 2, and 3.')
 
-    phiR = Variable(MyTensor(sz).zero_(), requires_grad=False).type_as(phi)
+    phiR = MyTensor(sz).zero_().type_as(phi)
 
     if dim == 1:
         phiR = phi * Ab[0] + Ab[1]
@@ -238,7 +238,7 @@ def apply_affine_transform_to_map_multiNC(Ab,phi):
     if dim != len(sz)-2:
         raise ValueError('Incompatible number of affine transforms')
 
-    phiR = Variable(MyTensor(sz).zero_(), requires_grad=False).type_as(phi)
+    phiR = MyTensor(sz).zero_().type_as(phi)
     for nrI in range(nrOfImages):
         phiR[nrI,...] = apply_affine_transform_to_map(Ab[nrI,:],phi[nrI,...])
 
@@ -410,7 +410,7 @@ def create_ND_vector_field_variable_multiN(sz, nrOfI=1):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
-    return Variable(MyTensor(*(csz.tolist())).zero_(), requires_grad=False)
+    return MyTensor(*(csz.tolist())).zero_()
 
 def create_ND_vector_field_variable(sz):
     """
@@ -422,7 +422,7 @@ def create_ND_vector_field_variable(sz):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([dim]+list(csz))
-    return Variable(MyTensor(*(csz.tolist())).zero_(), requires_grad=False)
+    return MyTensor(*(csz.tolist())).zero_()
 
 def create_vector_parameter(nr_of_elements):
     """

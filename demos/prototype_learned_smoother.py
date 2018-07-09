@@ -29,7 +29,7 @@ compute_std_gradients = True
 gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, nr_of_gaussians)
 
 vcollection = ce.fourier_set_of_gaussian_convolutions(m, gaussian_fourier_filter_generator,
-                                                      Variable(torch.from_numpy(gaussian_stds)), compute_std_gradients)
+                                                      torch.from_numpy(gaussian_stds), compute_std_gradients)
 
 I = I_or_phi[0]
 

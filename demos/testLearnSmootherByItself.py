@@ -31,9 +31,9 @@ visualize_smooth_vector_fields = True
 
 d = torch.load(results_filename)
 
-I0 = Variable( torch.from_numpy(d['I0']), requires_grad=False)
-I1 = Variable( torch.from_numpy(d['I1']), requires_grad=False)
-lam = Variable( d['registration_pars']['lam'], requires_grad=False)
+I0 = torch.from_numpy(d['I0'])
+I1 = torch.from_numpy(d['I1'])
+lam = d['registration_pars']['lam']
 sz = d['sz']
 lowResSize = lam.size()
 spacing = d['spacing']

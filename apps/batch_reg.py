@@ -19,7 +19,6 @@ if MATPLOTLIB_AGG:
 
 # first do the torch imports
 import torch
-from torch.autograd import Variable
 from time import time
 import os
 import numpy as np
@@ -174,14 +173,14 @@ def do_registration():
         for data_package in dataloaders[sess]:
             data= data_package[0]
             pair_path = [pair for pair in data_package[1]]
-            ISource = AdaptVal(Variable(data['image'][:,:,0]))
-            ITarget = AdaptVal(Variable(data['image'][:,:,1]))
+            ISource = AdaptVal(data['image'][:,:,0])
+            ITarget = AdaptVal(data['image'][:,:,1])
             #pair_path_idx = data['pair_path'].numpy().tolist()
             #pair_path = [pair_path_list[idx] for idx in pair_path_idx]
             LSource, LTarget = None, None
             if 'label' in data:
-                LSource = AdaptVal(Variable(data['label'][:, :,0], volatile=True))
-                LTarget = AdaptVal(Variable(data['label'][:, :,1], volatile=True))
+                LSource = AdaptVal(data['label'][:, :,0])
+                LTarget = AdaptVal(data['label'][:, :,1])
 
             if smooth_images:
                 # smooth both a little bit

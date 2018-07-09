@@ -100,11 +100,11 @@ def compute_mask(im):
 #d = torch.load('testBatchGlobalWeightRegularizedOpt_with_NCC_lddmm.pt')
 d = torch.load('testBatchGlobalWeightRegularizedOpt_tst.pt')
 
-I0 = Variable( torch.from_numpy(d['I0']), requires_grad=False)
-I1 = Variable( torch.from_numpy(d['I1']), requires_grad=False)
+I0 =  torch.from_numpy(d['I0'])
+I1 =  torch.from_numpy(d['I1'])
 Iw = d['Iw']
 phi = d['phi']
-lam = Variable( d['registration_pars']['lam'], requires_grad=False)
+lam =  d['registration_pars']['lam']
 sz = I0.size()
 history = d['history']
 lowResSize = lam.size()
@@ -210,7 +210,7 @@ if visualize_weights:
         plt.clf()
 
         source_mask = compute_mask(I0[n:n+1,0:1,...].data.numpy())
-        lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(Variable( torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:],spline_order)
+        lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size( torch.from_numpy(source_mask), spacing, lowResSize[2:],spline_order)
         lowRes_source_mask = lowRes_source_mask_v.data.numpy()[0,0,...]
 
         plt.subplot(2,3,1)

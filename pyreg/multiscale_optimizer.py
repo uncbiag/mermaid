@@ -17,7 +17,6 @@ from . import visualize_registration_results as vizReg
 from . import custom_optimizers as CO
 import numpy as np
 import torch
-from torch.autograd import Variable
 from .data_wrapper import USE_CUDA, AdaptVal, MyTensor
 from . import model_factory as MF
 from . import image_sampling as IS
@@ -531,7 +530,7 @@ class Optimizer(with_metaclass(ABCMeta, object)):
         :param shared_model_parameters: paramters that have been declared shared in a model
         :return: 0 by default, otherwise the corresponding penalty
         """
-        return Variable(MyTensor(1).zero_(),requires_grad=False)
+        return MyTensor(1).zero_()
 
 class ImageRegistrationOptimizer(Optimizer):
     """
@@ -1016,12 +1015,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 self.initialMap = self.map0_external
             else:
                 id = utils.identity_map_multiN(self.sz, self.spacing)
-                self.initialMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
+                self.initialMap = AdaptVal(torch.from_numpy(id))
 
             if self.mapLowResFactor is not None:
                 # create a lower resolution map for the computations
                 lowres_id = utils.identity_map_multiN(self.lowResSize, self.lowResSpacing)
-                self.lowResInitialMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=False))
+                self.lowResInitialMap = AdaptVal(torch.from_numpy(lowres_id))
 
     def set_model(self, modelName):
         """
@@ -2401,8 +2400,8 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
             for i, sample in enumerate(dataloader, 0):
 
                 # get the data from the dataloader
-                current_source_batch = AdaptVal(Variable(sample['ISource'], requires_grad=False))
-                current_target_batch = AdaptVal(Variable(sample['ITarget'], requires_grad=False))
+                current_source_batch = AdaptVal(sample['ISource'])
+                current_target_batch = AdaptVal(sample['ITarget'])
 
                 # create the optimizer
                 batch_size = current_source_batch.size()
@@ -2623,7 +2622,7 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
         :param shared_model_parameters: parameters that have been declared shared in a model
         :return: 0 by default, otherwise the corresponding penalty
         """
-        additional_loss = Variable(MyTensor(1).zero_(),requires_grad=False)
+        additional_loss = MyTensor(1).zero_()
         total_number_of_parameters = 1
         for k in shared_model_parameters:
             total_number_of_parameters += shared_model_parameters[k].numel()
@@ -2878,8 +2877,8 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
             all_histories = []
             current_batch = 0 # there is only one batch, this one
 
-            current_source_batch = Variable(self.ISource[:, ...].data, requires_grad=False)
-            current_target_batch = Variable(self.ITarget[:, ...].data, requires_grad=False)
+            current_source_batch = self.ISource[:, ...].data
+            current_target_batch = self.ITarget[:, ...].data
             current_batch_image_size = np.array(current_source_batch.size())
 
             # there is not consensus penalty here as this is technically not consensus optimization
@@ -2937,8 +2936,8 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
                 nr_of_images_in_batch = to_image-from_image
 
-                current_source_batch = Variable(self.ISource[from_image:to_image, ...].data, requires_grad=False)
-                current_target_batch = Variable(self.ITarget[from_image:to_image, ...].data, requires_grad=False)
+                current_source_batch = self.ISource[from_image:to_image, ...].data
+                current_target_batch = self.ITarget[from_image:to_image, ...].data
                 current_batch_image_size = np.array(current_source_batch.size())
 
                 print('Computing image pair batch ' + str(current_batch+1) + ' of ' + str(self.nr_of_batches) +

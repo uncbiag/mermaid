@@ -18,7 +18,8 @@ if dim==-1: # test nd version via fft
     fconvFilter = ce.FourierConvolution(f,[sz,sz,sz])
 
     #F = np.fft.fftn(f)
-    A = Variable(torch.from_numpy(np.random.rand(sz,sz,sz)), requires_grad=True)
+    A = torch.from_numpy(np.random.rand(sz,sz,sz))
+    A.requires_grad = True
 
     start = time.time()
     for iter in range(100):
@@ -29,8 +30,8 @@ if dim==-1: # test nd version via fft
 
 
 elif dim==2:
-    filters = Variable(torch.randn(1, 1, 32, 32))
-    inputs = Variable(torch.randn(1, 1, 170, 170))
+    filters = torch.randn(1, 1, 32, 32)
+    inputs = torch.randn(1, 1, 170, 170)
 
     start = time.time()
     for iter in range(1000):
@@ -39,8 +40,8 @@ elif dim==2:
     print(('time:', time.time() - start))
 
 elif dim==3:
-    filters = Variable(torch.randn(1, 1, 10, 10, 10))
-    inputs = Variable(torch.randn(1, 1, sz, sz, sz))
+    filters = torch.randn(1, 1, 10, 10, 10)
+    inputs = torch.randn(1, 1, sz, sz, sz)
 
     start = time.time()
     for iter in range(100):

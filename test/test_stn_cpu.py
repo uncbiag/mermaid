@@ -11,7 +11,6 @@ import numpy as np
 import numpy.testing as npt
 import pyreg.utils as utils
 import torch
-from torch.autograd import Variable
 
 from libraries.modules.stn_nd import STN_ND_BCXYZ
 
@@ -40,23 +39,23 @@ class Test_stn_1d(unittest.TestCase):
     def test_identity(self):
         spacing = np.array([1./(50.-1.)])
         self.stn = STN_ND_BCXYZ(spacing)
-        I0 = Variable( torch.zeros([1,1,50]) )
+        I0 =  torch.zeros([1,1,50])
         I0[0,0,12:33] = 1
-        I1 = Variable( torch.zeros([1,1,50]) )
+        I1 =  torch.zeros([1,1,50])
         I1[0,0,12:33] = 1
-        id = Variable( torch.from_numpy( utils.identity_map_multiN([1,1,50],spacing) ) )
+        id =  torch.from_numpy( utils.identity_map_multiN([1,1,50],spacing) )
         I1_warped = self.stn(I0,id)
         npt.assert_almost_equal(I1.data.numpy(),I1_warped.data.numpy(),decimal=4)
 
     def test_shift(self):
         spacing = np.array([1./(100.-1.)])
         self.stn = STN_ND_BCXYZ(spacing)
-        I0 = Variable(torch.zeros([1, 1, 100]))
+        I0 = torch.zeros([1, 1, 100])
         I0[0, 0, 12:33] = 1
-        I1 = Variable(torch.zeros([1, 1, 100]))
+        I1 = torch.zeros([1, 1, 100])
         I1[0, 0, 22:43] = 1
-        id = Variable(torch.from_numpy(utils.identity_map_multiN([1, 1, 100],spacing)))
-        id_shift = Variable(torch.zeros([1,1,100]))
+        id = torch.from_numpy(utils.identity_map_multiN([1, 1, 100],spacing))
+        id_shift = torch.zeros([1,1,100])
         id_shift[0,0,:] = (id[0,0,:] - 10*(id[0,0,1]-id[0,0,0]))
         I1_warped = self.stn(I0, id_shift)
         npt.assert_almost_equal(I1.data.numpy(), I1_warped.data.numpy(), decimal=4)
@@ -64,12 +63,12 @@ class Test_stn_1d(unittest.TestCase):
     def test_expand(self):
         spacing = np.array([1./(11.-1.)])
         self.stn = STN_ND_BCXYZ(spacing)
-        I0 = Variable(torch.zeros([1, 1, 11]))
+        I0 = torch.zeros([1, 1, 11])
         I0[0, 0, :] = torch.FloatTensor([0,0,0,0,1,1,1,0,0,0,0])
-        I1 = Variable(torch.zeros([1, 1, 11]))
+        I1 = torch.zeros([1, 1, 11])
         I1[0, 0, :] = torch.FloatTensor([0,0,0.5,1,1,1,1,1,0.5,0,0])
-        id = Variable(torch.from_numpy(utils.identity_map_multiN([1, 1, 11],spacing)))
-        id_expand = Variable(torch.zeros([1, 1, 11]))
+        id = torch.from_numpy(utils.identity_map_multiN([1, 1, 11],spacing))
+        id_expand = torch.zeros([1, 1, 11])
         id_expand[0, 0, :] = 0.5*(id[0, 0, :]-0.5)+0.5
         I1_warped = self.stn(I0, id_expand)
         npt.assert_almost_equal(I1.data.numpy(), I1_warped.data.numpy(), decimal=4)
@@ -85,23 +84,23 @@ class Test_stn_2d(unittest.TestCase):
     def test_identity(self):
         spacing = np.array([1./(50.-1.),1./(50.-1.)])
         self.stn = STN_ND_BCXYZ(spacing)
-        I0 = Variable( torch.zeros([1,1,50,50]) )
+        I0 =  torch.zeros([1,1,50,50])
         I0[0,0,12:33,12:33] = 1
-        I1 = Variable( torch.zeros([1,1,50,50]) )
+        I1 =  torch.zeros([1,1,50,50])
         I1[0,0,12:33,12:33] = 1
-        id = Variable( torch.from_numpy( utils.identity_map_multiN([1,1,50,50],spacing) ) )
+        id =  torch.from_numpy( utils.identity_map_multiN([1,1,50,50],spacing) )
         I1_warped = self.stn(I0,id)
         npt.assert_almost_equal(I1.data.numpy(),I1_warped.data.numpy(),decimal=4)
 
     def test_shift(self):
         spacing = np.array([1. / (10. - 1.), 1. / (10. - 1.)])
         self.stn = STN_ND_BCXYZ(spacing)
-        I0 = Variable(torch.zeros([1, 1, 10,10]))
+        I0 = torch.zeros([1, 1, 10,10])
         I0[0, 0, 2:6,2:6] = 1
-        I1 = Variable(torch.zeros([1, 1, 10,10]))
+        I1 = torch.zeros([1, 1, 10,10])
         I1[0, 0, 5:9,5:9] = 1
-        id = Variable(torch.from_numpy(utils.identity_map_multiN([1, 1, 10,10],spacing)))
-        id_shift = Variable(torch.zeros([1,2,10,10]))
+        id = torch.from_numpy(utils.identity_map_multiN([1, 1, 10,10],spacing))
+        id_shift = torch.zeros([1,2,10,10])
         id_shift[0,:,:,:] = (id[0,:,:,:] - 3*(id[0,0,1,0]-id[0,0,0,0]))
         I1_warped = self.stn(I0, id_shift)
         npt.assert_almost_equal(I1.data.numpy(), I1_warped.data.numpy(), decimal=4)
@@ -109,9 +108,9 @@ class Test_stn_2d(unittest.TestCase):
     def test_expand(self):
         spacing = np.array([1. / (11. - 1.), 1. / (11. - 1.)])
         self.stn = STN_ND_BCXYZ(spacing)
-        I0 = Variable(torch.zeros([1, 1, 11,11]))
+        I0 = torch.zeros([1, 1, 11,11])
         I0[0, 0, 4:7,4:7] = 1
-        I1 = Variable(torch.zeros([1, 1, 11,11]))
+        I1 = torch.zeros([1, 1, 11,11])
         I1[0, 0, 3:8,3:8] = 1
         I1[0,0,2,3:8]=0.5
         I1[0,0,8,3:8]=0.5
@@ -121,8 +120,8 @@ class Test_stn_2d(unittest.TestCase):
         I1[0,0,2,8]=0.25
         I1[0,0,8,2]=0.25
         I1[0,0,8,8]=0.25
-        id = Variable(torch.from_numpy(utils.identity_map_multiN([1, 1, 11,11],spacing)))
-        id_expand = Variable(torch.zeros([1, 2, 11,11]))
+        id = torch.from_numpy(utils.identity_map_multiN([1, 1, 11,11],spacing))
+        id_expand = torch.zeros([1, 2, 11,11])
         id_expand[0, :, :,:] = 0.5*(id[0, :, :,:]-0.5)+0.5
         I1_warped = self.stn(I0, id_expand)
         npt.assert_almost_equal(I1.data.numpy(), I1_warped.data.numpy(), decimal=4)
@@ -138,23 +137,23 @@ class Test_stn_3d(unittest.TestCase):
     def test_identity(self):
         spacing = np.array([1. / (50. - 1.), 1. / (50. - 1.), 1./(50.-1.)])
         self.stn = STN_ND_BCXYZ(spacing)
-        I0 = Variable( torch.zeros([1,1,50,50,50]) )
+        I0 =  torch.zeros([1,1,50,50,50])
         I0[0,0,12:33,12:33,12:33] = 1
-        I1 = Variable( torch.zeros([1,1,50,50,50]) )
+        I1 =  torch.zeros([1,1,50,50,50])
         I1[0,0,12:33,12:33,12:33] = 1
-        id = Variable( torch.from_numpy( utils.identity_map_multiN([1,1,50,50,50],spacing) ) )
+        id =  torch.from_numpy( utils.identity_map_multiN([1,1,50,50,50],spacing) )
         I1_warped = self.stn(I0,id)
         npt.assert_almost_equal(I1.data.numpy(),I1_warped.data.numpy(),decimal=4)
 
     def test_shift(self):
         spacing = np.array([1. / (100. - 1.), 1. / (100. - 1.), 1. / (100. - 1.)])
         self.stn = STN_ND_BCXYZ(spacing)
-        I0 = Variable(torch.zeros([1, 1, 100,100,100]))
+        I0 = torch.zeros([1, 1, 100,100,100])
         I0[0, 0, 12:33,12:33,12:33] = 1
-        I1 = Variable(torch.zeros([1, 1, 100,100,100]))
+        I1 = torch.zeros([1, 1, 100,100,100])
         I1[0, 0, 22:43,22:43,22:43] = 1
-        id = Variable(torch.from_numpy(utils.identity_map_multiN([1, 1, 100,100,100],spacing)))
-        id_shift = Variable(torch.zeros([1,3,100,100,100]))
+        id = torch.from_numpy(utils.identity_map_multiN([1, 1, 100,100,100],spacing))
+        id_shift = torch.zeros([1,3,100,100,100])
         id_shift[0,:,:,:] = (id[0,:,:,:] - 10*(id[0,0,1,0,0]-id[0,0,0,0,0]))
         I1_warped = self.stn(I0, id_shift)
         npt.assert_almost_equal(I1.data.numpy(), I1_warped.data.numpy(), decimal=4)
@@ -162,7 +161,7 @@ class Test_stn_3d(unittest.TestCase):
     def test_expand(self):
         spacing = np.array([1. / (11. - 1.), 1. / (11. - 1.), 1. / (11. - 1.)])
         self.stn = STN_ND_BCXYZ(spacing)
-        I0 = Variable(torch.zeros([1, 1, 11,11,11]))
+        I0 = torch.zeros([1, 1, 11,11,11])
         I0[0, 0, 4:7,4:7,4:7] = 1
         I1_np = np.array([[[[[ 0.   ,  0.   ,  0.   ,  0.   ,  0.   ,  0.   ,  0.   ,  0.   ,
             0.   ,  0.   ,  0.   ],
@@ -408,9 +407,9 @@ class Test_stn_3d(unittest.TestCase):
             0.   ,  0.   ,  0.   ]]]]])
 
 
-        I1 = Variable(torch.from_numpy(I1_np))
-        id = Variable(torch.from_numpy(utils.identity_map_multiN([1, 1, 11,11,11],spacing)))
-        id_expand = Variable(torch.zeros([1, 3, 11,11,11]))
+        I1 = torch.from_numpy(I1_np)
+        id = torch.from_numpy(utils.identity_map_multiN([1, 1, 11,11,11],spacing))
+        id_expand = torch.zeros([1, 3, 11,11,11])
         id_expand[0, :, :,:,:] = 0.5*(id[0, :, :,:,:]-0.5)+0.5
         I1_warped = self.stn(I0, id_expand)
         npt.assert_almost_equal(I1.data.numpy(), I1_warped.data.numpy(), decimal=4)

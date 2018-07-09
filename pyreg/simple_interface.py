@@ -15,7 +15,6 @@ import numpy as np
 from . import utils
 
 import torch
-from torch.autograd import Variable
 
 from pyreg.data_wrapper import AdaptVal
 
@@ -234,7 +233,7 @@ class RegisterImagePair(object):
                 val = p[key]
                 if torch.is_tensor(val):
                     val.zero_()
-                elif type(val)==torch.nn.parameter.Parameter or type(val)==torch.autograd.variable.Variable:
+                elif type(val)==torch.nn.parameter.Parameter or type(val)==torch.Tensor:
                     val.data.zero_()
 
     def set_model_parameters(self,p):
@@ -462,8 +461,8 @@ class RegisterImagePair(object):
             self.ISource = ISource
             self.ITarget = ITarget
         else:
-            self.ISource = AdaptVal(Variable(torch.from_numpy(ISource.copy()), requires_grad=False))
-            self.ITarget = AdaptVal(Variable(torch.from_numpy(ITarget), requires_grad=False))
+            self.ISource = AdaptVal(torch.from_numpy(ISource.copy()))
+            self.ITarget = AdaptVal(torch.from_numpy(ITarget))
 
         self.spacing = spacing
 
@@ -537,8 +536,8 @@ class RegisterImagePair(object):
                 self.set_initial_map(self.delayed_initial_map)
 
             if not self.light_analysis_on and use_multi_scale:
-                self.opt.optimizer.set_source_label( AdaptVal(Variable(torch.from_numpy(LSource))))
-                self.opt.optimizer.set_target_label( AdaptVal(Variable(torch.from_numpy(LTarget))))
+                self.opt.optimizer.set_source_label( AdaptVal(torch.from_numpy(LSource)))
+                self.opt.optimizer.set_target_label( AdaptVal(torch.from_numpy(LTarget)))
                 self._set_analysis(self.opt.optimizer,extra_info)
 
             self.opt.register()

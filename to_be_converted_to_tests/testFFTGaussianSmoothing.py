@@ -38,7 +38,8 @@ gus = utils.computeNormalizedGaussian(3*X,[0,0],[1,1])
 g = gus
 
 fconvFilter = ce.FourierConvolution(g, sz)
-Ib = fconvFilter(Variable(torch.from_numpy(I0),requires_grad=True))
+Ib = fconvFilter(torch.from_numpy(I0))
+Ib.requires_grad = True
 
 plt.subplot(221)
 plt.imshow(g)

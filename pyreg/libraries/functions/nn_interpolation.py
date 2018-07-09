@@ -5,7 +5,6 @@ from cffi import FFI
 import sys
 
 import torch
-from torch.autograd import Variable
 from pyreg.libraries._ext import my_lib_nn
 from . import map_scale_utils
 
@@ -50,4 +49,4 @@ def get_nn_interpolation(input1, input2, spacing):
     else:
         device_c[0] = -1
     nn_interpolation_fn_sel(input1.data, map_scaled.data, output, ndim, device_c)
-    return AdaptVal(Variable(output))
+    return AdaptVal(output)

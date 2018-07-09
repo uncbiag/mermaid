@@ -31,8 +31,8 @@ I0, I1,spacing = eg.CreateSquares(dim).create_image_pair(szEx, params)  # create
 sz = np.array(I0.shape)
 
 # create the source and target image as pyTorch variables
-ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
-ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
+ISource = AdaptVal(torch.from_numpy(I0.copy()))
+ITarget = AdaptVal(torch.from_numpy(I1))
 
 # smooth both a little bit
 params[('image_smoothing', {}, 'image smoothing settings')]
