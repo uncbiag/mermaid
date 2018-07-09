@@ -221,7 +221,7 @@ class OTSimilarityGradient(object):
             multiplier1 = torch.div(I1rescaled, self.kernel_multiplication(multiplier0))
             convergence.append(log(
                 AdaptVal(self.my_sum(torch.abs(I0rescaled - multiplier0 * self.kernel_multiplication(multiplier1))).data)
-                    .cpu().numpy()[0]))
+                    .item()))
         temp = self.my_dot(torch.log(multiplier0), I0rescaled) + self.my_dot(torch.log(multiplier1),
                                                                              I1rescaled) - self.my_dot(
             multiplier0, self.kernel_multiplication(multiplier1))

@@ -17,8 +17,8 @@ from torch.autograd import Variable
 import numpy as np
 from torch.autograd import gradcheck
 from .data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor
-if USE_CUDA:
-    import pytorch_fft.fft as fft
+# if USE_CUDA:
+#     import pytorch_fft.fft as fft
 
 from . import utils
 

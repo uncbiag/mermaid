@@ -1,12 +1,13 @@
+
 from __future__ import print_function
 from __future__ import absolute_import
 # from builtins import str
 # from builtins import range
 import matplotlib as matplt
+# from .config_parser import MATPLOTLIB_AGG
+# if MATPLOTLIB_AGG:
+#     matplt.use('Agg')
 
-from .config_parser import MATPLOTLIB_AGG
-if MATPLOTLIB_AGG:
-    matplt.use('Agg')
 
 """
 Some utility functions to display the registration results
