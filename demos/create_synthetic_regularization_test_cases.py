@@ -323,7 +323,7 @@ def _compute_ring_radii(extent, nr_of_rings, randomize_radii, randomize_factor=0
         diff_r = rings_at_default[1] - rings_at_default[0]
         rings_at = np.sort(rings_at_default + (np.random.random(nr_of_rings + 1) - 0.5) * diff_r * randomize_factor)
     else:
-        rings_at = np.linspace(0., extent, nr_of_rings + 2)
+        rings_at = np.linspace(0., extent, nr_of_rings + 1)
     # first one needs to be zero:
     rings_at[0] = 0
 
@@ -422,19 +422,29 @@ def compute_map_from_v(localized_v,sz,spacing):
 
     return phi0,phi1
 
-def add_texture(im_orig):
-    sz = im_orig.shape
-    rand_noise = np.random.random(sz[2:])-0.5
-    rand_noise = rand_noise.view().reshape(sz)
-    r_params = pars.ParameterDict()
-    r_params['smoother']['type'] = 'gaussian'
-    r_params['smoother']['gaussian_std'] = 0.02
-    s_r = sf.SmootherFactory(sz[2::], spacing).create_smoother(r_params)
+def add_texture(im_orig,texture_gaussian_smoothness=0.1,texture_magnitude=0.3):
 
-    rand_noise_smoothed = s_r.smooth(AdaptVal(Variable(torch.from_numpy(rand_noise), requires_grad=False))).data.cpu().numpy()
-    rand_noise_smoothed /= 2*rand_noise_smoothed.max()
+    # do this separately for each integer intensity level
+    levels = np.unique((np.floor(im_orig)).astype('int'))
 
-    im = im_orig + rand_noise_smoothed
+    im = np.zeros_like(im_orig)
+
+    for current_level in levels:
+
+        sz = im_orig.shape
+        rand_noise = np.random.random(sz[2:])-0.5
+        rand_noise = rand_noise.view().reshape(sz)
+        r_params = pars.ParameterDict()
+        r_params['smoother']['type'] = 'gaussian'
+        r_params['smoother']['gaussian_std'] = texture_gaussian_smoothness
+        s_r = sf.SmootherFactory(sz[2::], spacing).create_smoother(r_params)
+
+        rand_noise_smoothed = s_r.smooth(AdaptVal(Variable(torch.from_numpy(rand_noise), requires_grad=False))).data.cpu().numpy()
+        rand_noise_smoothed /= rand_noise_smoothed.max()
+        rand_noise_smoothed *= texture_magnitude
+
+        c_indx = (im_orig>=current_level-0.5)
+        im[c_indx] = im_orig[c_indx] + rand_noise_smoothed[c_indx]
 
     return im
 
@@ -444,6 +454,10 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
                              put_weights_between_circles,
                              start_with_fluid_weight,
                              use_random_source,
+                             use_fixed_source,
+                             add_texture_to_image,
+                             texture_gaussian_smoothness,
+                             texture_magnitude,
                              nr_of_circles_to_generate,
                              circle_extent,
                              sz,spacing,
@@ -455,9 +469,8 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
     nr_of_rings = nr_of_circles_to_generate
     extent = circle_extent
     randomize_factor = 0.25
-    randomize_radii = True
+    randomize_radii = not use_fixed_source
     smooth_initial_momentum = True
-    add_texture_to_image = True
 
     # create ordered set of weights
     multi_gaussian_weights = []
@@ -535,7 +548,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
     phi0_orig,phi1_orig = compute_map_from_v(localized_v_orig,sz,spacing)
 
     if add_texture_to_image:
-        ring_im = add_texture(ring_im_orig)
+        ring_im = add_texture(ring_im_orig,texture_gaussian_smoothness=texture_gaussian_smoothness,texture_magnitude=texture_magnitude)
         if publication_figures_directory is not None:
             plt.clf()
             plt.imshow(ring_im[0, 0, ...],origin='lower')
@@ -605,7 +618,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
         phi0_w, phi1_w = compute_map_from_v(localized_v_warped, sz, spacing)
 
         if add_texture_to_image:
-            warped_source_im = add_texture(warped_source_im_orig)
+            warped_source_im = add_texture(warped_source_im_orig,texture_gaussian_smoothness=texture_gaussian_smoothness,texture_magnitude=texture_magnitude)
             if publication_figures_directory is not None:
                 plt.clf()
                 plt.imshow(ring_im[0, 0, ...],origin='lower')
@@ -757,7 +770,12 @@ if __name__ == "__main__":
 
     parser.add_argument('--create_publication_figures', action='store_true', help='If set writes out figures illustrating the generation approach of first example')
 
+    parser.add_argument('--use_fixed_source', action='store_true', help='if set the source image is fixed; like a fixed atlas image')
     parser.add_argument('--use_random_source', action='store_true', help='if set then inital source is warped randomly, otherwise it is circular')
+
+    parser.add_argument('--no_texture', action='store_true',help='if set then no texture is used, otherwise (default) texture is generated')
+    parser.add_argument('--texture_gaussian_smoothness', required=False, type=float, default=None, help='Gaussian standard deviation used to smooth a random image to create texture.')
+    parser.add_argument('--texture_magnitude', required=False, type=float, default=None, help='Magnitude of the texture')
 
     parser.add_argument('--do_not_randomize_momentum', action='store_true', help='if set, momentum is deterministic')
     parser.add_argument('--do_not_randomize_in_sectors', action='store_true', help='if set and randomize momentum is on, momentum is only randomized uniformly over circles')
@@ -770,7 +788,7 @@ if __name__ == "__main__":
     parser.add_argument('--weights_fluid', required=False,type=str, default=None, help='weights for a fluid circle; default=[0.2,0.5,0.2,0.1]')
     parser.add_argument('--weights_background', required=False,type=str, default=None, help='weights for the background; default=[0,0,0,1]')
 
-    parser.add_argument('--kernel_weighting_type', required=False, type=str, default='w_K', help='Which kernel weighting to use for integration. Specify as [w_K|w_K_w|sqrt_w_K_sqrt_w]; w_K is the default')
+    parser.add_argument('--kernel_weighting_type', required=False, type=str, default=None, help='Which kernel weighting to use for integration. Specify as [w_K|w_K_w|sqrt_w_K_sqrt_w]; w_K is the default')
 
     parser.add_argument('--nr_of_angles', required=False, default=None, type=int, help='number of angles for randomize in sector') #10
     parser.add_argument('--multiplier_factor', required=False, default=None, type=float, help='value the random momentum is multiplied by') #1.0
@@ -795,7 +813,7 @@ if __name__ == "__main__":
 
     nr_of_pairs_to_generate = args.nr_of_pairs_to_generate
 
-    nr_of_circles_to_generate = get_parameter_value(args.nr_of_circles_to_generate, params,'nr_of_circles_to_generate', 2, 'number of circles for the synthetic data')
+    nr_of_circles_to_generate = get_parameter_value(args.nr_of_circles_to_generate, params, 'nr_of_circles_to_generate', 2, 'number of circles for the synthetic data')
     circle_extent = get_parameter_value(args.circle_extent, params, 'circle_extent', 0.2, 'Size of largest circle; image is [-0.5,0.5]^2')
 
     randomize_momentum_on_circle = get_parameter_value_flag(not args.do_not_randomize_momentum,params=params, params_name='randomize_momentum_on_circle',
@@ -812,6 +830,25 @@ if __name__ == "__main__":
 
     use_random_source = get_parameter_value_flag(args.use_random_source, params=params, params_name='use_random_source',
                                             default_val=False, params_description='if set then source image is already deformed (and no longer circular)')
+
+    use_fixed_source = get_parameter_value_flag(args.use_fixed_source, params=params, params_name='use_fixed_source',
+                                                 default_val=False,
+                                                 params_description='if set then source image will be fixed; like a fixed atlas image)')
+
+    add_texture_to_image = get_parameter_value_flag(not args.no_texture, params=params, params_name='add_texture_to_image', default_val=True,
+                                           params_description='When set to true, texture is added to the images (based on texture_gaussian_smoothness)')
+
+    texture_magnitude = get_parameter_value(args.texture_magnitude, params=params, params_name='texture_magnitude',
+                                            default_val=0.3, params_description='Largest magnitude of the added texture')
+
+    texture_gaussian_smoothness = get_parameter_value(args.texture_gaussian_smoothness,params=params,params_name='texture_gaussian_smoothness',
+                                                      default_val=0.02, params_description='How much smoothing is used to create the texture image')
+
+    kernel_weighting_type = get_parameter_value(args.kernel_weighting_type, params=params, params_name='kernel_weighting_type',
+                                                default_val='w_K', params_description='Which kernel weighting to use for integration. Specify as [w_K|w_K_w|sqrt_w_K_sqrt_w]; w_K is the default')
+
+    if use_random_source==True and use_fixed_source==True:
+        raise ValueError('The source image cannot simultaneously be random and fixed. Aborting')
 
     nr_of_angles = get_parameter_value(args.nr_of_angles,params,'nr_of_angles',10,'number of angles for randomize in sector')
     multiplier_factor = get_parameter_value(args.multiplier_factor,params,'multiplier_factor',0.5,'value the random momentum is multiplied by')
@@ -876,7 +913,7 @@ if __name__ == "__main__":
     sz = [1, 1, sz[0], sz[1]]
     spacing = 1.0 / (np.array(sz[2:]) - 1)
 
-    output_dir = os.path.normpath(args.output_directory)+'_kernel_weighting_type_' + native_str(args.kernel_weighting_type)
+    output_dir = os.path.normpath(args.output_directory)+'_kernel_weighting_type_' + native_str(kernel_weighting_type)
 
     image_output_dir = os.path.join(output_dir,'brain_affine_icbm')
     label_output_dir = os.path.join(output_dir,'label_affine_icbm')
@@ -938,12 +975,16 @@ if __name__ == "__main__":
                                      weights_neutral=weights_neutral,
                                      weight_smoothing_std=args.weight_smoothing_std,
                                      multi_gaussian_stds=multi_gaussian_stds,
-                                     kernel_weighting_type=args.kernel_weighting_type,
+                                     kernel_weighting_type=kernel_weighting_type,
                                      randomize_momentum_on_circle=randomize_momentum_on_circle,
                                      randomize_in_sectors=randomize_in_sectors,
                                      put_weights_between_circles=put_weights_between_circles,
                                      start_with_fluid_weight=start_with_fluid_weight,
                                      use_random_source=use_random_source,
+                                     use_fixed_source=use_fixed_source,
+                                     add_texture_to_image=add_texture_to_image,
+                                     texture_gaussian_smoothness=texture_gaussian_smoothness,
+                                     texture_magnitude=texture_magnitude,
                                      nr_of_circles_to_generate=nr_of_circles_to_generate,
                                      circle_extent=circle_extent,
                                      sz=sz,spacing=spacing,
