@@ -164,7 +164,7 @@ def half_sigmoid(x,alpha=1):
 def _compute_localized_edge_penalty(I,spacing,gamma):
     # needs to be batch B x X x Y x Z format
     fdt = fd.FD_torch(spacing=spacing)
-    gnI = float(np.min(spacing)) * fdt.grad_norm_sqr(I) ** 0.5
+    gnI = float(np.min(spacing)) * fdt.grad_norm_sqr_f(I) ** 0.5
 
     # compute edge penalty
     localized_edge_penalty = 1.0 / (1.0 + gamma * gnI)  # this is what we weight the OMT values with
@@ -217,7 +217,7 @@ def _compute_weighted_total_variation_1d(d_in,w, spacing, bc_val, pnorm=2):
     # need to use torch.abs here to make sure the proper subgradient is computed at zero
     batch_size = d.size()[0]
     volumeElement = spacing.prod()
-    t0 = torch.abs(fdt.dXc(d))
+    t0 = torch.abs(fdt.dXf(d))
 
     tm = t0*w
 
@@ -238,7 +238,7 @@ def _compute_weighted_total_variation_2d(d_in,w, spacing, bc_val, pnorm=2):
     # need to use torch.norm here to make sure the proper subgradient is computed at zero
     batch_size = d.size()[0]
     volumeElement = spacing.prod()
-    t0 = torch.norm(torch.stack((fdt.dXc(d),fdt.dYc(d))),pnorm,0)
+    t0 = torch.norm(torch.stack((fdt.dXf(d),fdt.dYf(d))),pnorm,0)
 
     tm = t0*w
 
@@ -262,9 +262,9 @@ def _compute_weighted_total_variation_3d(d_in,w, spacing, bc_val, pnorm=2):
     batch_size = d.size()[0]
     volumeElement = spacing.prod()
 
-    t0 = torch.norm(torch.stack((fdt.dXc(d),
-                                 fdt.dYc(d),
-                                 fdt.dZc(d))), pnorm, 0)
+    t0 = torch.norm(torch.stack((fdt.dXf(d),
+                                 fdt.dYf(d),
+                                 fdt.dZf(d))), pnorm, 0)
 
     tm = t0*w
 
@@ -289,7 +289,7 @@ def _compute_local_norm_of_gradient_1d(d,spacing,pnorm=2):
 
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.abs here to make sure the proper subgradient is computed at zero
-    t0 = torch.abs(fdt.dXc(d))
+    t0 = torch.abs(fdt.dXf(d))
 
     return t0
 
@@ -299,8 +299,8 @@ def _compute_local_norm_of_gradient_2d(d,spacing,pnorm=2):
     # need to use torch.norm here to make sure the proper subgradient is computed at zero
     #t0 = torch.norm(torch.stack((fdt.dXc(d),fdt.dYc(d))),pnorm,0)
 
-    dX = fdt.dXc(d)
-    dY = fdt.dYc(d)
+    dX = fdt.dXf(d)
+    dY = fdt.dYf(d)
 
     t0 = torch.norm(torch.stack((dX, dY)), pnorm, 0)
 
@@ -318,9 +318,9 @@ def _compute_local_norm_of_gradient_3d(d,spacing, pnorm=2):
     fdt = fd.FD_torch(spacing=spacing)
     # need to use torch.norm here to make sure the proper subgradient is computed at zero
 
-    t0 = torch.norm(torch.stack((fdt.dXc(d),
-                                 fdt.dYc(d),
-                                 fdt.dZc(d))), pnorm, 0)
+    t0 = torch.norm(torch.stack((fdt.dXf(d),
+                                 fdt.dYf(d),
+                                 fdt.dZf(d))), pnorm, 0)
 
     return t0
 
@@ -652,36 +652,43 @@ def weighted_softmax(input, dim=None, weights=None ):
 
     ret = torch.zeros_like(input)
 
+    # for numerical reasons we first compute the maximum inout along the dimension and then
+    # subtract if from all the exponents (this assures that we do not get exp(100) and then a NaN
+    # this is ok, because we can multiply the nominator and denominator with the same constant
+    # and by doing this shift the exponentials
+
+    max_in,_ = torch.max(input, dim=dim)
+
     if dim==0:
         norm = torch.zeros_like(input[0,...])
         for c in range(sz[0]):
-            norm += weights[c]*torch.exp(input[c,...])
+            norm += weights[c]*torch.exp(input[c,...]-max_in)
         for c in range(sz[0]):
-            ret[c,...] = weights[c]*torch.exp(input[c,...])/norm
+            ret[c,...] = weights[c]*torch.exp(input[c,...]-max_in)/norm
     elif dim==1:
         norm = torch.zeros_like(input[:,0, ...])
         for c in range(sz[1]):
-            norm += weights[c] * torch.exp(input[:,c, ...])
+            norm += weights[c] * torch.exp(input[:,c, ...]-max_in)
         for c in range(sz[1]):
-            ret[:,c, ...] = weights[c] * torch.exp(input[:,c, ...]) / norm
+            ret[:,c, ...] = weights[c] * torch.exp(input[:,c, ...]-max_in) / norm
     elif dim==2:
         norm = torch.zeros_like(input[:,:,0, ...])
         for c in range(sz[2]):
-            norm += weights[c] * torch.exp(input[:,:,c, ...])
+            norm += weights[c] * torch.exp(input[:,:,c, ...]-max_in)
         for c in range(sz[2]):
-            ret[:,:,c, ...] = weights[c] * torch.exp(input[:,:,c, ...]) / norm
+            ret[:,:,c, ...] = weights[c] * torch.exp(input[:,:,c, ...]-max_in) / norm
     elif dim==3:
         norm = torch.zeros_like(input[:,:,:,0, ...])
         for c in range(sz[3]):
-            norm += weights[c] * torch.exp(input[:,:,:,c, ...])
+            norm += weights[c] * torch.exp(input[:,:,:,c, ...]-max_in)
         for c in range(sz[3]):
-            ret[:,:,:,c, ...] = weights[c] * torch.exp(input[:,:,:,c, ...]) / norm
+            ret[:,:,:,c, ...] = weights[c] * torch.exp(input[:,:,:,c, ...]-max_in) / norm
     elif dim==4:
         norm = torch.zeros_like(input[:,:,:,:,0, ...])
         for c in range(sz[4]):
-            norm += weights[c] * torch.exp(input[:,:,:,:,c, ...])
+            norm += weights[c] * torch.exp(input[:,:,:,:,c, ...]-max_in)
         for c in range(sz[4]):
-            ret[:,:,:,:,c, ...] = weights[c] * torch.exp(input[:,:,:,:,c, ...]) / norm
+            ret[:,:,:,:,c, ...] = weights[c] * torch.exp(input[:,:,:,:,c, ...]-max_in) / norm
     else:
         raise ValueError('weighted_softmax is only supported for dimensions 0, 1, 2, 3, and 4.')
 
@@ -769,41 +776,48 @@ def weighted_sqrt_softmax(input, dim=None, weights=None ):
 
     ret = torch.zeros_like(input)
 
+    # for numerical reasons we first compute the maximum inout along the dimension and then
+    # subtract if from all the exponents (this assures that we do not get exp(100) and then a NaN
+    # this is ok, because we can multiply the nominator and denominator with the same constant
+    # and by doing this shift the exponentials
+
+    max_in, _ = torch.max(input, dim=dim)
+
     if dim==0:
         norm_sqr = torch.zeros_like(input[0,...])
         for c in range(sz[0]):
-            norm_sqr += weights[c]*(torch.exp(input[c,...]))**2
+            norm_sqr += weights[c]*(torch.exp(input[c,...]-max_in))**2
         norm = torch.sqrt(norm_sqr)
         for c in range(sz[0]):
-            ret[c,...] = torch.sqrt(weights[c])*torch.exp(input[c,...])/norm
+            ret[c,...] = torch.sqrt(weights[c])*torch.exp(input[c,...]-max_in)/norm
     elif dim==1:
         norm_sqr = torch.zeros_like(input[:,0, ...])
         for c in range(sz[1]):
-            norm_sqr += weights[c] * (torch.exp(input[:,c, ...]))**2
+            norm_sqr += weights[c] * (torch.exp(input[:,c, ...]-max_in))**2
         norm = torch.sqrt(norm_sqr)
         for c in range(sz[1]):
-            ret[:,c, ...] = torch.sqrt(weights[c]) * torch.exp(input[:,c, ...]) / norm
+            ret[:,c, ...] = torch.sqrt(weights[c]) * torch.exp(input[:,c, ...]-max_in) / norm
     elif dim==2:
         norm_sqr = torch.zeros_like(input[:,:,0, ...])
         for c in range(sz[2]):
-            norm_sqr += weights[c] * (torch.exp(input[:,:,c, ...]))**2
+            norm_sqr += weights[c] * (torch.exp(input[:,:,c, ...]-max_in))**2
         norm = torch.sqrt(norm_sqr)
         for c in range(sz[2]):
-            ret[:,:,c, ...] = torch.sqrt(weights[c]) * torch.exp(input[:,:,c, ...]) / norm
+            ret[:,:,c, ...] = torch.sqrt(weights[c]) * torch.exp(input[:,:,c, ...]-max_in) / norm
     elif dim==3:
         norm_sqr = torch.zeros_like(input[:,:,:,0, ...])
         for c in range(sz[3]):
-            norm_sqr += weights[c] * (torch.exp(input[:,:,:,c, ...]))**2
+            norm_sqr += weights[c] * (torch.exp(input[:,:,:,c, ...]-max_in))**2
         norm = torch.sqrt(norm_sqr)
         for c in range(sz[3]):
-            ret[:,:,:,c, ...] = torch.sqrt(weights[c]) * torch.exp(input[:,:,:,c, ...]) / norm
+            ret[:,:,:,c, ...] = torch.sqrt(weights[c]) * torch.exp(input[:,:,:,c, ...]-max_in) / norm
     elif dim==4:
         norm_sqr = torch.zeros_like(input[:,:,:,:,0, ...])
         for c in range(sz[4]):
-            norm_sqr += weights[c] * (torch.exp(input[:,:,:,:,c, ...]))**2
+            norm_sqr += weights[c] * (torch.exp(input[:,:,:,:,c, ...]-max_in))**2
         norm = torch.sqrt(norm_sqr)
         for c in range(sz[4]):
-            ret[:,:,:,:,c, ...] = torch.sqrt(weights[c]) * torch.exp(input[:,:,:,:,c, ...]) / norm
+            ret[:,:,:,:,c, ...] = torch.sqrt(weights[c]) * torch.exp(input[:,:,:,:,c, ...]-max_in) / norm
     else:
         raise ValueError('weighted_softmax is only supported for dimensions 0, 1, 2, 3, and 4.')
 
@@ -1131,7 +1145,7 @@ class DeepSmoothingModel(nn.Module):
 
         # need to use torch.abs here to make sure the proper subgradient is computed at zero
         batch_size = d.size()[0]
-        t0 = torch.abs(self.fdt.dXc(d))
+        t0 = torch.abs(self.fdt.dXf(d))
 
         return (t0).sum()*self.volumeElement/batch_size
 
@@ -1139,7 +1153,7 @@ class DeepSmoothingModel(nn.Module):
 
         # need to use torch.norm here to make sure the proper subgradient is computed at zero
         batch_size = d.size()[0]
-        t0 = torch.norm(torch.stack((self.fdt.dXc(d),self.fdt.dYc(d))),self.pnorm,0)
+        t0 = torch.norm(torch.stack((self.fdt.dXf(d),self.fdt.dYf(d))),self.pnorm,0)
 
         return t0.sum()*self.volumeElement/batch_size
 
@@ -1147,9 +1161,9 @@ class DeepSmoothingModel(nn.Module):
 
         # need to use torch.norm here to make sure the proper subgradient is computed at zero
         batch_size = d.size()[0]
-        t0 = torch.norm(torch.stack((self.fdt.dXc(d),
-                                     self.fdt.dYc(d),
-                                     self.fdt.dZc(d))), self.pnorm, 0)
+        t0 = torch.norm(torch.stack((self.fdt.dXf(d),
+                                     self.fdt.dYf(d),
+                                     self.fdt.dZf(d))), self.pnorm, 0)
 
         return t0.sum()*self.volumeElement/batch_size
 
@@ -1189,6 +1203,24 @@ class DeepSmoothingModel(nn.Module):
         """
         return self.current_penalty
 
+
+    def compute_local_weighted_tv_norm(self, I, weights):
+
+        sum_square_of_total_variation_penalty = Variable(MyTensor(self.nr_of_gaussians).zero_(), requires_grad=False)
+        # first compute the edge map
+        g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing, self.params)
+        batch_size = I.size()[0]
+
+        # now computed weighted TV norm channel-by-channel, square it and then take the square root (this is like in color TV)
+        for g in range(self.nr_of_gaussians):
+            c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
+
+            to_sum = g_I * c_local_norm_grad * self.volumeElement / batch_size
+            current_tv = (to_sum).sum()
+            sum_square_of_total_variation_penalty[g] = current_tv**2
+
+        total_variation_penalty = torch.norm(sum_square_of_total_variation_penalty,p=2)
+        return total_variation_penalty
 
 class encoder_block_2d(nn.Module):
     def __init__(self, input_feature, output_feature, use_dropout, use_batch_normalization):
@@ -1480,13 +1512,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         # compute the total variation penalty
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
-            # first compute the edge map
-            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing, self.params)
-            batch_size = I.size()[0]
-            for g in range(self.nr_of_gaussians):
-                # total_variation_penalty += self.compute_total_variation(weights[:,g,...])
-                c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
-                total_variation_penalty += (utils.remove_infs_from_variable(g_I * c_local_norm_grad)).sum() * self.volumeElement / batch_size
+            total_variation_penalty += self.compute_local_weighted_tv_norm(I, weights)
 
         diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.diffusion_weight_penalty > 0:
@@ -1832,13 +1858,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         # compute the total variation penalty; compute this on the pre (non-smoothed) weights
         total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.total_variation_weight_penalty > 0:
-            # first compute the edge map
-            g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing, self.params)
-            batch_size = I.size()[0]
-            for g in range(self.nr_of_gaussians):
-                # total_variation_penalty += self.compute_total_variation(weights[:,g,...])
-                c_local_norm_grad = _compute_local_norm_of_gradient(weights[:, g, ...], self.spacing, self.pnorm)
-                total_variation_penalty += (utils.remove_infs_from_variable(g_I * c_local_norm_grad)).sum() * self.volumeElement / batch_size
+            total_variation_penalty += self.compute_local_weighted_tv_norm(I=I,weights=weights)
 
         diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
         if self.diffusion_weight_penalty > 0:

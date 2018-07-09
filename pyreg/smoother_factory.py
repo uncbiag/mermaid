@@ -163,7 +163,7 @@ class Smoother(with_metaclass(ABCMeta, object)):
         :return: clampled velocity field
         """
 
-        rk4_factor = 2*np.sqrt(2)/self.dim*0.9 # 0.9 is saftey margin (see paper by Polzin et al. for this RK4 stability condition)
+        rk4_factor = 2*np.sqrt(2)/self.dim*0.75 # 0.75 is saftey margin (see paper by Polzin et al. for this RK4 stability condition)
 
         if clampCFL_dt is not None:
 
