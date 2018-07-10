@@ -843,6 +843,14 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
+        c_params = self.params[('optimizer', {}, 'optimizer settings')]
+        self.weight_clipping_type = c_params[('weight_clipping_type','l2_shared','Type of weight clipping that should be used [l1|l2|l1_individual|l2_individual|l1_shared|l2_shared]')]
+        """Type of weight clipping; applied to weights and bias indepdenendtly; norm restricted to weight_clipping_value"""
+        if self.weight_clipping_type=='None':
+            self.weight_clipping_type = None
+        self.weight_clipping_value = c_params[('weight_clipping_value',1.0,'Value to which the norm is being clipped')]
+        """Desired norm after clipping"""
+
         self.scheduler = None # for the step size scheduler
         self.patience = None # for the step size scheduler
         self._use_external_scheduler = False
@@ -1086,6 +1094,77 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             self.delayed_model_parameters_still_to_be_set = True
             self.delayed_model_parameters = p
+
+    def _is_vector(self,d):
+        sz = d.size()
+        if len(sz)==1:
+            return True
+        else:
+            return False
+
+    def _is_tensor(self,d):
+        sz = d.size()
+        if len(sz)>1:
+            return True
+        else:
+            return False
+
+    def _aux_do_weight_clipping_norm(self,pars,desired_norm):
+        if self.weight_clipping_value > 0:
+            for key in pars:
+                p = pars[key]
+                if self._is_vector(p.data):
+                    # just normalize this vector component-by-component, norm does not matter here as these are only scalars
+                    p.data.clamp_(-self.weight_clipping_value, self.weight_clipping_value)
+                elif self._is_tensor(p.data):
+                    # normalize sample-by-sample individually
+                    for b in range(p.data.size()[0]):
+                        param_norm = p.data[b, ...].norm(desired_norm)
+                        if param_norm > self.weight_clipping_value:
+                            clip_coef = self.weight_clipping_value / param_norm
+                            p.data[b, ...].mul_(clip_coef)
+                else:
+                    raise ValueError('Unknown data type; I do not know how to clip this')
+
+    def _do_individual_weight_clipping_l1(self):
+        ip = self.get_individual_model_parameters()
+        self._aux_do_weight_clipping_norm(pars=ip,desired_norm=1)
+
+    def _do_shared_weight_clipping_l1(self):
+        sp = self.get_shared_model_parameters()
+        self._aux_do_weight_clipping_norm(pars=sp,desired_norm=1)
+
+    def _do_individual_weight_clipping_l2(self):
+        ip = self.get_individual_model_parameters()
+        self._aux_do_weight_clipping_norm(pars=ip, desired_norm=2)
+
+    def _do_shared_weight_clipping_l2(self):
+        sp = self.get_shared_model_parameters()
+        self._aux_do_weight_clipping_norm(pars=sp, desired_norm=2)
+
+    def _do_weight_clipping(self):
+        """performs weight clipping, if desired"""
+        if self.weight_clipping_type is not None and self.weight_clipping_value>0:
+            possible_modes = ['l1', 'l2', 'l1_individual', 'l2_individual', 'l1_shared', 'l2_shared']
+            if self.weight_clipping_type in possible_modes:
+                if self.weight_clipping_type=='l1':
+                    self._do_shared_weight_clipping_l1()
+                    self._do_individual_weight_clipping_l1()
+                elif self.weight_clipping_type=='l2':
+                    self._do_shared_weight_clipping_l2()
+                    self._do_individual_weight_clipping_l2()
+                elif self.weight_clipping_type=='l1_individual':
+                    self._do_individual_weight_clipping_l1()
+                elif self.weight_clipping_type=='l2_individual':
+                    self._do_individual_weight_clipping_l2()
+                elif self.weight_clipping_type=='l1_shared':
+                    self._do_shared_weight_clipping_l1()
+                elif self.weight_clipping_type=='l2_shared':
+                    self._do_shared_weight_clipping_l2()
+                else:
+                    raise ValueError('Illegal weighgt clipping type: {}'.format(self.weight_clipping_type))
+            else:
+                raise ValueError('Weight clipping needs to be: [None|l1|l2|l1_individual|l2_individual|l1_shared|l2_shared]')
 
     def get_model_parameters(self):
         """
@@ -1929,6 +2008,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             # for p in self.optimizer_instance._params:
             #     p.data = p.data.float()
             current_loss = self.optimizer_instance.step(self._closure)
+
+            # do weight clipping if it is desired
+            if self.weight_clipping_type is not None:
+                self._do_weight_clipping()
 
             # an external scheduler may for example be used in batch optimization
             if not self._use_external_scheduler:
