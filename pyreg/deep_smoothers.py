@@ -1223,8 +1223,9 @@ class DeepSmoothingModel(nn.Module):
         return total_variation_penalty
 
 class encoder_block_2d(nn.Module):
-    def __init__(self, input_feature, output_feature, use_dropout, use_batch_normalization):
+    def __init__(self, input_feature, output_feature, use_dropout, use_batch_normalization,dim):
         super(encoder_block_2d, self).__init__()
+        self.dim = dim
 
         if use_batch_normalization:
             conv_bias = False
@@ -1281,9 +1282,11 @@ class encoder_block_2d(nn.Module):
             return self.forward_without_batch_normalization(x)
 
 class decoder_block_2d(nn.Module):
-    def __init__(self, input_feature, output_feature, pooling_filter,use_dropout, use_batch_normalization,last_block=False):
+    def __init__(self, input_feature, output_feature, pooling_filter,use_dropout, use_batch_normalization, dim, last_block=False):
         super(decoder_block_2d, self).__init__()
         # todo: check padding here, not sure if it is the right thing to do
+
+        self.dim = dim
 
         if use_batch_normalization:
             conv_bias = False
@@ -1378,12 +1381,12 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
 
         if self.use_momentum_as_input or self.use_target_image_as_input or self.use_source_image_as_input:
             self.encoder_1 = encoder_block_2d(self.get_number_of_input_channels(nr_of_image_channels,dim), feature_num,
-                                              use_dropout, use_batch_normalization)
+                                              use_dropout, use_batch_normalization, dim=dim)
         else:
-            self.encoder_1 = encoder_block_2d(1, feature_num, use_dropout, use_batch_normalization)
+            self.encoder_1 = encoder_block_2d(1, feature_num, use_dropout, use_batch_normalization, dim=dim)
 
         if not self.use_one_encoder_decoder_block:
-            self.encoder_2 = encoder_block_2d(feature_num, feature_num * 2, use_dropout, use_batch_normalization)
+            self.encoder_2 = encoder_block_2d(feature_num, feature_num * 2, use_dropout, use_batch_normalization, dim=dim)
 
         # todo: maybe have one decoder for each Gaussian here.
         # todo: the current version seems to produce strange gridded results
@@ -1395,12 +1398,12 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             # create two decoder blocks for each Gaussian
             for g in range(nr_of_gaussians):
                 if not self.use_one_encoder_decoder_block:
-                    self.decoder_1.append( decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization) )
-                self.decoder_2.append( decoder_block_2d(feature_num, 1, 2, use_dropout, use_batch_normalization, last_block=True) )
+                    self.decoder_1.append( decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization, dim=dim) )
+                self.decoder_2.append( decoder_block_2d(feature_num, 1, 2, use_dropout, use_batch_normalization, dim=dim, last_block=True) )
         else:
             if not self.use_one_encoder_decoder_block:
-                self.decoder_1 = decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization)
-            self.decoder_2 = decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, use_batch_normalization, last_block=True)  # 3?
+                self.decoder_1 = decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization, dim=dim)
+            self.decoder_2 = decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, use_batch_normalization, dim=dim, last_block=True)  # 3?
 
         self._initialize_weights()
 
