@@ -844,7 +844,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """the optimizer instance to perform the actual optimization"""
 
         c_params = self.params[('optimizer', {}, 'optimizer settings')]
-        self.weight_clipping_type = c_params[('weight_clipping_type','l2_shared','Type of weight clipping that should be used [l1|l2|l1_individual|l2_individual|l1_shared|l2_shared]')]
+        self.weight_clipping_type = c_params[('weight_clipping_type','None','Type of weight clipping that should be used [l1|l2|l1_individual|l2_individual|l1_shared|l2_shared|None]')]
         """Type of weight clipping; applied to weights and bias indepdenendtly; norm restricted to weight_clipping_value"""
         if self.weight_clipping_type=='None':
             self.weight_clipping_type = None
@@ -1110,21 +1110,24 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             return False
 
     def _aux_do_weight_clipping_norm(self,pars,desired_norm):
+        """does weight clipping but only for conv or bias layers (assuming they are named as such); be careful with the namimg here"""
         if self.weight_clipping_value > 0:
             for key in pars:
-                p = pars[key]
-                if self._is_vector(p.data):
-                    # just normalize this vector component-by-component, norm does not matter here as these are only scalars
-                    p.data.clamp_(-self.weight_clipping_value, self.weight_clipping_value)
-                elif self._is_tensor(p.data):
-                    # normalize sample-by-sample individually
-                    for b in range(p.data.size()[0]):
-                        param_norm = p.data[b, ...].norm(desired_norm)
-                        if param_norm > self.weight_clipping_value:
-                            clip_coef = self.weight_clipping_value / param_norm
-                            p.data[b, ...].mul_(clip_coef)
-                else:
-                    raise ValueError('Unknown data type; I do not know how to clip this')
+                # only do the clipping if it is a conv layer or a bias term
+                if key.lower().find('conv')>0 or key.lower().find('bias')>0:
+                    p = pars[key]
+                    if self._is_vector(p.data):
+                        # just normalize this vector component-by-component, norm does not matter here as these are only scalars
+                        p.data.clamp_(-self.weight_clipping_value, self.weight_clipping_value)
+                    elif self._is_tensor(p.data):
+                        # normalize sample-by-sample individually
+                        for b in range(p.data.size()[0]):
+                            param_norm = p.data[b, ...].norm(desired_norm)
+                            if param_norm > self.weight_clipping_value:
+                                clip_coef = self.weight_clipping_value / param_norm
+                                p.data[b, ...].mul_(clip_coef)
+                    else:
+                        raise ValueError('Unknown data type; I do not know how to clip this')
 
     def _do_individual_weight_clipping_l1(self):
         ip = self.get_individual_model_parameters()

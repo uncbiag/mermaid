@@ -1607,7 +1607,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         if self.total_variation_weight_penalty > 0:
             current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
             print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
-                  'OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()))
+                  '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()))
             self.current_penalty += current_tv_penalty
 
         if retain_weights:
