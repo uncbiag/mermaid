@@ -25,8 +25,8 @@ I0,I1,spacing= eg.CreateSquares(ds.dim).create_image_pair(szEx,params) # create 
 sz = np.array(I0.shape)
 
 # create the source and target image as pyTorch variables
-ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
-ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
+ISource = AdaptVal(torch.from_numpy(I0.copy()))
+ITarget = AdaptVal(torch.from_numpy(I1))
 
 so = MO.SingleScaleRegistrationOptimizer(sz,spacing,ds.use_map,ds.map_low_res_factor,params)
 so.set_model(model_name)

@@ -118,11 +118,11 @@ def run_model(model_name, model_parameters, I0, sz_sim,spacing_sim,sz_model,spac
             spline_order = params['model']['registration_model'][('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
 
             id = utils.identity_map_multiN(sz_sim, spacing_sim)
-            identityMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
+            identityMap = AdaptVal(torch.from_numpy(id))
 
             if not np.all(spacing_sim==spacing_model):
                 lowres_id = utils.identity_map_multiN(sz_model, spacing_model)
-                lowResIdentityMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=False))
+                lowResIdentityMap = AdaptVal(torch.from_numpy(lowres_id))
                 lowResISource,_ = sampler.downsample_image_to_size(I0, spacing_sim, sz_model, spline_order)
 
                 rec_tmp = model(lowResIdentityMap, lowResISource)
@@ -213,7 +213,7 @@ class ModelFactory(object):
             uses_map = self.models[modelName][2]
             if uses_map:
                 print('Using map-based ' + modelName + ' model')
-                model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams, compute_inverse_map=compute_inverse_map)
+                model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams)
             else:
                 print('Using ' + modelName + ' model')
                 model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams)

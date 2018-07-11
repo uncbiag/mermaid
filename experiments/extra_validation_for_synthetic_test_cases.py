@@ -48,8 +48,8 @@ def compare_det_of_jac_from_map(map,gt_map,label_image,visualize=False,print_out
     # synthetic spacing
     spacing = np.array(1./(sz-1))
 
-    map_torch = Variable( torch.from_numpy(map), requires_grad=False)
-    gt_map_torch = Variable( torch.from_numpy(gt_map), requires_grad=False)
+    map_torch =    torch.from_numpy(map)
+    gt_map_torch = torch.from_numpy(gt_map)
 
     det_est = eu.compute_determinant_of_jacobian(map_torch, spacing)
     det_gt = eu.compute_determinant_of_jacobian(gt_map_torch, spacing)
@@ -182,7 +182,7 @@ def downsample_to_compatible_size_single_image(gt_weight,weight,interpolation_or
         sampler = IS.ResampleImage()
 
         gt_weight_sz = gt_weight.shape
-        gt_weight_reshaped = Variable(torch.from_numpy(gt_weight.view().reshape([1, 1] + list(gt_weight_sz))), requires_grad=False)
+        gt_weight_reshaped = torch.from_numpy(gt_weight.view().reshape([1, 1] + list(gt_weight_sz)))
         spacing = np.array([1., 1.])
         desired_size = weight.shape
 
@@ -209,7 +209,7 @@ def upsample_to_compatible_size_single_image(gt_weight,weight,interpolation_orde
         sampler = IS.ResampleImage()
 
         weight_sz = weight.shape
-        weight_reshaped = Variable(torch.from_numpy(weight.view().reshape([1, 1] + list(weight_sz))), requires_grad=False)
+        weight_reshaped = torch.from_numpy(weight.view().reshape([1, 1] + list(weight_sz)))
         spacing = np.array([1., 1.])
         desired_size = gt_weight.shape
 

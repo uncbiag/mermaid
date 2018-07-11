@@ -32,10 +32,12 @@ if __name__ == '__main__':
     ot = OTSimilarityGradient([dx, dy], [n,m], sinkhorn_iterations=500, std_dev=0.07)
     temp = torch.zeros(n, m)
     temp[10:30, 10:30] = 1
-    I0 = Variable(temp, requires_grad=True)
+    I0 = temp
+    I0.requires_grad = True
     temp2 = torch.zeros(n, m)
     temp2[9:31, 9:31] = 1
-    I1 = Variable(temp2, requires_grad=True)
+    I1 = temp2
+    I1.requires_grad = True
     a, convergence = ot.compute_similarity(I0, I1)
     #pl.plot(range(len(convergence)), convergence)
     #pl.show()
@@ -46,9 +48,10 @@ if __name__ == '__main__':
     xx = xxx.transpose()
     yy = yyy.transpose()
     spacingbis = 2
-    phi = Variable(torch.zeros(2,n,m),requires_grad = True)
-    out = OTSimilarityHelper.apply(phi,I0, I1, Variable(torch.zeros(I0.size())), Variable(torch.zeros(I1.size())),
-                              Variable(spacing))
+    phi = torch.zeros(2,n,m)
+    phi.requires_grad = True
+    out = OTSimilarityHelper.apply(phi,I0, I1, torch.zeros(I0.size()), torch.zeros(I1.size(),
+                              spacing))
     out.backward()
     gradientTorch = -phi.grad.data.numpy()
     pl.imshow((I1.data.numpy() - I0.data.numpy()).transpose(), origin="lower")

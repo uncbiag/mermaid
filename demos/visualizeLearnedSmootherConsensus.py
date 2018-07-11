@@ -109,8 +109,8 @@ def get_checkpoint_filename(batch_nr, batch_iter):
 
 d = torch.load('testBatchGlobalWeightRegularizedOpt_tst.pt')
 
-I0 = Variable( torch.from_numpy(d['I0']), requires_grad=False)
-I1 = Variable( torch.from_numpy(d['I1']), requires_grad=False)
+I0 =  torch.from_numpy(d['I0'])
+I1 =  torch.from_numpy(d['I1'])
 sz = I0.size()
 history = d['history']
 spacing = d['spacing']
@@ -121,7 +121,7 @@ nr_of_batch_iters = 1
 
 c_filename = get_checkpoint_filename(0, nr_of_batch_iters-1)
 q = torch.load(c_filename)
-#lam_one = Variable( q['model']['state']['lam'], requires_grad=False)
+#lam_one =  q['model']['state']['lam'], requires_grad=False)
 lam_one = q['model']['parameters']['lam']
 lam_one_sz = lam_one.size()
 batch_size = lam_one_sz[0]
@@ -135,8 +135,8 @@ new_size_phi[1] = 2
 
 # get all the lambdas
 lam = torch.FloatTensor(*new_size_lam).zero_()
-phi = Variable(torch.FloatTensor(*new_size_phi).zero_(),requires_grad=False)
-Iw = Variable(torch.FloatTensor(*sz).zero_(), requires_grad=False)
+phi = torch.FloatTensor(*new_size_phi).zero_()
+Iw = torch.FloatTensor(*sz).zero_()
 
 for b in range(nr_of_batches):
     c_filename = get_checkpoint_filename(b, nr_of_batch_iters - 1)
@@ -145,7 +145,7 @@ for b in range(nr_of_batches):
     Iw[b*batch_size:min((b+1)*batch_size,sz[0]),...] = q['res']['Iw']
     phi[b*batch_size:min((b+1)*batch_size,sz[0]),...] = q['res']['phi']
 
-lam = Variable(lam,requires_grad=False)
+lam.requires_grad= False
 lowResSize = lam.size()
 
 stds = params['model']['registration_model']['forward_model']['smoother']['multi_gaussian_stds']
@@ -241,7 +241,7 @@ if visualize_weights:
         plt.clf()
 
         source_mask = compute_mask(I0[n:n+1,0:1,...].data.numpy())
-        lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(Variable( torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:],params['model']['registration_model'])
+        lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size( torch.from_numpy(source_mask), spacing, lowResSize[2:],params['model']['registration_model'])
         lowRes_source_mask = lowRes_source_mask_v.data.numpy()[0,0,...]
 
         plt.subplot(2,3,1)

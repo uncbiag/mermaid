@@ -5,9 +5,9 @@ import torch
 from torch.utils.ffi import create_extension
 
 if sys.version_info >= (3, 0):
-    target_dir = '_ext_p3'
+    target_dir = '_ext'
 else:
-    target_dir = '_ext_p2'
+    target_dir = '_ext'
 
 #this_file = os.path.dirname(__file__)
 sources_1D = []

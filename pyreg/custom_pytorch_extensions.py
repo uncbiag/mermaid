@@ -17,8 +17,8 @@ from torch.autograd import Variable
 import numpy as np
 from torch.autograd import gradcheck
 from .data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor
-if USE_CUDA:
-    import pytorch_fft.fft as fft
+# if USE_CUDA:
+#     import pytorch_fft.fft as fft
 
 from . import utils
 
@@ -148,7 +148,7 @@ def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True, m
         # as the FT of a symmetric kernel has to be real
         if USE_CUDA:
             f_filter =  create_cuda_filter(spatial_filter_max_at_zero, sz)
-            ret_filter = f_filter[0] # only the real part
+            ret_filter = f_filter[...,0] # only the real part
         else:
             f_filter = create_numpy_filter(spatial_filter_max_at_zero, sz)
             ret_filter = f_filter.real
@@ -168,11 +168,11 @@ def create_cuda_filter(spatial_filter, sz):
     :param sz:
     :return: cuda filter
     """
-    fftn = sel_fftn(sz.size)
+    fftn = torch.rfft
     spatial_filter_th = torch.from_numpy(spatial_filter).float().cuda()
     spatial_filter_th = spatial_filter_th[None, ...]
-    spatial_filter_th_cell = fftn(spatial_filter_th)
-    return spatial_filter_th_cell
+    spatial_filter_th_fft = fftn(spatial_filter_th, len(sz))
+    return spatial_filter_th_fft
 
 
 def create_numpy_filter(spatial_filter, sz):
@@ -186,12 +186,8 @@ def sel_fftn(dim):
     :return: function pointer
     """
     if USE_CUDA:
-        if dim == 1:
-            f = fft.rfft
-        elif dim == 2:
-            f = fft.rfft2
-        elif dim == 3:
-            f = fft.rfft3
+        if dim in[1,2,3]:
+            f= torch.rfft
         else:
             raise ValueError('Only 3D cuda fft supported')
         return f
@@ -213,12 +209,8 @@ def sel_ifftn(dim):
     :return: function pointer
     """
     if USE_CUDA:
-        if dim == 1:
-            f = fft.irfft
-        elif dim == 2:
-            f = fft.irfft2
-        elif dim == 3:
-            f = fft.irfft3
+        if dim in [1,2,3]:
+            f = torch.irfft
         else:
             raise ValueError('Only 3D cuda fft supported')
     else:
@@ -247,7 +239,7 @@ class FourierConvolution(Function):
         super(FourierConvolution, self).__init__()
         self.complex_fourier_filter = complex_fourier_filter
         if USE_CUDA:
-            self.dim = complex_fourier_filter.dim() - 1
+            self.dim = complex_fourier_filter.dim() -1
         else:
             self.dim = len(complex_fourier_filter.shape)
         self.fftn = sel_fftn(self.dim)
@@ -269,25 +261,25 @@ class FourierConvolution(Function):
         # filter_imag =0, then get  ac + bci
 
         if USE_CUDA:
-            input = FFTVal(input, ini=1)
-            f_input_real, f_input_imag = self.fftn(input)
-            f_filter_real = self.complex_fourier_filter
-            f_filter_real.expand_as(f_input_real)
-            f_conv_real = f_input_real * f_filter_real
-            f_conv_imag = f_input_imag * f_filter_real
-            conv_ouput_real = self.ifftn(f_conv_real, f_conv_imag)
+            input = FFTVal(input,ini=1)
+            f_input = self.fftn(input,self.dim,onesided=True)
+            f_filter_real = self.complex_fourier_filter[0]
+            f_filter_real=f_filter_real.expand_as(f_input[...,0])
+            f_filter_real = torch.stack((f_filter_real,f_filter_real),-1)
+            f_conv = f_input * f_filter_real
+            conv_ouput_real = self.ifftn(f_conv, self.dim,onesided=True,signal_sizes=input.shape[2::])
             result = conv_ouput_real
 
             return FFTVal(result, ini=-1)
         else:
             if self.dim <3:
-                conv_output = self.ifftn(self.fftn(input.numpy()) * self.complex_fourier_filter)
+                conv_output = self.ifftn(self.fftn(input.data.numpy()) * self.complex_fourier_filter)
                 result = conv_output.real  # should in principle be real
             elif self.dim == 3:
                 result = np.zeros(input.shape)
                 for batch in range(input.size()[0]):
                     for ch in range(input.size()[1]):
-                        conv_output = self.ifftn(self.fftn(input[batch,ch].numpy()) * self.complex_fourier_filter)
+                        conv_output = self.ifftn(self.fftn(input[batch,ch].data.numpy()) * self.complex_fourier_filter)
                         result[batch,ch] = conv_output.real
             else:
                 raise ValueError("cpu fft smooth should be 1d-3d")
@@ -327,14 +319,16 @@ class FourierConvolution(Function):
         # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
         # input_imag =0, then get  ac + bci
         if USE_CUDA:
+
             grad_output = FFTVal(grad_output, ini=1)
             #print grad_output.view(-1,1).sum()
-            f_go_real, f_go_imag = self.fftn(grad_output)
-            f_filter_real = self.complex_fourier_filter
-            f_filter_real.expand_as(f_go_real)
-            f_conv_real = f_go_real * f_filter_real
-            f_conv_conj_imag = f_go_imag * f_filter_real
-            grad_input = self.ifftn(f_conv_real, f_conv_conj_imag)
+            f_go = self.fftn(grad_output,self.dim,onesided=True)
+            f_filter_real = self.complex_fourier_filter[0]
+            f_filter_real = f_filter_real.expand_as(f_go[..., 0])
+            f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
+            f_conv = f_go * f_filter_real
+            grad_input = self.ifftn(f_conv,self.dim,onesided=True,signal_sizes=grad_output.shape[2::])
+
             # print(grad_input)
             # print((grad_input[0,0,12:15]))
 
@@ -417,15 +411,17 @@ class InverseFourierConvolution(Function):
 
         if USE_CUDA:
             input = FFTVal(input, ini=1)
-            f_input_real, f_input_imag = self.fftn(input)
-            f_filter_real = self.complex_fourier_filter
+            f_input =  self.fftn(input,self.dim,onesided=True)
+            f_filter_real = self.complex_fourier_filter[0]
             f_filter_real += self.alpha
-            f_filter_real.expand_as(f_input_real)
-            f_conv_real = f_input_real / f_filter_real
-            f_conv_imag = f_input_imag / f_filter_real
-            conv_ouput_real = self.ifftn(f_conv_real, f_conv_imag)
+            f_filter_real = f_filter_real.expand_as(f_input[..., 0])
+            f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
+            f_conv = f_input/f_filter_real
+            conv_ouput_real = self.ifftn(f_conv,self.dim,onesided=True,signal_sizes=input.shape[2::])
             result = conv_ouput_real
             return FFTVal(result, ini=-1)
+
+
         else:
             result = np.zeros(input.shape)
             if self.dim <3:
@@ -468,13 +464,15 @@ class InverseFourierConvolution(Function):
 
         if USE_CUDA:
             grad_output =FFTVal(grad_output, ini=1)
-            f_go_real, f_go_imag = self.fftn(grad_output)
-            f_filter_real = self.complex_fourier_filter
+
+            f_go = self.fftn(grad_output, self.dim, onesided=True)
+            f_filter_real = self.complex_fourier_filter[0]
             f_filter_real += self.alpha
-            f_filter_real.expand_as(f_go_real)
-            f_conv_real = f_go_real / f_filter_real
-            f_conv_conj_imag = f_go_imag / f_filter_real
-            grad_input = self.ifftn(f_conv_real, f_conv_conj_imag)
+            f_filter_real = f_filter_real.expand_as(f_go[..., 0])
+            f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
+            f_conv = f_go / f_filter_real
+            grad_input = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=grad_output.shape[2::])
+
             return FFTVal(grad_input, ini=-1)
         else:
             # if self.needs_input_grad[0]:
@@ -719,12 +717,12 @@ class FourierGaussianConvolution(Function):
 
     def _compute_convolution_CUDA(self,input,complex_fourier_filter):
         input = FFTVal(input, ini=1)
-        f_input_real, f_input_imag = self.fftn(input)
-        f_filter_real = complex_fourier_filter
-        f_filter_real.expand_as(f_input_real)
-        f_conv_real = f_input_real * f_filter_real
-        f_conv_imag = f_input_imag * f_filter_real
-        conv_ouput_real = self.ifftn(f_conv_real, f_conv_imag)
+        f_input = self.fftn(input, self.dim, onesided=True)
+        f_filter_real = complex_fourier_filter[0]
+        f_filter_real = f_filter_real.expand_as(f_input[..., 0])
+        f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
+        f_conv = f_input * f_filter_real
+        conv_ouput_real = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=input.shape[2::])
         result = conv_ouput_real
 
         return FFTVal(result, ini=-1)
@@ -750,12 +748,12 @@ class FourierGaussianConvolution(Function):
     def _compute_input_gradient_CUDA(self,grad_output,complex_fourier_filter):
         grad_output = FFTVal(grad_output, ini=1)
         # print grad_output.view(-1,1).sum()
-        f_go_real, f_go_imag = self.fftn(grad_output)
-        f_filter_real = complex_fourier_filter
-        f_filter_real.expand_as(f_go_real)
-        f_conv_real = f_go_real * f_filter_real
-        f_conv_conj_imag = f_go_imag * f_filter_real
-        grad_input = self.ifftn(f_conv_real, f_conv_conj_imag)
+        f_go = self.fftn(grad_output, self.dim, onesided=True)
+        f_filter_real = complex_fourier_filter[0]
+        f_filter_real = f_filter_real.expand_as(f_go[..., 0])
+        f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
+        f_conv = f_go * f_filter_real
+        grad_input = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=grad_output.shape[2::])
 
         return FFTVal(grad_input, ini=-1)
 
@@ -1283,7 +1281,8 @@ def check_fourier_conv():
     centered_id = utils.centered_identity_map(sz,spacing)
     g = 100 * utils.compute_normalized_gaussian(centered_id, mus, stds)
     FFilter,_ = create_complex_fourier_filter(g, sz)
-    input = AdaptVal(Variable(torch.randn([1, 1] + list(sz)), requires_grad=True))
+    input = AdaptVal(torch.randn([1, 1] + list(sz)))
+    input.requires_grad = True
     test = gradcheck(FourierConvolution(FFilter), input, eps=1e-6, atol=1e-4)
     print(test)
 
@@ -1297,7 +1296,8 @@ def check_run_forward_and_backward():
     sz = [20, 20]
     f = 1 / 400. * np.ones(sz)
     FFilter,_ = create_complex_fourier_filter(f, sz, False)
-    input = Variable(torch.randn(sz).float(), requires_grad=True)
+    input = torch.randn(sz).float()
+    input.requires_grad = True
     fc = FourierConvolution(FFilter)(input)
     # print( fc )
     fc.backward(torch.randn(sz).float())

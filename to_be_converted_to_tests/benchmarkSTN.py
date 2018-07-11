@@ -23,12 +23,12 @@ spacing = 1./(sz-1)
 print ('Spacing = ' + str( spacing ) )
 
 # create the source and target image as pyTorch variables
-ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
-ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
+ISource =  torch.from_numpy( I0.copy() )
+ITarget =  torch.from_numpy( I1 )
 
 # create the identity map [-1,1]^d
 id = utils.identityMap(sz)
-identityMap = Variable( torch.from_numpy( id ), requires_grad=False )
+identityMap =  torch.from_numpy( id )
 
 # just do basic interpolation with the identity map, to time the STN
 start = time.time()

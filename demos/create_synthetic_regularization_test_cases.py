@@ -30,7 +30,6 @@ import pyreg.forward_models as fm
 import pyreg.module_parameters as pars
 
 import torch
-from torch.autograd import Variable
 
 import numpy as np
 
@@ -182,7 +181,7 @@ def create_momentum(input_im,centered_map,
         s_m_params['smoother']['gaussian_std'] = momentum_smoothing
         s_m = sf.SmootherFactory(sz[2::], spacing).create_smoother(s_m_params)
 
-        m = s_m.smooth(AdaptVal(Variable(torch.from_numpy(m_orig), requires_grad=False))).data.cpu().numpy()
+        m = s_m.smooth(AdaptVal(torch.from_numpy(m_orig))).data.cpu().numpy()
 
         if visualize:
             plt.clf()
@@ -335,8 +334,8 @@ def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,sp
     # create a velocity field from this momentum using a multi-Gaussian kernel
     gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz[2:], spacing, nr_of_slots=nr_of_gaussians)
 
-    t_weights = Variable(torch.from_numpy(weights),requires_grad=False)
-    t_momentum = Variable(torch.from_numpy(m),requires_grad=False)
+    t_weights = torch.from_numpy(weights)
+    t_momentum = torch.from_numpy(m)
 
     if kernel_weighting_type=='sqrt_w_K_sqrt_w':
         sqrt_weights = torch.sqrt(t_weights)
@@ -351,7 +350,7 @@ def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,sp
     elif kernel_weighting_type=='w_K':
         multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(t_momentum,
                                                                  gaussian_fourier_filter_generator=gaussian_fourier_filter_generator,
-                                                                 sigma=Variable(torch.from_numpy(multi_gaussian_stds),requires_grad=False),
+                                                                 sigma=torch.from_numpy(multi_gaussian_stds),
                                                                  compute_std_gradients=False)
 
     # now compute the localized_velocity
@@ -411,13 +410,13 @@ def compute_map_from_v(localized_v,sz,spacing):
     params['number_of_time_steps'] = 40
 
     advectionMap = fm.AdvectMap( sz[2:], spacing )
-    pars_to_pass = utils.combine_dict({'v':AdaptVal(Variable(torch.from_numpy(localized_v),requires_grad=False))}, dict() )
+    pars_to_pass = utils.combine_dict({'v':AdaptVal(torch.from_numpy(localized_v))}, dict() )
     integrator = rk.RK4(advectionMap.f, advectionMap.u, pars_to_pass, params)
 
     tFrom = 0.
     tTo = 1.
 
-    phi0 = AdaptVal(Variable(torch.from_numpy(utils.identity_map_multiN(sz,spacing)),requires_grad=False))
+    phi0 = AdaptVal(torch.from_numpy(utils.identity_map_multiN(sz,spacing)))
     phi1 = integrator.solve([phi0], tFrom, tTo )[0]
 
     return phi0,phi1
@@ -439,7 +438,7 @@ def add_texture(im_orig,texture_gaussian_smoothness=0.1,texture_magnitude=0.3):
         r_params['smoother']['gaussian_std'] = texture_gaussian_smoothness
         s_r = sf.SmootherFactory(sz[2::], spacing).create_smoother(r_params)
 
-        rand_noise_smoothed = s_r.smooth(AdaptVal(Variable(torch.from_numpy(rand_noise), requires_grad=False))).data.cpu().numpy()
+        rand_noise_smoothed = s_r.smooth(AdaptVal(torch.from_numpy(rand_noise))).data.cpu().numpy()
         rand_noise_smoothed /= rand_noise_smoothed.max()
         rand_noise_smoothed *= texture_magnitude
 
@@ -506,7 +505,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
             smoother = sf.SmootherFactory(weights_orig.shape[2::], spacing).create_smoother(s_m_params)
             #weights_old = np.zeros_like(weights_orig)
             #weights_old[:] = weights_orig
-            weights_orig = (smoother.smooth(Variable(torch.from_numpy(weights_orig),requires_grad=False))).data.cpu().numpy()
+            weights_orig = (smoother.smooth(torch.from_numpy(weights_orig))).data.cpu().numpy()
             # make sure they are strictly positive
             weights_orig[weights_orig<0] = 0
 
@@ -568,11 +567,11 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
         ring_im = ring_im_orig
 
     # deform image based on this map
-    I0_source_orig = AdaptVal(Variable(torch.from_numpy(ring_im),requires_grad=False))
+    I0_source_orig = AdaptVal(torch.from_numpy(ring_im))
     I1_warped_orig = utils.compute_warped_image_multiNC(I0_source_orig, phi1_orig, spacing, spline_order=1)
 
     # define the label images
-    I0_label_orig = AdaptVal(Variable(torch.from_numpy(ring_im_orig),requires_grad=False))
+    I0_label_orig = AdaptVal(torch.from_numpy(ring_im_orig))
     I1_label_orig = utils.get_warped_label_map(I0_label_orig, phi1_orig, spacing )
 
     if publication_figures_directory is not None:
@@ -583,9 +582,9 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
 
     if use_random_source:
         # the initially created target will become the source
-        id_c_warped_t = utils.compute_warped_image_multiNC(AdaptVal(Variable(torch.from_numpy(id_c),requires_grad=False)), phi1_orig, spacing, spline_order=1)
+        id_c_warped_t = utils.compute_warped_image_multiNC(AdaptVal(torch.from_numpy(id_c)), phi1_orig, spacing, spline_order=1)
         id_c_warped = id_c_warped_t.data.cpu().numpy()
-        weights_warped_t = utils.compute_warped_image_multiNC(AdaptVal(Variable(torch.from_numpy(weights_orig),requires_grad=False)), phi1_orig, spacing, spline_order=1)
+        weights_warped_t = utils.compute_warped_image_multiNC(AdaptVal(torch.from_numpy(weights_orig)), phi1_orig, spacing, spline_order=1)
         weights_warped = weights_warped_t.data.cpu().numpy()
         # make sure they are stirctly positive
         weights_warped[weights_warped<0] = 0
@@ -630,11 +629,11 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
 
         # deform these images based on the new map
         # deform image based on this map
-        I0_source_w = AdaptVal(Variable(torch.from_numpy(warped_source_im), requires_grad=False))
+        I0_source_w = AdaptVal(torch.from_numpy(warped_source_im))
         I1_warped_w = utils.compute_warped_image_multiNC(I0_source_w, phi1_w, spacing, spline_order=1)
 
         # define the label images
-        I0_label_w = AdaptVal(Variable(torch.from_numpy(warped_source_im_orig), requires_grad=False))
+        I0_label_w = AdaptVal(torch.from_numpy(warped_source_im_orig))
         I1_label_w = utils.get_warped_label_map(I0_label_w, phi1_w, spacing)
 
     if use_random_source:

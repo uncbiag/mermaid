@@ -3,7 +3,6 @@ from __future__ import absolute_import
 from builtins import range
 from builtins import object
 import torch
-from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.nn as nn
 import numpy as np
@@ -491,7 +490,7 @@ def compute_localized_omt_penalty(weights, I, multi_gaussian_stds,spacing,volume
     if weights.size()[1] != len(multi_gaussian_stds):
         raise ValueError('Number of weights need to be the same as number of Gaussians. Format recently changed for weights to B x weights x X x Y')
 
-    penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+    penalty = MyTensor(1).zero_()
 
     # first compute the gradient of the image as the penalty is only evaluated at gradients of the image
     # and where the gradients of the total variation of the weights are
@@ -559,7 +558,7 @@ def compute_omt_penalty(weights, multi_gaussian_stds,volume_element,desired_powe
     if weights.size()[1] != len(multi_gaussian_stds):
         raise ValueError('Number of weights need to be the same as number of Gaussians. Format recently changed for weights to B x weights x X x Y')
 
-    penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+    penalty = MyTensor(1).zero_()
     batch_size = weights.size()[0]
 
     max_std = max(multi_gaussian_stds)
@@ -722,7 +721,7 @@ class WeightedSoftmax(nn.Module):
     Examples::
 
         >>> m = nn.WeightedSoftmax()
-        >>> input = autograd.Variable(torch.randn(2, 3))
+        >>> input = autograd.torch.randn(2, 3))
         >>> print(input)
         >>> print(m(input))
     """
@@ -854,7 +853,7 @@ class WeightedSqrtSoftmax(nn.Module):
     Examples::
 
         >>> m = nn.WeightedSqrtSoftmax()
-        >>> input = autograd.Variable(torch.randn(2, 3))
+        >>> input = autograd.torch.randn(2, 3))
         >>> print(input)
         >>> print(m(input))
     """
@@ -1447,7 +1446,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         assert (sz_mv[0] == self.nr_of_gaussians)
 
         # create the output tensor: will be of dimension: batch x channels x X x Y
-        ret = AdaptVal(Variable(MyTensor(*sz_mv[1:]), requires_grad=False))
+        ret = AdaptVal(MyTensor(*sz_mv[1:]))
 
         # now determine the size for the weights
         # Since the smoothing will be the same for all spatial directions (for a velocity field),
@@ -1513,11 +1512,11 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             weights = F.softmax(decoder_output, dim=1)
 
         # compute the total variation penalty
-        total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        total_variation_penalty = MyTensor(1).zero_()
         if self.total_variation_weight_penalty > 0:
             total_variation_penalty += self.compute_local_weighted_tv_norm(I, weights)
 
-        diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        diffusion_penalty = MyTensor(1).zero_()
         if self.diffusion_weight_penalty > 0:
             for g in range(self.nr_of_gaussians):
                 diffusion_penalty += self.compute_diffusion(weights[:, g, ...])
@@ -1561,7 +1560,7 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         elif self.weighting_type=='w_K':
             multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(momentum,
                                                                      gaussian_fourier_filter_generator=gaussian_fourier_filter_generator,
-                                                                     sigma=Variable(torch.from_numpy(self.gaussian_stds),requires_grad=False),
+                                                                     sigma=torch.from_numpy(self.gaussian_stds),
                                                                      compute_std_gradients=False)
         else:
             raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
@@ -1624,13 +1623,13 @@ def compute_weighted_multi_smooth_v(momentum, weights, gaussian_stds, gaussian_f
     sz_m = momentum.size()
     sz_mv = [len(gaussian_stds)] + list(sz_m)
     dim = sz_m[1]
-    weighted_multi_smooth_v = AdaptVal(Variable(MyTensor(*sz_mv), requires_grad=False))
+    weighted_multi_smooth_v = AdaptVal(MyTensor(*sz_mv))
     # and fill it with weighted smoothed velocity fields
     for i,g in enumerate(gaussian_stds):
         weighted_momentum_i = torch.zeros_like(momentum)
         for c in range(dim):
             weighted_momentum_i[:,c,...] = weights[:,i,...]*momentum[:,c,...]
-        current_g = Variable(torch.from_numpy(np.array([g])),requires_grad=False)
+        current_g = torch.from_numpy(np.array([g]))
         current_weighted_smoothed_v_i = ce.fourier_set_of_gaussian_convolutions(weighted_momentum_i, gaussian_fourier_filter_generator,current_g, compute_std_gradients=False)
         weighted_multi_smooth_v[i,...] = current_weighted_smoothed_v_i[0,...]
 
@@ -1783,7 +1782,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         sz_mv = [self.nr_of_gaussians] + list(sz_m)
 
         # create the output tensor: will be of dimension: batch x channels x X x Y
-        ret = AdaptVal(Variable(MyTensor(*sz_m), requires_grad=False))
+        ret = AdaptVal(MyTensor(*sz_m))
 
         # now determine the size for the weights
         # Since the smoothing will be the same for all spatial directions (for a velocity field),
@@ -1859,11 +1858,11 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
             weights = F.softmax(y, dim=1)
 
         # compute the total variation penalty; compute this on the pre (non-smoothed) weights
-        total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        total_variation_penalty = MyTensor(1).zero_()
         if self.total_variation_weight_penalty > 0:
             total_variation_penalty += self.compute_local_weighted_tv_norm(I=I,weights=weights)
 
-        diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        diffusion_penalty = MyTensor(1).zero_()
         if self.diffusion_weight_penalty > 0:
             for g in range(self.nr_of_gaussians):
                 diffusion_penalty += self.compute_diffusion(weights[:, g, ...])
@@ -1905,7 +1904,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         elif self.weighting_type=='w_K':
             multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(momentum,
                                                                      gaussian_fourier_filter_generator=gaussian_fourier_filter_generator,
-                                                                     sigma=Variable(torch.from_numpy(self.gaussian_stds),requires_grad=False),
+                                                                     sigma=torch.from_numpy(self.gaussian_stds),
                                                                      compute_std_gradients=False)
         else:
             raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))

@@ -170,8 +170,8 @@ def _load_current_source_and_target_images_as_variables(current_source_filename,
 
     sz = np.array(ISource.shape)
 
-    ISource = Variable(torch.from_numpy(ISource), requires_grad=False)
-    ITarget = Variable(torch.from_numpy(ITarget), requires_grad=False)
+    ISource = torch.from_numpy(ISource)
+    ITarget = torch.from_numpy(ITarget)
 
     return ISource,ITarget,hdr,sz,normalized_spacing
 
@@ -226,11 +226,11 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     if use_map:
         # create the identity map [-1,1]^d, since we will use a map-based implementation
         id = utils.identity_map_multiN(sz, spacing)
-        identityMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
+        identityMap = AdaptVal(torch.from_numpy(id))
         if map_low_res_factor is not None:
             # create a lower resolution map for the computations
             lowres_id = utils.identity_map_multiN(lowResSize, lowResSpacing)
-            lowResIdentityMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=False))
+            lowResIdentityMap = AdaptVal(torch.from_numpy(lowres_id))
 
     if USE_CUDA:
         model = model.cuda()
@@ -410,7 +410,7 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
 
     source_mask = compute_mask(I0[:, 0:1, ...].data.cpu().numpy())
     lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(
-        Variable(torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:],spline_order)
+        torch.from_numpy(source_mask), spacing, lowResSize[2:],spline_order)
     lowRes_source_mask = lowRes_source_mask_v.data.cpu().numpy()[0, 0, ...]
 
     if clean_print_path is None:

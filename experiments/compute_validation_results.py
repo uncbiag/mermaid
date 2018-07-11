@@ -27,7 +27,7 @@ import matplotlib
 
 def new_warp_image_nn(label_map, phi, spacing):
 
-    lm_t = Variable( torch.from_numpy(label_map),requires_grad=False)
+    lm_t = torch.from_numpy(label_map)
     lm_t = lm_t.view([1,1]+list(lm_t.size()))
 
     return utils.get_warped_label_map(lm_t, phi, spacing, sched='nn')

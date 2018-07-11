@@ -14,7 +14,7 @@ def compute_omt_penalty(weights, multi_gaussian_stds):
 
     # weights: weights x B x X x Y x Z
 
-    penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+    penalty = MyTensor(1).zero_()
     batch_size = weights.size()[1]
     max_std = max(multi_gaussian_stds)
     for i,s in enumerate(multi_gaussian_stds):
@@ -210,7 +210,7 @@ class ConsistentWeightedSmoothingModel(nn.Module):
         nr_c = sz[2]
 
         new_sz = sz[1:]  # simply the size of the resulting smoothed vector fields (collapsed along the multi-direction)
-        ret = AdaptVal(Variable(torch.FloatTensor(*new_sz), requires_grad=False))
+        ret = AdaptVal(torch.FloatTensor(*new_sz))
 
         sz_weight = list(sz)
         sz_weight = sz_weight[0:2] + sz_weight[
@@ -340,7 +340,7 @@ class ConsistentWeightedSmoothingModel(nn.Module):
         nr_c = sz[2]
 
         new_sz = sz[1:] # simply the size of the resulting smoothed vector fields (collapsed along the multi-direction)
-        ret = AdaptVal(Variable(torch.FloatTensor(*new_sz),requires_grad=False))
+        ret = AdaptVal(torch.FloatTensor(*new_sz))
 
         sz_weight = list(sz)
         sz_weight = sz_weight[0:2] + sz_weight[3:]  # cut out the channels, since the smoothing will be the same for all spatial directions
@@ -493,7 +493,7 @@ class old_ConsistentWeightedSmoothingModel(nn.Module):
         nr_c = sz[2]
 
         new_sz = sz[1:] # simply the size of the resulting smoothed vector fields (collapsed along the multi-direction)
-        ret = AdaptVal(Variable(torch.FloatTensor(*new_sz),requires_grad=False))
+        ret = AdaptVal(torch.FloatTensor(*new_sz))
 
         sz_weight = list(sz)
         sz_weight = sz_weight[0:2] + sz_weight[3:]  # cut out the channels, since the smoothing will be the same for all spatial directions
@@ -610,7 +610,7 @@ class WeightedSmoothingModel(nn.Module):
         nr_c = sz[2]
 
         new_sz = sz[1:]
-        ret = AdaptVal(Variable(torch.FloatTensor(*new_sz),requires_grad=False))
+        ret = AdaptVal(torch.FloatTensor(*new_sz))
 
         if retain_weights and self.computed_weights is None:
             print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')

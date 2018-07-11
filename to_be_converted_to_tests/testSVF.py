@@ -58,8 +58,8 @@ model = RN.SVFNet(sz,spacing,params)    # instantiate a stationary velocity fiel
 print(model)
 
 # create the source and target image as pyTorch variables
-ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
-ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
+ISource =torch.from_numpy( I0.copy() )
+ITarget =torch.from_numpy( I1 )
 
 # use the standard SVFLoss
 criterion = RN.SVFLoss(list(model.parameters())[0],sz,spacing,params)

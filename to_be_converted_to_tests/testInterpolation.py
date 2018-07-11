@@ -136,7 +136,8 @@ I0,I1,spacing = eg.CreateRealExampleImages(dim).create_image_pair()
 I0 = I0[:,:,64:64+16,64:64+32]
 spacing[1] *= 0.7
 
-I0v = Variable( torch.from_numpy(I0), requires_grad=True)
+I0v =torch.from_numpy(I0)
+I0v.requires_grad = True
 
 stn = STN_ND_BCXYZ(spacing)
 sz = I0.shape
@@ -144,7 +145,8 @@ sz = I0.shape
 id = utils.identity_map_multiN(sz,spacing)
 idp = id + np.random.random(id.shape).astype('float32')*0.025
 
-phi = Variable( torch.from_numpy(idp), requires_grad=True )
+phi = torch.from_numpy(idp)
+phi.requires_grad = True
 
 I1_warped = stn(I0v,phi)
 

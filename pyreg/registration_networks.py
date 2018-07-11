@@ -16,10 +16,9 @@ Currently implemented:
 from __future__ import print_function
 from __future__ import absolute_import
 
-from builtins import str
+# from builtins import str
 import torch
 import torch.nn as nn
-from torch.autograd.variable import Variable
 from torch.nn.parameter import Parameter
 
 from . import rungekutta_integrators as RK
@@ -60,9 +59,9 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
         """image spacing"""
         self.params = params
         """ParameterDict() object for the parameters"""
-        self.nrOfImages = sz[0]
+        self.nrOfImages = int(sz[0])
         """the number of images, i.e., the batch size B"""
-        self.nrOfChannels = sz[1]
+        self.nrOfChannels = int(sz[1])
         """the number of image channels, i.e., C"""
 
         self._shared_parameters = set()
@@ -806,7 +805,7 @@ class RegistrationMapLoss(RegistrationLoss):
             maxDispSqr = utils.remove_infs_from_variable(dispSqr).max() # required to shield this from inf during the optimization
 
             dispPenalty = (torch.max((maxDispSqr - self.max_displacement_sqr),
-                                     Variable(MyTensor(sz).zero_(), requires_grad=False))).sum()
+                                     MyTensor(sz).zero_())).sum()
 
             reg = reg + dispPenalty
         else:
@@ -1108,7 +1107,12 @@ class AffineMapNet(RegistrationNet):
         :return: returns a tuple (upsampled_state,upsampled_spacing)
         """
         ustate = self.state_dict().copy() # stays the same
-        upsampled_spacing = self.spacing*((self.sz[2::].astype('float')-1.)/(desiredSz[2::].astype('float')-1.))
+        if len(self.sz) == len(desiredSz):
+            desiredSz= desiredSz[2:]
+        if len(self.sz)-len(desiredSz)==2:
+            upsampled_spacing = self.spacing*((self.sz[2::].astype('float')-1.)/(desiredSz.astype('float')-1.))
+        else:
+            raise ValueError("Size not matched")
 
         return ustate, upsampled_spacing
 
@@ -1155,7 +1159,7 @@ class AffineMapLoss(RegistrationMapLoss):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the regularization energy
         """
-        regE = Variable(MyTensor(1).zero_(), requires_grad=False)
+        regE = MyTensor(1).zero_()
         return regE # so far there is no regularization
 
 

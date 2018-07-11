@@ -4,9 +4,9 @@ Helper functions to take care of all the file IO
 from __future__ import print_function
 from __future__ import absolute_import
 
-from builtins import str
-from builtins import range
-from builtins import object
+# from builtins import str
+# from builtins import range
+# from builtins import object
 import itk
 import os
 import nrrd
@@ -119,24 +119,7 @@ class FileIO(with_metaclass(ABCMeta, object)):
         return m_itk
 
     def _convert_data_to_numpy_if_needed(self,data):
-        if ( type( data ) == torch.autograd.variable.Variable ) or \
-                (type(data) == torch.torch.nn.parameter.Parameter) or \
-                (type(data) == torch.FloatTensor) or \
-                (type(data) == torch.DoubleTensor) or \
-                (type(data) == torch.HalfTensor) or \
-                (type(data) == torch.ByteTensor) or \
-                (type(data) == torch.CharTensor) or \
-                (type(data) == torch.ShortTensor) or \
-                (type(data) == torch.IntTensor) or \
-                (type(data) == torch.LongTensor) or \
-                (type(data) == torch.cuda.FloatTensor) or \
-                (type(data) == torch.cuda.DoubleTensor) or \
-                (type(data) == torch.cuda.HalfTensor) or \
-                (type(data) == torch.cuda.ByteTensor) or \
-                (type(data) == torch.cuda.CharTensor) or \
-                (type(data) == torch.cuda.ShortTensor) or \
-                (type(data) == torch.cuda.IntTensor) or \
-                (type(data) == torch.cuda.LongTensor):
+        if type( data ) == torch.Tensor:
             datar = utils.t2np(data)
         else:
             datar = data
@@ -618,7 +601,8 @@ class ImageIO(FileIO):
             if not silent_mode:
                 print('Using guessed spacing of ' + str(spacing))
 
-        spacing = hdr['spacing']
+        spacing = np.flipud( hdr['spacing'])
+
         squeezed_spacing = spacing # will be changed if image is squeezed
         sz = im.shape
         sz_squeezed = sz
@@ -670,10 +654,14 @@ class ImageIO(FileIO):
                 print('WARNING: Image was NOT intensity normalized when loading:' \
                       + ' [' + str(im.min()) + ',' + str(im.max()) + ']')
 
+
+
+
         if self.normalize_spacing:
             if not silent_mode:
                 print('INFO: Normalizing the spacing to [0,1] in the largest dimension. (Turn normalize_spacing off if this is not desired.)')
             hdr['original_spacing'] = spacing
+
 
             if hdr['is_vector_image']:
                 spacing = self._normalize_spacing(spacing, sz[1:], silent_mode)

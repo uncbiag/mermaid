@@ -19,7 +19,6 @@ if MATPLOTLIB_AGG:
 
 # first do the torch imports
 import torch
-from torch.autograd import Variable
 from time import time
 import os
 import numpy as np
@@ -164,21 +163,24 @@ def do_registration():
     mo.set_limit_max_batch(2)
     recorder = mo.init_recorder(expr_name)
 
+
     #########################    batch iteration setting   ############################################
     LSource, LTarget = None, None
     sessions = ['train']
     batch_id = 0
     for sess in sessions:
-        pair_path_list = dataloaders['info'][sess]
-        for data in dataloaders[sess]:
-            ISource = AdaptVal(Variable(data['image'][:,:1]))
-            ITarget = AdaptVal(Variable(data['image'][:,1:2]))
-            pair_path_idx = data['pair_path'].numpy().tolist()
-            pair_path = [pair_path_list[idx] for idx in pair_path_idx]
+        #pair_path_list = dataloaders['info'][sess]
+        for data_package in dataloaders[sess]:
+            data= data_package[0]
+            pair_path = [pair for pair in data_package[1]]
+            ISource = AdaptVal(data['image'][:,:,0])
+            ITarget = AdaptVal(data['image'][:,:,1])
+            #pair_path_idx = data['pair_path'].numpy().tolist()
+            #pair_path = [pair_path_list[idx] for idx in pair_path_idx]
             LSource, LTarget = None, None
             if 'label' in data:
-                LSource = AdaptVal(Variable(data['label'][:, :1], volatile=True))
-                LTarget = AdaptVal(Variable(data['label'][:, 1:2], volatile=True))
+                LSource = AdaptVal(data['label'][:, :,0])
+                LTarget = AdaptVal(data['label'][:, :,1])
 
             if smooth_images:
                 # smooth both a little bit

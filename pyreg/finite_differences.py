@@ -6,7 +6,7 @@ boundary conditions (though the latter have not been tested extensively yet).
 """
 from __future__ import absolute_import
 
-from builtins import object
+# from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import torch
@@ -531,7 +531,7 @@ class FD_torch(FD):
         :param sz: size of the array, e.g., [3,4,2]
         :return: the zero array
         """
-        return  Variable(MyTensor(sz).zero_(), requires_grad=False)
+        return  MyTensor(sz).zero_()
 
     def get_size_of_array(self, A):
         """

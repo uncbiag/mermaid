@@ -22,8 +22,8 @@ cs = eg.CreateSquares(sz)
 I0,I1 = cs.create_image_pair(params)
 
 # create the source and target image as pyTorch variables
-ISource = Variable( torch.from_numpy( I0 ), requires_grad=False )
-ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
+ISource =  torch.from_numpy( I0 )
+ITarget =  torch.from_numpy( I1 )
 
 # spacing so that everything is in [0,1]^2 for now
 spacing = 1./(sz-1)
