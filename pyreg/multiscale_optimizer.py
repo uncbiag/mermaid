@@ -1118,7 +1118,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     p = pars[key]
                     if self._is_vector(p.data):
                         # just normalize this vector component-by-component, norm does not matter here as these are only scalars
-                        p.data.clamp_(-self.weight_clipping_value, self.weight_clipping_value)
+                        p.data = p.data.clamp_(-self.weight_clipping_value, self.weight_clipping_value)
                     elif self._is_tensor(p.data):
                         # normalize sample-by-sample individually
                         for b in range(p.data.size()[0]):
@@ -1128,6 +1128,15 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                                 p.data[b, ...].mul_(clip_coef)
                     else:
                         raise ValueError('Unknown data type; I do not know how to clip this')
+
+    def _do_shared_weight_clipping_pre_lsm(self):
+        sp = self.get_shared_model_parameters()
+        if self.weight_clipping_value>0:
+            for key in sp:
+                if key.lower().find('pre_lsm_weights') > 0:
+                    p = sp[key]
+                    #p.data.clamp_(-self.weight_clipping_value, self.weight_clipping_value)
+                    p.data.clamp_(0,self.weight_clipping_value)
 
     def _do_individual_weight_clipping_l1(self):
         ip = self.get_individual_model_parameters()
@@ -1148,7 +1157,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def _do_weight_clipping(self):
         """performs weight clipping, if desired"""
         if self.weight_clipping_type is not None and self.weight_clipping_value>0:
-            possible_modes = ['l1', 'l2', 'l1_individual', 'l2_individual', 'l1_shared', 'l2_shared']
+            possible_modes = ['l1', 'l2', 'l1_individual', 'l2_individual', 'l1_shared', 'l2_shared', 'pre_lsm_weights']
             if self.weight_clipping_type in possible_modes:
                 if self.weight_clipping_type=='l1':
                     self._do_shared_weight_clipping_l1()
@@ -1164,6 +1173,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     self._do_shared_weight_clipping_l1()
                 elif self.weight_clipping_type=='l2_shared':
                     self._do_shared_weight_clipping_l2()
+                elif self.weight_clipping_type=='pre_lsm_weights':
+                    self._do_shared_weight_clipping_pre_lsm()
                 else:
                     raise ValueError('Illegal weighgt clipping type: {}'.format(self.weight_clipping_type))
             else:

@@ -747,6 +747,123 @@ class WeightedSoftmax(nn.Module):
 
         return self.__class__.__name__ + '()'
 
+def weighted_linear_softmax(input, dim=None, weights=None ):
+    r"""Applies a softmax function.
+
+    Weighted_linear_softmax is defined as:
+
+    :math:`weighted_linear_softmax(x) = \frac{clamp(x_i+w_i,0,1)}{\sum_j clamp(x_j+w_j,0,1)}`
+
+    It is applied to all slices along dim, and will rescale them so that the elements
+    lie in the range `(0, 1)` and sum to 1.
+
+    See :class:`~torch.nn.WeightedLinearSoftmax` for more details.
+
+    Arguments:
+        input (Variable): input
+        dim (int): A dimension along which weighted_linear_softmax will be computed.
+
+    """
+    if dim is None:
+        raise ValueError('dimension needs to be defined!')
+
+    sz = input.size()
+    if weights is None: # just make them all one/nr_of_weights
+        weights = [1./sz[dim]]*sz[dim]
+
+    nr_of_weights = len(weights)
+    assert( sz[dim]==nr_of_weights )
+
+    ret = torch.zeros_like(input)
+
+    max_in,_ = torch.max(input, dim=dim)
+
+    if dim==0:
+        norm = torch.zeros_like(input[0,...])
+        for c in range(sz[0]):
+            norm += torch.clamp(weights[c]+input[c,...],min=0,max=1)
+        for c in range(sz[0]):
+            ret[c,...] = torch.clamp(weights[c]+input[c,...],min=0,max=1)/norm
+    elif dim==1:
+        norm = torch.zeros_like(input[:,0, ...])
+        for c in range(sz[1]):
+            norm += torch.clamp(weights[c]+input[:,c, ...],min=0,max=1)
+        for c in range(sz[1]):
+            ret[:,c, ...] = torch.clamp(weights[c]+input[:,c, ...],min=0,max=1)/norm
+    elif dim==2:
+        norm = torch.zeros_like(input[:,:,0, ...])
+        for c in range(sz[2]):
+            norm += torch.clamp(weights[c]+input[:,:,c, ...],min=0,max=1)
+        for c in range(sz[2]):
+            ret[:,:,c, ...] = torch.clamp(weights[c]+input[:,:,c, ...],min=0,max=1)/norm
+    elif dim==3:
+        norm = torch.zeros_like(input[:,:,:,0, ...])
+        for c in range(sz[3]):
+            norm += torch.clamp(weights[c]+input[:,:,:,c, ...],min=0,max=1)
+        for c in range(sz[3]):
+            ret[:,:,:,c, ...] = torch.clamp(weights[c]+input[:,:,:,c, ...],min=0,max=1)/norm
+    elif dim==4:
+        norm = torch.zeros_like(input[:,:,:,:,0, ...])
+        for c in range(sz[4]):
+            norm += torch.clamp(weights[c]+input[:,:,:,:,c, ...],min=0,max=1)
+        for c in range(sz[4]):
+            ret[:,:,:,:,c, ...] = torch.clamp(weights[c]+input[:,:,:,:,c, ...],min=0,max=1)/norm
+    else:
+        raise ValueError('weighted_softmax is only supported for dimensions 0, 1, 2, 3, and 4.')
+
+    return ret
+
+class WeightedLinearSoftmax(nn.Module):
+    r"""Applies the a WeightedLinearSoftmax function to an n-dimensional input Tensor
+    rescaling them so that the elements of the n-dimensional output Tensor
+    lie in the range (0,1) and sum to 1
+
+    WeightedSoftmax is defined as
+    :math:`f_i(x) = \frac{clamp(x_i+w_i,0,1)}{\sum_j clamp(x_j+w_j,0,1)}`
+
+    It is assumed that 0<=w_i<=1 and that the weights sum up to one.
+    The effect of this weighting is that for a zero input (x=0) the output for f_i(x) will be w_i.
+
+    Shape:
+        - Input: any shape
+        - Output: same as input
+
+    Returns:
+        a Tensor of the same dimension and shape as the input with
+        values in the range [0, 1]
+
+    Arguments:
+        dim (int): A dimension along which WeightedSoftmax will be computed (so every slice
+            along dim will sum to 1).
+
+    Examples::
+
+        >>> m = nn.WeightedLinearSoftmax()
+        >>> input = autograd.Variable(torch.randn(2, 3))
+        >>> print(input)
+        >>> print(m(input))
+    """
+
+    def __init__(self, dim=None, weights=None):
+        super(WeightedLinearSoftmax, self).__init__()
+        self.dim = dim
+        self.weights = weights
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if not hasattr(self, 'dim'):
+            self.dim = None
+        if not hasattr(self, 'weights'):
+            self.weights = None
+
+    def forward(self, input):
+
+        return weighted_linear_softmax(input, self.dim, self.weights, _stacklevel=5)
+
+    def __repr__(self):
+
+        return self.__class__.__name__ + '()'
+
 def weighted_sqrt_softmax(input, dim=None, weights=None ):
     r"""Applies a weighted square-root softmax function.
 
@@ -978,6 +1095,27 @@ class DeepSmoothingModel(nn.Module):
         self.params[('edge_penalty_filename', 'DEBUG_edge_penalty.nrrd', 'Edge penalty image')]
         self.params[('edge_penalty_terminate_after_writing', False,
                                                        'Terminates the program after the edge file has been written; otherwise file may be constantly overwritten')]
+
+        self.use_momentum_as_input = self.params[('use_momentum_as_input', True, 'If true, uses the image and the momentum as input')]
+        self.estimate_around_global_weights = self.params[('estimate_around_global_weights', True,'If true, a weighted softmax is used so the default output (for input zero) are the global weights')]
+        self.use_source_image_as_input = self.params[('use_source_image_as_input', False, 'If true, uses the source image as additional input')]
+        self.use_target_image_as_input = self.params[('use_target_image_as_input', False, 'If true, uses the target image as additional input')]
+
+    def get_number_of_input_channels(self, nr_of_image_channels, dim):
+        """
+        legacy; to support velocity fields as input channels
+        currently only returns the number of image channels, but if something else would be used as
+        the network input, would need to return the total number of inputs
+        """
+        add_channels = 0
+        if self.use_momentum_as_input:
+            add_channels += dim
+        if self.use_source_image_as_input:
+            add_channels += 1
+        if self.use_target_image_as_input:
+            add_channels += 1
+
+        return self.nr_of_image_channels + add_channels
 
     def _display_stats_before_after(self, Ib, Ia, iname):
 
@@ -1371,13 +1509,8 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         feature_num = self.params[('number_of_features_in_first_layer', 32, 'number of features in the first encoder layer (64 in quicksilver)')]
         use_dropout= self.params[('use_dropout',False,'use dropout for the layers')]
         self.use_separate_decoders_per_gaussian = self.params[('use_separate_decoders_per_gaussian',True,'if set to true separte decoder branches are used for each Gaussian')]
-        self.use_momentum_as_input = self.params[('use_momentum_as_input',True,'If true, uses the image and the momentum as input')]
         use_batch_normalization = self.params[('use_batch_normalization',True,'If true, uses batch normalization between layers')]
         self.use_one_encoder_decoder_block = self.params[('use_one_encoder_decoder_block',True,'If False, using two each as in the quicksilver paper')]
-        self.estimate_around_global_weights = self.params[('estimate_around_global_weights', True, 'If true, a weighted softmax is used so the default output (for input zero) are the global weights')]
-
-        self.use_source_image_as_input = self.params[('use_source_image_as_input',True,'If true, uses the source image as additional input')]
-        self.use_target_image_as_input = self.params[('use_target_image_as_input', True, 'If true, uses the target image as additional input')]
 
         if self.use_momentum_as_input or self.use_target_image_as_input or self.use_source_image_as_input:
             self.encoder_1 = encoder_block_2d(self.get_number_of_input_channels(nr_of_image_channels,dim), feature_num,
@@ -1406,22 +1539,6 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             self.decoder_2 = decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, use_batch_normalization, dim=dim, last_block=True)  # 3?
 
         self._initialize_weights()
-
-    def get_number_of_input_channels(self, nr_of_image_channels, dim):
-        """
-        legacy; to support velocity fields as input channels
-        currently only returns the number of image channels, but if something else would be used as
-        the network input, would need to return the total number of inputs
-        """
-        add_channels = 0
-        if self.use_momentum_as_input:
-            add_channels+=dim
-        if self.use_source_image_as_input:
-            add_channels+=1
-        if self.use_target_image_as_input:
-            add_channels+=1
-
-        return self.nr_of_image_channels + add_channels
 
     def forward(self, I, additional_inputs, global_multi_gaussian_weights, gaussian_fourier_filter_generator,
                 encourage_spatial_weight_consistency=True, retain_weights=False):
@@ -1675,10 +1792,6 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
                                                                      params=params)
 
         self.kernel_sizes = self.params[('kernel_sizes',[7,7],'size of the convolution kernels')]
-        self.use_momentum_as_input = self.params[('use_momentum_as_input',True,'If true, uses the momentum as an additional input')]
-        self.use_source_image_as_input = self.params[('use_source_image_as_input',True,'If true, uses the target image as additional input')]
-        self.use_target_image_as_input = self.params[('use_target_image_as_input',True,'If true, uses the target image as additional input')]
-        self.estimate_around_global_weights = self.params[('estimate_around_global_weights', True, 'If true, a weighted softmax is used so the default output (for input zero) are the global weights')]
         self.use_batch_normalization = self.params[('use_batch_normalization', True, 'If true, uses batch normalization between layers')]
 
         # check that all the kernel-size are odd
@@ -1704,23 +1817,6 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         # todo: this would allow removing dim and nr_of_image_channels from interface
         # todo: because it could be compute on the fly when forward is executed
         self._init(self.nr_of_image_channels,dim=self.dim)
-
-
-    def get_number_of_input_channels(self, nr_of_image_channels, dim):
-        """
-        legacy; to support velocity fields as input channels
-        currently only returns the number of image channels, but if something else would be used as
-        the network input, would need to return the total number of inputs
-        """
-        add_channels = 0
-        if self.use_momentum_as_input:
-            add_channels+=dim
-        if self.use_target_image_as_input:
-            add_channels+=1
-        if self.use_source_image_as_input:
-            add_channels+=1
-
-        return self.nr_of_image_channels + add_channels
 
     def _init(self,nr_of_image_channels,dim):
         """
@@ -1963,6 +2059,204 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
 
         return ret
 
+class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
+    """
+    Assumes a given clustering of an input image and estimates weights for this clustering
+    Enforces the same weighting for all the dimensions of the vector field to be smoothed
+    This is NOT a deep network model, but a way to debug optimization using the synthetic data
+
+    """
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=1.0, params=None ):
+        super(ClusteredWeightedSmoothingModel, self).__init__(nr_of_gaussians=nr_of_gaussians,\
+                                                                     gaussian_stds=gaussian_stds,\
+                                                                     dim=dim,\
+                                                                     spacing=spacing,\
+                                                                     nr_of_image_channels=nr_of_image_channels,\
+                                                                     omt_power=omt_power,
+                                                                     params=params)
+
+        self.nr_of_clusters = 3 # todo: if this model works, this should be a parameter and clustering should be done within the model
+        scaling_factor = 100 # what the random initialization will be divided by
+
+        # initialize a weight vector  (will be run through the weighed_linear_softmax later, so that will keep the output in range
+        self.pre_lsm_weights = torch.nn.Parameter(AdaptVal(torch.rand(self.nr_of_gaussians,self.nr_of_clusters)/scaling_factor))
+
+        # make sure the last one is the largest one
+        assert(gaussian_stds[-1]==gaussian_stds.max())
+
+    def _get_cluster_indices(self,I,cluster_number):
+        """
+        This is a setting for our synthetic experiment. We have the following three intervals:
+        (-infinity,0.5],[0.5,1.5),[1.5,infinity)
+
+        :param I:
+        :param cluster_number:
+        :return:
+        """
+
+        # as we assume this is scalar input data, we kill the channel (1st-dimension)
+        # (a>0.4) & (a<0.6)
+        if cluster_number==0:
+            return (I[:,0,...]<=0.5)
+        elif cluster_number==1:
+            return ((I[:,0,...]>0.5) & (I[:,0,...]<=1.5))
+        elif cluster_number==2:
+            return (I[:,0,...]>1.5)
+        else:
+            raise ValueError('Unknown cluster number {}. Needs to be 0,1, or 2.'.format(cluster_number))
+
+    def forward(self, I, additional_inputs, global_multi_gaussian_weights, gaussian_fourier_filter_generator,
+                encourage_spatial_weight_consistency=True, retain_weights=False):
+
+        # format of multi_smooth_v is multi_v x batch x channels x X x Y
+        # (channels here are the vector field components)
+        # I is the image, m is the momentum. multi_smooth_v is the momentum smoothed with the various kernels
+
+        """
+        First make sure that the multi_smooth_v has the correct dimension.
+        I.e., the correct spatial dimension and one output for each Gaussian (multi_v)
+        """
+
+        # get the size of the input momentum batch x channels x X x Y
+        momentum = additional_inputs['m']
+        sz_m = momentum.size()
+        # get the size of the multi-velocity field; multi_v x batch x channels x X x Y
+        sz_mv = [self.nr_of_gaussians] + list(sz_m)
+
+        # create the output tensor: will be of dimension: batch x channels x X x Y
+        ret = AdaptVal(Variable(MyTensor(*sz_m), requires_grad=False))
+
+        # now determine the size for the weights
+        # Since the smoothing will be the same for all spatial directions (for a velocity field),
+        # this basically amounts to cutting out the channels; i.e., multi_v x batch x X x Y
+        sz_weight = list(sz_mv)
+        sz_weight = [sz_weight[1]] + [sz_weight[0]] + sz_weight[3:]
+
+        # if the weights should be stored (for debugging), create the tensor to store them here
+        if retain_weights:
+            if self.computed_weights is None:
+                print('DEBUG: retaining smoother weights - turn off to minimize memory consumption')
+                # create storage; batch x size v x X x Y
+                self.computed_weights = MyTensor(*sz_weight)
+
+            if self.deep_network_local_weight_smoothing > 0:
+                if self.computed_pre_weights is None:
+                    print('DEBUG: retaining smoother pre weights - turn off to minimize memory consumption')
+                    self.computed_pre_weights = MyTensor(*sz_weight)
+
+        # apply the mapping to normalized the pre_lsm_weights (these are parameters that are being optimized over)
+        lsm_weights = weighted_linear_softmax(self.pre_lsm_weights,dim=0,weights=global_multi_gaussian_weights)
+
+        #print('pre_lsm_weights')
+        #print(self.pre_lsm_weights)
+        print('lsm_weights')
+        print(lsm_weights)
+
+        # now we find the image "clusters" and use them to create the weight vector
+        # weight vector format:  B x weights x X x Y
+        weights = Variable(AdaptVal(torch.zeros(*sz_weight)),requires_grad=False)
+
+        for c in range(self.nr_of_clusters):
+            # indices for the first cluster
+            current_indices = self._get_cluster_indices(I,c)
+            # need to loop weights only as the indices will be for entire batches
+            for w in range(sz_weight[1]):
+                weights[:,w,...] = weights[:,w,...] + current_indices.float()*lsm_weights[w,c]
+
+        # compute the total variation penalty; compute this on the pre (non-smoothed) weights
+        total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        if self.total_variation_weight_penalty > 0:
+            total_variation_penalty += self.compute_local_weighted_tv_norm(I=I,weights=weights)
+
+        diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        if self.diffusion_weight_penalty > 0:
+            for g in range(self.nr_of_gaussians):
+                diffusion_penalty += self.compute_diffusion(weights[:, g, ...])
+
+        # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
+        if self.deep_network_local_weight_smoothing > 0 and self.deep_network_weight_smoother is None:
+            import pyreg.smoother_factory as sf
+            s_m_params = pars.ParameterDict()
+            s_m_params['smoother']['type'] = 'gaussian'
+            s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
+            self.deep_network_weight_smoother = sf.SmootherFactory(ret.size()[2::], self.spacing).create_smoother(s_m_params)
+
+        if self.deep_network_local_weight_smoothing>0:
+            # now we smooth all the weights
+            if retain_weights:
+                # todo: change visualization to work with this new format:
+                # B x weights x X x Y instead of weights x B x X x Y
+                self.computed_pre_weights[:] = weights.data
+
+            weights = self.deep_network_weight_smoother.smooth(weights)
+            # make sure they are all still positive (#todo: may not be necessary, since we set a minumum weight above now; but risky as we take the square root below)
+            weights = torch.clamp(weights,0.0,1.0)
+
+        # multiply the velocity fields by the weights and sum over them
+        # this is then the multi-Gaussian output
+
+        if self.weighting_type=='sqrt_w_K_sqrt_w':
+            sqrt_weights = torch.sqrt(weights)
+            sqrt_weighted_multi_smooth_v = compute_weighted_multi_smooth_v( momentum=momentum, weights=sqrt_weights, gaussian_stds=self.gaussian_stds,
+                                                                   gaussian_fourier_filter_generator=gaussian_fourier_filter_generator )
+        elif self.weighting_type=='w_K_w':
+            # now create the weighted multi-smooth-v
+            weighted_multi_smooth_v = compute_weighted_multi_smooth_v( momentum=momentum, weights=weights, gaussian_stds=self.gaussian_stds,
+                                                                       gaussian_fourier_filter_generator=gaussian_fourier_filter_generator )
+        elif self.weighting_type=='w_K':
+            multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(momentum,
+                                                                     gaussian_fourier_filter_generator=gaussian_fourier_filter_generator,
+                                                                     sigma=Variable(torch.from_numpy(self.gaussian_stds),requires_grad=False),
+                                                                     compute_std_gradients=False)
+        else:
+            raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
+
+        # now we apply this weight across all the channels; weight output is B x weights x X x Y
+        for n in range(self.dim):
+            # reverse the order so that for a given channel we have batch x multi_velocity x X x Y
+            # i.e., the multi-velocity field output is treated as a channel
+            # reminder: # format of multi_smooth_v is multi_v x batch x channels x X x Y
+            # (channels here are the vector field components); i.e. as many as there are dimensions
+            # each one of those should be smoothed the same
+
+            # let's smooth this on the fly, as the smoothing will be of form
+            # w_i*K_i*(w_i m)
+
+            if self.weighting_type=='sqrt_w_K_sqrt_w':
+                # roc should be: batch x multi_v x X x Y
+                roc = torch.transpose(sqrt_weighted_multi_smooth_v[:, :, n, ...], 0, 1)
+                yc = torch.sum(roc * sqrt_weights, dim=1)
+            elif self.weighting_type=='w_K_w':
+                # roc should be: batch x multi_v x X x Y
+                roc = torch.transpose(weighted_multi_smooth_v[:, :, n, ...], 0, 1)
+                yc = torch.sum(roc*weights,dim=1)
+            elif self.weighting_type=='w_K':
+                # roc should be: batch x multi_v x X x Y
+                roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
+                yc = torch.sum(roc * weights, dim=1)
+            else:
+                raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
+
+            ret[:, n, ...] = yc # ret is: batch x channels x X x Y
+
+        current_diffusion_penalty = self.diffusion_weight_penalty * diffusion_penalty
+
+        current_omt_penalty = self.omt_weight_penalty*compute_omt_penalty(weights,self.gaussian_stds,self.volumeElement,self.omt_power,self.omt_use_log_transformed_std)
+        current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
+        self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
+
+        print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
+              '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \
+              '; diffusion_penalty = ' + str(current_diffusion_penalty.data.cpu().numpy()))
+
+        if retain_weights:
+            # todo: change visualization to work with this new format:
+            # B x weights x X x Y instead of weights x B x X x Y
+            self.computed_weights[:] = weights.data
+
+        return ret
+
+
 
 class DeepSmootherFactory(object):
     """
@@ -2003,6 +2297,13 @@ class DeepSmootherFactory(object):
                                                           params=params)
         elif smootherType=='encoder_decoder':
             return EncoderDecoderSmoothingModel(nr_of_gaussians=self.nr_of_gaussians,
+                                                  gaussian_stds=self.gaussian_stds,
+                                                  dim=self.dim,
+                                                  spacing=self.spacing,
+                                                  nr_of_image_channels=self.nr_of_image_channels,
+                                                  params=params)
+        elif smootherType=='clustered':
+            return ClusteredWeightedSmoothingModel(nr_of_gaussians=self.nr_of_gaussians,
                                                   gaussian_stds=self.gaussian_stds,
                                                   dim=self.dim,
                                                   spacing=self.spacing,
