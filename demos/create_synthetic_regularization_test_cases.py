@@ -33,6 +33,10 @@ import torch
 
 import numpy as np
 
+# todo: find out a good way to fix this; this may be related to the MKL libraries
+print('WARNING: Disabled square root warning for numpy; this may be an issue of the MKL')
+np.warnings.filterwarnings('ignore','invalid value encountered in sqrt')
+
 import os
 import random
 
