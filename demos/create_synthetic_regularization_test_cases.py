@@ -181,7 +181,7 @@ def create_momentum(input_im,centered_map,
         s_m_params['smoother']['gaussian_std'] = momentum_smoothing
         s_m = sf.SmootherFactory(sz[2::], spacing).create_smoother(s_m_params)
 
-        m = s_m.smooth(AdaptVal(torch.from_numpy(m_orig))).data.cpu().numpy()
+        m = s_m.smooth(AdaptVal(torch.from_numpy(m_orig))).detach().cpu().numpy()
 
         if visualize:
             plt.clf()
@@ -384,7 +384,7 @@ def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,sp
         else:
             raise ValueError('Unknown kernel type: {}'.format(kernel_weighting_type))
 
-        localized_v[:, n, ...] = yc.data.cpu().numpy()  # ret is: batch x channels x X x Y
+        localized_v[:, n, ...] = yc.detach().cpu().numpy()  # ret is: batch x channels x X x Y
 
     if visualize:
 
@@ -438,7 +438,7 @@ def add_texture(im_orig,texture_gaussian_smoothness=0.1,texture_magnitude=0.3):
         r_params['smoother']['gaussian_std'] = texture_gaussian_smoothness
         s_r = sf.SmootherFactory(sz[2::], spacing).create_smoother(r_params)
 
-        rand_noise_smoothed = s_r.smooth(AdaptVal(torch.from_numpy(rand_noise))).data.cpu().numpy()
+        rand_noise_smoothed = s_r.smooth(AdaptVal(torch.from_numpy(rand_noise))).detach().cpu().numpy()
         rand_noise_smoothed /= rand_noise_smoothed.max()
         rand_noise_smoothed *= texture_magnitude
 
@@ -505,7 +505,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
             smoother = sf.SmootherFactory(weights_orig.shape[2::], spacing).create_smoother(s_m_params)
             #weights_old = np.zeros_like(weights_orig)
             #weights_old[:] = weights_orig
-            weights_orig = (smoother.smooth(torch.from_numpy(weights_orig))).data.cpu().numpy()
+            weights_orig = (smoother.smooth(torch.from_numpy(weights_orig))).detach().cpu().numpy()
             # make sure they are strictly positive
             weights_orig[weights_orig<0] = 0
 
@@ -576,20 +576,20 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
 
     if publication_figures_directory is not None:
         plt.clf()
-        plt.imshow(I1_label_orig[0, 0, ...].data.cpu().numpy(),origin='lower')
+        plt.imshow(I1_label_orig[0, 0, ...].detach().cpu().numpy(),origin='lower')
         plt.axis('off')
         plt.savefig(os.path.join(publication_figures_directory, 'ring_im_warped_source_{:d}.pdf'.format(image_pair_nr)),bbox_inches='tight',pad_inches=0)
 
     if use_random_source:
         # the initially created target will become the source
         id_c_warped_t = utils.compute_warped_image_multiNC(AdaptVal(torch.from_numpy(id_c)), phi1_orig, spacing, spline_order=1)
-        id_c_warped = id_c_warped_t.data.cpu().numpy()
+        id_c_warped = id_c_warped_t.detach().cpu().numpy()
         weights_warped_t = utils.compute_warped_image_multiNC(AdaptVal(torch.from_numpy(weights_orig)), phi1_orig, spacing, spline_order=1)
-        weights_warped = weights_warped_t.data.cpu().numpy()
+        weights_warped = weights_warped_t.detach().cpu().numpy()
         # make sure they are stirctly positive
         weights_warped[weights_warped<0] = 0
 
-        warped_source_im_orig = I1_label_orig.data.cpu().numpy()
+        warped_source_im_orig = I1_label_orig.detach().cpu().numpy()
 
         m_warped_source = create_momentum(warped_source_im_orig, centered_map=id_c_warped, randomize_momentum_on_circle=randomize_momentum_on_circle,
                                           randomize_in_sectors=randomize_in_sectors,
@@ -661,19 +661,19 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
         plt.clf()
         # plot original image, warped image, and grids
         plt.subplot(3,4,1)
-        plt.imshow(I0_source[0,0,...].data.cpu().numpy())
+        plt.imshow(I0_source[0,0,...].detach().cpu().numpy())
         plt.title('source')
         plt.subplot(3,4,2)
-        plt.imshow(I1_warped[0,0,...].data.cpu().numpy())
+        plt.imshow(I1_warped[0,0,...].detach().cpu().numpy())
         plt.title('warped = target')
         plt.subplot(3,4,3)
-        plt.imshow(I0_source[0,0,...].data.cpu().numpy())
-        plt.contour(phi0[0,0,...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
-        plt.contour(phi0[0,1,...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
+        plt.imshow(I0_source[0,0,...].detach().cpu().numpy())
+        plt.contour(phi0[0,0,...].detach().cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
+        plt.contour(phi0[0,1,...].detach().cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
         plt.subplot(3,4,4)
-        plt.imshow(I1_warped[0,0,...].data.cpu().numpy())
-        plt.contour(phi1[0,0,...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
-        plt.contour(phi1[0,1,...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
+        plt.imshow(I1_warped[0,0,...].detach().cpu().numpy())
+        plt.contour(phi1[0,0,...].detach().cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
+        plt.contour(phi1[0,1,...].detach().cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
 
         nr_of_weights = weights.shape[1]
         for cw in range(nr_of_weights):
@@ -694,29 +694,29 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
 
     if publication_figures_directory is not None:
         plt.clf()
-        plt.imshow(I0_source[0, 0, ...].data.cpu().numpy(),origin='lower')
+        plt.imshow(I0_source[0, 0, ...].detach().cpu().numpy(),origin='lower')
         plt.axis('image')
         plt.axis('off')
         plt.savefig(os.path.join(publication_figures_directory, '{:s}_{:d}.pdf'.format('source_image', image_pair_nr)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
-        plt.imshow(I1_warped[0, 0, ...].data.cpu().numpy(),origin='lower')
+        plt.imshow(I1_warped[0, 0, ...].detach().cpu().numpy(),origin='lower')
         plt.axis('image')
         plt.axis('off')
         plt.savefig(os.path.join(publication_figures_directory, '{:s}_{:d}.pdf'.format('target_image', image_pair_nr)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
-        plt.imshow(I0_source[0, 0, ...].data.cpu().numpy(),origin='lower')
-        plt.contour(phi0[0, 0, ...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
-        plt.contour(phi0[0, 1, ...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
+        plt.imshow(I0_source[0, 0, ...].detach().cpu().numpy(),origin='lower')
+        plt.contour(phi0[0, 0, ...].detach().cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
+        plt.contour(phi0[0, 1, ...].detach().cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
         plt.axis('image')
         plt.axis('off')
         plt.savefig(os.path.join(publication_figures_directory, '{:s}_{:d}.pdf'.format('source_image_with_grid', image_pair_nr)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
-        plt.imshow(I1_warped[0, 0, ...].data.cpu().numpy(),origin='lower')
-        plt.contour(phi1[0, 0, ...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
-        plt.contour(phi1[0, 1, ...].data.cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
+        plt.imshow(I1_warped[0, 0, ...].detach().cpu().numpy(),origin='lower')
+        plt.contour(phi1[0, 0, ...].detach().cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
+        plt.contour(phi1[0, 1, ...].detach().cpu().numpy(), np.linspace(-1, 1, 40), colors='r', linestyles='solid')
         plt.axis('image')
         plt.axis('off')
         plt.savefig(os.path.join(publication_figures_directory,'{:s}_{:d}.pdf'.format('target_image_with_grid', image_pair_nr)), bbox_inches='tight',pad_inches=0)
@@ -728,8 +728,8 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
         plt.axis('off')
         plt.savefig(os.path.join(publication_figures_directory, '{:s}_{:d}.pdf'.format('std_im_source', image_pair_nr)),bbox_inches='tight',pad_inches=0)
 
-    return I0_source.data.cpu().numpy(), I1_warped.data.cpu().numpy(), weights, \
-           I0_label.data.cpu().numpy(), I1_label.data.cpu().numpy(), phi1.data.cpu().numpy(), m
+    return I0_source.detach().cpu().numpy(), I1_warped.detach().cpu().numpy(), weights, \
+           I0_label.detach().cpu().numpy(), I1_label.detach().cpu().numpy(), phi1.detach().cpu().numpy(), m
 
 
 def get_parameter_value(command_line_par,params, params_name, default_val, params_description):

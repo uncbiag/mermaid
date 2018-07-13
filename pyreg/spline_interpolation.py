@@ -879,7 +879,7 @@ def test_me(test_dim=1):
 
     if testDim==1:
         plt.plot(x,s)
-        plt.plot(xi,si_tst[0,0,...].data.numpy())
+        plt.plot(xi,si_tst[0,0,...].detach().cpu().numpy())
 
         plt.show()
     elif testDim==2:
@@ -888,7 +888,7 @@ def test_me(test_dim=1):
         plt.clim(0,1.5)
         plt.colorbar()
         plt.subplot(122)
-        plt.imshow(si_tst[0, 0, ...].data.numpy())
+        plt.imshow(si_tst[0, 0, ...].detach().cpu().numpy())
         plt.clim(0,1.5)
         plt.colorbar()
         plt.show()

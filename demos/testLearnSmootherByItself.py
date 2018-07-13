@@ -52,22 +52,22 @@ if visualize_smooth_vector_fields:
     for n in range(nr_of_images):
 
         plt.subplot(3,2,1)
-        plt.imshow(m[n,0,...].data.numpy())
+        plt.imshow(m[n,0,...].detach().cpu().numpy())
 
         plt.subplot(3,2,2)
-        plt.imshow(m[n,1,...].data.numpy())
+        plt.imshow(m[n,1,...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 3)
-        plt.imshow(v[n, 0, ...].data.numpy())
+        plt.imshow(v[n, 0, ...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 4)
-        plt.imshow(v[n, 1, ...].data.numpy())
+        plt.imshow(v[n, 1, ...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 5)
-        plt.imshow(v_nl[n, 0, ...].data.numpy())
+        plt.imshow(v_nl[n, 0, ...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 6)
-        plt.imshow(v_nl[n, 1, ...].data.numpy())
+        plt.imshow(v_nl[n, 1, ...].detach().cpu().numpy())
 
         plt.title( str(n) )
 

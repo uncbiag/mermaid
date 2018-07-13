@@ -953,7 +953,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         :return:
         """
-        return self.rec_opt_par_loss_energy.cpu().data.numpy()
+        return self.rec_opt_par_loss_energy.detach().cpu().numpy()
 
     def get_custom_output_values(self):
         """
@@ -968,7 +968,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         Returns the current energy
         :return: Returns a tuple (energy, similarity energy, regularization energy)
         """
-        return self.rec_energy.cpu().data.numpy(), self.rec_similarityEnergy.cpu().data.numpy(), self.rec_regEnergy.cpu().data.numpy()
+        return self.rec_energy.detach().cpu().numpy(), self.rec_similarityEnergy.detach().cpu().numpy(), self.rec_regEnergy.cpu().data.numpy()
 
     def get_warped_image(self):
         """
@@ -1559,7 +1559,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             file_name += '_label'
         path = os.path.join(folder_path,file_name+'.nii.gz')
         im_io = FIO.ImageIO()
-        im_io.write(path, np.squeeze(img.data.cpu().numpy()))
+        im_io.write(path, np.squeeze(img.detach().cpu().numpy()))
 
     # todo: write these parameter/optimizer functions also for shared parameters and all parameters
     def set_sgd_shared_model_parameters_and_optimizer_states(self, pars):

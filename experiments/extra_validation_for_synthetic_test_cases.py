@@ -186,7 +186,7 @@ def downsample_to_compatible_size_single_image(gt_weight,weight,interpolation_or
         desired_size = weight.shape
 
         gt_weight_downsampled_t,_ = sampler.downsample_image_to_size(gt_weight_reshaped, spacing, desired_size, interpolation_order)
-        gt_weight_downsampled = gt_weight_downsampled_t.data.cpu().numpy()
+        gt_weight_downsampled = gt_weight_downsampled_t.detach().cpu().numpy()
 
         return gt_weight_downsampled
 
@@ -213,7 +213,7 @@ def upsample_to_compatible_size_single_image(gt_weight,weight,interpolation_orde
         desired_size = gt_weight.shape
 
         weight_upsampled_t,_ = sampler.upsample_image_to_size(weight_reshaped, spacing, desired_size, interpolation_order)
-        weight_upsampled = weight_upsampled_t.data.cpu().numpy()
+        weight_upsampled = weight_upsampled_t.detach().cpu().numpy()
 
         return weight_upsampled
 
@@ -456,8 +456,8 @@ def compute_and_visualize_validation_result(multi_gaussian_stds_synth,
     weights_output_filename_pt = os.path.join(image_and_map_output_directory, 'weights_{:05d}.pt'.format(pair_nr))
     momentum_output_filename_pt = os.path.join(image_and_map_output_directory, 'momentum_{:05d}.pt'.format(pair_nr))
 
-    map = torch.load(map_output_filename_pt).data.cpu().numpy()
-    momentum = torch.load(momentum_output_filename_pt).data.cpu().numpy()
+    map = torch.load(map_output_filename_pt).detach().cpu().numpy()
+    momentum = torch.load(momentum_output_filename_pt).detach().cpu().numpy()
 
     if print_images:
         visualize = True
@@ -473,13 +473,13 @@ def compute_and_visualize_validation_result(multi_gaussian_stds_synth,
     weights_dict = torch.load(weights_output_filename_pt)
     if not compare_global_weights:
         if 'local_weights' in weights_dict:
-            weights = weights_dict['local_weights'].cpu().numpy()
+            weights = weights_dict['local_weights'].detach().cpu().numpy()
         else:
             raise ValueError('requested comparison of local weights, but local weights are not available')
     else:
         # there are only global weights
         # let's make them "local" so that we can use the same code for comparison everywhere
-        global_weights = weights_dict['default_multi_gaussian_weights'].data.cpu().numpy()
+        global_weights = weights_dict['default_multi_gaussian_weights'].detach().cpu().numpy()
         nr_of_weights = len(global_weights)
 
         sz_m = list(momentum.shape)

@@ -1118,15 +1118,15 @@ class DeepSmoothingModel(nn.Module):
 
     def _display_stats_before_after(self, Ib, Ia, iname):
 
-        Ib_min = Ib.min().data.cpu().numpy()[0]
-        Ib_max = Ib.max().data.cpu().numpy()[0]
-        Ib_mean = Ib.mean().data.cpu().numpy()[0]
-        Ib_std = Ib.std().data.cpu().numpy()[0]
+        Ib_min = Ib.min().detach().cpu().numpy()[0]
+        Ib_max = Ib.max().detach().cpu().numpy()[0]
+        Ib_mean = Ib.mean().detach().cpu().numpy()[0]
+        Ib_std = Ib.std().detach().cpu().numpy()[0]
 
-        Ia_min = Ia.min().data.cpu().numpy()[0]
-        Ia_max = Ia.max().data.cpu().numpy()[0]
-        Ia_mean = Ia.mean().data.cpu().numpy()[0]
-        Ia_std = Ia.std().data.cpu().numpy()[0]
+        Ia_min = Ia.min().detach().cpu().numpy()[0]
+        Ia_max = Ia.max().detach().cpu().numpy()[0]
+        Ia_mean = Ia.mean().detach().cpu().numpy()[0]
+        Ia_std = Ia.std().detach().cpu().numpy()[0]
 
         print('{}: before: [{:.2f},{:.2f},{:.2f}]({:.2f}); after: [{:.2f},{:.2f},{:.2f}]({:.2f})'.format(iname, Ib_min,Ib_mean,Ib_max,Ib_std,Ia_min,Ia_mean,Ia_max,Ia_std))
 
@@ -1722,8 +1722,8 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         self.current_penalty = current_omt_penalty
         if self.total_variation_weight_penalty > 0:
             current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
-            print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
-                  '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()))
+            print('TV_penalty = ' + str(current_tv_penalty.detach().cpu().numpy()) + \
+                  '; OMT_penalty = ' + str(current_omt_penalty.detach().cpu().numpy()))
             self.current_penalty += current_tv_penalty
 
         if retain_weights:
@@ -2046,9 +2046,9 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
         self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
 
-        print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
-              '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \
-              '; diffusion_penalty = ' + str(current_diffusion_penalty.data.cpu().numpy()))
+        print('TV_penalty = ' + str(current_tv_penalty.detach().cpu().numpy()) + \
+              '; OMT_penalty = ' + str(current_omt_penalty.detach().cpu().numpy()) + \
+              '; diffusion_penalty = ' + str(current_diffusion_penalty.detach().cpu().numpy()))
 
 
         if retain_weights:
@@ -2244,9 +2244,9 @@ class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
         current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
         self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
 
-        print('TV_penalty = ' + str(current_tv_penalty.data.cpu().numpy()) + \
-              '; OMT_penalty = ' + str(current_omt_penalty.data.cpu().numpy()) + \
-              '; diffusion_penalty = ' + str(current_diffusion_penalty.data.cpu().numpy()))
+        print('TV_penalty = ' + str(current_tv_penalty.detach().cpu().numpy()) + \
+              '; OMT_penalty = ' + str(current_omt_penalty.detach().cpu().numpy()) + \
+              '; diffusion_penalty = ' + str(current_diffusion_penalty.detach().cpu().numpy()))
 
         if retain_weights:
             # todo: change visualization to work with this new format:

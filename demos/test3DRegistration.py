@@ -75,7 +75,7 @@ if save_me:
     d['phi'] = phis['phi'][0]
     torch.save(d,'reg_results_3d.pt')
 
-    nrrd.write('./res/Iw_tst_3d.nrrd', (d['Iw']['warped_images'][0].data.numpy()[0, 0, ...]))
+    nrrd.write('./res/Iw_tst_3d.nrrd', (d['Iw']['warped_images'][0].detach().cpu().numpy()[0, 0, ...]))
     nrrd.write('./res/I0_tst_3d.nrrd', d['I0'][0, 0, ...])
     nrrd.write('./res/I1_tst_3d.nrrd', d['I1'][0, 0, ...])
 

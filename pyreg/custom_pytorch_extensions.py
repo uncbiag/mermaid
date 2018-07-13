@@ -273,13 +273,13 @@ class FourierConvolution(Function):
             return FFTVal(result, ini=-1)
         else:
             if self.dim <3:
-                conv_output = self.ifftn(self.fftn(input.detach().numpy()) * self.complex_fourier_filter)
+                conv_output = self.ifftn(self.fftn(input.detach().cpu().numpy()) * self.complex_fourier_filter)
                 result = conv_output.real  # should in principle be real
             elif self.dim == 3:
                 result = np.zeros(input.shape)
                 for batch in range(input.size()[0]):
                     for ch in range(input.size()[1]):
-                        conv_output = self.ifftn(self.fftn(input[batch,ch].detach().numpy()) * self.complex_fourier_filter)
+                        conv_output = self.ifftn(self.fftn(input[batch,ch].detach().cpu().numpy()) * self.complex_fourier_filter)
                         result[batch,ch] = conv_output.real
             else:
                 raise ValueError("cpu fft smooth should be 1d-3d")
@@ -335,7 +335,7 @@ class FourierConvolution(Function):
             return FFTVal(grad_input, ini=-1)
         else:
             # if self.needs_input_grad[0]:
-            numpy_go = grad_output.detach().numpy()
+            numpy_go = grad_output.detach().cpu().numpy()
             # we use the conjugate because the assumption was that the spatial filter is real
             # THe following two lines should be correct
             if self.dim < 3:
@@ -425,7 +425,7 @@ class InverseFourierConvolution(Function):
         else:
             result = np.zeros(input.shape)
             if self.dim <3:
-                conv_output = self.ifftn(self.fftn(input.detach().numpy()) / (self.alpha + self.complex_fourier_filter))
+                conv_output = self.ifftn(self.fftn(input.detach().cpu().numpy()) / (self.alpha + self.complex_fourier_filter))
                 # result = abs(conv_output) # should in principle be real
                 result = conv_output.real
             elif self.dim == 3:
@@ -433,7 +433,7 @@ class InverseFourierConvolution(Function):
                 for batch in range(input.size()[0]):
                     for ch in range(input.size()[1]):
                         conv_output = self.ifftn(
-                            self.fftn(input[batch,ch].detach().numpy()) / (self.alpha + self.complex_fourier_filter))
+                            self.fftn(input[batch,ch].detach().cpu().numpy()) / (self.alpha + self.complex_fourier_filter))
                         result[batch, ch] = conv_output.real
             else:
                 raise ValueError("cpu fft smooth should be 1d-3d")
@@ -476,7 +476,7 @@ class InverseFourierConvolution(Function):
             return FFTVal(grad_input, ini=-1)
         else:
             # if self.needs_input_grad[0]:
-            numpy_go = grad_output.detach().numpy()
+            numpy_go = grad_output.detach().cpu().numpy()
             # we use the conjugate because the assumption was that the spatial filter is real
             # THe following two lines should be correct
             if self.dim<3:
@@ -556,7 +556,7 @@ class GaussianFourierFilterGenerator(object):
 
     def _compute_complex_gaussian_fourier_filter(self,sigma):
 
-        stds = sigma.detach().numpy() * np.ones(self.dim)
+        stds = sigma.detach().cpu().numpy() * np.ones(self.dim)
         gaussian_spatial_filter = utils.compute_normalized_gaussian(self.centered_id, self.mus, stds)
         complex_gaussian_fourier_filter,max_index = create_complex_fourier_filter(gaussian_spatial_filter,self.sz,True)
         return complex_gaussian_fourier_filter,max_index
@@ -567,7 +567,7 @@ class GaussianFourierFilterGenerator(object):
             raise ValueError('A Gaussian filter needs to be generated / requested *before* any other filter')
 
         # TODO: maybe compute this jointly with the gaussian filter itself to avoid computing the spatial filter twice
-        stds = sigma.detach().numpy() * np.ones(self.dim)
+        stds = sigma.detach().cpu().numpy() * np.ones(self.dim)
         gaussian_spatial_filter = utils.compute_normalized_gaussian(self.centered_id, self.mus, stds)
         gaussian_spatial_xsqr_filter = gaussian_spatial_filter*(self.centered_id**2).sum(axis=0)
 
@@ -729,13 +729,13 @@ class FourierGaussianConvolution(Function):
 
     def _compute_convolution_CPU(self,input,complex_fourier_filter):
         if self.dim < 3:
-            conv_output = self.ifftn(self.fftn(input.detach().numpy()) * complex_fourier_filter)
+            conv_output = self.ifftn(self.fftn(input.detach().cpu().numpy()) * complex_fourier_filter)
             result = conv_output.real  # should in principle be real
         elif self.dim == 3:
             result = np.zeros(input.shape)
             for batch in range(input.size()[0]):
                 for ch in range(input.size()[1]):
-                    conv_output = self.ifftn(self.fftn(input[batch, ch].detach().numpy()) * complex_fourier_filter)
+                    conv_output = self.ifftn(self.fftn(input[batch, ch].detach().cpu().numpy()) * complex_fourier_filter)
                     result[batch, ch] = conv_output.real
         else:
             raise ValueError("cpu fft smooth should be 1d-3d")
@@ -758,7 +758,7 @@ class FourierGaussianConvolution(Function):
         return FFTVal(grad_input, ini=-1)
 
     def _compute_input_gradient_CPU(self,grad_output,complex_fourier_filter):
-        numpy_go = grad_output.detach().numpy()
+        numpy_go = grad_output.detach().cpu().numpy()
         # we use the conjugate because the assumption was that the spatial filter is real
         # THe following two lines should be correct
         if self.dim < 3:
@@ -779,18 +779,18 @@ class FourierGaussianConvolution(Function):
 
     def _compute_sigma_gradient_CUDA(self,input,sigma,grad_output,complex_fourier_filter,complex_fourier_xsqr_filter):
         convolved_input = self._compute_convolution_CUDA(input, complex_fourier_filter)
-        grad_sigma = -1. / sigma * self.dim * (grad_output.detach().numpy() * convolved_input).sum()
+        grad_sigma = -1. / sigma * self.dim * (grad_output.detach().cpu().numpy() * convolved_input).sum()
         convolved_input_xsqr = self._compute_convolution_CUDA(input, complex_fourier_xsqr_filter)
-        grad_sigma += 1. / (sigma ** 3) * (grad_output.detach().numpy() * convolved_input_xsqr).sum()
+        grad_sigma += 1. / (sigma ** 3) * (grad_output.detach().cpu().numpy() * convolved_input_xsqr).sum()
 
         return grad_sigma
 
     # TODO: gradient appears to be incorrect
     def _compute_sigma_gradient_CPU(self,input,sigma,grad_output,complex_fourier_filter,complex_fourier_xsqr_filter):
         convolved_input = self._compute_convolution_CPU(input,complex_fourier_filter)
-        grad_sigma = -1./sigma*self.dim*(grad_output.detach().numpy()*convolved_input).sum()
+        grad_sigma = -1./sigma*self.dim*(grad_output.detach().cpu().numpy()*convolved_input).sum()
         convolved_input_xsqr = self._compute_convolution_CPU(input,complex_fourier_xsqr_filter)
-        grad_sigma += 1./(sigma**3)*(grad_output.detach().numpy()*convolved_input_xsqr).sum()
+        grad_sigma += 1./(sigma**3)*(grad_output.detach().cpu().numpy()*convolved_input_xsqr).sum()
 
         return grad_sigma
 

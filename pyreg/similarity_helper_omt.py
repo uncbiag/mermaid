@@ -21,7 +21,7 @@ class OTSimilarityHelper(Function):
                    """
     @staticmethod
     def forward(ctx, phi,I0,I1,multiplier0,multiplier1,spacing,nr_iterations_sinkhorn,std_sink):
-        shape = numpy_shape(AdaptVal(I0).cpu().numpy())
+        shape = numpy_shape(AdaptVal(I0).detach().cpu().numpy())
         simil = OTSimilarityGradient(spacing,shape,sinkhorn_iterations = nr_iterations_sinkhorn[0],std_dev = std_sink[0])
         result,other = simil.compute_similarity(I0,I1)
         multiplier0.copy_(AdaptVal(simil.multiplier0.data))
@@ -32,10 +32,10 @@ class OTSimilarityHelper(Function):
     @staticmethod
     def backward(ctx, grad_output):
         phi,I0,I1,multiplier0,multiplier1,spacing,nr_iterations_sinkhorn,std_sink = ctx.saved_variables
-        shape = numpy_shape(AdaptVal(I0.data).cpu().numpy())
+        shape = numpy_shape(AdaptVal(I0).detach().cpu().numpy())
         simil = OTSimilarityGradient(spacing.data,shape,sinkhorn_iterations = nr_iterations_sinkhorn.data[0],std_dev = std_sink.data[0])
         grad_input = simil.compute_gradient(I0,I1,multiplier0,multiplier1)
-        fm = FM.RHSLibrary(spacing.data.numpy())
+        fm = FM.RHSLibrary(spacing.detach().cpu().numpy())
         result_gradient = fm.rhs_advect_map_multiNC(torch.unsqueeze(phi,0),torch.unsqueeze(grad_input,0))
         #result_gradient = -grad_input
         return -2*result_gradient,None,None,None,None,None,None,None

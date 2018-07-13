@@ -69,7 +69,7 @@ class ResampleImage(object):
         sz = np.array(list(I.size()))  # we assume this is a pytorch tensor
         resSzInt = self._compute_scaled_size(sz, scaling)
 
-        Iz = nd.zoom(I.data.numpy(),scaling,None,order=1,mode='reflect')
+        Iz = nd.zoom(I.detach().cpu().numpy(),scaling,None,order=1,mode='reflect')
         newSpacing = spacing*((sz.astype('float')-1.)/(resSzInt.astype('float')-1.))
         Iz_t = torch.from_numpy(Iz)
 
@@ -269,13 +269,13 @@ def test_me():
     print(spacing_up)
 
     plt.subplot(131)
-    plt.imshow(I[0,0,:,:].data.numpy().squeeze())
+    plt.imshow(I[0,0,:,:].detach().cpu().numpy().squeeze())
 
     plt.subplot(132)
-    plt.imshow(ID[0, 0, :, :].data.numpy().squeeze())
+    plt.imshow(ID[0, 0, :, :].detach().cpu().numpy().squeeze())
 
     plt.subplot(133)
-    plt.imshow(IU[0, 0, :, :].data.numpy().squeeze())
+    plt.imshow(IU[0, 0, :, :].detach().cpu().numpy().squeeze())
 
     plt.show()
 
@@ -302,12 +302,12 @@ def test_me_2():
     print(spacing_up)
 
     plt.subplot(131)
-    plt.imshow(I[0, 0, :, :].data.numpy().squeeze())
+    plt.imshow(I[0, 0, :, :].detach().cpu().numpy().squeeze())
 
     plt.subplot(132)
-    plt.imshow(ID[0, 0, :, :].data.numpy().squeeze())
+    plt.imshow(ID[0, 0, :, :].detach().cpu().numpy().squeeze())
 
     plt.subplot(133)
-    plt.imshow(IU[0, 0, :, :].data.numpy().squeeze())
+    plt.imshow(IU[0, 0, :, :].detach().cpu().numpy().squeeze())
 
     plt.show()

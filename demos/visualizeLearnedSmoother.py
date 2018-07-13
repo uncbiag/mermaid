@@ -159,22 +159,22 @@ if visualize_smooth_vector_fields:
     for n in range(nr_of_images):
 
         plt.subplot(3,2,1)
-        plt.imshow(m[n,0,...].data.numpy())
+        plt.imshow(m[n,0,...].detach().cpu().numpy())
 
         plt.subplot(3,2,2)
-        plt.imshow(m[n,1,...].data.numpy())
+        plt.imshow(m[n,1,...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 3)
-        plt.imshow(v[n, 0, ...].data.numpy())
+        plt.imshow(v[n, 0, ...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 4)
-        plt.imshow(v[n, 1, ...].data.numpy())
+        plt.imshow(v[n, 1, ...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 5)
-        plt.imshow(v_nl[n, 0, ...].data.numpy())
+        plt.imshow(v_nl[n, 0, ...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 6)
-        plt.imshow(v_nl[n, 1, ...].data.numpy())
+        plt.imshow(v_nl[n, 1, ...].detach().cpu().numpy())
 
         plt.title( str(n) )
 
@@ -208,34 +208,34 @@ if visualize_weights:
 
         plt.clf()
 
-        source_mask = compute_mask(I0[n:n+1,0:1,...].data.numpy())
+        source_mask = compute_mask(I0[n:n+1,0:1,...].detach().cpu().numpy())
         lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size( torch.from_numpy(source_mask), spacing, lowResSize[2:],spline_order)
-        lowRes_source_mask = lowRes_source_mask_v.data.numpy()[0,0,...]
+        lowRes_source_mask = lowRes_source_mask_v.detach().cpu().numpy()[0,0,...]
 
         plt.subplot(2,3,1)
-        plt.imshow(I0[n,0,...].data.numpy(),cmap='gray')
+        plt.imshow(I0[n,0,...].detach().cpu().numpy(),cmap='gray')
         plt.title('source')
 
         plt.subplot(2, 3, 2)
-        plt.imshow(I1[n, 0, ...].data.numpy(), cmap='gray')
+        plt.imshow(I1[n, 0, ...].detach().cpu().numpy(), cmap='gray')
         plt.title('target')
 
         plt.subplot(2, 3, 3)
-        plt.imshow(Iw[n, 0, ...].data.numpy(), cmap='gray')
+        plt.imshow(Iw[n, 0, ...].detach().cpu().numpy(), cmap='gray')
         plt.title('warped')
 
         plt.subplot(2, 3, 4)
-        plt.imshow(Iw[n, 0, ...].data.numpy(), cmap='gray')
-        plt.contour(phi[n,0,...].data.numpy(),np.linspace(-1, 1, 20), colors='r', linestyles='solid')
-        plt.contour(phi[n,1,...].data.numpy(),np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+        plt.imshow(Iw[n, 0, ...].detach().cpu().numpy(), cmap='gray')
+        plt.contour(phi[n,0,...].detach().cpu().numpy(),np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+        plt.contour(phi[n,1,...].detach().cpu().numpy(),np.linspace(-1, 1, 20), colors='r', linestyles='solid')
         plt.title('warped+grid')
 
         plt.subplot(2,3,5)
-        plt.imshow(lam[n,0,...].data.numpy(),cmap='gray')
+        plt.imshow(lam[n,0,...].detach().cpu().numpy(),cmap='gray')
         plt.title('lambda')
 
         plt.subplot(2,3,6)
-        plt.imshow(os.numpy(),cmap='gray')
+        plt.imshow(os.detach().cpu().numpy(),cmap='gray')
         plt.title('std')
 
         plt.suptitle('Registration: ' + str(n))
@@ -249,19 +249,19 @@ if visualize_weights:
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            clw = local_weights[n,g,...].numpy()
+            clw = local_weights[n,g,...].detach().cpu().numpy()
             cmin = clw[lowRes_source_mask==1].min()
             cmax = clw[lowRes_source_mask==1].max()
-            plt.imshow((local_weights[n,g,...]).numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
+            plt.imshow((local_weights[n,g,...]).detach().cpu().numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
             plt.title("{:.2f}".format(stds[g]))
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
         os = compute_overall_std(local_weights[n,...], stds )
 
-        cmin = os.numpy()[lowRes_source_mask==1].min()
-        cmax = os.numpy()[lowRes_source_mask==1].max()
-        plt.imshow(os.numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
+        cmin = os.detach().cpu().numpy()[lowRes_source_mask==1].min()
+        cmax = os.detach().cpu().numpy()[lowRes_source_mask==1].max()
+        plt.imshow(os.detach().cpu().numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
         plt.colorbar()
         plt.suptitle('Registration: ' + str(n))
 

@@ -34,7 +34,7 @@ def compute_determinant_of_jacobian(phi,spacing):
     else:
         raise ValueError('Can only compute the determinant of Jacobian for dimensions 1, 2 and 3')
 
-    det = det.data[0, ...].cpu().numpy()
+    det = det.data[0, ...].detach().cpu().numpy()
     return det
 
 def plot_boxplot(compound_results,compound_names,semilogy=False, showfliers=True):
