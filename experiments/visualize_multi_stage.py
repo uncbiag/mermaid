@@ -9,7 +9,6 @@ import multiprocessing as mp
 import pyreg.visualize_registration_results as vizReg
 
 import torch
-from torch.autograd import Variable
 
 import pyreg.image_sampling as IS
 import pyreg.finite_differences as FD

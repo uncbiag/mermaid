@@ -3,7 +3,6 @@ import set_pyreg_paths
 
 # first do the torch imports
 import torch
-from torch.autograd import Variable
 from pyreg.data_wrapper import AdaptVal
 import numpy as np
 

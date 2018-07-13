@@ -7,7 +7,6 @@ import set_pyreg_paths
 import pyreg.visualize_registration_results as vizReg
 
 import torch
-from torch.autograd import Variable
 
 import pyreg.fileio as FIO
 import pyreg.image_sampling as IS

@@ -10,7 +10,6 @@ import pyreg.visualize_registration_results as vizReg
 import os
 
 import torch
-from torch.autograd import Variable
 
 import pyreg.utils as utils
 import pyreg.fileio as fio

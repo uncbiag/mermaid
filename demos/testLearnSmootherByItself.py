@@ -4,7 +4,6 @@ import set_pyreg_paths
 import pyreg.smoother_factory as SF
 
 import torch
-from torch.autograd import Variable
 
 import matplotlib.pyplot as plt
 

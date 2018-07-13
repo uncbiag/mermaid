@@ -2,7 +2,6 @@ from builtins import str
 from builtins import range
 import set_pyreg_paths
 import torch
-from torch.autograd import Variable
 
 import pyreg.smoother_factory as SF
 import pyreg.deep_smoothers as DS
