@@ -195,7 +195,10 @@ def calculate_image_overlap(dataset_info, phi_path, source_labelmap_path, target
 
     single_result = result
     single_result = single_result[~np.isnan(single_result)]
-    result_mean = np.mean(single_result)
+    if len(single_result)==0:
+        result_mean = np.nan
+    else:
+        result_mean = np.mean(single_result)
 
     return result_mean,single_result
 
@@ -245,10 +248,10 @@ def overlapping_plot(old_results_filename, new_results, boxplot_filename, visual
     # set axis tick
     ax.set_axisbelow(True)
     ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
-    ax.yaxis.set_tick_params(left='on', direction='in', width=1)
-    ax.yaxis.set_tick_params(right='on', direction='in', width=1)
-    ax.xaxis.set_tick_params(top='off', direction='in', width=1)
-    ax.xaxis.set_tick_params(bottom='off', direction='in', width=1)
+    ax.yaxis.set_tick_params(left=True, direction='in', width=1)
+    ax.yaxis.set_tick_params(right=True, direction='in', width=1)
+    ax.xaxis.set_tick_params(top=False, direction='in', width=1)
+    ax.xaxis.set_tick_params(bottom=False, direction='in', width=1)
 
     # create the boxplot
     bp = plt.boxplot(compound_results, vert=True, whis=1.5, meanline=True, widths=0.16, showfliers=True,
