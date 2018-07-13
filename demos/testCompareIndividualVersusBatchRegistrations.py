@@ -134,15 +134,15 @@ else: # read results from file
 nr_of_results = results['ind_I0'].size()[0]
 
 for i in range(nr_of_results):
-    vizreg.show_current_images(i, results['ind_I0'][i:i+1,...],
-                               results['ind_I1'][i:i+1,...],
-                               results['ind_I0_warped'][i:i+1,...],
-                               results['ind_lam'][i,...], 'i-lambda', results['ind_phi'][i:i+1,...])
+    vizreg.show_current_images(iter=i, iS=results['ind_I0'][i:i+1,...],
+                               iT=results['ind_I1'][i:i+1,...],
+                               iW=results['ind_I0_warped'][i:i+1,...],
+                               vizImages=results['ind_lam'][i,...], vizName='i-lambda', phiWarped=results['ind_phi'][i:i+1,...])
 
-    vizreg.show_current_images(i, results['batch_I0'][i:i+1,...],
-                               results['batch_I1'][i:i+1,...],
-                               results['batch_I0_warped'][i:i+1,...],
-                               results['batch_lam'][i,...], 'b-lambda', results['batch_phi'][i:i+1,...])
+    vizreg.show_current_images(iter=i, iS=results['batch_I0'][i:i+1,...],
+                               iT=results['batch_I1'][i:i+1,...],
+                               iW=results['batch_I0_warped'][i:i+1,...],
+                               vizImages=results['batch_lam'][i,...], vizName='b-lambda', phiWarped=results['batch_phi'][i:i+1,...])
 
 print()
 print('Hello')

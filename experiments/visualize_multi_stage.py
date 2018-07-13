@@ -289,14 +289,14 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     if use_map:
         if compute_similarity_measure_at_low_res:
             I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing, spline_order)
-            vizReg.show_current_images(iter, lowResISource, lowResITarget, I1Warped, vizImage, vizName,
-                                       phi_or_warped_image, visual_param)
+            vizReg.show_current_images(iter=iter, iS=lowResISource, iT=lowResITarget, iW=I1Warped, vizImages=vizImage, vizName=vizName,
+                                       phiWarped=phi_or_warped_image, visual_param=visual_param)
         else:
             I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing, spline_order)
-            vizReg.show_current_images(iter, ISource, ITarget, I1Warped, vizImage, vizName,
-                                       phi_or_warped_image, visual_param)
+            vizReg.show_current_images(iter=iter, iS=ISource, iT=ITarget, iW=I1Warped, vizImages=vizImage, vizName=vizName,
+                                       phiWarped=phi_or_warped_image, visual_param=visual_param)
     else:
-        vizReg.show_current_images(iter, ISource, ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
+        vizReg.show_current_images(iter=iter, iS=ISource, iT=ITarget, iW=phi_or_warped_image, vizImages=vizImage, vizName=vizName, phiWarped=None, visual_param=visual_param)
 
     dictionary_to_pass_to_smoother = dict()
     if map_low_res_factor is not None:
@@ -409,7 +409,7 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
 
     source_mask = compute_mask(I0[:, 0:1, ...].detach().cpu().numpy())
     lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(
-        torch.from_numpy(source_mask), spacing, lowResSize[2:],spline_order)
+        AdaptVal(torch.from_numpy(source_mask)), spacing, lowResSize[2:],spline_order)
     lowRes_source_mask = lowRes_source_mask_v.detach().cpu().numpy()[0, 0, ...]
 
     if clean_print_path is None:
