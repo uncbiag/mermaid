@@ -96,7 +96,7 @@ def create_momentum(input_im,centered_map,
             randomize_over_angles = randomize_in_sectors
 
             if randomize_over_angles:
-                angles = np.sort(2 * np.pi * np.random.rand(nr_of_angles))
+                angles = np.sort(2 * np.pi * np.random.rand(nr_of_angles)).astype('float32')
 
                 for a in range(nr_of_angles):
                     afrom = a
@@ -122,7 +122,7 @@ def create_momentum(input_im,centered_map,
                     else:
                         multiplier = -multiplier_factor
 
-                    c_rand_val_field = multiplier * np.random.rand(*list(indx.shape))
+                    c_rand_val_field = multiplier * np.random.rand(*list(indx.shape)).astype('float32')
 
                     dxc_d[indx] = dxc_d[indx] * c_rand_val_field[indx]
                     dyc_d[indx] = dyc_d[indx] * c_rand_val_field[indx]
@@ -142,7 +142,7 @@ def create_momentum(input_im,centered_map,
 
                 indx = ((dilated_input_im!=0) & (already_flipped==0) & (dxc ** 2 + dyc ** 2 != 0))
                 already_flipped[indx] = 1
-                c_rand_val_field = 2 * 2 * (np.random.rand(*list(indx.shape)) - 0.5)
+                c_rand_val_field = 2 * 2 * (np.random.rand(*list(indx.shape)).astype('float32') - 0.5)
 
                 dxc_d[indx] = dxc_d[indx] * c_rand_val_field[indx]
                 dyc_d[indx] = dyc_d[indx] * c_rand_val_field[indx]
@@ -154,7 +154,7 @@ def create_momentum(input_im,centered_map,
             already_flipped[indx] = 1
 
             # multiply by a random number in [-1,1]
-            c_rand_val = 2 * (np.random.rand() - 0.5)*multiplier_factor
+            c_rand_val = 2 * (np.random.rand().astype('float32') - 0.5)*multiplier_factor
 
             dxc_d[indx] = dxc_d[indx] * c_rand_val
             dyc_d[indx] = dyc_d[indx] * c_rand_val
@@ -250,7 +250,7 @@ def create_rings(levels_in,multi_gaussian_weights,default_multi_gaussian_weights
     ring_im = np.zeros(sh_ring_im,dtype='float32')
 
     # just add one more level in case we put weights in between (otherwise add a dummy)
-    levels = np.zeros(len(levels_in)+1)
+    levels = np.zeros(len(levels_in)+1,dtype='float32')
     levels[0:-1] = levels_in
     if put_weights_between_circles:
         levels[-1] = levels_in[-1]+levels_in[-1]-levels_in[-2]
@@ -322,11 +322,11 @@ def create_rings(levels_in,multi_gaussian_weights,default_multi_gaussian_weights
 
 def _compute_ring_radii(extent, nr_of_rings, randomize_radii, randomize_factor=0.75):
     if randomize_radii:
-        rings_at_default = np.linspace(0., extent, nr_of_rings + 1)
+        rings_at_default = np.linspace(0., extent, nr_of_rings + 1).astype('float32')
         diff_r = rings_at_default[1] - rings_at_default[0]
-        rings_at = np.sort(rings_at_default + (np.random.random(nr_of_rings + 1) - 0.5) * diff_r * randomize_factor)
+        rings_at = np.sort(rings_at_default + (np.random.random(nr_of_rings + 1).astype('float32') - 0.5) * diff_r * randomize_factor)
     else:
-        rings_at = np.linspace(0., extent, nr_of_rings + 1)
+        rings_at = np.linspace(0., extent, nr_of_rings + 1).astype('float32')
     # first one needs to be zero:
     rings_at[0] = 0
 
@@ -338,8 +338,8 @@ def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,sp
     # create a velocity field from this momentum using a multi-Gaussian kernel
     gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz[2:], spacing, nr_of_slots=nr_of_gaussians)
 
-    t_weights = torch.from_numpy(weights)
-    t_momentum = torch.from_numpy(m)
+    t_weights = AdaptVal(torch.from_numpy(weights))
+    t_momentum = AdaptVal(torch.from_numpy(m))
 
     if kernel_weighting_type=='sqrt_w_K_sqrt_w':
         sqrt_weights = torch.sqrt(t_weights)
@@ -354,7 +354,7 @@ def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,sp
     elif kernel_weighting_type=='w_K':
         multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(t_momentum,
                                                                  gaussian_fourier_filter_generator=gaussian_fourier_filter_generator,
-                                                                 sigma=torch.from_numpy(multi_gaussian_stds),
+                                                                 sigma=AdaptVal(torch.from_numpy(multi_gaussian_stds)),
                                                                  compute_std_gradients=False)
 
     # now compute the localized_velocity
@@ -435,7 +435,7 @@ def add_texture(im_orig,texture_gaussian_smoothness=0.1,texture_magnitude=0.3):
     for current_level in levels:
 
         sz = im_orig.shape
-        rand_noise = np.random.random(sz[2:])-0.5
+        rand_noise = np.random.random(sz[2:]).astype('float32')-0.5
         rand_noise = rand_noise.view().reshape(sz)
         r_params = pars.ParameterDict()
         r_params['smoother']['type'] = 'gaussian'
@@ -509,7 +509,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
             smoother = sf.SmootherFactory(weights_orig.shape[2::], spacing).create_smoother(s_m_params)
             #weights_old = np.zeros_like(weights_orig)
             #weights_old[:] = weights_orig
-            weights_orig = (smoother.smooth(torch.from_numpy(weights_orig))).detach().cpu().numpy()
+            weights_orig = (smoother.smooth(AdaptVal(torch.from_numpy(weights_orig)))).detach().cpu().numpy()
             # make sure they are strictly positive
             weights_orig[weights_orig<0] = 0
 
@@ -864,7 +864,7 @@ if __name__ == "__main__":
         multi_gaussian_stds_p = list(np.array(mgsl))
 
     multi_gaussian_stds = get_parameter_value(multi_gaussian_stds_p, params, 'multi_gaussian_stds', list(np.array([0.01, 0.05, 0.1, 0.2])), 'multi gaussian standard deviations')
-    multi_gaussian_stds = np.array(multi_gaussian_stds)
+    multi_gaussian_stds = np.array(multi_gaussian_stds).astype('float32')
 
     if args.weights_not_fluid is None:
         weights_not_fluid_p = None
@@ -873,7 +873,7 @@ if __name__ == "__main__":
         weights_not_fluid_p = list(np.array(cw))
 
     weights_not_fluid = get_parameter_value(weights_not_fluid_p, params, 'weights_not_fluid', list(np.array([0,0,0,1.0])), 'weights for the non-fluid regions')
-    weights_not_fluid = np.array(weights_not_fluid)
+    weights_not_fluid = np.array(weights_not_fluid).astype('float32')
 
     if len(weights_not_fluid)!=len(multi_gaussian_stds):
         raise ValueError('Need as many weights as there are standard deviations')
@@ -886,7 +886,7 @@ if __name__ == "__main__":
         weights_fluid_p = list(np.array(cw))
 
     weights_fluid = get_parameter_value(weights_fluid_p, params, 'weights_fluid', list(np.array([0.2,0.5,0.2,0.1])), 'weights for fluid regions')
-    weights_fluid = np.array(weights_fluid)
+    weights_fluid = np.array(weights_fluid).astype('float32')
 
     if len(weights_fluid)!=len(multi_gaussian_stds):
         raise ValueError('Need as many weights as there are standard deviations')
@@ -898,7 +898,7 @@ if __name__ == "__main__":
         weights_neutral_p = list(np.array(cw))
 
     weights_neutral = get_parameter_value(weights_neutral_p, params, 'weights_neutral', list(np.array([0,0,0,1.0])), 'weights in the neutral/background region')
-    weights_neutral = np.array(weights_neutral)
+    weights_neutral = np.array(weights_neutral).astype('float32')
 
     if len(weights_neutral)!=len(multi_gaussian_stds):
         raise ValueError('Need as many weights as there are standard deviations')
@@ -907,14 +907,14 @@ if __name__ == "__main__":
         sz_p = None
     else:
         cw = [int(item) for item in args.sz.split(',')]
-        sz_p = np.array(cw)
+        sz_p = np.array(cw).astype('float32')
 
     sz = get_parameter_value(sz_p, params, 'sz', [128,128], 'size of the synthetic example')
     if len(sz) != 2:
         raise ValueError('Only two dimensional synthetic examples are currently supported for sz parameter')
 
     sz = [1, 1, sz[0], sz[1]]
-    spacing = 1.0 / (np.array(sz[2:]) - 1)
+    spacing = 1.0 / (np.array(sz[2:]).astype('float32') - 1)
 
     output_dir = os.path.normpath(args.output_directory)+'_kernel_weighting_type_' + native_str(kernel_weighting_type)
 
