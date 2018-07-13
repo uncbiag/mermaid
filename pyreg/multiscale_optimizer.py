@@ -1146,7 +1146,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 for w in range(sz[0]):
                     # this is to assure that the weights are always between 0 and 1 (when using the WeightedLinearSoftmax
                     p[w,...].data.clamp_(0.0-multi_gaussian_weights[w],1.0-multi_gaussian_weights[w])
-
+                
     def _do_individual_weight_clipping_l1(self):
         ip = self.get_individual_model_parameters()
         self._aux_do_weight_clipping_norm(pars=ip,desired_norm=1)

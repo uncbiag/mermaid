@@ -2147,8 +2147,8 @@ class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
         # apply the mapping to normalized the pre_lsm_weights (these are parameters that are being optimized over)
         lsm_weights = weighted_linear_softmax(self.pre_lsm_weights,dim=0,weights=global_multi_gaussian_weights)
 
-        #print('pre_lsm_weights')
-        #print(self.pre_lsm_weights)
+        print('pre_lsm_weights')
+        print(self.pre_lsm_weights)
         print('lsm_weights')
         print(lsm_weights)
 
