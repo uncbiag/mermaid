@@ -838,7 +838,7 @@ class WeightedLinearSoftmax(nn.Module):
     Examples::
 
         >>> m = nn.WeightedLinearSoftmax()
-        >>> input = autograd.Variable(torch.randn(2, 3))
+        >>> input = torch.randn(2, 3)
         >>> print(input)
         >>> print(m(input))
     """
@@ -1343,7 +1343,7 @@ class DeepSmoothingModel(nn.Module):
 
     def compute_local_weighted_tv_norm(self, I, weights):
 
-        sum_square_of_total_variation_penalty = Variable(MyTensor(self.nr_of_gaussians).zero_(), requires_grad=False)
+        sum_square_of_total_variation_penalty = MyTensor(self.nr_of_gaussians).zero_()
         # first compute the edge map
         g_I = compute_localized_edge_penalty(I[:, 0, ...], self.spacing, self.params)
         batch_size = I.size()[0]
@@ -1746,7 +1746,7 @@ def compute_weighted_multi_smooth_v(momentum, weights, gaussian_stds, gaussian_f
         weighted_momentum_i = torch.zeros_like(momentum)
         for c in range(dim):
             weighted_momentum_i[:,c,...] = weights[:,i,...]*momentum[:,c,...]
-        current_g = torch.from_numpy(np.array([g]))
+        current_g = MyTensor([g])
         current_weighted_smoothed_v_i = ce.fourier_set_of_gaussian_convolutions(weighted_momentum_i, gaussian_fourier_filter_generator,current_g, compute_std_gradients=False)
         weighted_multi_smooth_v[i,...] = current_weighted_smoothed_v_i[0,...]
 
@@ -2123,7 +2123,7 @@ class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
         sz_mv = [self.nr_of_gaussians] + list(sz_m)
 
         # create the output tensor: will be of dimension: batch x channels x X x Y
-        ret = AdaptVal(Variable(MyTensor(*sz_m), requires_grad=False))
+        ret = AdaptVal(MyTensor(*sz_m))
 
         # now determine the size for the weights
         # Since the smoothing will be the same for all spatial directions (for a velocity field),
@@ -2153,7 +2153,7 @@ class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
 
         # now we find the image "clusters" and use them to create the weight vector
         # weight vector format:  B x weights x X x Y
-        weights = Variable(AdaptVal(torch.zeros(*sz_weight)),requires_grad=False)
+        weights = AdaptVal(torch.zeros(*sz_weight))
 
         for c in range(self.nr_of_clusters):
             # indices for the first cluster
@@ -2163,11 +2163,11 @@ class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
                 weights[:,w,...] = weights[:,w,...] + current_indices.float()*lsm_weights[w,c]
 
         # compute the total variation penalty; compute this on the pre (non-smoothed) weights
-        total_variation_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        total_variation_penalty = MyTensor(1).zero_()
         if self.total_variation_weight_penalty > 0:
             total_variation_penalty += self.compute_local_weighted_tv_norm(I=I,weights=weights)
 
-        diffusion_penalty = Variable(MyTensor(1).zero_(), requires_grad=False)
+        diffusion_penalty = MyTensor(1).zero_()
         if self.diffusion_weight_penalty > 0:
             for g in range(self.nr_of_gaussians):
                 diffusion_penalty += self.compute_diffusion(weights[:, g, ...])
@@ -2205,7 +2205,7 @@ class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
         elif self.weighting_type=='w_K':
             multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(momentum,
                                                                      gaussian_fourier_filter_generator=gaussian_fourier_filter_generator,
-                                                                     sigma=Variable(torch.from_numpy(self.gaussian_stds),requires_grad=False),
+                                                                     sigma=torch.from_numpy(self.gaussian_stds),
                                                                      compute_std_gradients=False)
         else:
             raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))

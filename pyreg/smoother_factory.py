@@ -1242,7 +1242,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             if smooth_to_compute_regularizer_energy and self.only_use_smallest_standard_deviation_for_regularization_energy:
                 # only smooth with the smallest standard deviation
                 smoothed_v = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
-                                                                     torch.from_numpy(np.array([self.smallest_gaussian_std])),
+                                                                     AdaptVal(torch.from_numpy(np.array([self.smallest_gaussian_std],dtype='float32'))),
                                                                      compute_std_gradients)
 
             else:
