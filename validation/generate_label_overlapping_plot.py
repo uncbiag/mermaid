@@ -15,7 +15,7 @@ def change_pt_to_nii(pt_file, save_path):
     From the pt dictionary to extract phi.nii 
     """
     d = torch.load(pt_file)
-    phi = d['phi'].data.numpy().squeeze()
+    phi = d['phi'].detach().cpu().numpy().squeeze()
     print(phi.shape)
     phi[0,...] = phi[0,...] / d['spacing'][0]
     phi[1,...] = phi[1,...] / d['spacing'][1]
@@ -226,10 +226,10 @@ def overlapping_plot(old_results_path, new_result_path):
     # set axis tick
     ax.set_axisbelow(True)
     ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5) 
-    ax.yaxis.set_tick_params(left='on', direction='in', width=1)
-    ax.yaxis.set_tick_params(right='on', direction='in', width=1)
-    ax.xaxis.set_tick_params(top='off', direction='in', width=1)
-    ax.xaxis.set_tick_params(bottom='off', direction='in', width=1)
+    ax.yaxis.set_tick_params(left=True, direction='in', width=1)
+    ax.yaxis.set_tick_params(right=True, direction='in', width=1)
+    ax.xaxis.set_tick_params(top=False, direction='in', width=1)
+    ax.xaxis.set_tick_params(bottom=False, direction='in', width=1)
 
     # create the boxplot
     bp = plt.boxplot(compound_results, vert=True, whis=1.5, meanline=True, widths=0.16, showfliers=True,

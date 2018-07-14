@@ -33,6 +33,9 @@ except ImportError:
     print('WARNING: nn_interpolation could not be imported (only supported in CUDA at the moment), some functionality may not be available.')
 
 
+def my_hasnan(x):
+    return (x != x).any()
+
 def create_symlink_with_correct_ext(sf,tf):
     abs_s = os.path.abspath(sf)
     ext_s = os.path.splitext(abs_s)[1]
@@ -635,13 +638,13 @@ def t2np( v ):
     :return: numpy array
     """
 
-    return (v.data).cpu().numpy()
+    return (v.detach()).cpu().numpy()
 
 def checkNan(x):
     """"
     input should be list of Variable
     """
-    return [len(np.argwhere(np.isnan(elem.cpu().data.numpy()))) for elem in x]
+    return [len(np.argwhere(np.isnan(elem.detach().cpu().numpy()))) for elem in x]
 
 
 ##########################################  Adaptive Net ###################################################3

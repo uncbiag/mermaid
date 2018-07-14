@@ -16,7 +16,6 @@ import set_pyreg_paths
 
 # first do the torch imports
 import torch
-from torch.autograd import Variable
 from time import time
 import numpy as np
 

@@ -179,7 +179,7 @@ class FD(with_metaclass(ABCMeta, object)):
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
 
-    def grad_norm_sqr(self, I):
+    def grad_norm_sqr_c(self, I):
         """
         Computes the gradient norm of an image
         !!!!!!!!!!!
@@ -197,6 +197,48 @@ class FD(with_metaclass(ABCMeta, object)):
             return (self.dXc(I)**2 + self.dYc(I)**2)
         elif ndim == 3 + 1:
             return (self.dXc(I)**2 + self.dYc(I)**2 + self.dZc(I)**2)
+        else:
+            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
+
+    def grad_norm_sqr_f(self, I):
+        """
+        Computes the gradient norm of an image
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
+
+        :param I: Input image [batch, X,Y,Z]
+        :return: returns ||grad I||^2
+        """
+        ndim = self.getdimension(I)
+        if ndim == 1 + 1:
+            return self.dXf(I)**2
+        elif ndim == 2 + 1:
+            return (self.dXf(I)**2 + self.dYf(I)**2)
+        elif ndim == 3 + 1:
+            return (self.dXf(I)**2 + self.dYf(I)**2 + self.dZf(I)**2)
+        else:
+            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
+
+    def grad_norm_sqr_b(self, I):
+        """
+        Computes the gradient norm of an image
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
+
+        :param I: Input image [batch, X,Y,Z]
+        :return: returns ||grad I||^2
+        """
+        ndim = self.getdimension(I)
+        if ndim == 1 + 1:
+            return self.dXb(I)**2
+        elif ndim == 2 + 1:
+            return (self.dXb(I)**2 + self.dYb(I)**2)
+        elif ndim == 3 + 1:
+            return (self.dXb(I)**2 + self.dYb(I)**2 + self.dZb(I)**2)
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
 

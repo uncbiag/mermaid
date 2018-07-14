@@ -17,7 +17,6 @@ import set_pyreg_paths
 
 # first do the torch imports
 import torch
-from torch.autograd import Variable
 import numpy as np
 
 import pyreg.example_generation as eg

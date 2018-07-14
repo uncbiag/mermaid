@@ -19,9 +19,9 @@ def get_multi_metric(pred, gt, eval_label_list=None, rm_bg=False, verbose=True):
     """
 
     if not isinstance(pred, (np.ndarray, np.generic)):
-        pred = pred.cpu().data.numpy()
+        pred = pred.detach().cpu().numpy()
     if not isinstance(gt, (np.ndarray, np.generic)):
-        gt = gt.cpu().data.numpy()
+        gt = gt.detach().cpu().numpy()
     label_list = np.unique(gt).tolist()
     pred_list = np.unique(pred).tolist()
     union_set = set(label_list).union(set(pred_list))

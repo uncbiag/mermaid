@@ -6,9 +6,9 @@ from glob import glob
 import os
 from scipy import misc
 import numpy as np
-import h5py
+#import h5py
 import skimage
-import SimpleITK as sitk
+#import SimpleITK as sitk
 import sys
 import torch
 import random

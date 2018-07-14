@@ -9,7 +9,6 @@ import multiprocessing as mp
 import pyreg.visualize_registration_results as vizReg
 
 import torch
-from torch.autograd import Variable
 
 import pyreg.image_sampling as IS
 import pyreg.finite_differences as FD
@@ -290,14 +289,14 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     if use_map:
         if compute_similarity_measure_at_low_res:
             I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing, spline_order)
-            vizReg.show_current_images(iter, lowResISource, lowResITarget, I1Warped, vizImage, vizName,
-                                       phi_or_warped_image, visual_param)
+            vizReg.show_current_images(iter=iter, iS=lowResISource, iT=lowResITarget, iW=I1Warped, vizImages=vizImage, vizName=vizName,
+                                       phiWarped=phi_or_warped_image, visual_param=visual_param)
         else:
             I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing, spline_order)
-            vizReg.show_current_images(iter, ISource, ITarget, I1Warped, vizImage, vizName,
-                                       phi_or_warped_image, visual_param)
+            vizReg.show_current_images(iter=iter, iS=ISource, iT=ITarget, iW=I1Warped, vizImages=vizImage, vizName=vizName,
+                                       phiWarped=phi_or_warped_image, visual_param=visual_param)
     else:
-        vizReg.show_current_images(iter, ISource, ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
+        vizReg.show_current_images(iter=iter, iS=ISource, iT=ITarget, iW=phi_or_warped_image, vizImages=vizImage, vizName=vizName, phiWarped=None, visual_param=visual_param)
 
     dictionary_to_pass_to_smoother = dict()
     if map_low_res_factor is not None:
@@ -408,40 +407,40 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
 
     spline_order = params['model']['registration_model'][('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
 
-    source_mask = compute_mask(I0[:, 0:1, ...].data.cpu().numpy())
+    source_mask = compute_mask(I0[:, 0:1, ...].detach().cpu().numpy())
     lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(
-        torch.from_numpy(source_mask), spacing, lowResSize[2:],spline_order)
-    lowRes_source_mask = lowRes_source_mask_v.data.cpu().numpy()[0, 0, ...]
+        AdaptVal(torch.from_numpy(source_mask)), spacing, lowResSize[2:],spline_order)
+    lowRes_source_mask = lowRes_source_mask_v.detach().cpu().numpy()[0, 0, ...]
 
     if clean_print_path is None:
 
         plt.subplot(2, 3, 1)
-        plt.imshow(cond_flip(I0[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
+        plt.imshow(cond_flip(I0[0, 0, ...].detach().cpu().numpy(),flip_axes), cmap='gray')
         plt.title('source')
 
         plt.subplot(2, 3, 2)
-        plt.imshow(cond_flip(I1[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
+        plt.imshow(cond_flip(I1[0, 0, ...].detach().cpu().numpy(),flip_axes), cmap='gray')
         plt.title('target')
 
         plt.subplot(2, 3, 3)
-        plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
+        plt.imshow(cond_flip(Iw[0, 0, ...].detach().cpu().numpy(),flip_axes), cmap='gray')
         plt.title('warped')
 
         plt.subplot(2, 3, 4)
-        plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
-        plt.contour(cond_flip(phi[0, 0, ...].data.cpu().numpy(),flip_axes), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
-        plt.contour(cond_flip(phi[0, 1, ...].data.cpu().numpy(),flip_axes), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+        plt.imshow(cond_flip(Iw[0, 0, ...].detach().cpu().numpy(),flip_axes), cmap='gray')
+        plt.contour(cond_flip(phi[0, 0, ...].detach().cpu().numpy(),flip_axes), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+        plt.contour(cond_flip(phi[0, 1, ...].detach().cpu().numpy(),flip_axes), np.linspace(-1, 1, 20), colors='r', linestyles='solid')
         plt.title('warped+grid')
 
         plt.subplot(2, 3, 5)
-        plt.imshow(cond_flip(norm_m[0, 0, ...].data.cpu().numpy(),flip_axes), cmap='gray')
+        plt.imshow(cond_flip(norm_m[0, 0, ...].detach().cpu().numpy(),flip_axes), cmap='gray')
         plt.title('|m|')
 
         if local_weights is not None:
             plt.subplot(2, 3, 6)
-            cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
-            cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
-            plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
+            cmin = osw.detach().cpu().numpy()[lowRes_source_mask == 1].min()
+            cmax = osw.detach().cpu().numpy()[lowRes_source_mask == 1].max()
+            plt.imshow(cond_flip(osw.detach().cpu().numpy() * lowRes_source_mask,flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
             plt.title('std')
 
         plt.suptitle('Registration result: pair id {:03d}'.format(print_figure_id))
@@ -454,44 +453,44 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
     if clean_print_path is not None:
         # now also create clean prints
         plt.clf()
-        plt.imshow(cond_flip(I0[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.imshow(cond_flip(I0[0, 0, ...].detach().cpu().numpy(), flip_axes), cmap='gray')
         plt.axis('image')
         plt.axis('off')
         plt.savefig(os.path.join(clean_print_path,'source_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
-        plt.imshow(cond_flip(I1[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.imshow(cond_flip(I1[0, 0, ...].detach().cpu().numpy(), flip_axes), cmap='gray')
         plt.axis('image')
         plt.axis('off')
         plt.savefig(os.path.join(clean_print_path,'target_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
-        plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.imshow(cond_flip(Iw[0, 0, ...].detach().cpu().numpy(), flip_axes), cmap='gray')
         plt.axis('image')
         plt.axis('off')
         plt.savefig(os.path.join(clean_print_path, 'warped_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
-        plt.imshow(cond_flip(Iw[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
-        plt.contour(cond_flip(phi[0, 0, ...].data.cpu().numpy(), flip_axes), np.linspace(-1, 1, 20), colors='r',
+        plt.imshow(cond_flip(Iw[0, 0, ...].detach().cpu().numpy(), flip_axes), cmap='gray')
+        plt.contour(cond_flip(phi[0, 0, ...].detach().cpu().numpy(), flip_axes), np.linspace(-1, 1, 20), colors='r',
                     linestyles='solid')
-        plt.contour(cond_flip(phi[0, 1, ...].data.cpu().numpy(), flip_axes), np.linspace(-1, 1, 20), colors='r',
+        plt.contour(cond_flip(phi[0, 1, ...].detach().cpu().numpy(), flip_axes), np.linspace(-1, 1, 20), colors='r',
                     linestyles='solid')
         plt.axis('image')
         plt.axis('off')
         plt.savefig(os.path.join(clean_print_path, 'warped_plus_grid_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
-        plt.imshow(cond_flip(norm_m[0, 0, ...].data.cpu().numpy(), flip_axes), cmap='gray')
+        plt.imshow(cond_flip(norm_m[0, 0, ...].detach().cpu().numpy(), flip_axes), cmap='gray')
         plt.axis('image')
         plt.axis('off')
         plt.savefig(os.path.join(clean_print_path, 'm_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         if local_weights is not None:
             plt.clf()
-            cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
-            cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
-            plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
+            cmin = osw.detach().cpu().numpy()[lowRes_source_mask == 1].min()
+            cmax = osw.detach().cpu().numpy()[lowRes_source_mask == 1].max()
+            plt.imshow(cond_flip(osw.detach().cpu().numpy() * lowRes_source_mask, flip_axes), cmap='gray', vmin=cmin, vmax=cmax)
             plt.axis('image')
             plt.axis('off')
             plt.savefig(os.path.join(clean_print_path, 'std_image_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
@@ -503,19 +502,19 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            clw = local_weights[0, g, ...].cpu().numpy()
+            clw = local_weights[0, g, ...].detach().cpu().numpy()
             cmin = clw[lowRes_source_mask == 1].min()
             cmax = clw[lowRes_source_mask == 1].max()
-            plt.imshow(cond_flip((local_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
-            plt.title("{:.2f}".format(stds.data.cpu()[g]))
+            plt.imshow(cond_flip((local_weights[0, g, ...]).detach().cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
+            plt.title("{:.2f}".format(stds.detach().cpu().numpy()[g]))
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
         osw = compute_overall_std(local_weights[0, ...].cpu(), stds.data.cpu())
 
-        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
-        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
-        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
+        cmin = osw.detach().cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.detach().cpu().numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(cond_flip(osw.detach().cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
         plt.colorbar()
         plt.suptitle('Weights: pair id {:03d}'.format(print_figure_id))
 
@@ -531,15 +530,15 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            clw = local_weights[0, g, ...].cpu().numpy()
-            plt.imshow(cond_flip((local_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask,flip_axes), vmin=0.0, vmax=1.0)
-            plt.title("{:.2f}".format(stds.data.cpu()[g]))
+            clw = local_weights[0, g, ...].detach().cpu().numpy()
+            plt.imshow(cond_flip((local_weights[0, g, ...]).detach().cpu().numpy() * lowRes_source_mask,flip_axes), vmin=0.0, vmax=1.0)
+            plt.title("{:.2f}".format(stds.detach().cpu().numpy()[g]))
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
         osw = compute_overall_std(local_weights[0, ...].cpu(), stds.data.cpu())
 
-        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), vmin=0, vmax=(stds.data.cpu().numpy()).max())
+        plt.imshow(cond_flip(osw.detach().cpu().numpy() * lowRes_source_mask,flip_axes), vmin=0, vmax=(stds.data.cpu().numpy()).max())
         plt.colorbar()
         plt.suptitle('Weights: pair id {:03d}'.format(print_figure_id))
 
@@ -555,19 +554,19 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            clw = local_pre_weights[0, g, ...].cpu().numpy()
+            clw = local_pre_weights[0, g, ...].detach().cpu().numpy()
             cmin = clw[lowRes_source_mask == 1].min()
             cmax = clw[lowRes_source_mask == 1].max()
-            plt.imshow(cond_flip((local_pre_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
-            plt.title("{:.2f}".format(stds.data.cpu()[g]))
+            plt.imshow(cond_flip((local_pre_weights[0, g, ...]).detach().cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
+            plt.title("{:.2f}".format(stds.detach().cpu().numpy()[g]))
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
         osw = compute_overall_std(local_pre_weights[0, ...].cpu(), stds.data.cpu())
 
-        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
-        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
-        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
+        cmin = osw.detach().cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.detach().cpu().numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(cond_flip(osw.detach().cpu().numpy() * lowRes_source_mask,flip_axes), vmin=cmin, vmax=cmax)
         plt.colorbar()
 
         plt.suptitle('Pre-Weights: pair id {:03d}'.format(print_figure_id))
@@ -583,12 +582,12 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
 
         for g in range(nr_of_gaussians):
             plt.clf()
-            clw = local_weights[0, g, ...].cpu().numpy()
+            clw = local_weights[0, g, ...].detach().cpu().numpy()
             #cmin = clw[lowRes_source_mask == 1].min()
             #cmax = clw[lowRes_source_mask == 1].max()
             cmin = 0.
             cmax = 1.
-            plt.imshow(cond_flip((local_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin,
+            plt.imshow(cond_flip((local_weights[0, g, ...]).detach().cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin,
                        vmax=cmax)
             #plt.colorbar()
             plt.axis('image')
@@ -597,18 +596,18 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
 
         osw = compute_overall_std(local_weights[0, ...].cpu(), stds.data.cpu())
 
-        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
-        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
+        cmin = osw.detach().cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.detach().cpu().numpy()[lowRes_source_mask == 1].max()
 
         plt.clf()
-        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
+        plt.imshow(cond_flip(osw.detach().cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
         #plt.colorbar()
         plt.axis('image')
         plt.axis('off')
         plt.savefig(os.path.join(clean_print_path, 'weight_image_overall_std_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
-        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
+        plt.imshow(cond_flip(osw.detach().cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
         plt.colorbar()
         plt.axis('image')
         plt.axis('off')
@@ -620,12 +619,12 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
 
         for g in range(nr_of_gaussians):
             plt.clf()
-            clw = local_pre_weights[0, g, ...].cpu().numpy()
+            clw = local_pre_weights[0, g, ...].detach().cpu().numpy()
             #cmin = clw[lowRes_source_mask == 1].min()
             #cmax = clw[lowRes_source_mask == 1].max()
             cmin = 0.
             cmax = 1.
-            plt.imshow(cond_flip((local_pre_weights[0, g, ...]).cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin,
+            plt.imshow(cond_flip((local_pre_weights[0, g, ...]).detach().cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin,
                        vmax=cmax)
             #plt.colorbar()
             plt.axis('image')
@@ -634,18 +633,18 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
 
         osw = compute_overall_std(local_pre_weights[0, ...].cpu(), stds.data.cpu())
 
-        cmin = osw.cpu().numpy()[lowRes_source_mask == 1].min()
-        cmax = osw.cpu().numpy()[lowRes_source_mask == 1].max()
+        cmin = osw.detach().cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = osw.detach().cpu().numpy()[lowRes_source_mask == 1].max()
 
         plt.clf()
-        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
+        plt.imshow(cond_flip(osw.detach().cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
         #plt.colorbar()
         plt.axis('image')
         plt.axis('off')
         plt.savefig(os.path.join(clean_print_path, 'weight_pre_image_overall_std_{:0>3d}.pdf'.format(print_figure_id)),bbox_inches='tight',pad_inches=0)
 
         plt.clf()
-        plt.imshow(cond_flip(osw.cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
+        plt.imshow(cond_flip(osw.detach().cpu().numpy() * lowRes_source_mask, flip_axes), vmin=cmin, vmax=cmax)
         plt.colorbar()
         plt.axis('image')
         plt.axis('off')
@@ -961,7 +960,7 @@ def compute_and_visualize_results(json_file,output_dir,
         all_dj['det_99_perc'] = np.percentile(det,99)
 
         # now just in the area where the values are not zero
-        indx = (ISource[0,0,...].data.cpu().numpy()!=0)
+        indx = (ISource[0,0,...].detach().cpu().numpy()!=0)
 
         nz_dj = dict()
 

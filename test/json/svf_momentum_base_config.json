@@ -13,7 +13,7 @@
         }, 
         "registration_model": {
             "forward_model": {
-                "number_of_time_steps": 10
+                "number_of_time_steps": 20
             }, 
             "loss": {
                 "display_max_displacement": false, 

@@ -872,6 +872,15 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
+        c_params = self.params[('optimizer', {}, 'optimizer settings')]
+        self.weight_clipping_type = c_params[('weight_clipping_type','None','Type of weight clipping that should be used [l1|l2|l1_individual|l2_individual|l1_shared|l2_shared|None]')]
+        """Type of weight clipping; applied to weights and bias indepdenendtly; norm restricted to weight_clipping_value"""
+        if self.weight_clipping_type=='None':
+            self.weight_clipping_type = None
+        if self.weight_clipping_type!='pre_lsm_weights':
+            self.weight_clipping_value = c_params[('weight_clipping_value', 1.0, 'Value to which the norm is being clipped')]
+            """Desired norm after clipping"""
+
         self.scheduler = None # for the step size scheduler
         self.patience = None # for the step size scheduler
         self._use_external_scheduler = False
@@ -944,7 +953,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         :return:
         """
-        return self.rec_opt_par_loss_energy.cpu().data.numpy()
+        return self.rec_opt_par_loss_energy.detach().cpu().numpy()
 
     def get_custom_output_values(self):
         """
@@ -959,7 +968,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         Returns the current energy
         :return: Returns a tuple (energy, similarity energy, regularization energy)
         """
-        return self.rec_energy.cpu().data.numpy(), self.rec_similarityEnergy.cpu().data.numpy(), self.rec_regEnergy.cpu().data.numpy()
+        return self.rec_energy.detach().cpu().numpy(), self.rec_similarityEnergy.detach().cpu().numpy(), self.rec_regEnergy.cpu().data.numpy()
 
     def get_warped_image(self):
         """
@@ -1127,6 +1136,99 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             self.delayed_model_parameters_still_to_be_set = True
             self.delayed_model_parameters = p
+
+    def _is_vector(self,d):
+        sz = d.size()
+        if len(sz)==1:
+            return True
+        else:
+            return False
+
+    def _is_tensor(self,d):
+        sz = d.size()
+        if len(sz)>1:
+            return True
+        else:
+            return False
+
+    def _aux_do_weight_clipping_norm(self,pars,desired_norm):
+        """does weight clipping but only for conv or bias layers (assuming they are named as such); be careful with the namimg here"""
+        if self.weight_clipping_value > 0:
+            for key in pars:
+                # only do the clipping if it is a conv layer or a bias term
+                if key.lower().find('conv')>0 or key.lower().find('bias')>0:
+                    p = pars[key]
+                    if self._is_vector(p.data):
+                        # just normalize this vector component-by-component, norm does not matter here as these are only scalars
+                        p.data = p.data.clamp_(-self.weight_clipping_value, self.weight_clipping_value)
+                    elif self._is_tensor(p.data):
+                        # normalize sample-by-sample individually
+                        for b in range(p.data.size()[0]):
+                            param_norm = p.data[b, ...].norm(desired_norm)
+                            if param_norm > self.weight_clipping_value:
+                                clip_coef = self.weight_clipping_value / param_norm
+                                p.data[b, ...].mul_(clip_coef)
+                    else:
+                        raise ValueError('Unknown data type; I do not know how to clip this')
+
+    def _do_shared_weight_clipping_pre_lsm(self):
+        multi_gaussian_weights = self.params['model']['registration_model']['forward_model']['smoother'][('multi_gaussian_weights', -1, 'the used multi gaussian weights')]
+        if multi_gaussian_weights==-1:
+            raise ValueError('The multi-gaussian weights should have been set before')
+        multi_gaussian_weights = np.array(multi_gaussian_weights)
+
+        sp = self.get_shared_model_parameters()
+        for key in sp:
+            if key.lower().find('pre_lsm_weights') > 0:
+                p = sp[key]
+                sz = p.size() #0 dim is weight dimension
+                if sz[0]!=len(multi_gaussian_weights):
+                    raise ValueError('Number of multi-Gaussian weights needs to be {}, but got {}'.format(sz[0],len(multi_gaussian_weights)))
+                for w in range(sz[0]):
+                    # this is to assure that the weights are always between 0 and 1 (when using the WeightedLinearSoftmax
+                    p[w,...].data.clamp_(0.0-multi_gaussian_weights[w],1.0-multi_gaussian_weights[w])
+                
+    def _do_individual_weight_clipping_l1(self):
+        ip = self.get_individual_model_parameters()
+        self._aux_do_weight_clipping_norm(pars=ip,desired_norm=1)
+
+    def _do_shared_weight_clipping_l1(self):
+        sp = self.get_shared_model_parameters()
+        self._aux_do_weight_clipping_norm(pars=sp,desired_norm=1)
+
+    def _do_individual_weight_clipping_l2(self):
+        ip = self.get_individual_model_parameters()
+        self._aux_do_weight_clipping_norm(pars=ip, desired_norm=2)
+
+    def _do_shared_weight_clipping_l2(self):
+        sp = self.get_shared_model_parameters()
+        self._aux_do_weight_clipping_norm(pars=sp, desired_norm=2)
+
+    def _do_weight_clipping(self):
+        """performs weight clipping, if desired"""
+        if self.weight_clipping_type is not None:
+            possible_modes = ['l1', 'l2', 'l1_individual', 'l2_individual', 'l1_shared', 'l2_shared', 'pre_lsm_weights']
+            if self.weight_clipping_type in possible_modes:
+                if self.weight_clipping_type=='l1':
+                    self._do_shared_weight_clipping_l1()
+                    self._do_individual_weight_clipping_l1()
+                elif self.weight_clipping_type=='l2':
+                    self._do_shared_weight_clipping_l2()
+                    self._do_individual_weight_clipping_l2()
+                elif self.weight_clipping_type=='l1_individual':
+                    self._do_individual_weight_clipping_l1()
+                elif self.weight_clipping_type=='l2_individual':
+                    self._do_individual_weight_clipping_l2()
+                elif self.weight_clipping_type=='l1_shared':
+                    self._do_shared_weight_clipping_l1()
+                elif self.weight_clipping_type=='l2_shared':
+                    self._do_shared_weight_clipping_l2()
+                elif self.weight_clipping_type=='pre_lsm_weights':
+                    self._do_shared_weight_clipping_pre_lsm()
+                else:
+                    raise ValueError('Illegal weighgt clipping type: {}'.format(self.weight_clipping_type))
+            else:
+                raise ValueError('Weight clipping needs to be: [None|l1|l2|l1_individual|l2_individual|l1_shared|l2_shared]')
 
     def get_model_parameters(self):
         """
@@ -1424,16 +1526,19 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                         I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing, self.spline_order)
                         lowResLWarped = utils.get_warped_label_map(self.lowResLSource, phi_or_warped_image,
                                                                     self.spacing)
-                        vizReg.show_current_images(iter, self.lowResISource, self.lowResITarget, I1Warped, self.lowResLSource,self.lowResLTarget,lowResLWarped,vizImage, vizName, phi_or_warped_image, visual_param)
+                        vizReg.show_current_images(iter=iter, iS=self.lowResISource, iT=self.lowResITarget, iW=I1Warped,
+                                                   iSL=self.lowResLSource,iTL=self.lowResLTarget,iWL=lowResLWarped,
+                                                   vizImages=vizImage, vizName=vizName, phiWarped=phi_or_warped_image, visual_param=visual_param)
                     else:
                         I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.spline_order)
                         vizImage = vizImage if len(vizImage)>2 else None
                         LWarped = None
                         if self.LSource is not None  and self.LTarget is not None:
                             LWarped = utils.get_warped_label_map(self.LSource, phi_or_warped_image, self.spacing)
-                        vizReg.show_current_images(iter, self.ISource, self.ITarget, I1Warped,self.LSource, self.LTarget,LWarped, vizImage, vizName, phi_or_warped_image, visual_param)
+                        vizReg.show_current_images(iter=iter, iS=self.ISource, iT=self.ITarget, iW=I1Warped, iSL=self.LSource, iTL=self.LTarget, iWL=LWarped,
+                                                   vizImages=vizImage, vizName=vizName, phiWarped=phi_or_warped_image, visual_param=visual_param)
                 else:
-                    vizReg.show_current_images(iter, self.ISource, self.ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
+                    vizReg.show_current_images(iter=iter, iS=self.ISource, iT=self.ITarget, iW=phi_or_warped_image, vizImages=vizImage, vizName=vizName, phiWarped=None, visual_param=visual_param)
 
                 if 0 :#iter==self.nrOfIterations-1:
                     self._debugging_saving_intermid_img(self.ISource, append='source')
@@ -1457,7 +1562,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             file_name += '_label'
         path = os.path.join(folder_path,file_name+'.nii.gz')
         im_io = FIO.ImageIO()
-        im_io.write(path, np.squeeze(img.data.cpu().numpy()))
+        im_io.write(path, np.squeeze(img.detach().cpu().numpy()))
 
     # todo: write these parameter/optimizer functions also for shared parameters and all parameters
     def set_sgd_shared_model_parameters_and_optimizer_states(self, pars):
@@ -2003,6 +2108,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             # for p in self.optimizer_instance._params:
             #     p.data = p.data.float()
             current_loss = self.optimizer_instance.step(self._closure)
+
+            # do weight clipping if it is desired
+            self._do_weight_clipping()
 
             # an external scheduler may for example be used in batch optimization
             if not self._use_external_scheduler:

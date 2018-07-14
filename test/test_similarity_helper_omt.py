@@ -53,7 +53,7 @@ if __name__ == '__main__':
     out = OTSimilarityHelper.apply(phi,I0, I1, torch.zeros(I0.size()), torch.zeros(I1.size(),
                               spacing))
     out.backward()
-    gradientTorch = -phi.grad.data.numpy()
-    pl.imshow((I1.data.numpy() - I0.data.numpy()).transpose(), origin="lower")
+    gradientTorch = -phi.grad.detach().cpu().numpy()
+    pl.imshow((I1.detach().cpu().numpy() - I0.detach().cpu().numpy()).transpose(), origin="lower")
     pl.quiver(xx[0:n:spacingbis, 0:m:spacingbis], yy[0:n:spacingbis, 0:m:spacingbis],gradientTorch[0, 0:n:spacingbis, 0:m:spacingbis], gradientTorch[1, 0:n:spacingbis, 0:m:spacingbis],color="red")
     pl.show()
