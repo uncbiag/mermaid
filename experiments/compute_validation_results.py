@@ -17,6 +17,8 @@ import pyreg.fileio as fio
 import scipy.io as sio
 import numpy as np
 import itk
+# needs to be imported after itk to overwrite itk's incorrect error handling
+import pyreg.fixwarnings
 
 import nrrd
 import torch
