@@ -4,10 +4,15 @@ Helper functions to take care of all the file IO
 from __future__ import print_function
 from __future__ import absolute_import
 
+from future.utils import native_str
+
 # from builtins import str
 # from builtins import range
 # from builtins import object
 import itk
+# needs to be imported after itk to overwrite itk's incorrect error handling
+import pyreg.fixwarnings
+
 import os
 import nrrd
 from . import utils
@@ -578,7 +583,7 @@ class ImageIO(FileIO):
             print('Reading image: ' + filename)
 
         # read with the itk reader (can also read other file formats)
-        im_itk = itk.imread(filename)
+        im_itk = itk.imread(native_str(filename))
         im, hdr = self._convert_itk_image_to_numpy(im_itk)
 
         if self.replace_nans_with_zeros:
@@ -832,7 +837,7 @@ class ImageIO(FileIO):
         print('Writing: ' + filename)
         npd = self._convert_data_to_numpy_if_needed(data)
         data_itk = self._get_itk_image_from_numpy(npd, hdr)
-        itk.imwrite(data_itk, filename)
+        itk.imwrite(data_itk, native_str(filename))
 
 
 class GenericIO(FileIO):
