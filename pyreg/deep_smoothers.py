@@ -746,6 +746,117 @@ class WeightedSoftmax(nn.Module):
 
         return self.__class__.__name__ + '()'
 
+def stable_softmax(input, dim=None):
+    r"""Applies a numerically stqable softmax function.
+
+    stable_softmax is defined as:
+
+    :math:`stable_softmax(x) = \frac{exp(x_i)}{\sum_j exp(x_j)}`
+
+    It is applied to all slices along dim, and will rescale them so that the elements
+    lie in the range `(0, 1)` and sum to 1.
+
+    See :class:`~torch.nn.StableSoftmax` for more details.
+
+    Arguments:
+        input (Variable): input
+        dim (int): A dimension along which stable_softmax will be computed.
+
+    """
+    if dim is None:
+        raise ValueError('dimension needs to be defined!')
+
+    sz = input.size()
+    ret = torch.zeros_like(input)
+
+    # for numerical reasons we first compute the maximum inout along the dimension and then
+    # subtract if from all the exponents (this assures that we do not get exp(100) and then a NaN
+    # this is ok, because we can multiply the nominator and denominator with the same constant
+    # and by doing this shift the exponentials
+
+    max_in,_ = torch.max(input, dim=dim)
+
+    if dim==0:
+        norm = torch.zeros_like(input[0,...])
+        for c in range(sz[0]):
+            norm += torch.exp(input[c,...]-max_in)
+        for c in range(sz[0]):
+            ret[c,...] = torch.exp(input[c,...]-max_in)/norm
+    elif dim==1:
+        norm = torch.zeros_like(input[:,0, ...])
+        for c in range(sz[1]):
+            norm += torch.exp(input[:,c, ...]-max_in)
+        for c in range(sz[1]):
+            ret[:,c, ...] = torch.exp(input[:,c, ...]-max_in) / norm
+    elif dim==2:
+        norm = torch.zeros_like(input[:,:,0, ...])
+        for c in range(sz[2]):
+            norm += torch.exp(input[:,:,c, ...]-max_in)
+        for c in range(sz[2]):
+            ret[:,:,c, ...] = torch.exp(input[:,:,c, ...]-max_in) / norm
+    elif dim==3:
+        norm = torch.zeros_like(input[:,:,:,0, ...])
+        for c in range(sz[3]):
+            norm += torch.exp(input[:,:,:,c, ...]-max_in)
+        for c in range(sz[3]):
+            ret[:,:,:,c, ...] = torch.exp(input[:,:,:,c, ...]-max_in) / norm
+    elif dim==4:
+        norm = torch.zeros_like(input[:,:,:,:,0, ...])
+        for c in range(sz[4]):
+            norm += torch.exp(input[:,:,:,:,c, ...]-max_in)
+        for c in range(sz[4]):
+            ret[:,:,:,:,c, ...] = torch.exp(input[:,:,:,:,c, ...]-max_in) / norm
+    else:
+        raise ValueError('weighted_softmax is only supported for dimensions 0, 1, 2, 3, and 4.')
+
+    return ret
+
+
+class StableSoftmax(nn.Module):
+    r"""Applies the StableSoftmax function to an n-dimensional input Tensor
+    rescaling them so that the elements of the n-dimensional output Tensor
+    lie in the range (0,1) and sum to 1
+
+    StableSoftmax is defined as
+    :math:`f_i(x) = \frac{exp(x_i)}{\sum_j exp(x_j)}`
+
+    Shape:
+        - Input: any shape
+        - Output: same as input
+
+    Returns:
+        a Tensor of the same dimension and shape as the input with
+        values in the range [0, 1]
+
+    Arguments:
+        dim (int): A dimension along which WeightedSoftmax will be computed (so every slice
+            along dim will sum to 1).
+
+    Examples::
+
+        >>> m = nn.StableSoftmax()
+        >>> input = autograd.torch.randn(2, 3))
+        >>> print(input)
+        >>> print(m(input))
+    """
+
+    def __init__(self, dim=None):
+        super(StableSoftmax, self).__init__()
+        self.dim = dim
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if not hasattr(self, 'dim'):
+            self.dim = None
+
+    def forward(self, input):
+
+        return stable_softmax(input, self.dim, _stacklevel=5)
+
+    def __repr__(self):
+
+        return self.__class__.__name__ + '()'
+
 def weighted_linear_softmax(input, dim=None, weights=None ):
     r"""Applies a softmax function.
 
