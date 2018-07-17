@@ -179,10 +179,32 @@ class HLoss(nn.Module):
     def forward(self, x, spacing):
         volumeElement = spacing.prod()
         batch_size = x.size()[0]
-        b = F.softmax(x, dim=1) * F.log_softmax(x, dim=1)
-        b = -1.0 * b.sum()*volumeElement/batch_size
+        b = x*torch.log(x)
+        #F.softmax(x, dim=1) * F.log_softmax(x, dim=1)
+        #b = -1.0 * b.sum()*volumeElement/batch_size
+        b = -1.0*b.sum()*volumeElement/batch_size
         return b
 
+class GlobalHLoss(nn.Module):
+    def __init__(self):
+        super(GlobalHLoss, self).__init__()
+
+    def forward(self, x, spacing):
+
+        nr_of_labels = x.size()[1]
+        P = MyTensor(nr_of_labels).zero_()
+        sz = list(x.size())
+        nr_of_elements = [sz[0]] + sz[2:]
+        current_norm = float(np.array(nr_of_elements).prod().astype('float32')) # number of pixels
+        for n in range(nr_of_labels):
+            P[n] = (x[:,n,...].sum())/current_norm
+
+        # now compute the entropy over this
+        b = MyTensor(1).zero_()
+        for n in range(nr_of_labels):
+            b = b-P[n]*torch.log(P[n])
+
+        return b
 
 class TotalVariationLoss(nn.Module):
     """
@@ -349,6 +371,7 @@ image_offset = 1.0
 reconstruction_weight = 10.0
 totalvariation_weight = 1.0
 entropy_weight = 25.0
+global_entropy_weight = 1.0
 
 
 image_input_directory = '../experiments/synthetic_example_out_kernel_weighting_type_w_K/brain_affine_icbm/'
@@ -373,6 +396,7 @@ print(reconstruction_unet)
 reconstruction_criterion = nn.L1Loss().to(device)
 totalvariation_criterion = TotalVariationLoss(dim=dim,params=params).to(device)
 entropy_criterion = HLoss().to(device)
+global_entropy_criterion = GlobalHLoss().to(device)
 clustering_criterion = ClusteringLoss(dim=dim,params=params).to(device)
 
 # create the optimizer
@@ -387,6 +411,7 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
     running_loss = 0.0
     running_reconstruction_loss = 0.0
     running_entropy_loss = 0.0
+    running_global_entropy_loss = 0.0
     running_totalvariation_loss = 0.0
     running_clustering_loss = 0.0
 
@@ -410,6 +435,8 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
         clustering_loss = AdaptVal(torch.zeros(1))
 
         entropy_loss = entropy_weight*entropy_criterion(label_probabilities,spacing=spacing)
+        # we want to maximize global entropy so let's minimize the negative one
+        negative_global_entropy_loss = -global_entropy_weight*global_entropy_criterion(label_probabilities,spacing=spacing)
         totalvariation_loss = totalvariation_weight*totalvariation_criterion(input_images=inputs,spacing=spacing,label_probabilities=label_probabilities)
 
         # try to reconstruct the image
@@ -418,7 +445,7 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
         reconstruction_loss = reconstruction_weight*reconstruction_criterion(reconstruction_outputs, desired_outputs)
 
         # compute the overall loss as a combination of reconstruction and clustering loss
-        loss = reconstruction_loss + clustering_loss + totalvariation_loss + entropy_loss
+        loss = reconstruction_loss + clustering_loss + totalvariation_loss + entropy_loss + negative_global_entropy_loss
         # compute the gradient
         loss.backward()
 
@@ -427,21 +454,22 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
         if only_display_epoch_results:
             running_loss += loss.item()/nr_of_datasets
             running_reconstruction_loss += reconstruction_loss.item()/nr_of_datasets
+            running_global_entropy_loss += negative_global_entropy_loss.item()/nr_of_datasets
             running_entropy_loss += entropy_loss.item()/nr_of_datasets
             running_totalvariation_loss += totalvariation_loss.item()/nr_of_datasets
             running_clustering_loss += clustering_loss.item()/nr_of_datasets
 
             if i==nr_of_batches-1:
                 # print statistics
-                print('Epoch: {}; loss={:.3f}, r_loss={:.3f}, tv_loss={:.3f}, h_loss={:.3f}, c_loss={:.3f}'
+                print('Epoch: {}; loss={:.3f}, r_loss={:.3f}, tv_loss={:.3f}, h_loss={:.3f}, neg_global_h_loss={:.3f}, c_loss={:.3f}'
                       .format(epoch + 1, running_loss, running_reconstruction_loss, running_totalvariation_loss,
-                              running_entropy_loss, running_clustering_loss))
+                              running_entropy_loss, running_global_entropy_loss, running_clustering_loss))
 
         else:
             # print statistics
-            print('Epoch: {}; batch: {}; loss={:.3f}, r_loss={:.3f}, tv_loss={:.3f}, h_loss={:.3f}, c_loss={:.3f}'
+            print('Epoch: {}; batch: {}; loss={:.3f}, r_loss={:.3f}, tv_loss={:.3f}, h_loss={:.3f}, neg_global_h_loss={:.3f}, c_loss={:.3f}'
                   .format(epoch+1, i+1,loss.item(),reconstruction_loss.item(),totalvariation_loss.item(),
-                          entropy_loss.item(),clustering_loss.item()))
+                          entropy_loss.item(),negative_global_entropy_loss.item(),clustering_loss.item()))
 
         if i==0 and (epoch%10==0):
 
