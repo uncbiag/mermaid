@@ -557,7 +557,8 @@ class ImageRegistrationOptimizer(Optimizer):
 
         self.lowResLTarget = None
         """if mapLowResFactor <1, a lowres target label image needs to be created to parameterize some of the registration algorithms"""
-
+        self.initialMap =None
+        """  initial map"""
         self.optimizer_name = None #''lbfgs_ls'
         """name of the optimizer to use"""
         self.optimizer_params = {}
@@ -704,7 +705,7 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         self.expr_name = expr_name
 
-    def get_expr_name(self):
+    def get_expr_name(self): 
         """
         the name of experiments
         :param expr_name:
@@ -1028,8 +1029,14 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             if self.mapLowResFactor is not None:
                 # create a lower resolution map for the computations
-                lowres_id = utils.identity_map_multiN(self.lowResSize, self.lowResSpacing)
-                self.lowResInitialMap = AdaptVal(torch.from_numpy(lowres_id))
+                if self.map0_external is None:
+                    lowres_id = utils.identity_map_multiN(self.lowResSize, self.lowResSpacing)
+                    self.lowResInitialMap = AdaptVal(torch.from_numpy(lowres_id))
+                else:
+                    sampler = IS.ResampleImage()
+                    lowres_id, _ = sampler.downsample_image_to_size(self.initialMap , self.spacing,self.lowResSize[2::] , 1)
+                    self.lowResInitialMap = AdaptVal(lowres_id)
+
 
     def set_model(self, modelName):
         """
@@ -1360,7 +1367,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                         rec_tmp = ret
                     # now upsample to correct resolution
                     desiredSz = self.initialMap.size()[2::]
-                    self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz, self.spline_order)
+                    self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.lowResSpacing, desiredSz, self.spline_order)
                     if self.compute_inverse_map and rec_inv_tmp is not None:
                         self.rec_phiInverseWarped, _ = self.sampler.upsample_image_to_size(rec_inv_tmp, self.spacing, desiredSz,self.spline_order)
             else:
@@ -3243,7 +3250,6 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """name of the model to be added (if specified by name; gets dominated by specifying an optimizer directly"""
         self.ssOpt = None
         """Single scale optimizer"""
-
         self.params['optimizer'][('multi_scale', {}, 'multi scale settings')]
 
 
@@ -3268,6 +3274,17 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param modelName: the name of the model (string)
         """
         self.model_name = modelName
+
+
+    def set_initial_map(self,map0):
+        """
+        Sets the initial map (overwrites the default identity map)
+        :param map0: intial map
+        :return: n/a
+        """
+        if self.ssOpt is None:
+            self.initialMap = map0
+
 
     def set_pair_path(self,pair_paths):
         # f = lambda name: os.path.split(name)
@@ -3469,12 +3486,15 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.LSource is not None and self.LTarget is not None:
                 LSourceC, spacingC = self.sampler.downsample_image_to_size(self.LSource, self.spacing, currentDesiredSz[2::],0)
                 LTargetC, spacingC = self.sampler.downsample_image_to_size(self.LTarget, self.spacing, currentDesiredSz[2::],0)
-
+            initialMap = None
+            if self.initialMap is not None:
+                initialMap,_ = self.sampler.downsample_image_to_size(self.initialMap,self.spacing, currentDesiredSz[2::],1)
             szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
 
             self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)
             print('Setting learning rate to ' + str( lastSuccessfulStepSizeTaken ))
             self.ssOpt.set_last_successful_step_size_taken( lastSuccessfulStepSizeTaken )
+            self.ssOpt.set_initial_map(initialMap)
 
             if ((self.add_model_name is not None) and
                     (self.add_model_networkClass is not None) and

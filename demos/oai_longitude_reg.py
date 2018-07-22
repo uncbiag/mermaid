@@ -1,7 +1,7 @@
 import matplotlib as matplt
-from pyreg.config_parser import MATPLOTLIB_AGG
-if MATPLOTLIB_AGG:
-    matplt.use('Agg')
+# from pyreg.config_parser import MATPLOTLIB_AGG
+# if MATPLOTLIB_AGG:
+#     matplt.use('Agg')
 import sys
 import numpy as np
 import os
@@ -363,60 +363,61 @@ class OAILongitudeReisgtration(object):
                 Ic1 = LSource
                 Ic0 = LTarget
 
+            #
+            # self.si.set_light_analysis_on(True)
+            # self.si.set_initial_map(None)
+            # self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
+            #                         model_name=self.model0_name,
+            #                         map_low_res_factor=self.map0_low_res_factor,
+            #                         nr_of_iterations=self.nr_of_iterations,
+            #                         visualize_step=None,
+            #                         optimizer_name=self.optimizer0_name,
+            #                         use_multi_scale=True,
+            #                         rel_ftol=0,
+            #                         similarity_measure_type=self.similarity_measure_type,
+            #                         similarity_measure_sigma=self.similarity_measure_sigma,
+            #                         json_config_out_filename='cur_settings.json',
+            #                         compute_inverse_map=True,
+            #                         params ='cur_settings.json')
+            # wi = self.si.get_warped_image()
+            # #self.im_io.write(os.path.join(saving_folder_path, img1_name + '_affine.nii.gz'), torch.squeeze(wi[0:1,0:1,...]), hdrc0)
+            #
+            # wi=wi.cpu().data.numpy()
+            # LSource_warped= None
+            #
+            # if not self.light_analysis_on:
+            #     self.si.opt.optimizer.ssOpt.set_source_label(AdaptVal(torch.from_numpy(LSource)))
+            #     LSource_warped = self.si.get_warped_label()
+            #     self.record_cur_performance(LSource_warped, LTarget, extra_info['pair_name'], extra_info['batch_id'], 'affine_finished')
+            # affine_param = self.si.opt.optimizer.ssOpt.model.Ab.data.cpu().numpy().reshape((4,3))
+            # affine_param = np.transpose(affine_param)
+            # print(" the affine param is {}".format(affine_param))
+            # det_affine_param = np.linalg.det(affine_param[:,:3])
+            # print("the determinant of the affine param is {}".format(det_affine_param))
+            #
+            #
+            #
+            # if self.label_affine_img_svg:
+            #     self.si.opt.optimizer.ssOpt.set_source_image(AdaptVal(torch.from_numpy(Ic1_copy)))
+            #     wi = self.si.get_warped_image().cpu().data.numpy()
+            #     Ic0 = Ic0_copy
+            #
+            #
+            #
+            # print("let's come to step 2 ")
+            # ###########################################################self.si.set_light_analysis_on(self.light_analysis_on)
+            # self.si.set_light_analysis_on(True)
+            # LSource_warped = LSource_warped.cpu().data.numpy()
 
-            self.si.set_light_analysis_on(True)
+
+
+
+            #
+            # affine_map =  self.si.opt.optimizer.ssOpt.get_map()
+            # self.si.opt = None
+            # self.si.set_initial_map(affine_map.detach())
+
             self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
-                                    model_name=self.model0_name,
-                                    map_low_res_factor=self.map0_low_res_factor,
-                                    nr_of_iterations=self.nr_of_iterations,
-                                    visualize_step=None,
-                                    optimizer_name=self.optimizer0_name,
-                                    use_multi_scale=True,
-                                    rel_ftol=0,
-                                    similarity_measure_type=self.similarity_measure_type,
-                                    similarity_measure_sigma=self.similarity_measure_sigma,
-                                    json_config_out_filename='cur_settings.json',
-                                    compute_inverse_map=True,
-                                    params ='cur_settings.json')
-            wi = self.si.get_warped_image()
-            self.im_io.write(os.path.join(saving_folder_path, img1_name + '_affine.nii.gz'), torch.squeeze(wi[0:1,0:1,...]), hdrc0)
-
-            wi=wi.cpu().data.numpy()
-            LSource_warped= None
-
-            if not self.light_analysis_on:
-                self.si.opt.optimizer.ssOpt.set_source_label(AdaptVal(torch.from_numpy(LSource)))
-                LSource_warped = self.si.get_warped_label()
-                self.record_cur_performance(LSource_warped, LTarget, extra_info['pair_name'], extra_info['batch_id'], 'affine_finished')
-            affine_param = self.si.opt.optimizer.ssOpt.model.Ab.data.cpu().numpy().reshape((4,3))
-            affine_param = np.transpose(affine_param)
-            print(" the affine param is {}".format(affine_param))
-            det_affine_param = np.linalg.det(affine_param[:,:3])
-            print("the determinant of the affine param is {}".format(det_affine_param))
-
-
-
-            if self.label_affine_img_svg:
-                self.si.opt.optimizer.ssOpt.set_source_image(AdaptVal(torch.from_numpy(Ic1_copy)))
-                wi = self.si.get_warped_image().cpu().data.numpy()
-                Ic0 = Ic0_copy
-
-
-
-            print("let's come to step 2 ")
-            self.si.set_light_analysis_on(self.light_analysis_on)
-            LSource_warped = LSource_warped.cpu().data.numpy()
-
-
-
-            # ##########################################3
-            # wi = Ic1
-            # LSource_warped = LSource
-            # ############################################
-
-
-
-            self.si.register_images(wi, Ic0, spacing,extra_info=extra_info,LSource=LSource_warped,LTarget=LTarget,
                                     model_name=self.model1_name,
                                     map_low_res_factor=self.map1_low_res_factor,
                                     nr_of_iterations=self.nr_of_iterations,

@@ -213,7 +213,7 @@ class ModelFactory(object):
             uses_map = self.models[modelName][2]
             if uses_map:
                 print('Using map-based ' + modelName + ' model')
-                model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams)
+                model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams,compute_inverse_map)
             else:
                 print('Using ' + modelName + ' model')
                 model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams)

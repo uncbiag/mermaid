@@ -8,7 +8,7 @@ from scipy import misc
 import numpy as np
 #import h5py
 import skimage
-#import SimpleITK as sitk
+#
 import sys
 import torch
 import random
@@ -412,6 +412,7 @@ def get_file_name(path):
 
 
 def sitk_read_img_to_std_tensor(path):
+    import SimpleITK as sitk
     img = sitk.ReadImage(path)
     img_np = sitk.GetArrayFromImage(img)
     img_np = np.expand_dims(np.expand_dims(img_np,0),0).astype(np.float32)
@@ -419,6 +420,8 @@ def sitk_read_img_to_std_tensor(path):
 
 
 def sitk_read_img_to_std_numpy(path):
+    import SimpleITK as sitk
+
     img = sitk.ReadImage(path)
     img_np = sitk.GetArrayFromImage(img)
     img_np = np.expand_dims(np.expand_dims(img_np,0),0).astype(np.float32)
