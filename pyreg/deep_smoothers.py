@@ -596,36 +596,6 @@ def compute_omt_penalty(weights, multi_gaussian_stds,volume_element,desired_powe
 
     return penalty
 
-def DimConv(dim):
-    if dim==1:
-        return nn.Conv1d
-    elif dim==2:
-        return nn.Conv2d
-    elif dim==3:
-        return nn.Conv3d
-    else:
-        raise ValueError('Only supported for dimensions 1, 2, and 3')
-
-def DimBatchNorm(dim):
-    if dim==1:
-        return nn.BatchNorm1d
-    elif dim==2:
-        return nn.BatchNorm2d
-    elif dim==3:
-        return nn.BatchNorm3d
-    else:
-        raise ValueError('Only supported for dimensions 1, 2, and 3')
-
-def DimConvTranspose(dim):
-    if dim==1:
-        return nn.ConvTranspose1d
-    elif dim==2:
-        return nn.ConvTranspose2d
-    elif dim==3:
-        return nn.ConvTranspose3d
-    else:
-        raise ValueError('Only supported for dimensions 1, 2, and 3')
-
 def weighted_softmax(input, dim=None, weights=None ):
     r"""Applies a softmax function.
 
@@ -1703,17 +1673,19 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
         feature_num = self.params[('number_of_features_in_first_layer', 32, 'number of features in the first encoder layer (64 in quicksilver)')]
         use_dropout= self.params[('use_dropout',False,'use dropout for the layers')]
         self.use_separate_decoders_per_gaussian = self.params[('use_separate_decoders_per_gaussian',True,'if set to true separte decoder branches are used for each Gaussian')]
-        use_batch_normalization = self.params[('use_batch_normalization',True,'If true, uses batch normalization between layers')]
+        use_batch_normalization = self.params[('use_batch_normalization',False,'If true, uses batch normalization between layers')]
+        use_instance_normalization = self.params[('use_instance_normalization',True,'If true, uses instance normalization between layers')]
+
         self.use_one_encoder_decoder_block = self.params[('use_one_encoder_decoder_block',True,'If False, using two each as in the quicksilver paper')]
 
         if self.use_momentum_as_input or self.use_target_image_as_input or self.use_source_image_as_input:
             self.encoder_1 = dn.encoder_block_2d(self.get_number_of_input_channels(nr_of_image_channels,dim), feature_num,
-                                              use_dropout, use_batch_normalization, dim=dim)
+                                              use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim)
         else:
-            self.encoder_1 = dn.encoder_block_2d(1, feature_num, use_dropout, use_batch_normalization, dim=dim)
+            self.encoder_1 = dn.encoder_block_2d(1, feature_num, use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim)
 
         if not self.use_one_encoder_decoder_block:
-            self.encoder_2 = dn.encoder_block_2d(feature_num, feature_num * 2, use_dropout, use_batch_normalization, dim=dim)
+            self.encoder_2 = dn.encoder_block_2d(feature_num, feature_num * 2, use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim)
 
         # todo: maybe have one decoder for each Gaussian here.
         # todo: the current version seems to produce strange gridded results
@@ -1725,12 +1697,12 @@ class EncoderDecoderSmoothingModel(DeepSmoothingModel):
             # create two decoder blocks for each Gaussian
             for g in range(nr_of_gaussians):
                 if not self.use_one_encoder_decoder_block:
-                    self.decoder_1.append( dn.decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization, dim=dim) )
-                self.decoder_2.append( dn.decoder_block_2d(feature_num, 1, 2, use_dropout, use_batch_normalization, dim=dim, last_block=True) )
+                    self.decoder_1.append( dn.decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim) )
+                self.decoder_2.append( dn.decoder_block_2d(feature_num, 1, 2, use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim, last_block=True) )
         else:
             if not self.use_one_encoder_decoder_block:
-                self.decoder_1 = dn.decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization, dim=dim)
-            self.decoder_2 = dn.decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, use_batch_normalization, dim=dim, last_block=True)  # 3?
+                self.decoder_1 = dn.decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim)
+            self.decoder_2 = dn.decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim, last_block=True)  # 3?
 
         self._initialize_weights()
 
@@ -1789,7 +1761,8 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
                                                                      params=params)
 
         self.kernel_sizes = self.params[('kernel_sizes',[7,7],'size of the convolution kernels')]
-        self.use_batch_normalization = self.params[('use_batch_normalization', True, 'If true, uses batch normalization between layers')]
+        self.use_batch_normalization = self.params[('use_batch_normalization', False, 'If true, uses batch normalization between layers')]
+        self.use_instance_normalization = self.params[('use_instance_normalization', True, 'If true, uses instance normalization between layers')]
 
         # check that all the kernel-size are odd
         for ks in self.kernel_sizes:
@@ -1808,6 +1781,7 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
 
         self.conv_layers = None
         self.batch_normalizations = None
+        self.instance_normalizations = None
 
         # needs to be initialized here, otherwise the optimizer won't see the modules from ModuleList
         # todo: figure out how to do ModuleList initialization not in __init__
@@ -1830,13 +1804,13 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         convs = [None]*self.nr_of_layers
 
         # first layer
-        convs[0] = DimConv(self.dim)(nr_of_input_channels,
+        convs[0] = dn.DimConv(self.dim)(nr_of_input_channels,
                                   self.nr_of_features_per_layer[0],
                                   self.kernel_sizes[0], padding=(self.kernel_sizes[0]-1)//2)
 
         # all the intermediate layers and the last one
         for l in range(self.nr_of_layers-1):
-            convs[l+1] = DimConv(self.dim)(self.nr_of_features_per_layer[l],
+            convs[l+1] = dn.DimConv(self.dim)(self.nr_of_features_per_layer[l],
                                         self.nr_of_features_per_layer[l+1],
                                         self.kernel_sizes[l+1],
                                         padding=(self.kernel_sizes[l+1]-1)//2)
@@ -1849,11 +1823,21 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
 
             batch_normalizations = [None]*(self.nr_of_layers-1) # not on the last layer
             for b in range(self.nr_of_layers-1):
-                batch_normalizations[b] = DimBatchNorm(self.dim)(self.nr_of_features_per_layer[b],momentum=batch_norm_momentum_val)
+                batch_normalizations[b] = dn.DimBatchNorm(self.dim)(self.nr_of_features_per_layer[b],momentum=batch_norm_momentum_val)
 
             self.batch_normalizations = nn.ModuleList()
             for b in batch_normalizations:
                 self.batch_normalizations.append(b)
+
+        if self.use_instance_normalization:
+
+            instance_normalizations = [None]*(self.nr_of_layers-1) # not on the last layer
+            for b in range(self.nr_of_layers-1):
+                instance_normalizations[b] = dn.DimInstanceNorm(self.dim)(self.nr_of_features_per_layer[b],momentum=batch_norm_momentum_val)
+
+            self.instance_normalizations = nn.ModuleList()
+            for b in instance_normalizations:
+                self.instance_normalizations.append(b)
 
         self._initialize_weights()
 
@@ -1862,12 +1846,20 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         # now let's apply all the convolution layers, until the last
         # (because the last one is not relu-ed
 
-        if self.batch_normalizations:
+        if self.use_batch_normalization:
             for l in range(len(self.conv_layers) - 1):
                 if self.use_relu:
                     x = F.relu(self.batch_normalizations[l](self.conv_layers[l](x)))
                 else:
                     x = F.sigmoid(self.batch_normalizations[l](self.conv_layers[l](x)))
+
+        elif self.use_instance_normalization:
+            for l in range(len(self.conv_layers) - 1):
+                if self.use_relu:
+                    x = F.relu(self.instance_normalizations[l](self.conv_layers[l](x)))
+                else:
+                    x = F.sigmoid(self.instance_normalizations[l](self.conv_layers[l](x)))
+
         else:
             for l in range(len(self.conv_layers) - 1):
                 if self.use_relu:
@@ -1905,7 +1897,8 @@ class UNetWeightedSmoothingModel(DeepSmoothingModel):
                                                                      omt_power=omt_power,
                                                                      params=params)
 
-        self.use_batch_normalization = self.params[('use_batch_normalization', True, 'If true, uses batch normalization between layers')]
+        self.use_batch_normalization = self.params[('use_batch_normalization', False, 'If true, uses batch normalization between layers')]
+        self.use_instance_normalization = self.params[('use_instance_normalization', True, 'If true, uses instance normalization between layers')]
 
         self.unet = None
 
@@ -1932,10 +1925,12 @@ class UNetWeightedSmoothingModel(DeepSmoothingModel):
         # create the network
         if USE_CUDA:
             self.unet = network_type(dim=dim, n_in_channel=nr_of_input_channels, n_out_channel=self.nr_of_gaussians,
-                                use_batch_normalization=self.use_batch_normalization).cuda()
+                                use_batch_normalization=self.use_batch_normalization,
+                                use_instance_normalization=self.use_instance_normalization).cuda()
         else:
             self.unet = network_type(dim=dim, n_in_channel=nr_of_input_channels, n_out_channel=self.nr_of_gaussians,
-                                           use_batch_normalization=self.use_batch_normalization)
+                                    use_batch_normalization=self.use_batch_normalization,
+                                    use_instance_normalization=self.use_instance_normalization)
 
         self._initialize_weights()
 

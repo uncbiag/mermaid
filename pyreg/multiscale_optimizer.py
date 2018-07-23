@@ -870,7 +870,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """the optimizer instance to perform the actual optimization"""
 
         c_params = self.params[('optimizer', {}, 'optimizer settings')]
-        self.weight_clipping_type = c_params[('weight_clipping_type','None','Type of weight clipping that should be used [l1|l2|l1_individual|l2_individual|l1_shared|l2_shared|None]')]
+        self.weight_clipping_type = c_params[('weight_clipping_type','none','Type of weight clipping that should be used [l1|l2|l1_individual|l2_individual|l1_shared|l2_shared|None]')]
         self.weight_clipping_type = self.weight_clipping_type.lower()
         """Type of weight clipping; applied to weights and bias indepdenendtly; norm restricted to weight_clipping_value"""
         if self.weight_clipping_type=='none':
@@ -1230,7 +1230,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 elif self.weight_clipping_type=='pre_lsm_weights':
                     self._do_shared_weight_clipping_pre_lsm()
                 else:
-                    raise ValueError('Illegal weighgt clipping type: {}'.format(self.weight_clipping_type))
+                    raise ValueError('Illegal weight clipping type: {}'.format(self.weight_clipping_type))
             else:
                 raise ValueError('Weight clipping needs to be: [None|l1|l2|l1_individual|l2_individual|l1_shared|l2_shared]')
 
@@ -2670,6 +2670,9 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
         print('Writing out shared parameter file to ' + shared_parameter_filename )
         torch.save(self.ssOpt.get_shared_model_parameters(),shared_parameter_filename)
 
+        # debug:
+        # todo: remove, just for debugging
+        #self.ssOpt._closure()
 
 class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 

@@ -111,7 +111,8 @@ nr_of_weights = 4
 global_multi_gaussian_weights = torch.from_numpy(np.array([0.0,0.0,0.0,1.0],dtype='float32'))
 gaussian_stds = torch.from_numpy(np.array([0.01,0.05,0.1,0.2],dtype='float32'))
 
-use_batch_normalization = True
+use_batch_normalization = False
+use_instance_normalization = True
 use_color_tv = True
 reconstruct_variances = False
 reconstruct_stds = True
@@ -124,7 +125,7 @@ display_colorbar = True
 reconstruction_weight = 1000.0
 totalvariation_weight = 0.01
 omt_weight = 2.5
-omt_power=2.0
+omt_power=1.0
 omt_use_log_transformed_std=True
 lr = 0.1
 
@@ -147,7 +148,7 @@ trainloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_worke
 reconstruction_criterion = nn.MSELoss().to(device)  # nn.L1Loss().to(device)
 totalvariation_criterion = dn.TotalVariationLoss(dim=dim, params=params).to(device)
 
-reconstruction_unet = network_type(dim=dim, n_in_channel=1, n_out_channel=nr_of_weights, use_batch_normalization=use_batch_normalization).to(device)
+reconstruction_unet = network_type(dim=dim, n_in_channel=1, n_out_channel=nr_of_weights, use_batch_normalization=use_batch_normalization, use_instance_normalization=use_instance_normalization).to(device)
 all_optimization_parameters = reconstruction_unet.parameters()
 
 print(reconstruction_unet)

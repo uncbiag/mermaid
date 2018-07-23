@@ -36,6 +36,16 @@ def DimBatchNorm(dim):
     else:
         raise ValueError('Only supported for dimensions 1, 2, and 3')
 
+def DimInstanceNorm(dim):
+    if dim == 1:
+        return nn.InstanceNorm1d
+    elif dim == 2:
+        return nn.InstanceNorm2d
+    elif dim == 3:
+        return nn.InstanceNorm3d
+    else:
+        raise ValueError('Only supported for dimensions 1, 2, and 3')
+
 def DimConvTranspose(dim):
     if dim==1:
         return nn.ConvTranspose1d
@@ -57,18 +67,22 @@ def DimMaxPool(dim):
         raise ValueError('Only supported for dimensions 1, 2, and 3')
 
 
-
-class conv_bn_rel(nn.Module):
+class conv_bn_in_rel(nn.Module):
     def __init__(self, dim, in_channels, out_channels, kernel_size, stride=1, active_unit='relu', same_padding=False,
-                 bn=False, reverse=False,group = 1,dilation = 1):
-        super(conv_bn_rel, self).__init__()
+                 bn=False, inn=False, reverse=False,group = 1,dilation = 1):
+        super(conv_bn_in_rel, self).__init__()
+
+        if bn and inn:
+            raise ValueError('Simultaneous batch and instance normalization is not supported')
+
         padding = int((kernel_size - 1) / 2) if same_padding else 0
         if not reverse:
             self.conv = DimConv(dim)(in_channels, out_channels, kernel_size, stride, padding=padding, groups=group,dilation=dilation)
         else:
             self.conv = DimConvTranspose(dim)(in_channels, out_channels, kernel_size, stride, padding=padding,groups=group,dilation=dilation)
 
-        self.bn = DimBatchNorm(dim)(out_channels, eps=0.0001, momentum=0, affine=True) if bn else None
+        self.bn = DimBatchNorm(dim)(out_channels, eps=0.0001, momentum=0.1, affine=True) if bn else None
+        self.inn = DimInstanceNorm(dim)(out_channels, eps=0.0001, momentum=0.1, affine=True) if inn else None
         if active_unit == 'relu':
             self.active_unit = nn.ReLU(inplace=True)
         elif active_unit == 'elu':
@@ -82,6 +96,8 @@ class conv_bn_rel(nn.Module):
         x = self.conv(x)
         if self.bn is not None:
             x = self.bn(x)
+        if self.inn is not None:
+            x = self.inn(x)
         if self.active_unit is not None:
             x = self.active_unit(x)
         return x
@@ -91,11 +107,15 @@ class conv_bn_rel(nn.Module):
 
 # Quicksilver style 2d encoder
 class encoder_block_2d(nn.Module):
-    def __init__(self, input_feature, output_feature, use_dropout, use_batch_normalization,dim):
+    def __init__(self, input_feature, output_feature, use_dropout, use_batch_normalization, use_instance_normalization, dim):
         super(encoder_block_2d, self).__init__()
+
+        if use_batch_normalization and use_instance_normalization:
+            raise ValueError('Batch normalization and instance normalization cannot be specified at the same time')
+
         self.dim = dim
 
-        if use_batch_normalization:
+        if use_batch_normalization or use_instance_normalization:
             conv_bias = False
         else:
             conv_bias = True
@@ -119,8 +139,15 @@ class encoder_block_2d(nn.Module):
             self.bn_3 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
             self.bn_4 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
 
+        if use_instance_normalization:
+            self.in_1 = DimInstanceNorm(self.dim)(output_feature, momentum=batch_norm_momentum_val)
+            self.in_2 = DimInstanceNorm(self.dim)(output_feature, momentum=batch_norm_momentum_val)
+            self.in_3 = DimInstanceNorm(self.dim)(output_feature, momentum=batch_norm_momentum_val)
+            self.in_4 = DimInstanceNorm(self.dim)(output_feature, momentum=batch_norm_momentum_val)
+
         self.use_dropout = use_dropout
         self.use_batch_normalization = use_batch_normalization
+        self.use_instance_normalization = use_instance_normalization
         self.dropout = nn.Dropout(0.2)
 
     def apply_dropout(self, input):
@@ -136,6 +163,13 @@ class encoder_block_2d(nn.Module):
         output = self.apply_dropout(self.prelu3(self.bn_3(self.conv_inblock2(output))))
         return self.prelu4(self.bn_4(self.conv_pooling(output)))
 
+    def forward_with_instance_normalization(self,x):
+        output = self.conv_input(x)
+        output = self.apply_dropout(self.prelu1(self.in_1(output)))
+        output = self.apply_dropout(self.prelu2(self.in_2(self.conv_inblock1(output))))
+        output = self.apply_dropout(self.prelu3(self.in_3(self.conv_inblock2(output))))
+        return self.prelu4(self.in_4(self.conv_pooling(output)))
+
     def forward_without_batch_normalization(self,x):
         output = self.conv_input(x)
         output = self.apply_dropout(self.prelu1(output))
@@ -146,18 +180,23 @@ class encoder_block_2d(nn.Module):
     def forward(self, x):
         if self.use_batch_normalization:
             return self.forward_with_batch_normalization(x)
+        elif self.use_instance_normalization:
+            return self.forward_with_instance_normalization(x)
         else:
             return self.forward_without_batch_normalization(x)
 
 # quicksilver style 2d decoder
 class decoder_block_2d(nn.Module):
-    def __init__(self, input_feature, output_feature, pooling_filter,use_dropout, use_batch_normalization, dim, last_block=False):
+    def __init__(self, input_feature, output_feature, pooling_filter,use_dropout, use_batch_normalization, use_instance_normalization, dim, last_block=False):
         super(decoder_block_2d, self).__init__()
         # todo: check padding here, not sure if it is the right thing to do
 
+        if use_batch_normalization and use_instance_normalization:
+            raise ValueError('Instance and batch normalization cannot be used together')
+
         self.dim = dim
 
-        if use_batch_normalization:
+        if use_batch_normalization or use_instance_normalization:
             conv_bias = False
         else:
             conv_bias = True
@@ -187,8 +226,16 @@ class decoder_block_2d(nn.Module):
             if not last_block:
                 self.bn_4 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
 
+        if use_instance_normalization:
+            self.in_1 = DimInstanceNorm(self.dim)(input_feature,momentum=batch_norm_momentum_val)
+            self.in_2 = DimInstanceNorm(self.dim)(input_feature,momentum=batch_norm_momentum_val)
+            self.in_3 = DimInstanceNorm(self.dim)(input_feature,momentum=batch_norm_momentum_val)
+            if not last_block:
+                self.in_4 = DimInstanceNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
+
         self.use_dropout = use_dropout
         self.use_batch_normalization = use_batch_normalization
+        self.use_instance_normalization = use_instance_normalization
         self.last_block = last_block
         self.dropout = nn.Dropout(0.2)
         self.output_feature = output_feature
@@ -208,6 +255,15 @@ class decoder_block_2d(nn.Module):
         else:  # generates intermediate results
             return self.apply_dropout(self.prelu4(self.bn_4(self.conv_output(output))))
 
+    def forward_with_instance_normalization(self,x):
+        output = self.prelu1(self.in_1(self.conv_unpooling(x)))
+        output = self.apply_dropout(self.prelu2(self.in_2(self.conv_inblock1(output))))
+        output = self.apply_dropout(self.prelu3(self.in_3(self.conv_inblock2(output))))
+        if self.last_block:  # generates final output
+            return self.conv_output(output);
+        else:  # generates intermediate results
+            return self.apply_dropout(self.prelu4(self.in_4(self.conv_output(output))))
+
     def forward_without_batch_normalization(self,x):
         output = self.prelu1(self.conv_unpooling(x))
         output = self.apply_dropout(self.prelu2(self.conv_inblock1(output)))
@@ -220,64 +276,40 @@ class decoder_block_2d(nn.Module):
     def forward(self, x):
         if self.use_batch_normalization:
             return self.forward_with_batch_normalization(x)
+        elif self.use_instance_normalization:
+            return self.forward_with_instance_normalization(x)
         else:
             return self.forward_without_batch_normalization(x)
 
 
 # actual definitions of the UNets
 
-class encoder_decoder_small(nn.Module):
-    """
-    unet include 2 down path (1/4)  and 2 up path (4)
-    """
-    def __init__(self, dim, n_in_channel, n_out_channel):
-        # each dimension of the input should be 16x
-        super(encoder_decoder_small,self).__init__()
-        self.down_path_1 = conv_bn_rel(dim, n_in_channel, 8, 4, stride=2, active_unit='relu', same_padding=True, bn=False)
-        self.down_path_2 = conv_bn_rel(dim, 8, 16, 4, stride=2, active_unit='relu', same_padding=True, bn=False)
-
-        # output_size = strides * (input_size-1) + kernel_size - 2*padding
-
-        self.up_path_2 = conv_bn_rel(dim, 16, 8, 4, stride=2, active_unit='relu', same_padding=True, bn=False,reverse=True)
-        self.up_path_1 = conv_bn_rel(dim, 8, n_out_channel, 4, stride=2, active_unit='None', same_padding=True, bn=False, reverse=True)
-
-    def forward(self, x):
-        d1 = self.down_path_1(x)
-        d2 = self.down_path_2(d1)
-
-        u2 = self.up_path_2(d2)
-        u1 = self.up_path_1(u2)
-
-        output = u1
-
-        return output
-
 class Unet(nn.Module):
     """
     unet include 4 down path (1/16)  and 4 up path (16)
     """
-    def __init__(self, dim, n_in_channel, n_out_channel, use_batch_normalization=True):
+    def __init__(self, dim, n_in_channel, n_out_channel, use_batch_normalization=False, use_instance_normalization=True):
         # each dimension of the input should be 16x
         super(Unet,self).__init__()
-        self.down_path_1 = conv_bn_rel(dim, n_in_channel, 16, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_2_1 = conv_bn_rel(dim, 16, 32, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_2_2 = conv_bn_rel(dim, 32, 32, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_4_1 = conv_bn_rel(dim, 32, 32, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_4_2 = conv_bn_rel(dim, 32, 32, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_8_1 = conv_bn_rel(dim, 32, 64, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_8_2 = conv_bn_rel(dim, 64, 64, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_16 = conv_bn_rel(dim, 64, 64, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization)
+        self.down_path_1 = conv_bn_in_rel(dim, n_in_channel, 16, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_2_1 = conv_bn_in_rel(dim, 16, 32, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_2_2 = conv_bn_in_rel(dim, 32, 32, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_4_1 = conv_bn_in_rel(dim, 32, 32, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_4_2 = conv_bn_in_rel(dim, 32, 32, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_8_1 = conv_bn_in_rel(dim, 32, 64, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_8_2 = conv_bn_in_rel(dim, 64, 64, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_16 = conv_bn_in_rel(dim, 64, 64, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
 
 
         # output_size = strides * (input_size-1) + kernel_size - 2*padding
-        self.up_path_8_1 = conv_bn_rel(dim, 64, 64, 2, stride=2, active_unit='leaky_relu', same_padding=False, bn=use_batch_normalization,reverse=True)
-        self.up_path_8_2 = conv_bn_rel(dim, 128, 64, 3, stride=1, active_unit='leaky_relu', same_padding=True, bn=use_batch_normalization)
-        self.up_path_4_1 = conv_bn_rel(dim, 64, 64, 2, stride=2, active_unit='leaky_relu', same_padding=False, bn=use_batch_normalization,reverse=True)
-        self.up_path_4_2 = conv_bn_rel(dim, 96, 32, 3, stride=1, active_unit='leaky_relu', same_padding=True, bn=use_batch_normalization)
-        self.up_path_2_1 = conv_bn_rel(dim, 32, 32, 2, stride=2, active_unit='leaky_relu', same_padding=False, bn=use_batch_normalization,reverse=True)
-        self.up_path_2_2 = conv_bn_rel(dim, 64, 8, 3, stride=1, active_unit='leaky_relu', same_padding=True, bn=use_batch_normalization)
-        self.up_path_1_1 = conv_bn_rel(dim, 8, 8, 2, stride=2, active_unit='None', same_padding=False, bn=use_batch_normalization, reverse=True)
-        self.up_path_1_2 = conv_bn_rel(dim, 24, n_out_channel, 3, stride=1, active_unit='None', same_padding=True, bn=use_batch_normalization)
+        self.up_path_8_1 = conv_bn_in_rel(dim, 64, 64, 2, stride=2, active_unit='leaky_relu', same_padding=False, bn=use_batch_normalization, inn=use_instance_normalization, reverse=True)
+        self.up_path_8_2 = conv_bn_in_rel(dim, 128, 64, 3, stride=1, active_unit='leaky_relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.up_path_4_1 = conv_bn_in_rel(dim, 64, 64, 2, stride=2, active_unit='leaky_relu', same_padding=False, bn=use_batch_normalization, inn=use_instance_normalization,reverse=True)
+        self.up_path_4_2 = conv_bn_in_rel(dim, 96, 32, 3, stride=1, active_unit='leaky_relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.up_path_2_1 = conv_bn_in_rel(dim, 32, 32, 2, stride=2, active_unit='leaky_relu', same_padding=False, bn=use_batch_normalization, inn=use_instance_normalization,reverse=True)
+        self.up_path_2_2 = conv_bn_in_rel(dim, 64, 8, 3, stride=1, active_unit='leaky_relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.up_path_1_1 = conv_bn_in_rel(dim, 8, 8, 2, stride=2, active_unit='None', same_padding=False, bn=use_batch_normalization, inn=use_instance_normalization, reverse=True)
+        self.up_path_1_2 = conv_bn_in_rel(dim, 24, n_out_channel, 3, stride=1, active_unit='None', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
 
     def forward(self, x):
         d1 = self.down_path_1(x)
@@ -305,7 +337,7 @@ batch_norm_momentum_val = 0.1
 
 class Simple_consistent(nn.Module):
 
-    def __init__(self, dim, n_in_channel, n_out_channel, use_batch_normalization=True):
+    def __init__(self, dim, n_in_channel, n_out_channel, use_batch_normalization=False, use_instance_normalization=True):
 
         super(Simple_consistent, self).__init__()
 
@@ -318,6 +350,8 @@ class Simple_consistent(nn.Module):
         self.params = pars.ParameterDict()
         self.kernel_sizes = self.params[('kernel_sizes', [7, 7], 'size of the convolution kernels')]
         self.use_batch_normalization = self.params[('use_batch_normalization', use_batch_normalization, 'If true, uses batch normalization between layers')]
+        self.use_instance_normalization = self.params[('use_instance_normalization', use_instance_normalization, 'If true, uses instance normalization between layers')]
+
 
         # check that all the kernel-size are odd
         for ks in self.kernel_sizes:
@@ -337,6 +371,7 @@ class Simple_consistent(nn.Module):
 
         self.conv_layers = None
         self.batch_normalizations = None
+        self.instance_normalizations = None
 
         # needs to be initialized here, otherwise the optimizer won't see the modules from ModuleList
         # todo: figure out how to do ModuleList initialization not in __init__
@@ -385,6 +420,17 @@ class Simple_consistent(nn.Module):
             for b in batch_normalizations:
                 self.batch_normalizations.append(b)
 
+        if self.use_instance_normalization:
+
+            instance_normalizations = [None] * (self.nr_of_layers - 1)  # not on the last layer
+            for b in range(self.nr_of_layers - 1):
+                instance_normalizations[b] = DimInstanceNorm(self.dim)(self.nr_of_features_per_layer[b],
+                                                                 momentum=batch_norm_momentum_val)
+
+            self.instance_normalization = nn.ModuleList()
+            for b in instance_normalizations:
+                self.instance_normalizations.append(b)
+
         #self._initialize_weights()
 
     def forward(self, x):
@@ -392,12 +438,18 @@ class Simple_consistent(nn.Module):
         # now let's apply all the convolution layers, until the last
         # (because the last one is not relu-ed
 
-        if self.batch_normalizations:
+        if self.use_batch_normalization:
             for l in range(len(self.conv_layers) - 1):
                 if self.use_relu:
                     x = F.relu(self.batch_normalizations[l](self.conv_layers[l](x)))
                 else:
                     x = F.sigmoid(self.batch_normalizations[l](self.conv_layers[l](x)))
+        elif self.use_instance_normalization:
+            for l in range(len(self.conv_layers) - 1):
+                if self.use_relu:
+                    x = F.relu(self.instance_normalizations[l](self.conv_layers[l](x)))
+                else:
+                    x = F.sigmoid(self.instance_normalizations[l](self.conv_layers[l](x)))
         else:
             for l in range(len(self.conv_layers) - 1):
                 if self.use_relu:
@@ -425,28 +477,28 @@ class Unet_no_skip(nn.Module):
     """
     unet include 4 down path (1/16)  and 4 up path (16)
     """
-    def __init__(self, dim, n_in_channel, n_out_channel, use_batch_normalization=True):
+    def __init__(self, dim, n_in_channel, n_out_channel, use_batch_normalization=False, use_instance_normalization=True):
         # each dimension of the input should be 16x
         super(Unet_no_skip,self).__init__()
-        self.down_path_1 = conv_bn_rel(dim, n_in_channel, 16, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_2_1 = conv_bn_rel(dim, 16, 32, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_2_2 = conv_bn_rel(dim, 32, 32, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_4_1 = conv_bn_rel(dim, 32, 32, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_4_2 = conv_bn_rel(dim, 32, 32, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_8_1 = conv_bn_rel(dim, 32, 64, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_8_2 = conv_bn_rel(dim, 64, 64, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization)
-        self.down_path_16 = conv_bn_rel(dim, 64, 64, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization)
+        self.down_path_1 = conv_bn_in_rel(dim, n_in_channel, 16, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_2_1 = conv_bn_in_rel(dim, 16, 32, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_2_2 = conv_bn_in_rel(dim, 32, 32, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_4_1 = conv_bn_in_rel(dim, 32, 32, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_4_2 = conv_bn_in_rel(dim, 32, 32, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_8_1 = conv_bn_in_rel(dim, 32, 64, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_8_2 = conv_bn_in_rel(dim, 64, 64, 3, stride=1, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.down_path_16 = conv_bn_in_rel(dim, 64, 64, 3, stride=2, active_unit='relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
 
 
         # output_size = strides * (input_size-1) + kernel_size - 2*padding
-        self.up_path_8_1 = conv_bn_rel(dim, 64, 64, 2, stride=2, active_unit='leaky_relu', same_padding=False, bn=use_batch_normalization,reverse=True)
-        self.up_path_8_2 = conv_bn_rel(dim, 64, 64, 3, stride=1, active_unit='leaky_relu', same_padding=True, bn=use_batch_normalization)
-        self.up_path_4_1 = conv_bn_rel(dim, 64, 64, 2, stride=2, active_unit='leaky_relu', same_padding=False, bn=use_batch_normalization,reverse=True)
-        self.up_path_4_2 = conv_bn_rel(dim, 64, 32, 3, stride=1, active_unit='leaky_relu', same_padding=True, bn=use_batch_normalization)
-        self.up_path_2_1 = conv_bn_rel(dim, 32, 32, 2, stride=2, active_unit='leaky_relu', same_padding=False, bn=use_batch_normalization,reverse=True)
-        self.up_path_2_2 = conv_bn_rel(dim, 32, 8, 3, stride=1, active_unit='leaky_relu', same_padding=True, bn=use_batch_normalization)
-        self.up_path_1_1 = conv_bn_rel(dim, 8, 8, 2, stride=2, active_unit='None', same_padding=False, bn=use_batch_normalization, reverse=True)
-        self.up_path_1_2 = conv_bn_rel(dim, 8, n_out_channel, 3, stride=1, active_unit='None', same_padding=True, bn=use_batch_normalization)
+        self.up_path_8_1 = conv_bn_in_rel(dim, 64, 64, 2, stride=2, active_unit='leaky_relu', same_padding=False, bn=use_batch_normalization, inn=use_instance_normalization,reverse=True)
+        self.up_path_8_2 = conv_bn_in_rel(dim, 64, 64, 3, stride=1, active_unit='leaky_relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.up_path_4_1 = conv_bn_in_rel(dim, 64, 64, 2, stride=2, active_unit='leaky_relu', same_padding=False, bn=use_batch_normalization, inn=use_instance_normalization,reverse=True)
+        self.up_path_4_2 = conv_bn_in_rel(dim, 64, 32, 3, stride=1, active_unit='leaky_relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.up_path_2_1 = conv_bn_in_rel(dim, 32, 32, 2, stride=2, active_unit='leaky_relu', same_padding=False, bn=use_batch_normalization, inn=use_instance_normalization,reverse=True)
+        self.up_path_2_2 = conv_bn_in_rel(dim, 32, 8, 3, stride=1, active_unit='leaky_relu', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
+        self.up_path_1_1 = conv_bn_in_rel(dim, 8, 8, 2, stride=2, active_unit='None', same_padding=False, bn=use_batch_normalization, inn=use_instance_normalization, reverse=True)
+        self.up_path_1_2 = conv_bn_in_rel(dim, 8, n_out_channel, 3, stride=1, active_unit='None', same_padding=True, bn=use_batch_normalization, inn=use_instance_normalization)
 
     def forward(self, x):
         d1 = self.down_path_1(x)
