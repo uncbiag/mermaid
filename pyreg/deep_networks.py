@@ -6,8 +6,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import set_pyreg_paths
-import pyreg.deep_smoothers as deep_smoothers
 import pyreg.finite_differences as fd
 import pyreg.module_parameters as pars
 
@@ -90,6 +88,141 @@ class conv_bn_rel(nn.Module):
 
 
 ###########################################
+
+# Quicksilver style 2d encoder
+class encoder_block_2d(nn.Module):
+    def __init__(self, input_feature, output_feature, use_dropout, use_batch_normalization,dim):
+        super(encoder_block_2d, self).__init__()
+        self.dim = dim
+
+        if use_batch_normalization:
+            conv_bias = False
+        else:
+            conv_bias = True
+
+        self.conv_input = DimConv(self.dim)(in_channels=input_feature, out_channels=output_feature,
+                                    kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
+        self.conv_inblock1 = DimConv(self.dim)(in_channels=output_feature, out_channels=output_feature,
+                                       kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
+        self.conv_inblock2 = DimConv(self.dim)(in_channels=output_feature, out_channels=output_feature,
+                                       kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
+        self.conv_pooling = DimConv(self.dim)(in_channels=output_feature, out_channels=output_feature,
+                                      kernel_size=2, stride=2, padding=0, dilation=1,bias=conv_bias)
+        self.prelu1 = nn.PReLU()
+        self.prelu2 = nn.PReLU()
+        self.prelu3 = nn.PReLU()
+        self.prelu4 = nn.PReLU()
+
+        if use_batch_normalization:
+            self.bn_1 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
+            self.bn_2 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
+            self.bn_3 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
+            self.bn_4 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
+
+        self.use_dropout = use_dropout
+        self.use_batch_normalization = use_batch_normalization
+        self.dropout = nn.Dropout(0.2)
+
+    def apply_dropout(self, input):
+        if self.use_dropout:
+            return self.dropout(input)
+        else:
+            return input
+
+    def forward_with_batch_normalization(self,x):
+        output = self.conv_input(x)
+        output = self.apply_dropout(self.prelu1(self.bn_1(output)))
+        output = self.apply_dropout(self.prelu2(self.bn_2(self.conv_inblock1(output))))
+        output = self.apply_dropout(self.prelu3(self.bn_3(self.conv_inblock2(output))))
+        return self.prelu4(self.bn_4(self.conv_pooling(output)))
+
+    def forward_without_batch_normalization(self,x):
+        output = self.conv_input(x)
+        output = self.apply_dropout(self.prelu1(output))
+        output = self.apply_dropout(self.prelu2(self.conv_inblock1(output)))
+        output = self.apply_dropout(self.prelu3(self.conv_inblock2(output)))
+        return self.prelu4(self.conv_pooling(output))
+
+    def forward(self, x):
+        if self.use_batch_normalization:
+            return self.forward_with_batch_normalization(x)
+        else:
+            return self.forward_without_batch_normalization(x)
+
+# quicksilver style 2d decoder
+class decoder_block_2d(nn.Module):
+    def __init__(self, input_feature, output_feature, pooling_filter,use_dropout, use_batch_normalization, dim, last_block=False):
+        super(decoder_block_2d, self).__init__()
+        # todo: check padding here, not sure if it is the right thing to do
+
+        self.dim = dim
+
+        if use_batch_normalization:
+            conv_bias = False
+        else:
+            conv_bias = True
+
+        self.conv_unpooling = DimConvTranspose(self.dim)(in_channels=input_feature, out_channels=input_feature,
+                                                 kernel_size=pooling_filter, stride=2, padding=0,output_padding=0,bias=conv_bias)
+        self.conv_inblock1 = DimConv(self.dim)(in_channels=input_feature, out_channels=input_feature,
+                                       kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
+        self.conv_inblock2 = DimConv(self.dim)(in_channels=input_feature, out_channels=input_feature,
+                                       kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
+        if last_block:
+            self.conv_output = DimConv(self.dim)(in_channels=input_feature, out_channels=output_feature,
+                                         kernel_size=3, stride=1, padding=1, dilation=1)
+        else:
+            self.conv_output = DimConv(self.dim)(in_channels=input_feature, out_channels=output_feature,
+                                         kernel_size=3, stride=1, padding=1, dilation=1,bias=conv_bias)
+
+        self.prelu1 = nn.PReLU()
+        self.prelu2 = nn.PReLU()
+        self.prelu3 = nn.PReLU()
+        self.prelu4 = nn.PReLU()
+
+        if use_batch_normalization:
+            self.bn_1 = DimBatchNorm(self.dim)(input_feature,momentum=batch_norm_momentum_val)
+            self.bn_2 = DimBatchNorm(self.dim)(input_feature,momentum=batch_norm_momentum_val)
+            self.bn_3 = DimBatchNorm(self.dim)(input_feature,momentum=batch_norm_momentum_val)
+            if not last_block:
+                self.bn_4 = DimBatchNorm(self.dim)(output_feature,momentum=batch_norm_momentum_val)
+
+        self.use_dropout = use_dropout
+        self.use_batch_normalization = use_batch_normalization
+        self.last_block = last_block
+        self.dropout = nn.Dropout(0.2)
+        self.output_feature = output_feature
+
+    def apply_dropout(self, input):
+        if self.use_dropout:
+            return self.dropout(input)
+        else:
+            return input
+
+    def forward_with_batch_normalization(self,x):
+        output = self.prelu1(self.bn_1(self.conv_unpooling(x)))
+        output = self.apply_dropout(self.prelu2(self.bn_2(self.conv_inblock1(output))))
+        output = self.apply_dropout(self.prelu3(self.bn_3(self.conv_inblock2(output))))
+        if self.last_block:  # generates final output
+            return self.conv_output(output);
+        else:  # generates intermediate results
+            return self.apply_dropout(self.prelu4(self.bn_4(self.conv_output(output))))
+
+    def forward_without_batch_normalization(self,x):
+        output = self.prelu1(self.conv_unpooling(x))
+        output = self.apply_dropout(self.prelu2(self.conv_inblock1(output)))
+        output = self.apply_dropout(self.prelu3(self.conv_inblock2(output)))
+        if self.last_block:  # generates final output
+            return self.conv_output(output);
+        else:  # generates intermediate results
+            return self.apply_dropout(self.prelu4(self.conv_output(output)))
+
+    def forward(self, x):
+        if self.use_batch_normalization:
+            return self.forward_with_batch_normalization(x)
+        else:
+            return self.forward_without_batch_normalization(x)
+
 
 # actual definitions of the UNets
 
@@ -280,6 +413,7 @@ class Simple_consistent(nn.Module):
         # now we are ready for the weighted softmax (will be like softmax if no weights are specified)
 
         if self.estimate_around_global_weights:
+            import pyreg.deep_smoothers as deep_smoothers
             weights = deep_smoothers.weighted_softmax(x, dim=1, weights=self.global_multi_gaussian_weights)
         else:
             weights = F.softmax(x, dim=1)
@@ -391,6 +525,8 @@ class TotalVariationLoss(nn.Module):
     # todo: merge this with the code in deep_smoothers.py
     def compute_local_weighted_tv_norm(self, I, weights, spacing, nr_of_gaussians, use_color_tv, pnorm=2):
 
+        import pyreg.deep_smoothers as deep_smoothers
+
         volumeElement = spacing.prod()
         if use_color_tv:
             individual_sum_of_total_variation_penalty = MyTensor(nr_of_gaussians).zero_()
@@ -480,6 +616,8 @@ class ClusteringLoss(nn.Module):
             raise ValueError('Only defined for dimensions {1,2,3}')
 
     def forward(self, input_images, spacing, label_probabilities):
+        import pyreg.deep_smoothers as deep_smoothers
+
         # first compute the weighting functions
         localized_edge_penalty = deep_smoothers.compute_localized_edge_penalty(input_images[:,0,...],spacing,self.params)
 

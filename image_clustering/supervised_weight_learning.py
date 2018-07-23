@@ -13,6 +13,7 @@ import set_pyreg_paths
 import pyreg.fileio as FIO
 import pyreg.module_parameters as pars
 import pyreg.deep_smoothers as deep_smoothers
+import pyreg.deep_networks as dn
 
 from pyreg.data_wrapper import MyTensor, AdaptVal, USE_CUDA
 
@@ -20,8 +21,6 @@ device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else 
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-import deep_networks as dn
 
 # create a dataloader
 
@@ -108,7 +107,8 @@ image_offset = 1.0
 
 # todo: read this values from the configuration file
 nr_of_weights = 4
-global_multi_gaussian_weights = torch.from_numpy(np.array([0.25,0.25,0.25,0.25],dtype='float32'))
+#global_multi_gaussian_weights = torch.from_numpy(np.array([0.25,0.25,0.25,0.25],dtype='float32'))
+global_multi_gaussian_weights = torch.from_numpy(np.array([0.0,0.0,0.0,1.0],dtype='float32'))
 gaussian_stds = torch.from_numpy(np.array([0.01,0.05,0.1,0.2],dtype='float32'))
 
 use_batch_normalization = True
@@ -122,8 +122,8 @@ if reconstruct_stds and reconstruct_variances:
 display_colorbar = True
 
 reconstruction_weight = 1000.0
-totalvariation_weight = 0.05
-omt_weight = 1.0
+totalvariation_weight = 0.01
+omt_weight = 2.5
 omt_power=2.0
 omt_use_log_transformed_std=True
 lr = 0.1
@@ -185,8 +185,8 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
         # forward + backward + optimize
         reconstruction_outputs = reconstruction_unet(inputs)
         #pre_weights = deep_smoothers.weighted_softmax(reconstruction_outputs, dim=1, weights=global_multi_gaussian_weights)
-        #pre_weights = deep_smoothers.weighted_linear_softmax(reconstruction_outputs, dim=1, weights=global_multi_gaussian_weights)
-        pre_weights = deep_smoothers.stable_softmax(reconstruction_outputs, dim=1)
+        pre_weights = deep_smoothers.weighted_linear_softmax(reconstruction_outputs, dim=1, weights=global_multi_gaussian_weights)
+        #pre_weights = deep_smoothers.stable_softmax(reconstruction_outputs, dim=1)
 
         # enforce minimum weight for numerical reasons
         # todo: check if this is really needed, this was for the sqrt

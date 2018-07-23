@@ -922,9 +922,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.network_penalty = params[('network_penalty', 0.0, 'factor by which the L2 norm of network weights is penalized')]
         """penalty factor for L2 norm of network weights"""
 
-        self.encourage_spatial_weight_consistency = params[('encourage_spatial_weight_consistency',True,'If True tries adds an averaging term in the network to make weights spatially consistent')]
-        """If set to true predicted weights are first spatially averaged before normalization in network"""
-
         self.optimize_over_smoother_stds = params[('optimize_over_smoother_stds', False, 'if set to true the smoother will optimize over standard deviations')]
         """determines if we should optimize over the smoother standard deviations"""
 
@@ -1227,15 +1224,13 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                 # v is actually the vector-valued momentum here; changed the interface to pass this also
                 smoothed_v = self.ws(I=I, additional_inputs=additional_inputs, global_multi_gaussian_weights=self.get_gaussian_weights(),
                                      gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
-                                     encourage_spatial_weight_consistency=self.encourage_spatial_weight_consistency,
                                      retain_weights=self.debug_retain_computed_local_weights)
 
                 self.debug_computed_local_weights = self.ws.get_computed_weights()
                 self.debug_computed_local_pre_weights = self.ws.get_computed_pre_weights()
             else:
                 smoothed_v = self.ws(I=I, additional_inputs=additional_inputs, global_multi_gaussian_weights=self.get_gaussian_weights(),
-                                     gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
-                                     encourage_spatial_weight_consistency=self.encourage_spatial_weight_consistency)
+                                     gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator)
         else:
             # if we are either not optimizing over the deep network or we are computing the energy of the regularizer
 

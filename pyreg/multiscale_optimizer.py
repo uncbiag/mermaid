@@ -874,8 +874,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         c_params = self.params[('optimizer', {}, 'optimizer settings')]
         self.weight_clipping_type = c_params[('weight_clipping_type','None','Type of weight clipping that should be used [l1|l2|l1_individual|l2_individual|l1_shared|l2_shared|None]')]
+        self.weight_clipping_type = self.weight_clipping_type.lower()
         """Type of weight clipping; applied to weights and bias indepdenendtly; norm restricted to weight_clipping_value"""
-        if self.weight_clipping_type=='None':
+        if self.weight_clipping_type=='none':
             self.weight_clipping_type = None
         if self.weight_clipping_type!='pre_lsm_weights':
             self.weight_clipping_value = c_params[('weight_clipping_value', 1.0, 'Value to which the norm is being clipped')]
