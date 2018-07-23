@@ -15,12 +15,12 @@ from pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
 
 if sys.version_info >= (3, 0):
     if USE_CUDA:
-        from pyreg.libraries._ext_p3 import my_lib_1D, my_lib_2D, my_lib_3D
-    from pyreg.libraries._ext_p3 import my_lib_nd
+        from pyreg.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
+    from pyreg.libraries._ext import my_lib_nd
 else:
     if USE_CUDA:
-        from pyreg.libraries._ext_p2 import my_lib_1D, my_lib_2D, my_lib_3D
-    from pyreg.libraries._ext_p2 import my_lib_nd
+        from pyreg.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
+    from pyreg.libraries._ext import my_lib_nd
 
 from . import map_scale_utils
 

@@ -8,7 +8,6 @@ from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import torch
-from torch.autograd import Variable
 
 from . import finite_differences as fd
 from .data_wrapper import MyTensor
@@ -49,7 +48,7 @@ class Regularizer(with_metaclass(ABCMeta, object)):
         :return: Regularizer energy
         """
         szv = v.size()
-        reg = Variable(MyTensor(1).zero_(), requires_grad=False)
+        reg = MyTensor(1).zero_()
         for nrI in range(szv[0]): # loop over number of images
             reg = reg + self._compute_regularizer(v[nrI, ...])
         return reg
@@ -294,14 +293,14 @@ class HelmholtzRegularizer(Regularizer):
             raise ValueError('Regularizer is currently only supported in dimensions 1 to 3')
 
     def _compute_regularizer_1d(self, v, alpha, gamma):
-        Lv = Variable(MyTensor(v.size()).zero_(), requires_grad=False)
+        Lv = MyTensor(v.size()).zero_()
         # None is refer to batch, which is added here for compatibility, the following [0] is used for this reason
         Lv[0,:] = v[0,:] * gamma - self.fdt.lap(v[None,0,:])[0] * alpha
         # now compute the norm
         return (Lv[0,:] ** 2).sum()*self.volumeElement
 
     def _compute_regularizer_2d(self, v, alpha, gamma):
-        Lv = Variable(MyTensor(v.size()).zero_(), requires_grad=False)
+        Lv = MyTensor(v.size()).zero_()
         for i in [0, 1]:
             # None is refer to batch, which is added here for compatibility, the following [0] is used for this reason
             Lv[i,:, :] = v[i,:, :] * gamma - self.fdt.lap(v[None, i,:, :])[0] * alpha
@@ -310,7 +309,7 @@ class HelmholtzRegularizer(Regularizer):
         return (Lv[0,:, :] ** 2 + Lv[1,:, :] ** 2).sum()*self.volumeElement
 
     def _compute_regularizer_3d(self, v, alpha, gamma):
-        Lv = Variable(MyTensor(v.size()).zero_(), requires_grad=False)
+        Lv = MyTensor(v.size()).zero_()
         for i in [0, 1, 2]:
             # None is refer to batch, which is added here for compatibility, the following [0] is used for this reason
             Lv[i,:, :, :] = v[i,:, :, :] * gamma - self.fdt.lap(v[None,i,:, :, :])[0] * alpha

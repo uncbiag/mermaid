@@ -8,7 +8,6 @@ from builtins import range
 from builtins import object
 from abc import ABCMeta, abstractmethod
 import torch
-from torch.autograd import Variable
 from .data_wrapper import AdaptVal
 from .data_wrapper import MyTensor
 from . import utils
@@ -48,7 +47,7 @@ class SimilarityMeasure(with_metaclass(ABCMeta, object)):
         :return: returns similarity measure
         """
         sz = I0.size()
-        sim = Variable(torch.zeros(1), requires_grad=False).type_as(I0)
+        sim = torch.zeros(1).type_as(I0)
 
         if I0Source is None and phi is None:
             for nrI in range(sz[0]):  # loop over all the images
@@ -80,7 +79,7 @@ class SimilarityMeasure(with_metaclass(ABCMeta, object)):
         :return: returns similarity measure
         """
         sz = I0.size()
-        sim = Variable(torch.zeros(1), requires_grad=False).type_as(I0)
+        sim = torch.zeros(1).type_as(I0)
 
         if I0Source is None:
             for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same; if available map is the same for all channels
@@ -200,13 +199,13 @@ class OptimalMassTransportSimilarity(SimilarityMeasure):
         I1_warped = utils.compute_warped_image(I0Source, phi, self.spacing,self.spline_order)
 
         # Encapsulate the data in tensor Variables
-        multiplier0 = Variable(torch.zeros(I0.size()))
-        multiplier1 = Variable(torch.zeros(I1.size()))
-        nr_iterations_sinkhorn = Variable(torch.Tensor([self.sinkhorn_iterations]))
-        std_sink = Variable(torch.Tensor([self.std_sinkhorn]))
+        multiplier0 = torch.zeros(I0.size())
+        multiplier1 = torch.zeros(I1.size())
+        nr_iterations_sinkhorn = torch.Tensor([self.sinkhorn_iterations])
+        std_sink = torch.Tensor([self.std_sinkhorn])
 
         # Compute the actual similarity
-        result = OTSimilarityHelper.apply(phi,I1_warped,I1,multiplier0,multiplier1,Variable(torch.Tensor(self.spacing)),nr_iterations_sinkhorn,std_sink)
+        result = OTSimilarityHelper.apply(phi,I1_warped,I1,multiplier0,multiplier1,torch.Tensor(self.spacing),nr_iterations_sinkhorn,std_sink)
         return result/(self.std_dev**2)
 
 class NCCSimilarity(SimilarityMeasure):

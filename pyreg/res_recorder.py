@@ -1,10 +1,11 @@
 from __future__ import print_function
-from builtins import str
-from builtins import object
+# from builtins import str
+# from builtins import object
 import pandas as pd
 from openpyxl import load_workbook
 import numpy as np
 import os
+from pyreg.data_utils import make_dir
 
 class XlsxRecorder(object):
     """
@@ -20,9 +21,16 @@ class XlsxRecorder(object):
     2. task results: saved in ../data/summary.xlsx
         ** Sheet1: task_name * #metrics recorded by iteration
     """
-    def __init__(self, expr_name,  saving_path):
+    def __init__(self, expr_name, saving_path='', folder_name=''):
         self.expr_name = expr_name
-        self.saving_path = saving_path
+        if not len(saving_path):
+            self.saving_path = '../data/'+expr_name  #saving_path
+        else:
+            self.saving_path = saving_path
+        self.saving_path = os.path.abspath(self.saving_path)
+        self.folder_name = folder_name
+        if len(folder_name):
+            self.saving_path = os.path.join(self.saving_path, folder_name)
         """path of saving excel, default is the same as the path of saving figures"""
         self.writer_path = None
         self.xlsx_writer =  None
@@ -143,6 +151,7 @@ class XlsxRecorder(object):
             metric_avg_dic = self.merge_from_avg_buff()
             self.saving_label_averaged_results(metric_avg_dic)
             self.saving_summary(metric_avg_dic)
+            self.save_figs_for_batch(metric_avg_dic)
             self.xlsx_writer.close()
             self.summary_writer.close()
         else:
@@ -162,7 +171,10 @@ class XlsxRecorder(object):
             iter_expand = {metric: np.squeeze(np.concatenate((results[iter_info][metric], results_summary[iter_info][metric]), 0)) for metric in self.measures}
             df = pd.DataFrame.from_dict(iter_expand)
             df = df[self.measures]
-            df.index = pd.Index(self.name_list_buffer+['average'])
+            try:
+                df.index = pd.Index(self.name_list_buffer+['average'])
+            except:
+                print("DEBUGGING !!, the iter_expand is {},\n  self.name_list_buffer is {},\n results summary is {} \n results{}\n".format(iter_expand,self.name_list_buffer, results_summary,results))
             df.to_excel(self.xlsx_writer, sheet_name=self.sheet_name, startcol=start_column, index_label=iter_info)
             start_column += self.column_space
         self.xlsx_writer.save()
@@ -183,7 +195,7 @@ class XlsxRecorder(object):
         results_summary = {metric+iter_info: np.mean(results[iter_info][metric]).reshape(1) for metric in self.measures for iter_info in self.iter_info_buffer}
         df = pd.DataFrame.from_dict(results_summary)
         df = df[col_name_list]
-        df.index = pd.Index([self.expr_name])
+        df.index = pd.Index([self.expr_name+self.folder_name])
         startrow = self.summary_writer.sheets['Sheet1']._current_row + 1
         df.to_excel(self.summary_writer, startrow = startrow)
         self.summary_writer.save()
@@ -206,7 +218,10 @@ class XlsxRecorder(object):
         df = pd.DataFrame.from_dict(formated_data)
         df.index = pd.Index(row_index)
         df = df[column_index]
-        df.to_excel(self.xlsx_writer, sheet_name=self.sheet_name, startrow= self.start_row, index_label= iter_info)
+        try:
+            df.to_excel(self.xlsx_writer, sheet_name=self.sheet_name, startrow= self.start_row, index_label= iter_info)
+        except:
+            df.to_excel(self.xlsx_writer, sheet_name=self.sheet_name, startrow=self.start_row, index_label=iter_info)
         worksheet = self.xlsx_writer.sheets[self.sheet_name]
         #worksheet.set_column(1,1000, 30)
         self.xlsx_writer.save()
@@ -214,3 +229,34 @@ class XlsxRecorder(object):
 
 
 
+    def save_figs_for_batch(self,results_summary):
+        """
+        the function will plot the dice score for each batch and
+        :return:
+        """
+        from matplotlib import pyplot as plt
+        import numpy as np
+
+        plt.style.use('fivethirtyeight')
+        img_num = len(self.name_list_buffer)
+        iter_num = len(self.iter_info_buffer)
+        img_dice_np = np.zeros([img_num,iter_num])-1
+        x_axis = list(range(iter_num))
+
+        for j,iter_info in enumerate(self.iter_info_buffer):
+            for i in range(img_num):
+                img_dice_np[i,j] = results_summary[iter_info]['dice'][i][0]
+
+        fig, ax = plt.subplots()
+        for i in range(img_num):
+            ax.plot(x_axis, img_dice_np[i,:],label=self.name_list_buffer[i])
+
+        ax.legend( prop={'size': 4})
+        ax.set( ylabel='average_dice',
+               title='dice score for each sample')
+        plt.xticks(x_axis)
+        ax.set_xticklabels(self.iter_info_buffer,fontdict={'fontsize':5})
+        for tick in ax.get_xticklabels():
+            tick.set_rotation(55)
+        path  = os.path.join(self.saving_path, 'images_dice_iter.png')
+        plt.savefig(path,dpi=300, bbox_inches='tight')

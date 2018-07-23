@@ -49,8 +49,8 @@ class Test_registration_algorithms(unittest.TestCase):
         self.sz = np.array(I0.shape)
 
         # create the source and target image as pyTorch variables
-        self.ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
-        self.ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
+        self.ISource = AdaptVal(torch.from_numpy(I0.copy()))
+        self.ITarget = AdaptVal(torch.from_numpy(I1))
 
         # smooth both a little bit
         self.params[('image_smoothing', {}, 'image smoothing settings')]
@@ -277,13 +277,12 @@ class Test_registration_algorithms(unittest.TestCase):
         so.get_optimizer().set_visualization(False)
         so.set_light_analysis_on(True)
         so.register()
-
-        # E = [0.12390037], similarityE = [0.11124722], regE = [0.01265315], relF = [0.01015974]
+        # E=[0.12413108], simE=[0.11151054], regE=0.012620546855032444
         energy = so.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.12390037, decimal=4)
-        npt.assert_almost_equal(energy[1], 0.11124722, decimal=4)
-        npt.assert_almost_equal(energy[2], 0.01265315, decimal=4)
+        npt.assert_almost_equal(energy[0], 0.12413108, decimal=4)
+        npt.assert_almost_equal(energy[1], 0.11151054, decimal=4)
+        npt.assert_almost_equal(energy[2], 0.012620546855032444, decimal=4)
 
     def test_svf_scalar_momentum_map_single_scale(self):
         self.params = pars.ParameterDict()
@@ -299,12 +298,12 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        # E = [0.16383654], similarityE = [0.15004958], regE = [0.01378695], relF = [0.00207442]
+        # E=[0.16388921], simE=[0.15010326], regE=0.013785961084067822
         energy = so.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.16383654, decimal = 4)
-        npt.assert_almost_equal(energy[1], 0.15004958, decimal = 4)
-        npt.assert_almost_equal(energy[2], 0.01378695, decimal = 4)
+        npt.assert_almost_equal(energy[0], 0.16388921, decimal = 4)
+        npt.assert_almost_equal(energy[1], 0.15010326, decimal = 4)
+        npt.assert_almost_equal(energy[2], 0.013785961084067822, decimal = 4)
 
     def test_svf_vector_momentum_image_single_scale(self):
 
@@ -342,12 +341,12 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        # E = [0.03567605], similarityE = [0.02147852], regE = [0.01419752], relF = [0.0002105]
+        # E=[0.03567663], simE=[0.02147915], regE=0.01419747807085514
         energy = so.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.03567605, decimal = 4)
-        npt.assert_almost_equal(energy[1], 0.02147852, decimal = 4)
-        npt.assert_almost_equal(energy[2], 0.01419752, decimal = 4)
+        npt.assert_almost_equal(energy[0], 0.03567663, decimal = 4)
+        npt.assert_almost_equal(energy[1], 0.02147915, decimal = 4)
+        npt.assert_almost_equal(energy[2], 0.01419747807085514, decimal = 4)
 
 
 def run_test_by_name( testName ):
@@ -356,6 +355,7 @@ def run_test_by_name( testName ):
     runner = unittest.TextTestRunner()
     runner.run(suite)
 
+run_test_by_name('test_svf_scalar_momentum_map_single_scale')
 #run_test_by_name('test_svf_vector_momentum_image_single_scale')
 #run_test_by_name('test_lddmm_shooting_map_single_scale')
 #run_test_by_name('test_lddmm_shooting_image_single_scale')

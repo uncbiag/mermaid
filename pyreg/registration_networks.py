@@ -16,10 +16,9 @@ Currently implemented:
 from __future__ import print_function
 from __future__ import absolute_import
 
-from builtins import str
+# from builtins import str
 import torch
 import torch.nn as nn
-from torch.autograd.variable import Variable
 from torch.nn.parameter import Parameter
 
 from . import rungekutta_integrators as RK
@@ -60,9 +59,9 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
         """image spacing"""
         self.params = params
         """ParameterDict() object for the parameters"""
-        self.nrOfImages = sz[0]
+        self.nrOfImages = int(sz[0])
         """the number of images, i.e., the batch size B"""
-        self.nrOfChannels = sz[1]
+        self.nrOfChannels = int(sz[1])
         """the number of image channels, i.e., C"""
 
         self._shared_parameters = set()
@@ -386,6 +385,15 @@ class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
         self.tTo = 1.
         """time to solve a model to"""
 
+        self.use_CFL_clamping = self.params[('use_CFL_clamping', True, 'If the model uses time integration, CFL clamping is used')]
+        """If the model uses time integration, then CFL clamping is used"""
+
+    def _use_CFL_clamping_if_desired(self,cfl_dt):
+        if self.use_CFL_clamping:
+            return cfl_dt
+        else:
+            return None
+
     def set_integration_tfrom(self,tFrom):
         """
         Sets the starging time for integration
@@ -605,7 +613,8 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
         :return: returns the image at the final time point (tTo)
         """
         pars_to_pass = utils.combine_dict({'I':I},self._get_default_dictionary_to_pass_to_integrator())
-        self.smoother.smooth(self.m,self.v,pars_to_pass,variables_from_optimizer)
+        self.smoother.smooth(self.m,self.v,pars_to_pass,variables_from_optimizer,
+                             smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
         I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
         return I1[0]
 
@@ -796,7 +805,7 @@ class RegistrationMapLoss(RegistrationLoss):
             maxDispSqr = utils.remove_infs_from_variable(dispSqr).max() # required to shield this from inf during the optimization
 
             dispPenalty = (torch.max((maxDispSqr - self.max_displacement_sqr),
-                                     Variable(MyTensor(sz).zero_(), requires_grad=False))).sum()
+                                     MyTensor(sz).zero_())).sum()
 
             reg = reg + dispPenalty
         else:
@@ -908,7 +917,7 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
         """
         m = self.m
         pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-        v = self.smoother.smooth(m,None,pars_to_pass,variables_from_optimizer)
+        v = self.smoother.smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
         batch_size = self.m.size()[0]
         return self.regularizer.compute_regularizer_multiN(v)/batch_size + self.smoother.get_penalty()
 
@@ -1070,9 +1079,10 @@ class AffineMapNet(RegistrationNet):
     """
     Registration network for affine transformation
     """
-    def __init__(self,sz,spacing,params):
+    def __init__(self,sz,spacing,params,compute_inverse_map=False):
         super(AffineMapNet, self).__init__(sz,spacing,params)
         self.dim = len(self.sz) - 2
+        self.compute_inverse_map = compute_inverse_map
         self.Ab = self.create_registration_parameters()
 
     def create_registration_parameters(self):
@@ -1098,7 +1108,12 @@ class AffineMapNet(RegistrationNet):
         :return: returns a tuple (upsampled_state,upsampled_spacing)
         """
         ustate = self.state_dict().copy() # stays the same
-        upsampled_spacing = self.spacing*(self.sz[2::].astype('float')/desiredSz[2::].astype('float'))
+        if len(self.sz) == len(desiredSz):
+            desiredSz= desiredSz[2:]
+        if len(self.sz)-len(desiredSz)==2:
+            upsampled_spacing = self.spacing*((self.sz[2::].astype('float')-1.)/(desiredSz.astype('float')-1.))
+        else:
+            raise ValueError("Size not matched")
 
         return ustate, upsampled_spacing
 
@@ -1110,7 +1125,7 @@ class AffineMapNet(RegistrationNet):
         :return: returns a tuple (downsampled_state,downsampled_spacing)
         """
         dstate = self.state_dict().copy() # stays the same
-        downsampled_spacing = self.spacing*(self.sz[2::].astype('float')/desiredSz[2::].astype('float'))
+        downsampled_spacing = self.spacing*((self.sz[2::].astype('float')-1.)/(desiredSz[2::].astype('float')-1.))
         return dstate, downsampled_spacing
 
     def forward(self, phi, I0_source, variables_from_optimizer=None):
@@ -1145,7 +1160,7 @@ class AffineMapLoss(RegistrationMapLoss):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the regularization energy
         """
-        regE = Variable(MyTensor(1).zero_(), requires_grad=False)
+        regE = MyTensor(1).zero_()
         return regE # so far there is no regularization
 
 
@@ -1292,7 +1307,7 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
             v = self.develop_smoother.smooth(m)
         else:
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer)
+            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
         batch_size = self.m.size()[0]
         reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
@@ -1326,7 +1341,8 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
         :return: image at time tTo
         """
         pars_to_pass_s = utils.combine_dict({'I':I},self._get_default_dictionary_to_pass_to_integrator())
-        v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer)
+        v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer,
+                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
         self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
         I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
@@ -1363,7 +1379,7 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
             v = self.develop_smoother.smooth(m)
         else:
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer)
+            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
         batch_size = self.m.size()[0]
         reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
@@ -1444,7 +1460,7 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
             v = self.develop_smoother.smooth(m)
         else:
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer)
+            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
         batch_size = self.m.size()[0]
         reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
@@ -1482,7 +1498,8 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         """
 
         pars_to_pass_s = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_integrator())
-        v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer)
+        v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer,
+                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
         self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
 
@@ -1524,7 +1541,7 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
             v = self.develop_smoother.smooth(m)
         else:
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer)
+            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
         batch_size = self.m.size()[0]
         reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
@@ -1651,7 +1668,8 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I, self.sz, self.spacing)
         pars_to_pass_s = utils.combine_dict({'I':I},self._get_default_dictionary_to_pass_to_integrator())
-        v = self.smoother.smooth(m,None,pars_to_pass_s,variables_from_optimizer)
+        v = self.smoother.smooth(m,None,pars_to_pass_s,variables_from_optimizer,
+                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
         self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
         I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
@@ -1688,7 +1706,7 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
             v = self.develop_smoother.smooth(m)
         else:
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer)
+            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer,smooth_to_compute_regularizer_energy=True)
 
         batch_size = v.size()[0]
         reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
@@ -1754,7 +1772,7 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
             v = self.develop_smoother.smooth(m)
         else:
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer)
+            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
         batch_size = v.size()[0]
         reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
@@ -1829,7 +1847,7 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
             v = self.develop_smoother.smooth(m)
         else:
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer)
+            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
         batch_size = v.size()[0]
         reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
@@ -1866,7 +1884,8 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
         pars_to_pass_s = utils.combine_dict({'I': I0_source},self._get_default_dictionary_to_pass_to_integrator())
-        v = self.smoother.smooth(m,None,pars_to_pass_s,variables_from_optimizer)
+        v = self.smoother.smooth(m,None,pars_to_pass_s,variables_from_optimizer,
+                             smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
         self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
 
@@ -1908,7 +1927,7 @@ class SVFScalarMomentumMapLoss(RegistrationMapLoss):
             v = self.develop_smoother.smooth(m)
         else:
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer)
+            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
         batch_size = v.size()[0]
         reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()

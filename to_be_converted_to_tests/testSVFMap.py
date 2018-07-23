@@ -58,12 +58,12 @@ model = RN.SVFNetMap(sz,spacing,params)    # instantiate a stationary velocity f
 print(model)
 
 # create the source and target image as pyTorch variables
-ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
-ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
+ISource = torch.from_numpy( I0.copy() )
+ITarget = torch.from_numpy( I1 )
 
 # create the identity map [-1,1]^d
 id = utils.identityMap(sz)
-identityMap = Variable( torch.from_numpy( id ), requires_grad=False )
+identityMap = torch.from_numpy( id )
 
 criterion = RN.SVFLossMap(list(model.parameters())[0],sz,spacing,params) # stationary velocity field with maps
 # use LBFGS as optimizer; this is essential for convergence when not using the Hilbert gradient

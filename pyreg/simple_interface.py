@@ -4,8 +4,8 @@ This package provides a super-simple interface for standard registration tasks
 from __future__ import print_function
 from __future__ import absolute_import
 
-from builtins import str
-from builtins import object
+# from builtins import str
+# from builtins import object
 
 from . import multiscale_optimizer as MO
 from . import module_parameters as pars
@@ -15,13 +15,16 @@ import numpy as np
 from . import utils
 
 import torch
-from torch.autograd import Variable
 
 from pyreg.data_wrapper import AdaptVal
 
 class RegisterImagePair(object):
 
     def __init__(self):
+        self.task_name = None
+        self.par_respro = None
+        self.recorder = None
+        self.light_analysis_on = True
 
         self.I1_warped = None
         self.phi = None
@@ -59,11 +62,60 @@ class RegisterImagePair(object):
 
         return self.params
 
+    def set_light_analysis_on(self, light_analysis_on):
+        self.light_analysis_on =light_analysis_on
+
+    def init_analysis_params(self,par_respro, task_name):
+        self.par_respro=par_respro
+        self.task_name = task_name
+
+
+    def get_opt(self):
+        return self.opt
+
+    def set_opt(self,opt):
+        self.opt= opt
+        self.optimizer_has_been_initialized=True
+
+
+    def _set_analysis(self, mo, extra_info):
+
+        expr_name = self.par_respro['respro']['expr_name']
+        save_fig = self.par_respro['respro']['save_fig']
+        save_fig_num = self.par_respro['respro']['save_fig_num']
+        save_fig_path = self.par_respro['respro']['save_fig_path']
+        save_excel = self.par_respro['respro']['save_excel']
+        mo.set_expr_name(expr_name)
+        mo.set_save_fig(save_fig)
+        mo.set_save_fig_path(save_fig_path)
+        mo.set_save_fig_num(save_fig_num)
+        mo.set_save_excel(save_excel)
+        pair_name = extra_info['pair_name']
+        batch_id = extra_info['batch_id']
+        visualize = self.par_respro['respro']['visualize']
+        mo.set_visualization(visualize)
+        mo.set_pair_path(pair_name)
+        mo.set_batch_id(batch_id)
+
+        if self.recorder is None:
+            self.recorder = mo.init_recorder(expr_name)
+            print("the recorder initialized")
+        else:
+            print("load the record")
+            mo.set_recorder(self.recorder)
+
+    def get_recorder(self):
+        return self.recorder
+
+    def set_recorder(self, recorder):
+        self.recorder = recorder
+
     def print_available_models(self):
         MF.AvailableModels().print_available_models()
 
     def get_available_models(self):
         return MF.AvailableModels().get_models()
+
 
     def get_history(self):
         """
@@ -96,6 +148,19 @@ class RegisterImagePair(object):
 
         if self.opt is not None:
             return self.opt.get_warped_image()
+        else:
+            return None
+
+
+    def get_warped_label(self):
+        """
+        Returns the warped label
+
+        :return: the warped label
+        """
+
+        if self.opt is not None:
+            return self.opt.get_warped_label()
         else:
             return None
 
@@ -168,7 +233,7 @@ class RegisterImagePair(object):
                 val = p[key]
                 if torch.is_tensor(val):
                     val.zero_()
-                elif type(val)==torch.nn.parameter.Parameter or type(val)==torch.autograd.variable.Variable:
+                elif type(val)==torch.nn.parameter.Parameter or type(val)==torch.Tensor:
                     val.data.zero_()
 
     def set_model_parameters(self,p):
@@ -195,7 +260,8 @@ class RegisterImagePair(object):
 
         return normalized_spacing0,np.array(example_ISource.shape)
 
-    def register_images_from_files(self,source_filename,target_filename,model_name,
+    def register_images_from_files(self,source_filename,target_filename,model_name,extra_info=None,
+                                   lsource_filename=None, ltarget_filename=None,
                                    nr_of_iterations=None,
                                    similarity_measure_type=None,
                                    similarity_measure_sigma=None,
@@ -243,6 +309,9 @@ class RegisterImagePair(object):
         if use_batch_optimization and use_consensus_optimization:
             raise ValueError('Cannot simultaneously select consensus AND batch optimization')
 
+        LSource=None
+        LTarget=None
+
         if not use_batch_optimization:
             ISource,hdr0,spacing0,normalized_spacing0 = \
                 fileio.ImageIO().read_to_nc_format(source_filename,
@@ -255,6 +324,17 @@ class RegisterImagePair(object):
                                                    intensity_normalize=self.normalize_intensity,
                                                    squeeze_image=self.squeeze_image,
                                                    normalize_spacing=self.normalize_spacing)
+            if lsource_filename and ltarget_filename:
+                LSource, _, _, _ = \
+                    fileio.ImageIO().read_to_nc_format(lsource_filename,
+                                                       intensity_normalize=False,
+                                                       squeeze_image=self.squeeze_image,
+                                                       normalize_spacing=self.normalize_spacing)
+                LTarget, _, _, _ = \
+                    fileio.ImageIO().read_to_nc_format(ltarget_filename,
+                                                       intensity_normalize=False,
+                                                       squeeze_image=self.squeeze_image,
+                                                       normalize_spacing=self.normalize_spacing)
             assert (np.all(normalized_spacing0 == normalized_spacing1))
             spacing = normalized_spacing0
             self.sz = np.array( ISource.size() )
@@ -263,6 +343,9 @@ class RegisterImagePair(object):
             # batch normalization needs the filenames as input
             ISource = source_filename
             ITarget = target_filename
+            if lsource_filename and ltarget_filename:
+                LSource = lsource_filename
+                LTarget = ltarget_filename
 
             # let's read one to get the spacing
             print('Reading one image to obtain the spacing information')
@@ -273,7 +356,7 @@ class RegisterImagePair(object):
 
             spacing,self.sz = self._get_spacing_and_size_from_image_file(one_filename)
 
-        self.register_images(ISource,ITarget,spacing,model_name,
+        self.register_images(ISource,ITarget,spacing,model_name,extra_info = extra_info,LSource=LSource,LTarget=LTarget,
                       nr_of_iterations=nr_of_iterations,
                       similarity_measure_type=similarity_measure_type,
                       similarity_measure_sigma=similarity_measure_sigma,
@@ -292,7 +375,7 @@ class RegisterImagePair(object):
                       compute_inverse_map=compute_inverse_map,
                       params=params)
 
-    def register_images(self,ISource,ITarget,spacing,model_name,
+    def register_images(self,ISource,ITarget,spacing,model_name,extra_info=None,LSource=None, LTarget=None,
                         nr_of_iterations=None,
                         similarity_measure_type=None,
                         similarity_measure_sigma=None,
@@ -378,8 +461,8 @@ class RegisterImagePair(object):
             self.ISource = ISource
             self.ITarget = ITarget
         else:
-            self.ISource = AdaptVal(Variable(torch.from_numpy(ISource.copy()), requires_grad=False))
-            self.ITarget = AdaptVal(Variable(torch.from_numpy(ITarget), requires_grad=False))
+            self.ISource = AdaptVal(torch.from_numpy(ISource.copy()))
+            self.ITarget = AdaptVal(torch.from_numpy(ITarget))
 
         self.spacing = spacing
 
@@ -421,7 +504,6 @@ class RegisterImagePair(object):
 
             if resume_from_last_checkpoint and use_consensus_optimization:
                 self.params['optimizer']['consensus_settings']['continue_from_last_checkpoint'] = True
-
             if use_multi_scale:
                 if use_consensus_optimization or use_batch_optimization:
                     raise ValueError('Consensus or batch optimization is not yet supported for multi-scale registration')
@@ -440,8 +522,10 @@ class RegisterImagePair(object):
                 self.opt.get_optimizer().set_visualize_step(visualize_step)
             else:
                 self.opt.get_optimizer().set_visualization(False)
+                self.opt.get_optimizer().set_visualize_step(visualize_step)
 
-            self.opt.set_light_analysis_on(True)
+            self.opt.set_light_analysis_on(self.light_analysis_on)
+
 
             self.optimizer_has_been_initialized = True
 
@@ -450,6 +534,11 @@ class RegisterImagePair(object):
 
             if self.delayed_initial_map_still_to_be_set:
                 self.set_initial_map(self.delayed_initial_map)
+
+            if not self.light_analysis_on and use_multi_scale:
+                self.opt.optimizer.set_source_label( AdaptVal(torch.from_numpy(LSource)))
+                self.opt.optimizer.set_target_label( AdaptVal(torch.from_numpy(LTarget)))
+                self._set_analysis(self.opt.optimizer,extra_info)
 
             self.opt.register()
 

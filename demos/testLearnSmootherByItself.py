@@ -4,7 +4,6 @@ import set_pyreg_paths
 import pyreg.smoother_factory as SF
 
 import torch
-from torch.autograd import Variable
 
 import matplotlib.pyplot as plt
 
@@ -31,9 +30,9 @@ visualize_smooth_vector_fields = True
 
 d = torch.load(results_filename)
 
-I0 = Variable( torch.from_numpy(d['I0']), requires_grad=False)
-I1 = Variable( torch.from_numpy(d['I1']), requires_grad=False)
-lam = Variable( d['registration_pars']['lam'], requires_grad=False)
+I0 = torch.from_numpy(d['I0'])
+I1 = torch.from_numpy(d['I1'])
+lam = d['registration_pars']['lam']
 sz = d['sz']
 lowResSize = lam.size()
 spacing = d['spacing']
@@ -53,22 +52,22 @@ if visualize_smooth_vector_fields:
     for n in range(nr_of_images):
 
         plt.subplot(3,2,1)
-        plt.imshow(m[n,0,...].data.numpy())
+        plt.imshow(m[n,0,...].detach().cpu().numpy())
 
         plt.subplot(3,2,2)
-        plt.imshow(m[n,1,...].data.numpy())
+        plt.imshow(m[n,1,...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 3)
-        plt.imshow(v[n, 0, ...].data.numpy())
+        plt.imshow(v[n, 0, ...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 4)
-        plt.imshow(v[n, 1, ...].data.numpy())
+        plt.imshow(v[n, 1, ...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 5)
-        plt.imshow(v_nl[n, 0, ...].data.numpy())
+        plt.imshow(v_nl[n, 0, ...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 6)
-        plt.imshow(v_nl[n, 1, ...].data.numpy())
+        plt.imshow(v_nl[n, 1, ...].detach().cpu().numpy())
 
         plt.title( str(n) )
 

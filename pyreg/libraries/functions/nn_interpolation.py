@@ -5,7 +5,6 @@ from cffi import FFI
 import sys
 
 import torch
-from torch.autograd import Variable
 from pyreg.libraries._ext import my_lib_nn
 from . import map_scale_utils
 
@@ -13,9 +12,9 @@ ffi = FFI()
 
 if USE_CUDA:
     if sys.version_info >= (3, 0):
-        from pyreg.libraries._ext_p3 import nn_interpolation
+        from pyreg.libraries._ext import nn_interpolation
     else:
-        from pyreg.libraries._ext_p2 import nn_interpolation
+        from pyreg.libraries._ext import nn_interpolation
 
 def nn_interpolation_fn_sel(input1, input2, output, ndim, device_c, use_cuda=USE_CUDA):
     if use_cuda:
@@ -40,6 +39,7 @@ def get_nn_interpolation(input1, input2, spacing):
     elif ndim == 2:
         output = MyTensor(input1.size()[0], input1.size()[1], input2.size()[2], input2.size()[3]).zero_()
     elif ndim == 3:
+        #print(type(input1),type(input2))
         output = MyTensor(input1.size()[0], input1.size()[1], input2.size()[2], input2.size()[3], input2.size()[4]).zero_()
     else:
         raise ValueError('Can only process dimensions 1-3')
@@ -49,4 +49,4 @@ def get_nn_interpolation(input1, input2, spacing):
     else:
         device_c[0] = -1
     nn_interpolation_fn_sel(input1.data, map_scaled.data, output, ndim, device_c)
-    return AdaptVal(Variable(output))
+    return AdaptVal(output)

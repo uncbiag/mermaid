@@ -1,4 +1,4 @@
-from builtins import range
+# from builtins import range
 import torch
 
 def scale_map(map,spacing):
@@ -35,4 +35,5 @@ def scale_map_grad(grad_map,spacing):
     ndim = len(spacing)
     for d in range(ndim):
         #grad_map[:, d, ...] *= spacing[d] * (sz[d + 2] - 1) / 2.
-        grad_map[:, d, ...] *= (sz[d + 2] - 1)/2.
+        #grad_map[:, d, ...] *= (sz[d + 2] - 1)/2.
+        grad_map[:, d, ...] *= (2. / (sz[d + 2] - 1.) / spacing[d])

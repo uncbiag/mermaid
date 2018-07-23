@@ -21,7 +21,7 @@
         }, 
         "switch": {
             "switch_to_exist_task": true,
-            "task_root_path": "/playpen/zyshen/data/lpba3d_inter"
+            "task_root_path": "/playpen/zyshen/data/hist_lpba_reg_inter_slicing_117_axis_1"
         }
     }
 }

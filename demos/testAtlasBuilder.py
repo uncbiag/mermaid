@@ -4,11 +4,14 @@ from __future__ import print_function
 
 from builtins import str
 from builtins import range
+import matplotlib as matplt
+from pyreg.config_parser import MATPLOTLIB_AGG
+if MATPLOTLIB_AGG:
+    matplt.use('Agg')
 import set_pyreg_paths
 
 # first do the torch imports
 import torch
-from torch.autograd import Variable
 from pyreg.data_wrapper import AdaptVal
 import pyreg.fileio as FIO
 import pyreg.simple_interface as SI
@@ -31,9 +34,9 @@ def compute_average_image(images):
     for nr,im_name in enumerate(images):
         Ic,hdrc,spacing,_ = im_io.read_to_nc_format(filename=im_name)
         if nr==0:
-            Iavg = AdaptVal(Variable(torch.from_numpy(Ic), requires_grad=False))
+            Iavg = AdaptVal(torch.from_numpy(Ic))
         else:
-            Iavg += AdaptVal(Variable(torch.from_numpy(Ic), requires_grad=False))
+            Iavg += AdaptVal(torch.from_numpy(Ic))
     Iavg = Iavg/len(images)
     return Iavg,spacing
 
@@ -45,7 +48,7 @@ def build_atlas(images, nr_of_cycles):
     Iavg, sp = compute_average_image(images)
     Iavg = Iavg.data
 
-    plt.imshow(AdaptVal(Iavg[0, 0, ...]).cpu().numpy(), cmap='gray')
+    plt.imshow(AdaptVal(Iavg[0, 0, ...]).detach().cpu().numpy(), cmap='gray')
     plt.title('Initial average based on ' + str(len(images)) + ' images')
     plt.colorbar()
     plt.show()
@@ -65,7 +68,7 @@ def build_atlas(images, nr_of_cycles):
                 si.set_model_parameters(mp[i])
 
             # register current image to average image
-            si.register_images(Ic, AdaptVal(Iavg).cpu().numpy(), spacing,
+            si.register_images(Ic, AdaptVal(Iavg).detach().cpu().numpy(), spacing,
                                model_name='svf_scalar_momentum_map',
                                map_low_res_factor=0.5,
                                nr_of_iterations=5,
@@ -104,7 +107,7 @@ def build_atlas(images, nr_of_cycles):
 
         Iavg = newAvg / len(images)
 
-        plt.imshow(AdaptVal(Iavg[0, 0, ...]).cpu().numpy(), cmap='gray')
+        plt.imshow(AdaptVal(Iavg[0, 0, ...]).detach().cpu().numpy(), cmap='gray')
         plt.title('Average ' + str(c + 1) + '/' + str(nr_of_cycles))
         plt.colorbar()
         plt.show()

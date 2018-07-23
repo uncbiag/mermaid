@@ -2,7 +2,6 @@ from builtins import str
 from builtins import range
 import set_pyreg_paths
 import torch
-from torch.autograd import Variable
 
 import pyreg.smoother_factory as SF
 import pyreg.deep_smoothers as DS
@@ -109,8 +108,8 @@ def get_checkpoint_filename(batch_nr, batch_iter):
 
 d = torch.load('testBatchGlobalWeightRegularizedOpt_tst.pt')
 
-I0 = Variable( torch.from_numpy(d['I0']), requires_grad=False)
-I1 = Variable( torch.from_numpy(d['I1']), requires_grad=False)
+I0 =  torch.from_numpy(d['I0'])
+I1 =  torch.from_numpy(d['I1'])
 sz = I0.size()
 history = d['history']
 spacing = d['spacing']
@@ -121,7 +120,7 @@ nr_of_batch_iters = 1
 
 c_filename = get_checkpoint_filename(0, nr_of_batch_iters-1)
 q = torch.load(c_filename)
-#lam_one = Variable( q['model']['state']['lam'], requires_grad=False)
+#lam_one =  q['model']['state']['lam'], requires_grad=False)
 lam_one = q['model']['parameters']['lam']
 lam_one_sz = lam_one.size()
 batch_size = lam_one_sz[0]
@@ -135,8 +134,8 @@ new_size_phi[1] = 2
 
 # get all the lambdas
 lam = torch.FloatTensor(*new_size_lam).zero_()
-phi = Variable(torch.FloatTensor(*new_size_phi).zero_(),requires_grad=False)
-Iw = Variable(torch.FloatTensor(*sz).zero_(), requires_grad=False)
+phi = torch.FloatTensor(*new_size_phi).zero_()
+Iw = torch.FloatTensor(*sz).zero_()
 
 for b in range(nr_of_batches):
     c_filename = get_checkpoint_filename(b, nr_of_batch_iters - 1)
@@ -145,7 +144,7 @@ for b in range(nr_of_batches):
     Iw[b*batch_size:min((b+1)*batch_size,sz[0]),...] = q['res']['Iw']
     phi[b*batch_size:min((b+1)*batch_size,sz[0]),...] = q['res']['phi']
 
-lam = Variable(lam,requires_grad=False)
+lam.requires_grad= False
 lowResSize = lam.size()
 
 stds = params['model']['registration_model']['forward_model']['smoother']['multi_gaussian_stds']
@@ -190,22 +189,22 @@ if visualize_smooth_vector_fields:
     for n in range(nr_of_images):
 
         plt.subplot(3,2,1)
-        plt.imshow(m[n,0,...].data.numpy())
+        plt.imshow(m[n,0,...].detach().cpu().numpy())
 
         plt.subplot(3,2,2)
-        plt.imshow(m[n,1,...].data.numpy())
+        plt.imshow(m[n,1,...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 3)
-        plt.imshow(v[n, 0, ...].data.numpy())
+        plt.imshow(v[n, 0, ...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 4)
-        plt.imshow(v[n, 1, ...].data.numpy())
+        plt.imshow(v[n, 1, ...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 5)
-        plt.imshow(v_nl[n, 0, ...].data.numpy())
+        plt.imshow(v_nl[n, 0, ...].detach().cpu().numpy())
 
         plt.subplot(3, 2, 6)
-        plt.imshow(v_nl[n, 1, ...].data.numpy())
+        plt.imshow(v_nl[n, 1, ...].detach().cpu().numpy())
 
         plt.title( str(n) )
 
@@ -240,36 +239,36 @@ if visualize_weights:
 
         plt.clf()
 
-        source_mask = compute_mask(I0[n:n+1,0:1,...].data.numpy())
-        lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size(Variable( torch.from_numpy(source_mask), requires_grad=False), spacing, lowResSize[2:],params['model']['registration_model'])
-        lowRes_source_mask = lowRes_source_mask_v.data.numpy()[0,0,...]
+        source_mask = compute_mask(I0[n:n+1,0:1,...].detach().cpu().numpy())
+        lowRes_source_mask_v, _ = IS.ResampleImage().downsample_image_to_size( torch.from_numpy(source_mask), spacing, lowResSize[2:],params['model']['registration_model'])
+        lowRes_source_mask = lowRes_source_mask_v.detach().cpu().numpy()[0,0,...]
 
         plt.subplot(2,3,1)
-        plt.imshow(I0[n,0,...].data.numpy(),cmap='gray')
+        plt.imshow(I0[n,0,...].detach().cpu().numpy(),cmap='gray')
         plt.title('source')
 
         plt.subplot(2, 3, 2)
-        plt.imshow(I1[n, 0, ...].data.numpy(), cmap='gray')
+        plt.imshow(I1[n, 0, ...].detach().cpu().numpy(), cmap='gray')
         plt.title('target')
 
         plt.subplot(2, 3, 3)
-        plt.imshow(Iw[n, 0, ...].data.numpy(), cmap='gray')
+        plt.imshow(Iw[n, 0, ...].detach().cpu().numpy(), cmap='gray')
         plt.title('warped')
 
         plt.subplot(2, 3, 4)
-        plt.imshow(Iw[n, 0, ...].data.numpy(), cmap='gray')
-        plt.contour(phi[n,0,...].data.numpy(),np.linspace(-1, 1, 20), colors='r', linestyles='solid')
-        plt.contour(phi[n,1,...].data.numpy(),np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+        plt.imshow(Iw[n, 0, ...].detach().cpu().numpy(), cmap='gray')
+        plt.contour(phi[n,0,...].detach().cpu().numpy(),np.linspace(-1, 1, 20), colors='r', linestyles='solid')
+        plt.contour(phi[n,1,...].detach().cpu().numpy(),np.linspace(-1, 1, 20), colors='r', linestyles='solid')
         plt.title('warped+grid')
 
         plt.subplot(2,3,5)
-        plt.imshow(lam[n,0,...].data.numpy(),cmap='gray')
+        plt.imshow(lam[n,0,...].detach().cpu().numpy(),cmap='gray')
         plt.title('lambda')
 
         plt.subplot(2,3,6)
-        cmin = os.numpy()[lowRes_source_mask == 1].min()
-        cmax = os.numpy()[lowRes_source_mask == 1].max()
-        plt.imshow(os.numpy()*lowRes_source_mask,cmap='gray',vmin=cmin,vmax=cmax)
+        cmin = os.detach().cpu().numpy()[lowRes_source_mask == 1].min()
+        cmax = os.detach().cpu().numpy()[lowRes_source_mask == 1].max()
+        plt.imshow(os.detach().cpu().numpy()*lowRes_source_mask,cmap='gray',vmin=cmin,vmax=cmax)
         plt.title('std')
 
         plt.suptitle('Registration: ' + str(n))
@@ -283,19 +282,19 @@ if visualize_weights:
 
         for g in range(nr_of_gaussians):
             plt.subplot(2, 4, g + 1)
-            clw = local_weights[n,g, ...].numpy()
+            clw = local_weights[n,g, ...].detach().cpu().numpy()
             cmin = clw[lowRes_source_mask==1].min()
             cmax = clw[lowRes_source_mask==1].max()
-            plt.imshow((local_weights[n,g, ...]).numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
+            plt.imshow((local_weights[n,g, ...]).detach().cpu().numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
             plt.title("{:.2f}".format(stds[g]))
             plt.colorbar()
 
         plt.subplot(2, 4, 8)
         os = compute_overall_std(local_weights[n,...], stds )
 
-        cmin = os.numpy()[lowRes_source_mask==1].min()
-        cmax = os.numpy()[lowRes_source_mask==1].max()
-        plt.imshow(os.numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
+        cmin = os.detach().cpu().numpy()[lowRes_source_mask==1].min()
+        cmax = os.detach().cpu().numpy()[lowRes_source_mask==1].max()
+        plt.imshow(os.detach().cpu().numpy()*lowRes_source_mask,vmin=cmin,vmax=cmax)
         plt.colorbar()
         plt.suptitle('Registration: ' + str(n))
 

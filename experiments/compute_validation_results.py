@@ -10,7 +10,6 @@ import pyreg.visualize_registration_results as vizReg
 import os
 
 import torch
-from torch.autograd import Variable
 
 import pyreg.utils as utils
 import pyreg.fileio as fio
@@ -18,6 +17,8 @@ import pyreg.fileio as fio
 import scipy.io as sio
 import numpy as np
 import itk
+# needs to be imported after itk to overwrite itk's incorrect error handling
+import pyreg.fixwarnings
 
 import nrrd
 import torch
@@ -27,7 +28,7 @@ import matplotlib
 
 def new_warp_image_nn(label_map, phi, spacing):
 
-    lm_t = Variable( torch.from_numpy(label_map),requires_grad=False)
+    lm_t = torch.from_numpy(label_map)
     lm_t = lm_t.view([1,1]+list(lm_t.size()))
 
     return utils.get_warped_label_map(lm_t, phi, spacing, sched='nn')
@@ -153,10 +154,10 @@ def calculate_image_overlap(dataset_info, phi_path, source_labelmap_path, target
     label_from_id = moving_id-dataset_info['start_id'] # typicall starts at 1
     label_to_id = target_id-dataset_info['start_id']
 
-    label_from_filename = dataset_info['label_files_dir'] + dataset_info['label_prefix'] + str(label_from_id + dataset_info['start_id']) + '.nii'
+    label_from_filename = dataset_info['label_files_dir'] + dataset_info['label_prefix'] + '{:d}.nii'.format(label_from_id + dataset_info['start_id'])
     label_from, hdr, _, _ = im_io.read(label_from_filename, silent_mode=True, squeeze_image=True)
 
-    label_to_filename = dataset_info['label_files_dir'] + dataset_info['label_prefix'] + str(label_to_id + dataset_info['start_id']) + '.nii'
+    label_to_filename = dataset_info['label_files_dir'] + dataset_info['label_prefix'] + '{:d}.nii'.format(label_to_id + dataset_info['start_id'])
     label_to, hdr, _, _ = im_io.read(label_to_filename, silent_mode=True, squeeze_image=True)
 
     map_io = fio.MapIO()
@@ -196,7 +197,10 @@ def calculate_image_overlap(dataset_info, phi_path, source_labelmap_path, target
 
     single_result = result
     single_result = single_result[~np.isnan(single_result)]
-    result_mean = np.mean(single_result)
+    if len(single_result)==0:
+        result_mean = np.nan
+    else:
+        result_mean = np.mean(single_result)
 
     return result_mean,single_result
 
@@ -246,10 +250,10 @@ def overlapping_plot(old_results_filename, new_results, boxplot_filename, visual
     # set axis tick
     ax.set_axisbelow(True)
     ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
-    ax.yaxis.set_tick_params(left='on', direction='in', width=1)
-    ax.yaxis.set_tick_params(right='on', direction='in', width=1)
-    ax.xaxis.set_tick_params(top='off', direction='in', width=1)
-    ax.xaxis.set_tick_params(bottom='off', direction='in', width=1)
+    ax.yaxis.set_tick_params(left=True, direction='in', width=1)
+    ax.yaxis.set_tick_params(right=True, direction='in', width=1)
+    ax.xaxis.set_tick_params(top=False, direction='in', width=1)
+    ax.xaxis.set_tick_params(bottom=False, direction='in', width=1)
 
     # create the boxplot
     bp = plt.boxplot(compound_results, vert=True, whis=1.5, meanline=True, widths=0.16, showfliers=True,
@@ -314,9 +318,9 @@ def create_stage_output_dir(output_dir,stage,compute_from_frozen=False):
         raise ValueError('stages need to be {0,1,2}')
 
     if compute_from_frozen:
-        stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_frozen_stage_' + str(stage))
+        stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_frozen_stage_{:d}'.format(stage))
     else:
-        stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_' + str(stage))
+        stage_output_dir = os.path.join(os.path.normpath(output_dir), 'model_results_stage_{:d}'.format(stage))
 
     return stage_output_dir
 

@@ -59,8 +59,8 @@ To be able to communicate with pyTorch's autograd functionality, let's make thes
 .. code::
 
     # create the source and target image as pyTorch variables
-    ISource = Variable( torch.from_numpy( I0.copy() ), requires_grad=False )
-    ITarget = Variable( torch.from_numpy( I1 ), requires_grad=False )
+    ISource = torch.from_numpy( I0.copy() )
+    ITarget = torch.from_numpy( I1 )
 
 
 Now we are ready to set up the optimizer and to optimize. By default some visual output will be created.

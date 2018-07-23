@@ -16,7 +16,6 @@ import set_pyreg_paths
 
 # first do the torch imports
 import torch
-from torch.autograd import Variable
 from pyreg.data_wrapper import CUDA_ON, MyTensor, AdaptVal
 import numpy as np
 
@@ -67,8 +66,8 @@ print ('Spacing = ' + str( spacing ) )
 
 # create the source and target image as pyTorch variables
 
-ISource = AdaptVal(Variable(torch.from_numpy(I0.copy()), requires_grad=False))
-ITarget = AdaptVal(Variable(torch.from_numpy(I1), requires_grad=False))
+ISource = AdaptVal(torch.from_numpy(I0.copy()))
+ITarget = AdaptVal(torch.from_numpy(I1))
 
 if ds.smooth_images:
     # smooth both a little bit

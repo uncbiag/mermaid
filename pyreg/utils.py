@@ -7,9 +7,9 @@ Various utility functions.
 from __future__ import print_function
 from __future__ import absolute_import
 # TODO
-
-from builtins import str
-from builtins import range
+#
+# from builtins import str
+# from builtins import range
 import torch
 from torch.nn.parameter import Parameter
 from torch.autograd import Variable
@@ -32,6 +32,9 @@ try:
 except ImportError:
     print('WARNING: nn_interpolation could not be imported (only supported in CUDA at the moment), some functionality may not be available.')
 
+
+def my_hasnan(x):
+    return (x != x).any()
 
 def create_symlink_with_correct_ext(sf,tf):
     abs_s = os.path.abspath(sf)
@@ -103,16 +106,17 @@ def remove_infs_from_variable(v):
     # but values of this size should not occur in practice anyway
     sz = v.size()
     reduction_factor = np.prod(np.array(sz))
+    condition = True
 
-    if type(v.data)==torch.FloatTensor or type(v.data)==torch.cuda.FloatTensor:
+    if  type(v.data) ==torch.cuda.FloatTensor or v.data.dtype==torch.float32: #########################################################
         return torch.clamp(v,
                            min=(np.asscalar(np.finfo('float32').min))/reduction_factor,
                            max=(np.asscalar(np.finfo('float32').max))/reduction_factor)
-    elif type(v.data)==torch.DoubleTensor or type(v.data)==torch.cuda.DoubleTensor:
+    elif v.data.dtype==torch.DoubleTensor or type(v.data)==torch.cuda.DoubleTensor:
         return torch.clamp(v,
                            min=(np.asscalar(np.finfo('float64').min))/reduction_factor,
                            max=(np.asscalar(np.finfo('float64').max))/reduction_factor)
-    elif type(v.data)==torch.HalfTensor or type(v.data)==torch.cuda.HalfTensor:
+    elif v.data.dtype==torch.HalfTensor or type(v.data)==torch.cuda.HalfTensor:
         return torch.clamp(v,
                            min=(np.asscalar(np.finfo('float16').min))/reduction_factor,
                            max=(np.asscalar(np.finfo('float16').max))/reduction_factor)
@@ -206,7 +210,7 @@ def apply_affine_transform_to_map(Ab,phi):
     if dim not in [1,2,3]:
         raise ValueError('Only supports dimensions 1, 2, and 3.')
 
-    phiR = Variable(MyTensor(sz).zero_(), requires_grad=False).type_as(phi)
+    phiR = MyTensor(sz).zero_().type_as(phi)
 
     if dim == 1:
         phiR = phi * Ab[0] + Ab[1]
@@ -237,7 +241,7 @@ def apply_affine_transform_to_map_multiNC(Ab,phi):
     if dim != len(sz)-2:
         raise ValueError('Incompatible number of affine transforms')
 
-    phiR = Variable(MyTensor(sz).zero_(), requires_grad=False).type_as(phi)
+    phiR = MyTensor(sz).zero_().type_as(phi)
     for nrI in range(nrOfImages):
         phiR[nrI,...] = apply_affine_transform_to_map(Ab[nrI,:],phi[nrI,...])
 
@@ -274,10 +278,11 @@ def compute_normalized_gaussian(X, mu, sig):
 
 def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order):
 
-    if spline_order not in [1,2,3,4,5,6,7,8,9]:
-        raise ValueError('Currently only orders 1 to 9 are supported')
-
-    if spline_order==1:
+    if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
+        raise ValueError('Currently only orders 0 to 9 are supported')
+    if spline_order==0:
+        return get_warped_label_map(I0,phi,spacing)
+    elif spline_order==1:
         stn = STN_ND_BCXYZ(spacing)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
@@ -288,10 +293,11 @@ def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order):
 
 def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order):
 
-    if spline_order not in [1,2,3,4,5,6,7,8,9]:
-        raise ValueError('Currently only orders 1 to 9 are supported')
-
-    if spline_order==1:
+    if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
+        raise ValueError('Currently only orders 0 to 9 are supported')
+    if spline_order==0:
+        return get_warped_label_map(I0,phi,spacing)
+    elif spline_order==1:
         stn = STN_ND_BCXYZ(spacing)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
@@ -302,10 +308,11 @@ def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order):
 
 def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order):
 
-    if spline_order not in [1,2,3,4,5,6,7,8,9]:
-        raise ValueError('Currently only orders 1 to 9 are supported')
-
-    if spline_order==1:
+    if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
+        raise ValueError('Currently only orders 0 to 9 are supported')
+    if spline_order==0:
+        return get_warped_label_map(I0,phi,spacing)
+    elif spline_order==1:
         stn = STN_ND_BCXYZ(spacing)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing,spline_order)
@@ -406,7 +413,7 @@ def create_ND_vector_field_variable_multiN(sz, nrOfI=1):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
-    return Variable(MyTensor(*(csz.tolist())).zero_(), requires_grad=False)
+    return MyTensor(*(csz.tolist())).zero_()
 
 def create_ND_vector_field_variable(sz):
     """
@@ -418,7 +425,7 @@ def create_ND_vector_field_variable(sz):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([dim]+list(csz))
-    return Variable(MyTensor(*(csz.tolist())).zero_(), requires_grad=False)
+    return MyTensor(*(csz.tolist())).zero_()
 
 def create_vector_parameter(nr_of_elements):
     """
@@ -492,7 +499,7 @@ def identity_map_multiN(sz,spacing,dtype='float32'):
     :return: returns the identity map
     """
     dim = len(sz)-2
-    nrOfI = sz[0]
+    nrOfI = int(sz[0])
 
     if dim == 1:
         id = np.zeros([nrOfI,1,sz[2]],dtype=dtype)
@@ -631,16 +638,13 @@ def t2np( v ):
     :return: numpy array
     """
 
-    if type( v ) == torch.autograd.variable.Variable:
-        return (v.data).cpu().numpy()
-    else:
-        return v.cpu().numpy()
+    return (v.detach()).cpu().numpy()
 
 def checkNan(x):
     """"
     input should be list of Variable
     """
-    return [len(np.argwhere(np.isnan(elem.cpu().data.numpy()))) for elem in x]
+    return [len(np.argwhere(np.isnan(elem.detach().cpu().numpy()))) for elem in x]
 
 
 ##########################################  Adaptive Net ###################################################3

@@ -69,9 +69,9 @@ else:
     raise ValueError('Only dimensions 1 to 3 are currently supported.')
 
 ICV = torch.from_numpy(IC)
-ISource = Variable( torch.from_numpy( I0 ), requires_grad=False )
-gridV = Variable( torch.from_numpy( grid ), requires_grad=True )
-
+ISource =  torch.from_numpy( I0 )
+gridV = torch.from_numpy( grid )
+gridV.requires_grad = True
 # now run it through the spatial transformer network
 s = STN_ND( dim )
 start = time.time()

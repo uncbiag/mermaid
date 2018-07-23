@@ -29,7 +29,6 @@ import numpy as np
 from . import finite_differences as fd
 from . import utils
 from .data_wrapper import MyTensor
-from torch.autograd import Variable
 from future.utils import with_metaclass
 
 class RHSLibrary(object):
@@ -70,7 +69,7 @@ class RHSLibrary(object):
         :return: Returns the RHS of the advection equations involved BxCxXxYxZ
         '''
         sz = I.size()
-        rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
+        rhs_ret = MyTensor(sz).zero_()
 
         for nc in range(sz[1]):  # loop over all the images
             rhs_ret[:, nc, ...]= self._rhs_advect_image_multiN(I[:,nc:nc+1, ...], v )
@@ -108,7 +107,7 @@ class RHSLibrary(object):
         """
 
         sz = I.size()
-        rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
+        rhs_ret = MyTensor(sz).zero_()
 
         for nc in range(sz[1]):  # loop over all the images
             rhs_ret[:, nc, ...]=self._rhs_scalar_conservation_multiN(I[:, nc:nc + 1, ...], v)
@@ -148,7 +147,7 @@ class RHSLibrary(object):
         :return: Returns the RHS of the advection equations involved BxCxXxYxZ
         '''
         sz = phi.size()
-        rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
+        rhs_ret = MyTensor(sz).zero_()
         self._rhs_advect_map_call(phi, v,rhs_ret)
         return rhs_ret
 
@@ -168,12 +167,12 @@ class RHSLibrary(object):
         if self.dim==1:
             rhsphi[:]= -fdc.dXc(phi[:,0,:]) * v[:,0,:]
         elif self.dim==2:
-            #rhsphi = Variable(MyTensor( phi.size() ).zero_(), requires_grad=False)
+            #rhsphi = MyTensor( phi.size() ).zero_(), requires_grad=False)
             rhsphi[:,0,:, :] = -(v[:,0,:, :] * fdc.dXc(phi[:,0,:, :]) + v[:,1,:, :] * fdc.dYc(phi[:,0,:, :]))
             rhsphi[:,1,:, :] = -(v[:,0,:, :] * fdc.dXc(phi[:,1,:, :]) + v[:,1,:, :] * fdc.dYc(phi[:,1,:, :]))
             #return rhsphi
         elif self.dim==3:
-            #rhsphi = Variable(MyTensor( phi.size() ).zero_(), requires_grad=False)
+            #rhsphi = MyTensor( phi.size() ).zero_(), requires_grad=False)
             rhsphi[:,0,:, :, :] = -(v[:,0,:, :, :] * fdc.dXc(phi[:,0,:, :, :]) +
                                    v[:,1,:, :, :] * fdc.dYc(phi[:,0,:, :, :]) +
                                    v[:,2,:, :, :] * fdc.dZc(phi[:,0,:, :, :]))
@@ -208,7 +207,7 @@ class RHSLibrary(object):
         :return: Returns the RHS of the EPDiff equations involved BxCXxYxZ
         '''
         sz = m.size()
-        rhs_ret = Variable(MyTensor(sz).zero_(), requires_grad=False)
+        rhs_ret = MyTensor(sz).zero_()
         self._rhs_epdiff_call(m, v, rhs_ret)
         return rhs_ret
 
@@ -221,7 +220,7 @@ class RHSLibrary(object):
         if self.dim == 1:
             rhsm[:]= -self.fdt.dXc(m[:,0, :] * v[:,0, :]) - self.fdt.dXc(v[:,0, :]) * m[:,0, :]
         elif self.dim == 2:
-            #rhsm = Variable(MyTensor(m.size()).zero_(), requires_grad=False)
+            #rhsm = MyTensor(m.size()).zero_(), requires_grad=False)
             # (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)
             rhsm[:,0, :, :] = (-self.fdt.dXc(m[:,0, :, :] * v[:,0, :, :])
                              - self.fdt.dYc(m[:,0, :, :] * v[:,1, :, :])
@@ -234,7 +233,7 @@ class RHSLibrary(object):
                              - self.fdt.dYc(v[:,1, :, :]) * m[:,1, :, :])
             #return rhsm
         elif self.dim == 3:
-            #rhsm = Variable(MyTensor(m.size()).zero_(), requires_grad=False)
+            #rhsm = MyTensor(m.size()).zero_(), requires_grad=False)
             # (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)
             rhsm[:,0, :, :, :] = (-self.fdt.dXc(m[:,0, :, :, :] * v[:,0, :, :, :])
                                 - self.fdt.dYc(m[:,0, :, :, :] * v[:,1, :, :, :])

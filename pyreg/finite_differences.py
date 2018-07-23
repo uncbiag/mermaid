@@ -6,7 +6,7 @@ boundary conditions (though the latter have not been tested extensively yet).
 """
 from __future__ import absolute_import
 
-from builtins import object
+# from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import torch
@@ -179,7 +179,7 @@ class FD(with_metaclass(ABCMeta, object)):
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
 
-    def grad_norm_sqr(self, I):
+    def grad_norm_sqr_c(self, I):
         """
         Computes the gradient norm of an image
         !!!!!!!!!!!
@@ -192,11 +192,53 @@ class FD(with_metaclass(ABCMeta, object)):
         """
         ndim = self.getdimension(I)
         if ndim == 1 + 1:
-            return self.ddXc(I)**2
+            return self.dXc(I)**2
         elif ndim == 2 + 1:
-            return (self.ddXc(I)**2 + self.ddYc(I)**2)
+            return (self.dXc(I)**2 + self.dYc(I)**2)
         elif ndim == 3 + 1:
-            return (self.ddXc(I)**2 + self.ddYc(I)**2 + self.ddZc(I)**2)
+            return (self.dXc(I)**2 + self.dYc(I)**2 + self.dZc(I)**2)
+        else:
+            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
+
+    def grad_norm_sqr_f(self, I):
+        """
+        Computes the gradient norm of an image
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
+
+        :param I: Input image [batch, X,Y,Z]
+        :return: returns ||grad I||^2
+        """
+        ndim = self.getdimension(I)
+        if ndim == 1 + 1:
+            return self.dXf(I)**2
+        elif ndim == 2 + 1:
+            return (self.dXf(I)**2 + self.dYf(I)**2)
+        elif ndim == 3 + 1:
+            return (self.dXf(I)**2 + self.dYf(I)**2 + self.dZf(I)**2)
+        else:
+            raise ValueError('Finite differences are only supported in dimensions 1 to 3')
+
+    def grad_norm_sqr_b(self, I):
+        """
+        Computes the gradient norm of an image
+        !!!!!!!!!!!
+        IMPORTANT:
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 1 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        THIS IS FOR COMPUTATIONAL EFFICIENCY.
+
+        :param I: Input image [batch, X,Y,Z]
+        :return: returns ||grad I||^2
+        """
+        ndim = self.getdimension(I)
+        if ndim == 1 + 1:
+            return self.dXb(I)**2
+        elif ndim == 2 + 1:
+            return (self.dXb(I)**2 + self.dYb(I)**2)
+        elif ndim == 3 + 1:
+            return (self.dXb(I)**2 + self.dYb(I)**2 + self.dZb(I)**2)
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
 
@@ -489,7 +531,7 @@ class FD_torch(FD):
         :param sz: size of the array, e.g., [3,4,2]
         :return: the zero array
         """
-        return  Variable(MyTensor(sz).zero_(), requires_grad=False)
+        return  MyTensor(sz).zero_()
 
     def get_size_of_array(self, A):
         """

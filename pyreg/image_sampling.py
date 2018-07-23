@@ -18,10 +18,10 @@ import numpy as np
 
 from . import smoother_factory as SF
 from . import module_parameters as MP
+import matplotlib.pyplot as plt
 
 from . import utils
 from .data_wrapper import AdaptVal
-
 class ResampleImage(object):
     """
     This class supports image resampling, both based on a scale factor (implemented via skimage's zoom
@@ -69,9 +69,9 @@ class ResampleImage(object):
         sz = np.array(list(I.size()))  # we assume this is a pytorch tensor
         resSzInt = self._compute_scaled_size(sz, scaling)
 
-        Iz = nd.zoom(I.data.numpy(),scaling,None,order=1,mode='reflect')
+        Iz = nd.zoom(I.detach().cpu().numpy(),scaling,None,order=1,mode='reflect')
         newSpacing = spacing*((sz.astype('float')-1.)/(resSzInt.astype('float')-1.))
-        Iz_t = Variable(torch.from_numpy(Iz),requires_grad=False)
+        Iz_t = torch.from_numpy(Iz)
 
         return Iz_t,newSpacing
 
@@ -79,7 +79,7 @@ class ResampleImage(object):
         sz = np.array(list(I.size()))  # we assume this is a pytorch tensor
         resSzInt = self._compute_scaled_size(sz[1::], scaling)
 
-        Iz = Variable(torch.zeros([sz[0]]+list(resSzInt)), requires_grad=False)
+        Iz = torch.zeros([sz[0]]+list(resSzInt))
         for nrC in range(sz[0]):  # loop over all channels
             Iz[nrC, ...], newSpacing = self._zoom_image_singleC(I[nrC, ...], spacing, scaling)
 
@@ -89,7 +89,7 @@ class ResampleImage(object):
         sz = np.array(list(I.size())) # we assume this is a pytorch tensor
         resSzInt = self._compute_scaled_size(sz[2::], scaling)
 
-        Iz = Variable(torch.zeros([sz[0],sz[1]]+list(resSzInt)), requires_grad=False)
+        Iz = torch.zeros([sz[0],sz[1]]+list(resSzInt))
         for nrI in range(sz[0]): # loop over images
             Iz[nrI,...],newSpacing = self._zoom_image_multiC(I[nrI,...],spacing,scaling)
 
@@ -119,8 +119,8 @@ class ResampleImage(object):
             print(desiredSizeNC)
             raise('For upsampling sizes need to increase')
 
-        newspacing = spacing*((sz[2::].astype('float')-1.)/(desiredSizeNC[2::].astype('float')-1.))
-        idDes = AdaptVal(Variable(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC,newspacing))))
+        newspacing = spacing*((sz[2::].astype('float')-1)/(desiredSizeNC[2::].astype('float')-1))##################################
+        idDes = AdaptVal(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC,newspacing)))
 
         # now use this map for resampling
         IZ = utils.compute_warped_image_multiNC(I, idDes, newspacing, spline_order)
@@ -154,8 +154,8 @@ class ResampleImage(object):
         smoother = SF.DiffusionSmoother(sz, spacing, self.params)
         smoothedImage_multiNC = smoother.smooth(I)
 
-        newspacing = spacing*((sz[2::].astype('float')-1.)/(desiredSizeNC[2::].astype('float')-1.))
-        idDes = AdaptVal(Variable(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC,newspacing))))
+        newspacing = spacing*((sz[2::].astype('float')-1.)/(desiredSizeNC[2::].astype('float')-1.)) ###########################################
+        idDes = AdaptVal(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC,newspacing)))
 
         # now use this map for resampling
         ID = utils.compute_warped_image_multiNC(smoothedImage_multiNC, idDes, newspacing, spline_order)
@@ -256,7 +256,7 @@ def test_me():
     """
     Convenience testing function (to be converted to a test)
     """
-    I = Variable( torch.zeros([1,1,100,100]), requires_grad = False )
+    I =  torch.zeros([1,1,100,100])
     I[0,0,30:70,30:70]=1
 
     ri = ResampleImage()
@@ -269,13 +269,13 @@ def test_me():
     print(spacing_up)
 
     plt.subplot(131)
-    plt.imshow(I[0,0,:,:].data.numpy().squeeze())
+    plt.imshow(I[0,0,:,:].detach().cpu().numpy().squeeze())
 
     plt.subplot(132)
-    plt.imshow(ID[0, 0, :, :].data.numpy().squeeze())
+    plt.imshow(ID[0, 0, :, :].detach().cpu().numpy().squeeze())
 
     plt.subplot(133)
-    plt.imshow(IU[0, 0, :, :].data.numpy().squeeze())
+    plt.imshow(IU[0, 0, :, :].detach().cpu().numpy().squeeze())
 
     plt.show()
 
@@ -283,7 +283,7 @@ def test_me_2():
     """
     Convenience testing function (to be converted to a test)
     """
-    I = Variable(torch.zeros([1, 1, 100, 100]), requires_grad=False)
+    I = torch.zeros([1, 1, 100, 100])
     I[0, 0, 30:70, 30:70] = 1
 
     ri = ResampleImage()
@@ -302,12 +302,12 @@ def test_me_2():
     print(spacing_up)
 
     plt.subplot(131)
-    plt.imshow(I[0, 0, :, :].data.numpy().squeeze())
+    plt.imshow(I[0, 0, :, :].detach().cpu().numpy().squeeze())
 
     plt.subplot(132)
-    plt.imshow(ID[0, 0, :, :].data.numpy().squeeze())
+    plt.imshow(ID[0, 0, :, :].detach().cpu().numpy().squeeze())
 
     plt.subplot(133)
-    plt.imshow(IU[0, 0, :, :].data.numpy().squeeze())
+    plt.imshow(IU[0, 0, :, :].detach().cpu().numpy().squeeze())
 
     plt.show()

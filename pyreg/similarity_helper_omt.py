@@ -7,7 +7,7 @@ from builtins import range
 from builtins import object
 from abc import ABCMeta, abstractmethod
 import torch
-from torch.autograd import Variable,Function
+from torch.autograd import Function
 from .data_wrapper import AdaptVal
 from . import utils
 from math import floor
@@ -21,9 +21,9 @@ class OTSimilarityHelper(Function):
                    """
     @staticmethod
     def forward(ctx, phi,I0,I1,multiplier0,multiplier1,spacing,nr_iterations_sinkhorn,std_sink):
-        shape = numpy_shape(AdaptVal(I0).cpu().numpy())
+        shape = numpy_shape(AdaptVal(I0).detach().cpu().numpy())
         simil = OTSimilarityGradient(spacing,shape,sinkhorn_iterations = nr_iterations_sinkhorn[0],std_dev = std_sink[0])
-        result,other = simil.compute_similarity(Variable(I0),Variable(I1))
+        result,other = simil.compute_similarity(I0,I1)
         multiplier0.copy_(AdaptVal(simil.multiplier0.data))
         multiplier1.copy_(AdaptVal(simil.multiplier1.data))
         ctx.save_for_backward(phi,I0,I1,multiplier0,multiplier1,spacing,nr_iterations_sinkhorn,std_sink)
@@ -32,10 +32,10 @@ class OTSimilarityHelper(Function):
     @staticmethod
     def backward(ctx, grad_output):
         phi,I0,I1,multiplier0,multiplier1,spacing,nr_iterations_sinkhorn,std_sink = ctx.saved_variables
-        shape = numpy_shape(AdaptVal(I0.data).cpu().numpy())
+        shape = numpy_shape(AdaptVal(I0).detach().cpu().numpy())
         simil = OTSimilarityGradient(spacing.data,shape,sinkhorn_iterations = nr_iterations_sinkhorn.data[0],std_dev = std_sink.data[0])
         grad_input = simil.compute_gradient(I0,I1,multiplier0,multiplier1)
-        fm = FM.RHSLibrary(spacing.data.numpy())
+        fm = FM.RHSLibrary(spacing.detach().cpu().numpy())
         result_gradient = fm.rhs_advect_map_multiNC(torch.unsqueeze(phi,0),torch.unsqueeze(grad_input,0))
         #result_gradient = -grad_input
         return -2*result_gradient,None,None,None,None,None,None,None
@@ -96,7 +96,7 @@ class OTSimilarityGradient(object):
                :param std: standard deviation of the gaussian kernel
                :return: exp(-|x_i - x_j|^2/std**2)
                """
-        x = Variable(torch.linspace(0, 1, length))
+        x = torch.linspace(0, 1, length)
         x_col = x.unsqueeze(1)
         y_lin = x.unsqueeze(0)
         c = torch.abs(x_col - y_lin) ** 2
@@ -109,7 +109,7 @@ class OTSimilarityGradient(object):
                        :param std: standard deviation of the gaussian kernel
                        :return: (x_j - x_i) * exp(-|x_i - x_j|^2/std**2)
                        """
-        x = Variable(torch.linspace(0, 1, length))
+        x = torch.linspace(0, 1, length)
         x_col = x.unsqueeze(1)
         y_lin = x.unsqueeze(0)
         c = torch.abs(x_col - y_lin) ** 2
@@ -210,8 +210,10 @@ class OTSimilarityGradient(object):
         I1rescaled = torch.div(temp2, self.my_sum(temp2))
 
         ### definition of the lagrange multiplier
-        multiplier0 = Variable(torch.ones(I0.size()), requires_grad=True)
-        multiplier1 = Variable(torch.ones(I1.size()), requires_grad=True)
+        multiplier0 = torch.ones(I0.size())
+        multiplier1 = torch.ones(I1.size())
+        multiplier0.requires_grad= True
+        multiplier1.requires_grad = True
         convergence = []
         ### iteration of sinkhorn loop
         for i in range(self.sinkhorn_iterations):
@@ -219,7 +221,7 @@ class OTSimilarityGradient(object):
             multiplier1 = torch.div(I1rescaled, self.kernel_multiplication(multiplier0))
             convergence.append(log(
                 AdaptVal(self.my_sum(torch.abs(I0rescaled - multiplier0 * self.kernel_multiplication(multiplier1))).data)
-                    .cpu().numpy()[0]))
+                    .item()))
         temp = self.my_dot(torch.log(multiplier0), I0rescaled) + self.my_dot(torch.log(multiplier1),
                                                                              I1rescaled) - self.my_dot(
             multiplier0, self.kernel_multiplication(multiplier1))
@@ -238,7 +240,7 @@ class OTSimilarityGradient(object):
                :param multiplier1: Lagrange multiplier for the second marginal
                :return: Gradient wrt the grid
                """
-        gradient = Variable(torch.zeros((self.dim,) + I0.size()), requires_grad=False)
+        gradient = torch.zeros((self.dim,) + I0.size())
         for i in range(self.dim):
             choice_kernel = self.set_choice_kernel_gibbs(i, self.dim)
             gradient[i] = 2 * torch.mul(multiplier0,

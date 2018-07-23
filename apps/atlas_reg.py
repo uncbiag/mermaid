@@ -34,9 +34,9 @@ def compute_average_image(images):
     for nr,im_name in enumerate(images):
         Ic,hdrc,spacing,_ = im_io.read_to_nc_format(filename=im_name)
         if nr==0:
-            Iavg = AdaptVal(Variable(torch.from_numpy(Ic), requires_grad=False))
+            Iavg = AdaptVal(torch.from_numpy(Ic))
         else:
-            Iavg += AdaptVal(Variable(torch.from_numpy(Ic), requires_grad=False))
+            Iavg += AdaptVal(torch.from_numpy(Ic))
     Iavg = Iavg/len(images)
     return Iavg,spacing
 
@@ -49,7 +49,7 @@ def build_atlas(images, nr_of_cycles, warped_images, temp_folder, visualize):
     Iavg = Iavg.data
 
     if visualize:
-        plt.imshow(AdaptVal(Iavg[0, 0, ...]).cpu().numpy(), cmap='gray')
+        plt.imshow(AdaptVal(Iavg[0, 0, ...]).detach().cpu().numpy(), cmap='gray')
         plt.title('Initial average based on ' + str(len(images)) + ' images')
         plt.colorbar()
         plt.show()
@@ -69,7 +69,7 @@ def build_atlas(images, nr_of_cycles, warped_images, temp_folder, visualize):
                 si.set_model_parameters(mp[i])
 
             # register current image to average image
-            si.register_images(Ic, AdaptVal(Iavg).cpu().numpy(), spacing,
+            si.register_images(Ic, AdaptVal(Iavg).detach().cpu().numpy(), spacing,
                                model_name='svf_scalar_momentum_map',
                                map_low_res_factor=0.5,
                                nr_of_iterations=5,
@@ -96,7 +96,7 @@ def build_atlas(images, nr_of_cycles, warped_images, temp_folder, visualize):
         Iavg = newAvg / len(images)
 
         if visualize:
-            plt.imshow(AdaptVal(Iavg[0, 0, ...]).cpu().numpy(), cmap='gray')
+            plt.imshow(AdaptVal(Iavg[0, 0, ...]).detach().cpu().numpy(), cmap='gray')
             plt.title('Average ' + str(c + 1) + '/' + str(nr_of_cycles))
             plt.colorbar()
             plt.show()

@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torch
-from torch.autograd import Variable
 from torch.autograd import Function
 
 from torch.autograd import gradcheck
@@ -50,27 +49,27 @@ class SplineInterpolation_ND_BCXYZ(Module):
 
         # Poles for the different spline orders
         self.poles = dict()
-        self.poles[2] = torch.from_numpy(np.array([np.sqrt(8.) - 3.]))
-        self.poles[3] = torch.from_numpy(np.array([np.sqrt(3.) - 2.]))
+        self.poles[2] = torch.from_numpy(np.array([np.sqrt(8.) - 3.]).astype('float32'))
+        self.poles[3] = torch.from_numpy(np.array([np.sqrt(3.) - 2.]).astype('float32'))
         self.poles[4] = torch.from_numpy(np.array([np.sqrt(664.0 - np.sqrt(438976.0)) + np.sqrt(304.0) - 19.0,
-                                                   np.sqrt(664.0 + np.sqrt(438976.0)) - np.sqrt(304.0) - 19.0]))
+                                                   np.sqrt(664.0 + np.sqrt(438976.0)) - np.sqrt(304.0) - 19.0]).astype('float32'))
         self.poles[5] = torch.from_numpy(
             np.array([np.sqrt(135.0 / 2.0 - np.sqrt(17745.0 / 4.0)) + np.sqrt(105.0 / 4.0) - 13.0 / 2.0,
-                      np.sqrt(135.0 / 2.0 + np.sqrt(17745.0 / 4.0)) - np.sqrt(105.0 / 4.0) - 13.0 / 2.0]))
+                      np.sqrt(135.0 / 2.0 + np.sqrt(17745.0 / 4.0)) - np.sqrt(105.0 / 4.0) - 13.0 / 2.0]).astype('float32'))
         self.poles[6] = torch.from_numpy(np.array([-0.48829458930304475513011803888378906211227916123938,
                                                    -0.081679271076237512597937765737059080653379610398148,
-                                                   -0.0014141518083258177510872439765585925278641690553467]))
+                                                   -0.0014141518083258177510872439765585925278641690553467]).astype('float32'))
         self.poles[7] = torch.from_numpy(np.array([-0.53528043079643816554240378168164607183392315234269,
                                                    -0.12255461519232669051527226435935734360548654942730,
-                                                   -0.0091486948096082769285930216516478534156925639545994]))
+                                                   -0.0091486948096082769285930216516478534156925639545994]).astype('float32'))
         self.poles[8] = torch.from_numpy(np.array([-0.57468690924876543053013930412874542429066157804125,
                                                    -0.16303526929728093524055189686073705223476814550830,
                                                    -0.023632294694844850023403919296361320612665920854629,
-                                                   -0.00015382131064169091173935253018402160762964054070043]))
+                                                   -0.00015382131064169091173935253018402160762964054070043]).astype('float32'))
         self.poles[9] = torch.from_numpy(np.array([-0.60799738916862577900772082395428976943963471853991,
                                                    -0.20175052019315323879606468505597043468089886575747,
                                                    -0.043222608540481752133321142979429688265852380231497,
-                                                   -0.0021213069031808184203048965578486234220548560988624]))
+                                                   -0.0021213069031808184203048965578486234220548560988624]).astype('float32'))
 
     def _scale_map_to_ijk(self, phi, spacing, sz_image):
         """
@@ -83,7 +82,7 @@ class SplineInterpolation_ND_BCXYZ(Module):
         """
         sz = phi.size()
 
-        scaling = (np.array(list(sz_image[2:])).astype('float64')-1.)/(np.array(list(sz[2:])).astype('float64')-1.) # to account for different number of pixels/voxels ijk coordinates (only physical coordinates are consistent)
+        scaling = (np.array(list(sz_image[2:])).astype('float32')-1.)/(np.array(list(sz[2:])).astype('float32')-1.) # to account for different number of pixels/voxels ijk coordinates (only physical coordinates are consistent)
 
         phi_scaled = torch.zeros_like(phi)
         ndim = len(spacing)
@@ -134,7 +133,7 @@ class SplineInterpolation_ND_BCXYZ(Module):
 
         if horizon<self.Ns[dim-1]:
             # accelerated loop
-            zn = z
+            zn = z.clone()
             Sum = self._slice_dim(c,0,dim=dim)
             for n in range(1,horizon):
                 Sum += zn*self._slice_dim(c,n,dim=dim)
@@ -143,7 +142,7 @@ class SplineInterpolation_ND_BCXYZ(Module):
             return Sum
         else:
             # full loop
-            zn = z
+            zn = z.clone()
             iz = 1./z
             z2n = z**(self.Ns[dim-1]-1.)
             Sum = self._slice_dim(c,0,dim=dim) + z2n*self._slice_dim(c,-1,dim=dim)
@@ -321,7 +320,7 @@ class SplineInterpolation_ND_BCXYZ(Module):
         if dim not in [1,2,3]:
             raise ValueError('Signal needs to be of dimensions 1, 2, or 3 and in format B x C x X x Y x Z')
 
-        c = Variable( MyTensor(*(list(s.size()))).zero_(), requires_grad=False )
+        c =  MyTensor(*(list(s.size()))).zero_()
         c[:] = s
 
         self.Ns = list(s.size()[2:])
@@ -357,7 +356,7 @@ class SplineInterpolation_ND_BCXYZ(Module):
         dim = sz[1]
 
         index = MyLongTensor(*([self.n+1]+list(x.size())))
-        weight = Variable(MyTensor(*([self.n+1]+list(x.size()))).zero_(), requires_grad=False)
+        weight = MyTensor(*([self.n+1]+list(x.size()))).zero_()
 
         # compute the interpolation indexes
         # todo: can likely be simplified (without loop over dimension)
@@ -374,18 +373,18 @@ class SplineInterpolation_ND_BCXYZ(Module):
 
         # compute the weights
         if self.n==2:
-            w = x - Variable(index[1,...].float(),requires_grad=False)
+            w = x - index[1,...].float()
             weight[1,...] = 3.0 / 4.0 - w * w
             weight[2,...] = (1.0 / 2.0) * (w - weight[1,...] + 1.0)
             weight[0,...] = 1.0 - weight[1,...] - weight[2,...]
         elif self.n==3:
-            w = x - Variable(index[1,...].float(),requires_grad=False)
+            w = x - index[1,...].float()
             weight[3,...] = (1.0 / 6.0) * w * w * w
             weight[0,...] = (1.0 / 6.0) + (1.0 / 2.0) * w * (w - 1.0) - weight[3,...]
             weight[2,...] = w + weight[0,...] - 2.0 * weight[3,...]
             weight[1,...] = 1.0 - weight[0,...] - weight[2,...] - weight[3,...]
         elif self.n==4:
-            w = x - Variable(index[2].float(),requires_grad=False)
+            w = x - index[2].float()
             w2 = w * w
             t = (1.0 / 6.0) * w2
             weight[0] = 1.0 / 2.0 - w
@@ -398,7 +397,7 @@ class SplineInterpolation_ND_BCXYZ(Module):
             weight[4] = weight[0] + t0 + (1.0 / 2.0) * w
             weight[2] = 1.0 - weight[0] - weight[1] - weight[3] - weight[4]
         elif self.n==5:
-            w = x - Variable(index[2].float(),requires_grad=False)
+            w = x - index[2].float()
             w2 = w * w
             weight[5] = (1.0 / 120.0) * w * w2 * w2
             w2 -= w
@@ -415,7 +414,7 @@ class SplineInterpolation_ND_BCXYZ(Module):
             weight[1] = t0 + t1
             weight[4] = t0 - t1
         elif self.n==6:
-            w = x - Variable(index[3].float(),requires_grad=False)
+            w = x - index[3].float()
             weight[0] = 1.0 / 2.0 - w
             weight[0] *= weight[0] * weight[0]
             weight[0] *= weight[0] / 720.0
@@ -436,7 +435,7 @@ class SplineInterpolation_ND_BCXYZ(Module):
             weight[6] *= weight[6] / 720.0
             weight[5] = 1.0 - weight[0] - weight[1] - weight[2] - weight[3] - weight[4] - weight[6]
         elif self.n==7:
-            w = x - Variable(index[3].float(),requires_grad=False)
+            w = x - index[3].float()
             weight[0] = 1.0 - w
             weight[0] *= weight[0]
             weight[0] *= weight[0] * weight[0]
@@ -458,7 +457,7 @@ class SplineInterpolation_ND_BCXYZ(Module):
             weight[7] *= w / 5040.0
             weight[6] = 1.0 - weight[0] - weight[1] - weight[2] - weight[3] - weight[4] - weight[5] - weight[7]
         elif self.n==8:
-            w = x - Variable(index[4].float(),requires_grad=False)
+            w = x - index[4].float()
             weight[0] = 1.0 / 2.0 - w
             weight[0] *= weight[0]
             weight[0] *= weight[0]
@@ -489,7 +488,7 @@ class SplineInterpolation_ND_BCXYZ(Module):
             weight[8] *= weight[8] / 40320.0
             weight[6] = 1.0 - weight[0] - weight[1] - weight[2] - weight[3] - weight[4] - weight[5] - weight[7] - weight[8]
         elif self.n==9:
-            w = x - Variable(index[4].float(),requires_grad=False)
+            w = x - index[4].float()
             weight[0] = 1.0 - w
             weight[0] *= weight[0]
             weight[0] *= weight[0]
@@ -805,18 +804,18 @@ def test_me(test_dim=1):
     testDim = test_dim
 
     if testDim==1:
-        s = np.array([20,-15,10,-5,5,-12,12]) #,-20,20,-30,30,-7,7,-3,3,-20,20,-1,1,-5,5,3,2,1])
+        s = np.array([20,-15,10,-5,5,-12,12]).astype('float32') #,-20,20,-30,30,-7,7,-3,3,-20,20,-1,1,-5,5,3,2,1])
         #s = np.array([1.,1.,1.,1.,1.,1.])
-        spacingOrig = np.array([1./(len(s)-1)])
+        spacingOrig = np.array([1./(len(s)-1)]).astype('float32')
         #s = np.tile(s,2)
-        x = np.arange(0,len(s))*spacingOrig
+        x = np.arange(0,len(s)).astype('float32')*spacingOrig
         #
-        xi = np.arange(0,len(s)-1+0.1,0.1)*spacingOrig
+        xi = np.arange(0,len(s)-1+0.1,0.1).astype('float32')*spacingOrig
 
         spacing = spacingOrig*0.1
 
-        s_torch_orig = Variable(torch.from_numpy(s.astype('float32')), requires_grad=True)
-        xi_torch_orig = Variable(torch.from_numpy(xi.astype('float32')), requires_grad=True)
+        s_torch_orig = torch.from_numpy(s.astype('float32'))
+        xi_torch_orig = torch.from_numpy(xi.astype('float32'))
 
         s_torch = s_torch_orig.view(torch.Size([1, 1] + list(s_torch_orig.size())))
         # s_torch = torch.cat((s_torch,s_torch),0)
@@ -827,7 +826,7 @@ def test_me(test_dim=1):
         # xi_torch = xi_torch_orig
 
     elif testDim==2:
-        s = np.random.rand(10,10)
+        s = np.random.rand(10,10).astype('float32')
 
         #s = np.random.rand(1, 10)
         #s = np.tile(s,(10,1))
@@ -841,11 +840,11 @@ def test_me(test_dim=1):
         x = utils.identity_map_multiN([1,1,10,10],[1,1])
         xi = utils.identity_map_multiN([1,1,20,20],[0.5,0.5])
 
-        spacing = np.array([0.5,0.5])
+        spacing = np.array([0.5,0.5]).astype('float32')
 
-        s_torch_orig = Variable(torch.from_numpy(s.astype('float32')), requires_grad=True)
+        s_torch_orig = torch.from_numpy(s.astype('float32'))
         s_torch = s_torch_orig.view(torch.Size([1, 1] + list(s_torch_orig.size())))
-        xi_torch = Variable(torch.from_numpy(xi.astype('float32')), requires_grad=True)
+        xi_torch = torch.from_numpy(xi.astype('float32'))
 
     else:
         raise ValueError('unsupported test dimension')
@@ -863,7 +862,7 @@ def test_me(test_dim=1):
     #sif.forward(vals['c'],vals['weight'])
     #sif.backward(grad_output)
 
-    #test = gradcheck(PerformSplineInterpolationHelper(vals['index']), (Variable(vals['c'],requires_grad=True),Variable(vals['weight'],requires_grad=True)), eps=1e-2, atol=1e-4)
+    #test = gradcheck(PerformSplineInterpolationHelper(vals['index']), (vals['c'],requires_grad=True),vals['weight'],requires_grad=True)), eps=1e-2, atol=1e-4)
     #print(test)
 
     # ctst = si.get_interpolation_coefficients(s_torch)
@@ -880,7 +879,7 @@ def test_me(test_dim=1):
 
     if testDim==1:
         plt.plot(x,s)
-        plt.plot(xi,si_tst[0,0,...].data.numpy())
+        plt.plot(xi,si_tst[0,0,...].detach().cpu().numpy())
 
         plt.show()
     elif testDim==2:
@@ -889,7 +888,7 @@ def test_me(test_dim=1):
         plt.clim(0,1.5)
         plt.colorbar()
         plt.subplot(122)
-        plt.imshow(si_tst[0, 0, ...].data.numpy())
+        plt.imshow(si_tst[0, 0, ...].detach().cpu().numpy())
         plt.clim(0,1.5)
         plt.colorbar()
         plt.show()
