@@ -275,7 +275,7 @@ class FourierConvolution(Function):
             f_filter_real.expand_as(f_input_real)
             f_conv_real = f_input_real * f_filter_real
             f_conv_imag = f_input_imag * f_filter_real
-            conv_ouput_real = self.ifftn(f_conv_real, f_conv_imag)
+            conv_ouput_real = self.ifftn(f_conv_real, f_conv_imag, n=input.size()[-1])
             result = conv_ouput_real
 
             return FFTVal(result, ini=-1)
@@ -334,7 +334,7 @@ class FourierConvolution(Function):
             f_filter_real.expand_as(f_go_real)
             f_conv_real = f_go_real * f_filter_real
             f_conv_conj_imag = f_go_imag * f_filter_real
-            grad_input = self.ifftn(f_conv_real, f_conv_conj_imag)
+            grad_input = self.ifftn(f_conv_real, f_conv_conj_imag, n=grad_output.size()[-1])
             # print(grad_input)
             # print((grad_input[0,0,12:15]))
 
@@ -423,7 +423,7 @@ class InverseFourierConvolution(Function):
             f_filter_real.expand_as(f_input_real)
             f_conv_real = f_input_real / f_filter_real
             f_conv_imag = f_input_imag / f_filter_real
-            conv_ouput_real = self.ifftn(f_conv_real, f_conv_imag)
+            conv_ouput_real = self.ifftn(f_conv_real, f_conv_imag, n=input.size()[-1])
             result = conv_ouput_real
             return FFTVal(result, ini=-1)
         else:
@@ -474,7 +474,7 @@ class InverseFourierConvolution(Function):
             f_filter_real.expand_as(f_go_real)
             f_conv_real = f_go_real / f_filter_real
             f_conv_conj_imag = f_go_imag / f_filter_real
-            grad_input = self.ifftn(f_conv_real, f_conv_conj_imag)
+            grad_input = self.ifftn(f_conv_real, f_conv_conj_imag, n=grad_output.size()[-1])
             return FFTVal(grad_input, ini=-1)
         else:
             # if self.needs_input_grad[0]:
@@ -724,7 +724,7 @@ class FourierGaussianConvolution(Function):
         f_filter_real.expand_as(f_input_real)
         f_conv_real = f_input_real * f_filter_real
         f_conv_imag = f_input_imag * f_filter_real
-        conv_ouput_real = self.ifftn(f_conv_real, f_conv_imag)
+        conv_ouput_real = self.ifftn(f_conv_real, f_conv_imag, n=input.size()[-1])
         result = conv_ouput_real
 
         return FFTVal(result, ini=-1)
@@ -755,7 +755,7 @@ class FourierGaussianConvolution(Function):
         f_filter_real.expand_as(f_go_real)
         f_conv_real = f_go_real * f_filter_real
         f_conv_conj_imag = f_go_imag * f_filter_real
-        grad_input = self.ifftn(f_conv_real, f_conv_conj_imag)
+        grad_input = self.ifftn(f_conv_real, f_conv_conj_imag, n=grad_output.size()[-1])
 
         return FFTVal(grad_input, ini=-1)
 
