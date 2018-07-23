@@ -1,7 +1,7 @@
 import matplotlib as matplt
-from pyreg.config_parser import MATPLOTLIB_AGG
-if MATPLOTLIB_AGG:
-    matplt.use('Agg')
+# from pyreg.config_parser import MATPLOTLIB_AGG
+# if MATPLOTLIB_AGG:
+#     matplt.use('Agg')
 import sys
 import numpy as np
 import os
@@ -363,8 +363,9 @@ class OAILongitudeReisgtration(object):
                 Ic1 = LSource
                 Ic0 = LTarget
 
-
+            #
             # self.si.set_light_analysis_on(True)
+            # self.si.set_initial_map(None)
             # self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
             #                         model_name=self.model0_name,
             #                         map_low_res_factor=self.map0_low_res_factor,
@@ -376,9 +377,10 @@ class OAILongitudeReisgtration(object):
             #                         similarity_measure_type=self.similarity_measure_type,
             #                         similarity_measure_sigma=self.similarity_measure_sigma,
             #                         json_config_out_filename='cur_settings.json',
+            #                         compute_inverse_map=True,
             #                         params ='cur_settings.json')
             # wi = self.si.get_warped_image()
-            # self.im_io.write(os.path.join(saving_folder_path, img1_name + '_affine.nii.gz'), torch.squeeze(wi[0:1,0:1,...]), hdrc0)
+            # #self.im_io.write(os.path.join(saving_folder_path, img1_name + '_affine.nii.gz'), torch.squeeze(wi[0:1,0:1,...]), hdrc0)
             #
             # wi=wi.cpu().data.numpy()
             # LSource_warped= None
@@ -403,19 +405,19 @@ class OAILongitudeReisgtration(object):
             #
             #
             # print("let's come to step 2 ")
-            # self.si.set_light_analysis_on(self.light_analysis_on)
+            # ###########################################################self.si.set_light_analysis_on(self.light_analysis_on)
+            # self.si.set_light_analysis_on(True)
             # LSource_warped = LSource_warped.cpu().data.numpy()
 
 
 
-            ##########################################3
-            wi = Ic1
-            LSource_warped = LSource
-            ############################################
 
+            #
+            # affine_map =  self.si.opt.optimizer.ssOpt.get_map()
+            # self.si.opt = None
+            # self.si.set_initial_map(affine_map.detach())
 
-
-            self.si.register_images(wi, Ic0, spacing,extra_info=extra_info,LSource=LSource_warped,LTarget=LTarget,
+            self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
                                     model_name=self.model1_name,
                                     map_low_res_factor=self.map1_low_res_factor,
                                     nr_of_iterations=self.nr_of_iterations,
@@ -426,6 +428,7 @@ class OAILongitudeReisgtration(object):
                                     similarity_measure_type= self.similarity_measure_type,
                                     similarity_measure_sigma=self.similarity_measure_sigma,
                                     json_config_out_filename='output_settings_lbfgs.json',
+                                    compute_inverse_map=True,
                                     params='cur_settings_lbfgs.json')
 
             wi = self.si.get_warped_image()

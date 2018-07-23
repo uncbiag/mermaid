@@ -1079,9 +1079,10 @@ class AffineMapNet(RegistrationNet):
     """
     Registration network for affine transformation
     """
-    def __init__(self,sz,spacing,params):
+    def __init__(self,sz,spacing,params,compute_inverse_map=False):
         super(AffineMapNet, self).__init__(sz,spacing,params)
         self.dim = len(self.sz) - 2
+        self.compute_inverse_map = compute_inverse_map
         self.Ab = self.create_registration_parameters()
 
     def create_registration_parameters(self):
