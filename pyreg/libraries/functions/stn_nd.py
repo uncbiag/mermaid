@@ -10,6 +10,7 @@ import sys
 
 import torch
 from torch.autograd import Function
+from torch.nn import Module
 from cffi import FFI
 from pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
 
@@ -25,6 +26,64 @@ else:
 from . import map_scale_utils
 
 ffi = FFI()
+
+
+
+
+
+#
+# class STNFunction_ND_BCXYZ(Module):
+#     """
+#    Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox).
+#    """
+#
+#     def __init__(self, spacing):
+#         """
+#         Constructor
+#
+#         :param ndim: (int) spatial transformation of the transform
+#         """
+#         super(STNFunction_ND_BCXYZ, self).__init__()
+#         self.spacing = spacing
+#         self.ndim = len(spacing)
+#
+#     def forward_stn(self, input1, input2, ndim):
+#         if ndim==1:
+#             raise ValueError("Not implemented")
+#         if ndim==2:
+#             output = torch.nn.functional.grid_sample(input1, input2.permute([0, 2, 3, 1]), mode='bilinear',
+#                                           padding_mode='border')
+#         if ndim==3:
+#             output = torch.nn.functional.grid_sample(input1, input2.permute([0, 2, 3, 4, 1]), mode='trilinear', padding_mode='border')
+#         return output
+#
+#     def forward(self, input1, input2):
+#         """
+#         Perform the actual spatial transform
+#
+#         :param input1: image in BCXYZ format
+#         :param input2: spatial transform in BdimXYZ format
+#         :return: spatially transformed image in BCXYZ format
+#         """
+#
+#         assert(len(self.spacing)+2==len(input2.size()))
+#
+#         output = self.forward_stn(input1, map_scale_utils.scale_map(input2,self.spacing), self.ndim)
+#         # print(STNVal(output, ini=-1).sum())
+#         return output
+#
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class STNFunction_ND_BCXYZ(Function):
@@ -128,70 +187,4 @@ class STNFunction_ND_BCXYZ(Function):
 
 
 ###################################################################################################################
-
-class STNFunction_ND(Function):
-    """
-    Spatial transform function for 1D, 2D, and 3D. In BXYZC format (NOT the format used in the current toolbox).
-    """
-
-    def __init__(self, ndim):
-        """
-        Constructor
-
-        :param ndim: (int) spatial transformation of the transform
-        """
-        super(STNFunction_ND, self).__init__()
-        self.ndim = ndim
-        """spatial dimension"""
-
-    def forward(self, input1, input2):
-        """
-        Perform the actual spatial transform
-
-        :param input1: image in BXYZC format
-        :param input2: spatial transform in BXYZdim format
-        :return: spatially transformed image in BXYZC format
-        """
-        self.input1 = input1
-        self.input2 = input2
-        self.device_c = ffi.new("int *")
-        if self.ndim == 1:
-            output = torch.zeros(input1.size()[0], input2.size()[1], input1.size()[2])
-        elif self.ndim == 2:
-            output = torch.zeros(input1.size()[0], input2.size()[1], input2.size()[2], input1.size()[3])
-        elif self.ndim == 3:
-            output = torch.zeros(input1.size()[0], input2.size()[1], input2.size()[2], input2.size()[3],
-                                 input1.size()[4])
-        else:
-            raise ValueError('Can only process dimensions 1-3')
-        # print('decice %d' % torch.cuda.current_device())
-        if input1.is_cuda:
-            self.device = torch.cuda.current_device()
-        else:
-            self.device = -1
-        self.device_c[0] = self.device
-        if not input1.is_cuda:
-            my_lib_nd.BilinearSamplerBXYZC_updateOutput_ND(input1, input2, output, self.ndim)
-        else:
-            output = output.cuda(self.device)
-            my_lib_nd.BilinearSamplerBXYZC_updateOutput_ND_cuda(input1, input2, output, self.device_c)
-        return output
-
-    def backward(self, grad_output):
-        """
-        Computes the gradient
-
-        :param grad_output: grad output from previous "layer"
-        :return: gradient
-        """
-        grad_input1 = STNTensor(self.input1.size()).zero_()
-        grad_input2 = STNTensor(self.input2.size()).zero_()
-        # print('backward decice %d' % self.device)
-        if not USE_CUDA:
-            my_lib_nd.BilinearSamplerBXYZC_updateGradInput_ND(self.input1, self.input2, grad_input1, grad_input2,
-                                                              grad_output, self.ndim)
-        else:
-            my_lib_nd.BilinearSamplerBXYZC_updateGradInput_ND_cuda(self.input1, self.input2, grad_input1, grad_input2,
-                                                                   grad_output, self.device_c)
-        return grad_input1, grad_input2
 

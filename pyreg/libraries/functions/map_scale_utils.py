@@ -18,7 +18,7 @@ def scale_map(map,spacing):
     # id[d]-=1.
 
     for d in range(ndim):
-        map_scaled[:, d, ...] = map[:, d, ...] * (2. / (sz[d + 2] - 1.) / spacing[d]) - torch.ones_like(map[:, d, ...])
+        map_scaled[:, d, ...] = map[:, d, ...] * (2. / (sz[d + 2] - 1.) / spacing[d]) - 1.
 
     return map_scaled
 
@@ -36,4 +36,4 @@ def scale_map_grad(grad_map,spacing):
     for d in range(ndim):
         #grad_map[:, d, ...] *= spacing[d] * (sz[d + 2] - 1) / 2.
         #grad_map[:, d, ...] *= (sz[d + 2] - 1)/2.
-        grad_map[:, d, ...] *= (2. / (sz[d + 2] - 1.) / spacing[d])
+        grad_map[:, d, ...]  *= (2. / (sz[d + 2] - 1.) / spacing[d])
