@@ -476,13 +476,13 @@ class OAILongitudeReisgtration(object):
                 ##################    using randomized mesh for debugging   ###############################3
                 mesh =  torch.rand(inversed_map.shape[0],3,200,1,1)*2-1
                 #######################################################
-                mesh =  AdaptVal(torch.from_numpy(mesh))
-                mesh_itp = self.mesh_interpolation(inversed_map, mesh)
+                mesh =  AdaptVal(mesh)
+                mesh_itp = self.mesh_interpolation(inversed_map, mesh, spacing)
                 print("debugging mesh_itp")
 
 
-    def mesh_interpolation (self,map, mesh):
-        mesh_itp = compute_warped_image_multiNC(map, mesh,spacing=None,spline_order=1)
+    def mesh_interpolation (self,map, mesh, spacing):
+        mesh_itp = compute_warped_image_multiNC(map, mesh,spacing=spacing,spline_order=1)
         return mesh_itp
 
 
