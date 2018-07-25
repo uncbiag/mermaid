@@ -333,7 +333,7 @@ class OAILongitudeReisgtration(object):
 
         saving_folder_path = self.__gen_img_saving_path(patient,mod, spec)
         self._update_saving_analysis_path(saving_folder_path)
-        self.im_io.write(os.path.join(saving_folder_path, img0_name+'_target.nii.gz'), np.squeeze(Ic0), hdrc0)
+        #self.im_io.write(os.path.join(saving_folder_path, img0_name+'_target.nii.gz'), np.squeeze(Ic0), hdrc0)
 
         if self.img_label_channel_on:
             Ic0 = np.concatenate((Ic0, LTarget), 1)
@@ -351,7 +351,7 @@ class OAILongitudeReisgtration(object):
 
             Ic1, hdrc, spacing, _ = self.im_io.read_to_nc_format(filename=img_path, intensity_normalize=True)
 
-            self.im_io.write(os.path.join(saving_folder_path, img1_name + '_source.nii.gz'), np.squeeze(Ic1), hdrc0)
+            #self.im_io.write(os.path.join(saving_folder_path, img1_name + '_source.nii.gz'), np.squeeze(Ic1), hdrc0)
 
 
             if LTarget is not None:
@@ -450,6 +450,8 @@ class OAILongitudeReisgtration(object):
                                     params='cur_settings_lbfgs.json')
 
             wi = self.si.get_warped_image()
+
+            inversed_map = None
             if self.cal_inverse_map:
                 inversed_map_svf = self.si.get_inverse_map().detach()
                 inv_Ab = get_inverse_affine_param(Ab.detach())
@@ -459,12 +461,30 @@ class OAILongitudeReisgtration(object):
                 inv_Ab = update_affine_param(inv_Ab,inv_Ab)
                 inversed_map = apply_affine_transform_to_map_multiNC(inv_Ab, inversed_map_svf)  ##########################3
                 recovered_source = compute_warped_image_multiNC(AdaptVal(torch.from_numpy(Ic0)), inversed_map, spacing, 1)
-                self.im_io.write(os.path.join(saving_folder_path, img1_name + '_recovered_source.nii.gz'),
-                                 torch.squeeze(recovered_source[0:1, 0:1, ...]), hdrc0)
+                # self.im_io.write(os.path.join(saving_folder_path, img1_name + '_recovered_source.nii.gz'),
+                #                  torch.squeeze(recovered_source[0:1, 0:1, ...]), hdrc0)
 
             self.im_io.write(os.path.join(saving_folder_path,img1_name+'_warpped.nii.gz'), torch.squeeze(wi[0:1,0:1,...]), hdrc0)
 
-        return 1
+
+
+
+            #############################  code for mesh interpolation  #########################################33
+            if self.cal_inverse_map:
+
+                #  write a new function     read_mesh_into_tensor    B*3*N*1*1
+                ##################    using randomized mesh for debugging   ###############################3
+                mesh =  torch.rand(inversed_map.shape[0],3,200,1,1)*2-1
+                #######################################################
+                mesh =  AdaptVal(torch.from_numpy(mesh))
+                mesh_itp = self.mesh_interpolation(inversed_map, mesh)
+                print("debugging mesh_itp")
+
+
+    def mesh_interpolation (self,map, mesh):
+        mesh_itp = compute_warped_image_multiNC(map, mesh,spacing=None,spline_order=1)
+        return mesh_itp
+
 
 
 
