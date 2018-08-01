@@ -71,7 +71,7 @@ class NoisyLinear(nn.Module):
                 self.bias_sigma.data.fill_(self.std_init)
 
     def scale_noise(self, size):
-        x = torch.Tensor(size).normal_()
+        x = MyTensor(size).normal_()
         x = x.sign().mul(x.abs().sqrt())
         return x
 
@@ -82,8 +82,8 @@ class NoisyLinear(nn.Module):
             weight_epsilon = epsilon_out.ger(epsilon_in)
             bias_epsilon = self.scale_noise(self.out_features)
         else:
-            weight_epsilon = torch.Tensor(*(self.out_features, self.in_features)).normal_()
-            bias_epsilon = torch.Tensor(self.out_features).normal_()
+            weight_epsilon = MyTensor(*(self.out_features, self.in_features)).normal_()
+            bias_epsilon = MyTensor(self.out_features).normal_()
         return F.linear(input,
                         self.weight_mu + self.weight_sigma.mul(weight_epsilon),
                         self.bias_mu + self.bias_sigma.mul(bias_epsilon))
@@ -122,43 +122,43 @@ class _NoisyConvNd(nn.Module):
             self.std_init = std_init
 
         if transposed:
-            self.weight = Parameter(torch.Tensor(
+            self.weight = Parameter(MyTensor(
                 in_channels, out_channels // groups, *kernel_size))
             if self.scalar_sigmas:
                 if self.optimize_sigmas:
-                    self.weight_sigma = Parameter(torch.Tensor(1))
+                    self.weight_sigma = Parameter(MyTensor(1))
                 else:
-                    self.weight_sigma = torch.Tensor(1)
+                    self.weight_sigma = MyTensor(1)
             else:
                 if self.optimize_sigmas:
-                    self.weight_sigma = Parameter(torch.Tensor(in_channels, out_channels//groups))
+                    self.weight_sigma = Parameter(MyTensor(in_channels, out_channels//groups))
                 else:
-                    self.weight_sigma = torch.Tensor(in_channels, out_channels//groups)
+                    self.weight_sigma = MyTensor(in_channels, out_channels//groups)
         else:
-            self.weight = Parameter(torch.Tensor(
+            self.weight = Parameter(MyTensor(
                 out_channels, in_channels // groups, *kernel_size))
             if self.scalar_sigmas:
                 if self.optimize_sigmas:
-                    self.weight_sigma = Parameter(torch.Tensor(1))
+                    self.weight_sigma = Parameter(MyTensor(1))
                 else:
-                    self.weight_sigma = torch.Tensor(1)
+                    self.weight_sigma = MyTensor(1)
             else:
                 if self.optimize_sigmas:
-                    self.weight_sigma = Parameter(torch.Tensor(out_channels, in_channels//groups))
+                    self.weight_sigma = Parameter(MyTensor(out_channels, in_channels//groups))
                 else:
-                    self.weight_sigma = torch.Tensor(out_channels, in_channels // groups)
+                    self.weight_sigma = MyTensor(out_channels, in_channels // groups)
         if bias:
-            self.bias = Parameter(torch.Tensor(out_channels))
+            self.bias = Parameter(MyTensor(out_channels))
             if self.scalar_sigmas:
                 if self.optimize_sigmas:
-                    self.bias_sigma = Parameter(torch.Tensor(1))
+                    self.bias_sigma = Parameter(MyTensor(1))
                 else:
-                    self.bias_sigma = torch.Tensor(1)
+                    self.bias_sigma = MyTensor(1)
             else:
                 if self.optimize_sigmas:
-                    self.bias_sigma = Parameter(torch.Tensor(out_channels))
+                    self.bias_sigma = Parameter(MyTensor(out_channels))
                 else:
-                    self.bias_sigma = torch.Tensor(out_channels)
+                    self.bias_sigma = MyTensor(out_channels)
         else:
             self.register_parameter('bias', None)
             self.register_parameter('bias_sigma', None)
