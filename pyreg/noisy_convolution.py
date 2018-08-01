@@ -6,6 +6,10 @@ import torch.nn as nn
 
 from torch.nn.modules.utils import _single, _pair, _triple
 
+from pyreg.data_wrapper import MyTensor, USE_CUDA
+
+device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
+
 class NoisyLinear(nn.Module):
     """Applies a noisy linear transformation to the incoming data: :math:`y = (mu_w + sigma_w \cdot epsilon_w)x + mu_b + sigma_b \cdot epsilon_b`
     More details can be found in the paper `Noisy Networks for Exploration` _ .
@@ -34,11 +38,11 @@ class NoisyLinear(nn.Module):
         self.in_features = in_features
         self.out_features = out_features
         self.factorised = factorised
-        self.weight_mu = Parameter(torch.Tensor(out_features, in_features))
-        self.weight_sigma = Parameter(torch.Tensor(out_features, in_features))
+        self.weight_mu = Parameter(MyTensor(out_features, in_features))
+        self.weight_sigma = Parameter(MyTensor(out_features, in_features))
         if bias:
-            self.bias_mu = Parameter(torch.Tensor(out_features))
-            self.bias_sigma = Parameter(torch.Tensor(out_features))
+            self.bias_mu = Parameter(MyTensor(out_features))
+            self.bias_sigma = Parameter(MyTensor(out_features))
         else:
             self.register_parameter('bias', None)
         if std_init is None:
@@ -313,8 +317,8 @@ class NoisyConv1d(_NoisyConvNd):
 
     def forward(self, input, iter=0):
 
-        weight_epsilon = torch.Tensor(*(self.out_channels, self.in_channels, *self.kernel_size)).normal_()
-        bias_epsilon = torch.Tensor(self.out_channels).normal_()
+        weight_epsilon = MyTensor(*(self.out_channels, self.in_channels, *self.kernel_size)).normal_()
+        bias_epsilon = MyTensor(self.out_channels).normal_()
 
         if self.bias is not None:
             if self.training:
@@ -486,8 +490,8 @@ class NoisyConv2d(_NoisyConvNd):
 
     def forward(self, input, iter=0):
 
-        weight_epsilon = torch.Tensor(*(self.out_channels, self.in_channels, *self.kernel_size)).normal_()
-        bias_epsilon = torch.Tensor(self.out_channels).normal_()
+        weight_epsilon = MyTensor(*(self.out_channels, self.in_channels, *self.kernel_size)).normal_()
+        bias_epsilon = MyTensor(self.out_channels).normal_()
 
         if self.bias is not None:
             if self.training:
@@ -655,8 +659,8 @@ class NoisyConv3d(_NoisyConvNd):
 
     def forward(self, input):
 
-        weight_epsilon = torch.Tensor(*(self.out_channels, self.in_channels, *self.kernel_size)).normal_()
-        bias_epsilon = torch.Tensor(self.out_channels).normal_()
+        weight_epsilon = MyTensor(*(self.out_channels, self.in_channels, *self.kernel_size)).normal_()
+        bias_epsilon = MyTensor(self.out_channels).normal_()
 
         if self.bias is not None:
             if self.training:
@@ -843,8 +847,8 @@ class NoisyConvTranspose1d(_NoisyConvTransposeMixin, _NoisyConvNd):
     def forward(self, input, output_size=None, iter=0):
         output_padding = self._output_padding(input, output_size)
 
-        weight_epsilon = torch.Tensor(*(self.out_channels, self.in_channels, *self.kernel_size)).normal_()
-        bias_epsilon = torch.Tensor(self.out_channels).normal_()
+        weight_epsilon = MyTensor(*(self.out_channels, self.in_channels, *self.kernel_size)).normal_()
+        bias_epsilon = MyTensor(self.out_channels).normal_()
 
         if self.bias is not None:
             if self.training:
@@ -1023,8 +1027,8 @@ class NoisyConvTranspose2d(_NoisyConvTransposeMixin, _NoisyConvNd):
     def forward(self, input, output_size=None, iter=0):
         output_padding = self._output_padding(input, output_size)
 
-        weight_epsilon = torch.Tensor(*(self.out_channels, self.in_channels, *self.kernel_size)).normal_()
-        bias_epsilon = torch.Tensor(self.out_channels).normal_()
+        weight_epsilon = MyTensor(*(self.out_channels, self.in_channels, *self.kernel_size)).normal_()
+        bias_epsilon = MyTensor(self.out_channels).normal_()
 
         if self.bias is not None:
             if self.training:
@@ -1200,8 +1204,8 @@ class NoisyConvTranspose3d(_NoisyConvTransposeMixin, _NoisyConvNd):
     def forward(self, input, output_size=None):
         output_padding = self._output_padding(input, output_size)
 
-        weight_epsilon = torch.Tensor(*(self.out_channels, self.in_channels, *self.kernel_size)).normal_()
-        bias_epsilon = torch.Tensor(self.out_channels).normal_()
+        weight_epsilon = MyTensor(*(self.out_channels, self.in_channels, *self.kernel_size)).normal_()
+        bias_epsilon = MyTensor(self.out_channels).normal_()
 
         if self.bias is not None:
             if self.training:
