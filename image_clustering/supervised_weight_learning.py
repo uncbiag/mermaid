@@ -21,6 +21,7 @@ device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else 
 
 import matplotlib.pyplot as plt
 import numpy as np
+import random
 
 # create a dataloader
 
@@ -95,7 +96,7 @@ def compute_variances(weights,stds):
     return ret
 
 rel_path = '../experiments'
-input_directory = 'synthetic_example_out_kernel_weighting_type_w_K'
+input_directory = 'synthetic_example_out_kernel_weighting_type_sqrt_w_K_sqrt_w'
 image_input_directory = os.path.join(rel_path,input_directory,'brain_affine_icbm')
 
 dim = 2
@@ -111,23 +112,29 @@ nr_of_weights = 4
 global_multi_gaussian_weights = torch.from_numpy(np.array([0.0,0.0,0.0,1.0],dtype='float32'))
 gaussian_stds = torch.from_numpy(np.array([0.01,0.05,0.1,0.2],dtype='float32'))
 
-use_batch_normalization = False
-use_instance_normalization = True
+normalization_type = 'layer' # '['batch', 'instance', 'layer', 'group', 'none']
+use_noisy_convolution = False
+noisy_convolution_std = 0.0
+
 use_color_tv = True
 reconstruct_variances = False
 reconstruct_stds = True
 
-if reconstruct_stds and reconstruct_variances:
-    raise ValueError('Cannot select reconstruct_stds and reconstruct_variances. Pick one. If none is picked the weights are reconstructed')
-
 display_colorbar = True
 
+im_sz = np.array([128,128])
 reconstruction_weight = 1000.0
-totalvariation_weight = 0.01
+totalvariation_weight = 0.001
 omt_weight = 2.5
 omt_power=1.0
 omt_use_log_transformed_std=True
-lr = 0.1
+lr = 0.05
+seed = 75
+
+if seed is not None:
+    print('Setting the seed to: {}'.format(seed))
+    random.seed(seed)
+    torch.manual_seed(seed)
 
 used_image_pairs_file = os.path.join(rel_path,input_directory,'used_image_pairs.pt')
 used_image_pairs = torch.load(used_image_pairs_file)
@@ -139,6 +146,9 @@ network_type = dn.Unet
 #network_type = dn.Simple_consistent
 
 params = pars.ParameterDict()
+params['normalization_type'] = normalization_type
+params['use_noisy_convolution'] = use_noisy_convolution
+params['noisy_convolution_std'] = noisy_convolution_std
 
 dataset = ImageAndWeightDataset(image_filenames=input_images, rel_path=rel_path, params=params)
 trainloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=1)
@@ -148,7 +158,9 @@ trainloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_worke
 reconstruction_criterion = nn.MSELoss().to(device)  # nn.L1Loss().to(device)
 totalvariation_criterion = dn.TotalVariationLoss(dim=dim, params=params).to(device)
 
-reconstruction_unet = network_type(dim=dim, n_in_channel=1, n_out_channel=nr_of_weights, use_batch_normalization=use_batch_normalization, use_instance_normalization=use_instance_normalization).to(device)
+reconstruction_unet = network_type(dim=dim, n_in_channel=1, n_out_channel=nr_of_weights, im_sz=im_sz, params=params).to(device)
+reconstruction_unet.initialize_network_weights()
+
 all_optimization_parameters = reconstruction_unet.parameters()
 
 print(reconstruction_unet)
@@ -184,7 +196,7 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
         optimizer.zero_grad()
 
         # forward + backward + optimize
-        reconstruction_outputs = reconstruction_unet(inputs)
+        reconstruction_outputs = reconstruction_unet(inputs,)
         #pre_weights = deep_smoothers.weighted_softmax(reconstruction_outputs, dim=1, weights=global_multi_gaussian_weights)
         pre_weights = deep_smoothers.weighted_linear_softmax(reconstruction_outputs, dim=1, weights=global_multi_gaussian_weights)
         #pre_weights = deep_smoothers.stable_softmax(reconstruction_outputs, dim=1)

@@ -23,8 +23,6 @@ import os
 import matplotlib.pyplot as plt
 #from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-batch_norm_momentum_val = 0.1
-
 # def _custom_colorbar(mappable):
 #     ax = mappable.axes
 #     fig = ax.figure
@@ -1134,7 +1132,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
 
     """
 
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=1.0,params=None):
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, im_sz, nr_of_image_channels=1, omt_power=1.0,params=None):
         super(DeepSmoothingModel, self).__init__()
 
         self.nr_of_image_channels = nr_of_image_channels
@@ -1143,6 +1141,9 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
             raise ValueError('Currently only implemented for images with 1 channel')
 
         self.dim = dim
+        self.im_sz = im_sz
+        assert(len(self.im_sz)==self.dim)
+
         self.omt_power = omt_power
         self.pnorm = 2
 
@@ -1324,7 +1325,8 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
 
     def _initialize_weights(self):
 
-        print('WARNING: weight initialization DISABLED; using pyTorch default network initialization, which is probably good enough (famous last words).')
+        print('WARNING: weight initialization DISABLED; using pyTorch default network initialization, which is probably not a good idea.')
+        print('WARNING: if you are seeing this message, you probably should have implemented your own weight initialization.')
 
         # self.weight_initalization_constant = self.params[('weight_initialization_constant', 0.01, 'Weights are initialized via normal_(0, math.sqrt(weight_initialization_constant / n))')]
         # print('WARNING: weight initialization ENABLED')
@@ -1655,133 +1657,27 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
 
         return ret
 
-
-class EncoderDecoderSmoothingModel(DeepSmoothingModel):
-    """
-    Similar to the model used in Quicksilver
-    """
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=1.0, params=None ):
-        super(EncoderDecoderSmoothingModel, self).__init__(nr_of_gaussians=nr_of_gaussians,\
-                                                                     gaussian_stds=gaussian_stds,\
-                                                                     dim=dim,\
-                                                                     spacing=spacing,\
-                                                                     nr_of_image_channels=nr_of_image_channels,\
-                                                                     omt_power=omt_power,\
-                                                                     params=params)
-
-        # is 64 in quicksilver paper
-        feature_num = self.params[('number_of_features_in_first_layer', 32, 'number of features in the first encoder layer (64 in quicksilver)')]
-        use_dropout= self.params[('use_dropout',False,'use dropout for the layers')]
-        self.use_separate_decoders_per_gaussian = self.params[('use_separate_decoders_per_gaussian',True,'if set to true separte decoder branches are used for each Gaussian')]
-        use_batch_normalization = self.params[('use_batch_normalization',False,'If true, uses batch normalization between layers')]
-        use_instance_normalization = self.params[('use_instance_normalization',True,'If true, uses instance normalization between layers')]
-
-        self.use_one_encoder_decoder_block = self.params[('use_one_encoder_decoder_block',True,'If False, using two each as in the quicksilver paper')]
-
-        if self.use_momentum_as_input or self.use_target_image_as_input or self.use_source_image_as_input:
-            self.encoder_1 = dn.encoder_block_2d(self.get_number_of_input_channels(nr_of_image_channels,dim), feature_num,
-                                              use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim)
-        else:
-            self.encoder_1 = dn.encoder_block_2d(1, feature_num, use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim)
-
-        if not self.use_one_encoder_decoder_block:
-            self.encoder_2 = dn.encoder_block_2d(feature_num, feature_num * 2, use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim)
-
-        # todo: maybe have one decoder for each Gaussian here.
-        # todo: the current version seems to produce strange gridded results
-
-        if self.use_separate_decoders_per_gaussian:
-            if not self.use_one_encoder_decoder_block:
-                self.decoder_1 = nn.ModuleList()
-            self.decoder_2 = nn.ModuleList()
-            # create two decoder blocks for each Gaussian
-            for g in range(nr_of_gaussians):
-                if not self.use_one_encoder_decoder_block:
-                    self.decoder_1.append( dn.decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim) )
-                self.decoder_2.append( dn.decoder_block_2d(feature_num, 1, 2, use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim, last_block=True) )
-        else:
-            if not self.use_one_encoder_decoder_block:
-                self.decoder_1 = dn.decoder_block_2d(feature_num * 2, feature_num, 2, use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim)
-            self.decoder_2 = dn.decoder_block_2d(feature_num, nr_of_gaussians, 2, use_dropout, use_batch_normalization, use_instance_normalization=use_instance_normalization, dim=dim, last_block=True)  # 3?
-
-        self._initialize_weights()
-
-    def _compute_pre_weights(self,x, I, global_multi_gaussian_weights):
-
-        if self.use_one_encoder_decoder_block:
-            encoder_output = self.encoder_1(x)
-        else:
-            encoder_output = self.encoder_2(self.encoder_1(x))
-
-        if self.use_one_encoder_decoder_block:
-            if self.use_separate_decoders_per_gaussian:
-                # here we have separate decoder outputs for the different Gaussians
-                # should give it more flexibility
-                decoder_output_individual = []
-                for g in range(self.nr_of_gaussians):
-                    decoder_output_individual.append(self.decoder_2[g]((encoder_output)))
-                decoder_output = torch.cat(decoder_output_individual, dim=1);
-            else:
-                decoder_output = self.decoder_2(encoder_output)
-        else:
-            if self.use_separate_decoders_per_gaussian:
-                # here we have separate decoder outputs for the different Gaussians
-                # should give it more flexibility
-                decoder_output_individual = []
-                for g in range(self.nr_of_gaussians):
-                    decoder_output_individual.append( self.decoder_2[g](self.decoder_1[g](encoder_output)) )
-                decoder_output = torch.cat(decoder_output_individual, dim=1);
-            else:
-                decoder_output = self.decoder_2(self.decoder_1(encoder_output))
-
-        # now we are ready for the weighted softmax (will be like softmax if no weights are specified)
-        if self.estimate_around_global_weights:
-            pre_weights = weighted_linear_softmax(decoder_output, dim=1, weights=global_multi_gaussian_weights)
-        else:
-            pre_weights = stable_softmax(decoder_output, dim=1)
-
-        return pre_weights
-
-
-
-class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
+class GeneralNetworkWeightedSmoothingModel(DeepSmoothingModel):
     """
     Mini neural network which takes as an input a set of smoothed velocity field as
     well as input images and predicts weights for a multi-Gaussian smoothing from this
     Enforces the same weighting for all the dimensions of the vector field to be smoothed
 
     """
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=1.0, params=None ):
-        super(SimpleConsistentWeightedSmoothingModel, self).__init__(nr_of_gaussians=nr_of_gaussians,\
+    def __init__(self, network_type, nr_of_gaussians, gaussian_stds, dim, spacing, im_sz, nr_of_image_channels=1, omt_power=1.0, params=None ):
+        super(GeneralNetworkWeightedSmoothingModel, self).__init__(nr_of_gaussians=nr_of_gaussians,\
                                                                      gaussian_stds=gaussian_stds,\
                                                                      dim=dim,\
                                                                      spacing=spacing,\
+                                                                     im_sz=im_sz,\
                                                                      nr_of_image_channels=nr_of_image_channels,\
                                                                      omt_power=omt_power,
                                                                      params=params)
 
-        self.kernel_sizes = self.params[('kernel_sizes',[7,7],'size of the convolution kernels')]
-        self.use_batch_normalization = self.params[('use_batch_normalization', False, 'If true, uses batch normalization between layers')]
-        self.use_instance_normalization = self.params[('use_instance_normalization', True, 'If true, uses instance normalization between layers')]
 
-        # check that all the kernel-size are odd
-        for ks in self.kernel_sizes:
-            if ks%2== 0:
-                raise ValueError('Kernel sizes need to be odd')
 
-        # the last layers feature number is not specified as it will simply be the number of Gaussians
-        self.nr_of_features_per_layer = self.params[('number_of_features_per_layer',[20],'Number of features for the convolution later; last one is set to number of Gaussians')]
-        # add the number of Gaussians to the last layer
-        self.nr_of_features_per_layer = self.nr_of_features_per_layer + [nr_of_gaussians]
-
-        self.nr_of_layers = len(self.kernel_sizes)
-        assert( self.nr_of_layers== len(self.nr_of_features_per_layer) )
-
-        self.use_relu = self.params[('use_relu',True,'if set to True uses Relu, otherwise sigmoid')]
-
-        self.conv_layers = None
-        self.batch_normalizations = None
-        self.instance_normalizations = None
+        self.network = None
+        self.network_type = network_type
 
         # needs to be initialized here, otherwise the optimizer won't see the modules from ModuleList
         # todo: figure out how to do ModuleList initialization not in __init__
@@ -1797,149 +1693,43 @@ class SimpleConsistentWeightedSmoothingModel(DeepSmoothingModel):
         :return:
         """
 
-        assert(self.nr_of_layers>0)
+        # determine the network type
+        admissible_network_types = ['simple_consistent','encoder_decoder','unet','unet_no_skip']
+        if self.network_type.lower() not in admissible_network_types:
+            raise ValueError('Unknow network type: {}'.format(self.network_type))
 
-        nr_of_input_channels = self.get_number_of_input_channels(nr_of_image_channels,dim)
-
-        convs = [None]*self.nr_of_layers
-
-        # first layer
-        convs[0] = dn.DimConv(self.dim)(nr_of_input_channels,
-                                  self.nr_of_features_per_layer[0],
-                                  self.kernel_sizes[0], padding=(self.kernel_sizes[0]-1)//2)
-
-        # all the intermediate layers and the last one
-        for l in range(self.nr_of_layers-1):
-            convs[l+1] = dn.DimConv(self.dim)(self.nr_of_features_per_layer[l],
-                                        self.nr_of_features_per_layer[l+1],
-                                        self.kernel_sizes[l+1],
-                                        padding=(self.kernel_sizes[l+1]-1)//2)
-
-        self.conv_layers = nn.ModuleList()
-        for c in convs:
-            self.conv_layers.append(c)
-
-        if self.use_batch_normalization:
-
-            batch_normalizations = [None]*(self.nr_of_layers-1) # not on the last layer
-            for b in range(self.nr_of_layers-1):
-                batch_normalizations[b] = dn.DimBatchNorm(self.dim)(self.nr_of_features_per_layer[b],momentum=batch_norm_momentum_val)
-
-            self.batch_normalizations = nn.ModuleList()
-            for b in batch_normalizations:
-                self.batch_normalizations.append(b)
-
-        if self.use_instance_normalization:
-
-            instance_normalizations = [None]*(self.nr_of_layers-1) # not on the last layer
-            for b in range(self.nr_of_layers-1):
-                instance_normalizations[b] = dn.DimInstanceNorm(self.dim)(self.nr_of_features_per_layer[b],momentum=batch_norm_momentum_val)
-
-            self.instance_normalizations = nn.ModuleList()
-            for b in instance_normalizations:
-                self.instance_normalizations.append(b)
-
-        self._initialize_weights()
-
-    def _compute_pre_weights(self, x, I, global_multi_gaussian_weights):
-
-        # now let's apply all the convolution layers, until the last
-        # (because the last one is not relu-ed
-
-        if self.use_batch_normalization:
-            for l in range(len(self.conv_layers) - 1):
-                if self.use_relu:
-                    x = F.relu(self.batch_normalizations[l](self.conv_layers[l](x)))
-                else:
-                    x = F.sigmoid(self.batch_normalizations[l](self.conv_layers[l](x)))
-
-        elif self.use_instance_normalization:
-            for l in range(len(self.conv_layers) - 1):
-                if self.use_relu:
-                    x = F.relu(self.instance_normalizations[l](self.conv_layers[l](x)))
-                else:
-                    x = F.sigmoid(self.instance_normalizations[l](self.conv_layers[l](x)))
-
+        if self.network_type.lower()=='simple_consistent':
+            network_type = dn.Simple_consistent
+        elif self.network_type.lower()=='encoder_decoder':
+            network_type = dn.Encoder_decoder
+        elif self.network_type.lower()=='unet':
+            network_type = dn.Unet
+        elif self.network_type.lower()=='unet_no_skip':
+            network_type = dn.Unet_no_skip
         else:
-            for l in range(len(self.conv_layers) - 1):
-                if self.use_relu:
-                    x = F.relu(self.conv_layers[l](x))
-                else:
-                    x = F.sigmoid(self.conv_layers[l](x))
+            raise ValueError('Unknown network type: {}'.format(self.network_type))
 
-        # and now apply the last one without an activation for now
-        # because we want to have the ability to smooth *before* the softmax
-        # this is similar to smoothing in the logit domain for an active mean field approach
-        x = self.conv_layers[-1](x)
-
-        # now we are ready for the weighted softmax (will be like softmax if no weights are specified)
-        if self.estimate_around_global_weights:
-            pre_weights = weighted_linear_softmax(x, dim=1, weights=global_multi_gaussian_weights)
-        else:
-            pre_weights = stable_softmax(x, dim=1)
-
-        return pre_weights
-
-
-class UNetWeightedSmoothingModel(DeepSmoothingModel):
-    """
-    Mini neural network which takes as an input a set of smoothed velocity field as
-    well as input images and predicts weights for a multi-Gaussian smoothing from this
-    Enforces the same weighting for all the dimensions of the vector field to be smoothed
-
-    """
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=1.0, params=None ):
-        super(UNetWeightedSmoothingModel, self).__init__(nr_of_gaussians=nr_of_gaussians,\
-                                                                     gaussian_stds=gaussian_stds,\
-                                                                     dim=dim,\
-                                                                     spacing=spacing,\
-                                                                     nr_of_image_channels=nr_of_image_channels,\
-                                                                     omt_power=omt_power,
-                                                                     params=params)
-
-        self.use_batch_normalization = self.params[('use_batch_normalization', False, 'If true, uses batch normalization between layers')]
-        self.use_instance_normalization = self.params[('use_instance_normalization', True, 'If true, uses instance normalization between layers')]
-
-        self.unet = None
-
-        # needs to be initialized here, otherwise the optimizer won't see the modules from ModuleList
-        # todo: figure out how to do ModuleList initialization not in __init__
-        # todo: this would allow removing dim and nr_of_image_channels from interface
-        # todo: because it could be compute on the fly when forward is executed
-        self._init(self.nr_of_image_channels,dim=self.dim)
-
-    def _init(self,nr_of_image_channels,dim):
-        """
-        Initalizes all the conv layers
-        :param nr_of_image_channels:
-        :param dim:
-        :return:
-        """
-
-        # network_type = dn.Unet_no_skip
-        network_type = dn.Unet
-        # network_type = dn.Simple_consistent
+        # dim, n_in_channel, n_out_channel, im_sz, params
 
         nr_of_input_channels = self.get_number_of_input_channels(nr_of_image_channels,dim)
 
         # create the network
         if USE_CUDA:
-            self.unet = network_type(dim=dim, n_in_channel=nr_of_input_channels, n_out_channel=self.nr_of_gaussians,
-                                use_batch_normalization=self.use_batch_normalization,
-                                use_instance_normalization=self.use_instance_normalization).cuda()
+            self.network = network_type(dim=dim, n_in_channel=nr_of_input_channels, n_out_channel=self.nr_of_gaussians,
+                                im_sz=self.im_sz, params=self.params).cuda()
         else:
-            self.unet = network_type(dim=dim, n_in_channel=nr_of_input_channels, n_out_channel=self.nr_of_gaussians,
-                                    use_batch_normalization=self.use_batch_normalization,
-                                    use_instance_normalization=self.use_instance_normalization)
+            self.network = network_type(dim=dim, n_in_channel=nr_of_input_channels, n_out_channel=self.nr_of_gaussians,
+                                     im_sz=self.im_sz, params=self.params)
 
-        self._initialize_weights()
+        #self._initialize_weights()
+        self.network.initialize_network_weights()
 
     def _compute_pre_weights(self, x, I, global_multi_gaussian_weights):
 
         # now let's apply all the convolution layers, until the last
         # (because the last one is not relu-ed
 
-        x = self.unet(x)
+        x = self.network(x)
 
         # now we are ready for the weighted softmax (will be like softmax if no weights are specified)
         if self.estimate_around_global_weights:
@@ -1956,11 +1746,12 @@ class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
     This is NOT a deep network model, but a way to debug optimization using the synthetic data
 
     """
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1, omt_power=1.0, params=None ):
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, im_sz, nr_of_image_channels=1, omt_power=1.0, params=None ):
         super(ClusteredWeightedSmoothingModel, self).__init__(nr_of_gaussians=nr_of_gaussians,\
                                                                      gaussian_stds=gaussian_stds,\
                                                                      dim=dim,\
                                                                      spacing=spacing,\
+                                                                     im_sz=im_sz,\
                                                                      nr_of_image_channels=nr_of_image_channels,\
                                                                      omt_power=omt_power,
                                                                      params=params)
@@ -2034,13 +1825,15 @@ class DeepSmootherFactory(object):
     Factory to quickly create different types of deep smoothers.
     """
 
-    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, nr_of_image_channels=1 ):
+    def __init__(self, nr_of_gaussians, gaussian_stds, dim, spacing, im_sz, nr_of_image_channels=1 ):
         self.nr_of_gaussians = nr_of_gaussians
         """number of Gaussians as input"""
         self.gaussian_stds = gaussian_stds
         """stds of the Gaussians"""
         self.dim = dim
         """dimension of input image"""
+        self.im_sz = im_sz
+        """image size"""
         self.nr_of_image_channels = nr_of_image_channels
         """number of channels the image has (currently only one is supported)"""
         self.spacing = spacing
@@ -2058,34 +1851,26 @@ class DeepSmootherFactory(object):
         """
 
         cparams = params[('deep_smoother',{})]
-        smootherType = cparams[('type', 'simple_consistent','type of deep smoother (simple_consistent|encoder_decoder|clustered|unet)')]
-        if smootherType=='simple_consistent':
-            return SimpleConsistentWeightedSmoothingModel(nr_of_gaussians=self.nr_of_gaussians,
-                                                          gaussian_stds=self.gaussian_stds,
-                                                          dim=self.dim,
-                                                          spacing=self.spacing,
-                                                          nr_of_image_channels=self.nr_of_image_channels,
-                                                          params=params)
-        elif smootherType=='encoder_decoder':
-            return EncoderDecoderSmoothingModel(nr_of_gaussians=self.nr_of_gaussians,
-                                                  gaussian_stds=self.gaussian_stds,
-                                                  dim=self.dim,
-                                                  spacing=self.spacing,
-                                                  nr_of_image_channels=self.nr_of_image_channels,
-                                                  params=params)
-        elif smootherType=='clustered':
+        smootherType = cparams[('type', 'simple_consistent','type of deep smoother (simple_consistent|encoder_decoder|clustered|unet|unet_no_skip)')]
+
+        admissible_smoother_types = ['simple_consistent','encoder_decoder','unet','unet_no_skip','clustered']
+        if smootherType.lower() not in admissible_smoother_types:
+            raise ValueError('Unknown smoother type: {}'.format(smootherType))
+
+        if smootherType=='clustered':
             return ClusteredWeightedSmoothingModel(nr_of_gaussians=self.nr_of_gaussians,
-                                                  gaussian_stds=self.gaussian_stds,
-                                                  dim=self.dim,
-                                                  spacing=self.spacing,
-                                                  nr_of_image_channels=self.nr_of_image_channels,
-                                                  params=params)
-        elif smootherType=='unet':
-            return UNetWeightedSmoothingModel(nr_of_gaussians=self.nr_of_gaussians,
-                                                  gaussian_stds=self.gaussian_stds,
-                                                  dim=self.dim,
-                                                  spacing=self.spacing,
-                                                  nr_of_image_channels=self.nr_of_image_channels,
-                                                  params=params)
+                                                   gaussian_stds=self.gaussian_stds,
+                                                   dim=self.dim,
+                                                   spacing=self.spacing,
+                                                   im_sz=self.im_sz,
+                                                   nr_of_image_channels=self.nr_of_image_channels,
+                                                   params=params)
         else:
-            raise ValueError('Deep smoother: ' + smootherType + ' not known')
+            return GeneralNetworkWeightedSmoothingModel(network_type=smootherType,
+                                                        nr_of_gaussians=self.nr_of_gaussians,
+                                                        gaussian_stds=self.gaussian_stds,
+                                                        dim=self.dim,
+                                                        spacing=self.spacing,
+                                                        im_sz=self.im_sz,
+                                                        nr_of_image_channels=self.nr_of_image_channels,
+                                                        params=params)

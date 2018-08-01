@@ -848,7 +848,7 @@ if __name__ == "__main__":
                                                       default_val=0.02, params_description='How much smoothing is used to create the texture image')
 
     kernel_weighting_type = get_parameter_value(args.kernel_weighting_type, params=params, params_name='kernel_weighting_type',
-                                                default_val='w_K', params_description='Which kernel weighting to use for integration. Specify as [w_K|w_K_w|sqrt_w_K_sqrt_w]; w_K is the default')
+                                                default_val='sqrt_w_K_sqrt_w', params_description='Which kernel weighting to use for integration. Specify as [w_K|w_K_w|sqrt_w_K_sqrt_w]; w_K is the default')
 
     if use_random_source==True and use_fixed_source==True:
         raise ValueError('The source image cannot simultaneously be random and fixed. Aborting')

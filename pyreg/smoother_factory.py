@@ -961,7 +961,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.multi_gaussian_stds_optimizer_params = self._create_multi_gaussian_stds_optimization_vector_parameters()
         self.multi_gaussian_weights_optimizer_params = self._create_multi_gaussian_weights_optimization_vector_parameters()
 
-        self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,dim=self.dim,spacing=self.spacing).create_deep_smoother(params)
+        self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,dim=self.dim,spacing=self.spacing,im_sz=self.sz).create_deep_smoother(params)
         """learned mini-network to predict multi-Gaussian smoothing weights"""
 
         self.load_dnn_parameters_from_this_file = params[('load_dnn_parameters_from_this_file','',
