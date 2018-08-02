@@ -213,7 +213,10 @@ class LBFGS_LS(Optimizer):
 
             # check that progress can be made along that direction
             if gtd > -tolerance_change:
+                if state['n_iter'] == 1:
+                    self._last_step_size_taken = 0.0
                 break
+
 
             # reset initial guess for step size
             if state['n_iter'] == 1:
