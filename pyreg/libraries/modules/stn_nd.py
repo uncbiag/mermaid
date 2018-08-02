@@ -36,11 +36,11 @@ class STN_ND_BCXYZ(Module):
     """
     Spatial transform code for nD spatial transoforms. Uses the BCXYZ image format.
     """
-    def __init__(self, spacing):
+    def __init__(self, spacing, zero_boundary=False):
         super(STN_ND_BCXYZ, self).__init__()
         self.spacing = spacing
         """spatial dimension"""
-        self.f = STNFunction_ND_BCXYZ( self.spacing )
+        self.f = STNFunction_ND_BCXYZ( self.spacing,zero_boundary)
         """spatial transform function"""
     def forward(self, input1, input2):
         """

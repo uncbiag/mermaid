@@ -32,6 +32,13 @@ except ImportError:
 
 # testing code starts here
 
+torch.backends.cudnn.deterministic = True
+
+torch.manual_seed(999)
+
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(999)
+
 
 class Test_stn_1d(unittest.TestCase):
 
@@ -91,7 +98,7 @@ class Test_stn_2d(unittest.TestCase):
         device_c[0] = device
         nframes = 3
         height = 120
-        width = 1
+        width = 100
         ratio = 1
         grid_height = int(height / ratio)
         grid_width = int(width / ratio)
@@ -100,8 +107,8 @@ class Test_stn_2d(unittest.TestCase):
         self.device = device
         self.device_c = device_c
         self.inputImage = torch.randn(nframes, channels, width, height)
-        self.inputGrids = (torch.rand(nframes, 2, grid_width, grid_height))
-        self.output = torch.rand(nframes, channels, grid_width, grid_height)
+        self.inputGrids = (torch.rand(nframes, 2, grid_width, grid_height))*2-1
+        self.output = torch.zeros(nframes, channels, grid_width, grid_height)
         self.inputImage_cuda = self.inputImage.cuda(device)
         self.inputGrids_cuda = self.inputGrids.cuda(device)
         self.output_cuda = self.output.cuda(device)
@@ -142,9 +149,9 @@ class Test_stn_3d(unittest.TestCase):
         device_c = ffi.new("int *")
         device_c[0] = device
         nframes = 3
-        depth = 1
+        depth = 10
         height = 137
-        width = 1
+        width = 100
         ratio = 1
         grid_depth = int(depth / ratio)
         grid_height = int(height / ratio)

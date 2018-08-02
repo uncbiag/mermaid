@@ -14,7 +14,7 @@ extern THCState *state;
 
 
 
-int BilinearSamplerBCWHD_updateOutput_cuda_3D(THCudaTensor *inputImages, THCudaTensor *grids, THCudaTensor *output, int * device)
+int BilinearSamplerBCWHD_updateOutput_cuda_3D(THCudaTensor *inputImages, THCudaTensor *grids, THCudaTensor *output, int * device, int zero_boundary)
 {
 // not right here, just for projection, refer to mycuda
 //  THCState *state = getCutorchState(L);
@@ -64,7 +64,8 @@ int BilinearSamplerBCWHD_updateOutput_cuda_3D(THCudaTensor *inputImages, THCudaT
                                                THCudaTensor_stride(state, output, 2),
                                                THCudaTensor_stride(state, output, 3),
                                                THCudaTensor_stride(state, output, 4),
-                                               THCState_getCurrentStream(state));
+                                               THCState_getCurrentStream(state),
+                                               zero_boundary);
 
   //check for errors
   if (!success) {
@@ -76,7 +77,7 @@ int BilinearSamplerBCWHD_updateOutput_cuda_3D(THCudaTensor *inputImages, THCudaT
 
 
 int BilinearSamplerBCWHD_updateGradInput_cuda_3D(THCudaTensor *inputImages, THCudaTensor *grids, THCudaTensor *gradInputImages,
-                                        THCudaTensor *gradGrids, THCudaTensor *gradOutput, int * device)
+                                        THCudaTensor *gradGrids, THCudaTensor *gradOutput, int * device, int zero_boundary)
 {
 //  THCState *state = getCutorchState(L);
 //  THCudaTensor *inputImages = (THCudaTensor *)luaT_checkudata(L, 2, "torch.CudaTensor");
@@ -141,7 +142,8 @@ int BilinearSamplerBCWHD_updateGradInput_cuda_3D(THCudaTensor *inputImages, THCu
                                                   THCudaTensor_stride(state, gradOutput, 2),
                                                   THCudaTensor_stride(state, gradOutput, 3),
                                                   THCudaTensor_stride(state, gradOutput, 4),
-                                                  THCState_getCurrentStream(state));
+                                                  THCState_getCurrentStream(state),
+                                                  zero_boundary);
 
   //check for errors
   if (!success) {
@@ -151,7 +153,7 @@ int BilinearSamplerBCWHD_updateGradInput_cuda_3D(THCudaTensor *inputImages, THCu
 }
 
 int BilinearSamplerBCWHD_updateGradInputOnlyGrid_cuda_3D(THCudaTensor *inputImages, THCudaTensor *grids,
-                                        THCudaTensor *gradGrids, THCudaTensor *gradOutput, int * device)
+                                        THCudaTensor *gradGrids, THCudaTensor *gradOutput, int * device, int zero_boundary)
 {
 //  THCState *state = getCutorchState(L);
 //  THCudaTensor *inputImages = (THCudaTensor *)luaT_checkudata(L, 2, "torch.CudaTensor");
@@ -196,7 +198,8 @@ int BilinearSamplerBCWHD_updateGradInputOnlyGrid_cuda_3D(THCudaTensor *inputImag
                                                   THCudaTensor_stride(state, gradOutput, 2),
                                                   THCudaTensor_stride(state, gradOutput, 3),
                                                   THCudaTensor_stride(state, gradOutput, 4),
-                                                  THCState_getCurrentStream(state));
+                                                  THCState_getCurrentStream(state),
+                                                  zero_boundary);
 
   //check for errors
   if (!success) {
