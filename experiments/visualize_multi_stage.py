@@ -1230,5 +1230,5 @@ if args.compute_only_pair_nr is None and not args.only_recompute_validation_meas
                     os.remove(summary_pdf_name)
 
                 print('Creating summary PDF: ')
-                cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_dir, '*.pdf'), summary_pdf_name)
+                cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_dir, '0*.pdf'), summary_pdf_name)
                 os.system(cmd)

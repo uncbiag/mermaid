@@ -93,6 +93,29 @@ class NoisyLinear(nn.Module):
                + str(self.in_features) + ' -> ' \
                + str(self.out_features) + ')'
 
+class NoisyLayer(nn.Module):
+    def __init__(self, std_init=None):
+        super(NoisyLayer, self).__init__()
+
+        self.std_init = std_init
+
+        if self.std_init is None:
+            self.std_init = 0.25
+        else:
+            self.std_init = std_init
+
+    def forward(self, input, iter=0):
+
+        noise_epsilon = MyTensor(input.size()).normal_()
+
+        if self.training:
+            output = input + 1. / (iter + 1) * self.std_init * noise_epsilon
+        else:
+            output = input
+
+        return output
+
+
 class _NoisyConvNd(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride,

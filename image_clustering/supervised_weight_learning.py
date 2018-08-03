@@ -109,26 +109,31 @@ image_offset = 1.0
 # todo: read this values from the configuration file
 nr_of_weights = 4
 #global_multi_gaussian_weights = torch.from_numpy(np.array([0.25,0.25,0.25,0.25],dtype='float32'))
-global_multi_gaussian_weights = torch.from_numpy(np.array([0.0,0.0,0.0,1.0],dtype='float32'))
+global_multi_gaussian_weights = torch.from_numpy(np.array([0.0,0.0,0.3,0.7],dtype='float32'))
 gaussian_stds = torch.from_numpy(np.array([0.01,0.05,0.1,0.2],dtype='float32'))
 
-normalization_type = 'layer' # '['batch', 'instance', 'layer', 'group', 'none']
+normalization_type = 'group' # '['batch', 'instance', 'layer', 'group', 'none']
 use_noisy_convolution = False
-noisy_convolution_std = 0.0
+noisy_convolution_std = 0.05
+
+use_noise_layers = False
+noise_layer_std = 0.025
+last_noise_layer_std = 0.025
 
 use_color_tv = True
+use_omt_tv_weighting = False
 reconstruct_variances = False
 reconstruct_stds = True
 
 display_colorbar = True
 
 im_sz = np.array([128,128])
-reconstruction_weight = 1000.0
-totalvariation_weight = 0.001
-omt_weight = 2.5
+reconstruction_weight = 10000.0
+totalvariation_weight = 0.01
+omt_weight = 35.0
 omt_power=1.0
 omt_use_log_transformed_std=True
-lr = 0.05
+lr = 0.025
 seed = 75
 
 if seed is not None:
@@ -141,14 +146,26 @@ used_image_pairs = torch.load(used_image_pairs_file)
 # only the source images have the weights
 input_images = used_image_pairs['source_images']
 
+# todo: check if smoothing of input image is beneficial for edge detection
+# todo: if so, also implement it in the main code base
+
+# todo: think about where to inject the noise in the noisy convolution, before or after the normalization (likely after the normalization)
+# todo: weight the total variation term by the OMT cost. In this way it will be cheaper to introduce jumps for cheaper terms
+
 #network_type = dn.Unet_no_skip
-network_type = dn.Unet
-#network_type = dn.Simple_consistent
+#network_type = dn.Unet
+network_type = dn.Simple_consistent
 
 params = pars.ParameterDict()
 params['normalization_type'] = normalization_type
 params['use_noisy_convolution'] = use_noisy_convolution
 params['noisy_convolution_std'] = noisy_convolution_std
+
+params['use_noise_layers'] = use_noise_layers
+params['noise_layer_std'] = noise_layer_std
+params['last_noise_layer_std'] = last_noise_layer_std
+
+params['edge_penalty_gamma'] = 2. #10.
 
 dataset = ImageAndWeightDataset(image_filenames=input_images, rel_path=rel_path, params=params)
 trainloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=1)
@@ -156,7 +173,8 @@ trainloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_worke
 # create the two network and the loss function
 
 reconstruction_criterion = nn.MSELoss().to(device)  # nn.L1Loss().to(device)
-totalvariation_criterion = dn.TotalVariationLoss(dim=dim, params=params).to(device)
+totalvariation_criterion = None
+omt_criterion = None
 
 reconstruction_unet = network_type(dim=dim, n_in_channel=1, n_out_channel=nr_of_weights, im_sz=im_sz, params=params).to(device)
 reconstruction_unet.initialize_network_weights()
@@ -167,6 +185,7 @@ print(reconstruction_unet)
 
 # create the optimizer
 optimizer = optim.SGD(all_optimization_parameters, lr=lr, momentum=0.9, nesterov=True)
+#optimizer = optim.SGD(all_optimization_parameters, lr=lr, momentum=0.9, nesterov=True, weight_decay=0.001)
 
 nr_of_datasets = len(dataset)
 nr_of_batches = len(trainloader)
@@ -192,11 +211,24 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
         spacing = input_dict['spacing'][0].detach().cpu().numpy()  # all of the spacings are the same, so just use one
         volumeElement = spacing.prod()
 
+        if totalvariation_criterion is None:
+            # now we have the spacing information and can instantiate it
+            totalvariation_criterion = dn.TotalVariationLoss(dim=dim, im_sz=im_sz, spacing=spacing,
+                                                             use_omt_weighting=use_omt_tv_weighting,
+                                                             gaussian_stds=gaussian_stds,
+                                                             omt_power=omt_power,
+                                                             omt_use_log_transformed_std=omt_use_log_transformed_std,
+                                                             params=params).to(device)
+        if omt_criterion is None:
+            # now we have the spacing information and can instantiate it
+            omt_criterion = dn.OMTLoss(spacing=spacing, desired_power=omt_power,
+                                       use_log_transform=omt_use_log_transformed_std, params=params).to(device)
+
         # zero the parameter gradients
         optimizer.zero_grad()
 
         # forward + backward + optimize
-        reconstruction_outputs = reconstruction_unet(inputs,)
+        reconstruction_outputs = reconstruction_unet(inputs)
         #pre_weights = deep_smoothers.weighted_softmax(reconstruction_outputs, dim=1, weights=global_multi_gaussian_weights)
         pre_weights = deep_smoothers.weighted_linear_softmax(reconstruction_outputs, dim=1, weights=global_multi_gaussian_weights)
         #pre_weights = deep_smoothers.stable_softmax(reconstruction_outputs, dim=1)
@@ -234,8 +266,9 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
         else: # directly penalizing weights differences
             reconstruction_loss = reconstruction_weight * reconstruction_criterion(weights, gt_weights)
 
-        totalvariation_loss = totalvariation_weight * totalvariation_criterion(input_images=unscaled_images,spacing=spacing,label_probabilities=pre_weights,use_color_tv=use_color_tv)
-        omt_loss = omt_weight * deep_smoothers.compute_omt_penalty(weights, gaussian_stds, volumeElement, omt_power, omt_use_log_transformed_std)
+        totalvariation_loss = totalvariation_weight * totalvariation_criterion(input_images=unscaled_images,label_probabilities=pre_weights,use_color_tv=use_color_tv)
+
+        omt_loss = omt_weight * omt_criterion(weights, gaussian_stds)
 
         # compute the overall loss
         loss = reconstruction_loss + totalvariation_loss + omt_loss
