@@ -55,7 +55,7 @@ def create_symlink_with_correct_ext(sf,tf):
     # now we can do the symlink
     os.symlink(abs_s,abs_t_with_right_ext)
 
-    
+
 def combine_dict(d1,d2):
     """
     Creates a dictionary which has entries from both of them
@@ -145,7 +145,7 @@ def lift_to_dimension(A,dim):
 
 def get_dim_of_affine_transform(Ab):
     """
-    Returns the number of dimensions corresponding to an affine transformation  of the form y=Ax+b 
+    Returns the number of dimensions corresponding to an affine transformation  of the form y=Ax+b
     stored in a column vector. For A =[a1,a2,a3] the parameter vector is simply [a1;a2;a3;b], i.e.,
     all columns stacked on top of each other
     :param Ab: parameter vector
@@ -194,6 +194,66 @@ def set_affine_transform_to_identity_multiN(Ab):
     nrOfImages = sz[0]
     for nrI in range(nrOfImages):
         set_affine_transform_to_identity(Ab[nrI,:])
+
+def get_inverse_affine_param(Ab):
+    """
+    the input should be B*pars,
+    C(Ax+b)+d = CAx+Cb+d=x
+    C= inv(A), d = -Cb
+
+    :param Ab:
+    :return:
+    """
+
+    dim =0
+    if Ab.shape[1]==2:
+        dim = 1
+    elif Ab.shape[1]==6:
+        dim = 2
+    elif Ab.shape[1]==12:
+        dim = 3
+
+    if dim not in [1,2,3]:
+        raise ValueError('Only supports dimensions 1, 2, and 3.')
+    Ab = Ab.view(Ab.shape[0],dim+1,dim).transpose(1,2)
+    Ab_inv = torch.zeros_like(Ab)
+    for n in range(Ab.shape[0]):
+        tm_inv = torch.inverse(Ab[n,:,:dim])
+        Ab_inv[n,:,:dim] = tm_inv
+        Ab_inv[n,:,dim] = - torch.matmul(tm_inv, Ab[n,:,dim])
+    inv_affine_param = Ab_inv.transpose(1,2).contiguous().view(Ab.shape[0],-1)
+    return inv_affine_param
+
+def update_affine_param(Ab,Cd):
+    """
+    the input should be B*pars,
+    C(Ax+b)+d = CAx+Cb+d
+
+    :param Ab:
+    :return:
+    """
+
+    dim =0
+    if Ab.shape[1]==2:
+        dim = 1
+    elif Ab.shape[1]==6:
+        dim = 2
+    elif Ab.shape[1]==12:
+        dim = 3
+
+    if dim not in [1,2,3]:
+        raise ValueError('Only supports dimensions 1, 2, and 3.')
+    Ab = Ab.view(Ab.shape[0],dim+1,dim).transpose(1,2)
+    Cd = Cd.view(Cd.shape[0],dim+1,dim).transpose(1,2)
+    updated_param = torch.zeros_like(Ab)
+    for n in range(Ab.shape[0]):
+        tm_param = torch.matmul(Cd[n,:,:dim],Ab[n,:,:dim])
+        updated_param[n,:,:dim] = tm_param
+        updated_param[n,:,dim] = torch.matmul(Cd[n,:,:dim], Ab[n,:,dim]) +Cd[n,:,dim]
+        updated_param = updated_param.transpose(1,2).contiguous().view(Ab.shape[0],-1)
+    return updated_param
+
+
 
 
 def apply_affine_transform_to_map(Ab,phi):
@@ -250,8 +310,8 @@ def apply_affine_transform_to_map_multiNC(Ab,phi):
 def compute_normalized_gaussian(X, mu, sig):
     """
     Computes a normalized Gaussian
-    
-    :param X: map with coordinates at which to evaluate 
+
+    :param X: map with coordinates at which to evaluate
     :param mu: array indicating the mean
     :param sig: array indicating the standard deviations for the different dimensions
     :return: normalized Gaussian
@@ -276,14 +336,14 @@ def compute_normalized_gaussian(X, mu, sig):
         raise ValueError('Can only compute Gaussians in dimensions 1-3')
 
 
-def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order):
+def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order,zero_boundary=False):
 
     if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
     if spline_order==0:
         return get_warped_label_map(I0,phi,spacing)
     elif spline_order==1:
-        stn = STN_ND_BCXYZ(spacing)
+        stn = STN_ND_BCXYZ(spacing,zero_boundary)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
 
@@ -291,14 +351,14 @@ def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order):
 
     return I1_warped
 
-def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order):
+def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order,zero_boundary=False):
 
     if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
     if spline_order==0:
         return get_warped_label_map(I0,phi,spacing)
     elif spline_order==1:
-        stn = STN_ND_BCXYZ(spacing)
+        stn = STN_ND_BCXYZ(spacing,zero_boundary)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
 
@@ -306,14 +366,14 @@ def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order):
 
     return I1_warped
 
-def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order):
+def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order,zero_boundary=False):
 
     if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
     if spline_order==0:
         return get_warped_label_map(I0,phi,spacing)
     elif spline_order==1:
-        stn = STN_ND_BCXYZ(spacing)
+        stn = STN_ND_BCXYZ(spacing,zero_boundary)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing,spline_order)
 
@@ -322,7 +382,7 @@ def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order):
     return I1_warped
 
 
-def compute_warped_image(I0,phi,spacing,spline_order):
+def compute_warped_image(I0,phi,spacing,spline_order,zero_boundary=False):
     """
     Warps image.
 
@@ -334,13 +394,13 @@ def compute_warped_image(I0,phi,spacing,spline_order):
 
     # implements this by creating a different view (effectively adding dimensions)
     Iw = compute_warped_image_multiNC(I0.view(torch.Size([1, 1]+ list(I0.size()))),
-                                        phi.view(torch.Size([1]+ list(phi.size()))),spacing,spline_order)
+                                        phi.view(torch.Size([1]+ list(phi.size()))),spacing,spline_order,zero_boundary)
     return Iw.view(I0.size())
 
-def compute_warped_image_multiNC(I0, phi, spacing, spline_order):
+def compute_warped_image_multiNC(I0, phi, spacing, spline_order,zero_boundary=False):
     """
     Warps image.
-    
+
     :param I0: image to warp, image size BxCxXxYxZ
     :param phi: map for the warping, size BxdimxXxYxZ
     :param spacing: image spacing [dx,dy,dz]
@@ -349,11 +409,11 @@ def compute_warped_image_multiNC(I0, phi, spacing, spline_order):
 
     dim = I0.dim()-2
     if dim == 1:
-        return _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order)
+        return _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order,zero_boundary)
     elif dim == 2:
-        return _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order)
+        return _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order,zero_boundary)
     elif dim == 3:
-        return _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order)
+        return _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order,zero_boundary)
     else:
         raise ValueError('Images can only be warped in dimensions 1 to 3')
 
@@ -361,7 +421,7 @@ def compute_warped_image_multiNC(I0, phi, spacing, spline_order):
 def compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, sz, spacing):
     """
     Computes the vector momentum from the scalar momentum: :math:`m=\\lambda\\nabla I`
-    
+
     :param lam: scalar momentum, BxCxXxYxZ
     :param I: image, BxCxXxYxZ
     :param sz: size of image
@@ -405,7 +465,7 @@ def compute_vector_momentum_from_scalar_momentum_multiN(lam, I, nrOfI, sz, spaci
 def create_ND_vector_field_variable_multiN(sz, nrOfI=1):
     """
     Create vector field torch Variable of given size
-    
+
     :param sz: just the spatial sizes (e.g., [5] in 1D, [5,10] in 2D, [5,10,10] in 3D)
     :param nrOfI: number of images
     :return: returns vector field of size nrOfIxdimxXxYxZ
@@ -418,7 +478,7 @@ def create_ND_vector_field_variable_multiN(sz, nrOfI=1):
 def create_ND_vector_field_variable(sz):
     """
     Create vector field torch Variable of given size
-    
+
     :param sz: just the spatial sizes (e.g., [5] in 1D, [5,10] in 2D, [5,10,10] in 3D)
     :return: returns vector field of size dimxXxYxZ
     """
@@ -492,7 +552,7 @@ def centered_identity_map_multiN(sz, spacing, dtype='float32'):
 def identity_map_multiN(sz,spacing,dtype='float32'):
     """
     Create an identity map
-    
+
     :param sz: size of an image in BxCxXxYxZ format
     :param spacing: list with spacing information [sx,sy,sz]
     :param dtype: numpy data-type ('float32', 'float64', ...)
@@ -572,7 +632,7 @@ def centered_identity_map(sz, spacing, dtype='float32'):
 def identity_map(sz,spacing,dtype='float32'):
     """
     Returns an identity map.
-    
+
     :param sz: just the spatial dimensions, i.e., XxYxZ
     :param spacing: list with spacing information [sx,sy,sz]
     :param dtype: numpy data-type ('float32', 'float64', ...)
@@ -633,7 +693,7 @@ def get_warped_label_map(label_map, phi, spacing, sched='nn'):
 def t2np( v ):
     """
     Takes a torch array and returns it as a numpy array on the cpu
-    
+
     :param v: torch array
     :return: numpy array
     """
@@ -645,6 +705,11 @@ def checkNan(x):
     input should be list of Variable
     """
     return [len(np.argwhere(np.isnan(elem.detach().cpu().numpy()))) for elem in x]
+
+
+
+
+
 
 
 ##########################################  Adaptive Net ###################################################3

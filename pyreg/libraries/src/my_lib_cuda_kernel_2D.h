@@ -15,7 +15,7 @@ int BilinearSamplerBCWH_updateOutput_cuda_kernel_2D(/*output->size[2]*/int szw,
                                                  /*THCudaTensor *inputImages*/float *inputImages, int isb, int isc, int isw, int ish, 
                                                  /*THCudaTensor *grids*/float *grids, int gsb, int gsc, int gsw, int gsh, 
                                                  /*THCudaTensor *output*/float *output, int osb, int osc, int osw, int osh, 
-                                                 /*THCState_getCurrentStream(state)*/cudaStream_t stream);
+                                                 /*THCState_getCurrentStream(state)*/cudaStream_t stream, int zero_boundary);
 
 
 
@@ -33,7 +33,7 @@ int BilinearSamplerBCWH_updateGradInput_cuda_kernel_2D(/*gradOutput->size[2]*/in
                                                     /*THCudaTensor *gradInputImages*/float *gradInputImages, int gisb, int gisc, int gisw, int gish,
                                                     /*THCudaTensor *gradGrids*/float *gradGrids, int ggsb, int ggsc, int ggsw, int ggsh,
                                                     /*THCudaTensor *gradOutput*/float *gradOutput, int gosb, int gosc, int gosw, int gosh,
-                                                    /*THCState_getCurrentStream(state)*/cudaStream_t stream);
+                                                    /*THCState_getCurrentStream(state)*/cudaStream_t stream, int zero_boundary);
 
 int BilinearSamplerBCWH_updateGradInputOnlyGrid_cuda_kernel_2D(
                                         /*gradOutput->size[2]*/int szw, 
@@ -48,7 +48,7 @@ int BilinearSamplerBCWH_updateGradInputOnlyGrid_cuda_kernel_2D(
                                         /*THCudaTensor *grids*/float *grids, int gsb, int gsc, int gsw, int gsh, 
                                         /*THCudaTensor *gradGrids*/float *gradGrids, int ggsb, int ggsc, int ggsw, int ggsh,
                                         /*THCudaTensor *gradOutput*/float *gradOutput, int gosb, int gosc, int gosw, int gosh,
-                                        /*THCState_getCurrentStream(state)*/cudaStream_t stream);
+                                        /*THCState_getCurrentStream(state)*/cudaStream_t stream, int zero_boundary);
 
 #ifdef __cplusplus
 }

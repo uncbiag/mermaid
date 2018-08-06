@@ -1,7 +1,14 @@
+import os
+import sys
+
+sys.path.insert(0,os.path.abspath('.'))
+sys.path.insert(0,os.path.abspath('..'))
+sys.path.insert(0,os.path.abspath('../pyreg'))
+sys.path.insert(0,os.path.abspath('../pyreg/libraries'))
 import matplotlib as matplt
-# from pyreg.config_parser import MATPLOTLIB_AGG
-# if MATPLOTLIB_AGG:
-#     matplt.use('Agg')
+from pyreg.config_parser import MATPLOTLIB_AGG
+if MATPLOTLIB_AGG:
+    matplt.use('Agg')
 import sys
 import numpy as np
 import os
@@ -12,6 +19,8 @@ import torch
 import pyreg.module_parameters as pars
 from pyreg.data_utils import make_dir, get_file_name, sitk_read_img_to_std_tensor, sitk_read_img_to_std_numpy
 import random
+from pyreg.utils import apply_affine_transform_to_map_multiNC, get_inverse_affine_param, compute_warped_image_multiNC, \
+    update_affine_param
 import matplotlib.pyplot as plt
 import pyreg.simple_interface as SI
 import pyreg.fileio as FIO
@@ -174,7 +183,7 @@ class Logger(object):
 class OAILongitudeReisgtration(object):
     def __init__(self):
         self.patients = []
-        self.task_name='debuglabel_affine_img_svf'
+        self.task_name='debug4label_affine_img_svf'
         self.expr_name='much_longer_iter'
         self.recorder_saving_path = '../data'
         self.model0_name = 'affine_map'
@@ -190,6 +199,7 @@ class OAILongitudeReisgtration(object):
         self.light_analysis_on=False
         self.par_respro=None
         self.recorder = None
+        self.cal_inverse_map = True
         self.img_label_channel_on = False
         self.label_affine_img_svg = False
         """if the patient of certain mod and spec has no label, then the light_analysis will automatically on for this patient"""
@@ -323,7 +333,7 @@ class OAILongitudeReisgtration(object):
 
         saving_folder_path = self.__gen_img_saving_path(patient,mod, spec)
         self._update_saving_analysis_path(saving_folder_path)
-        ########################3self.im_io.write(os.path.join(saving_folder_path, img0_name+'.nii.gz'), np.squeeze(Ic0), hdrc0)
+        #self.im_io.write(os.path.join(saving_folder_path, img0_name+'_target.nii.gz'), np.squeeze(Ic0), hdrc0)
 
         if self.img_label_channel_on:
             Ic0 = np.concatenate((Ic0, LTarget), 1)
@@ -340,6 +350,9 @@ class OAILongitudeReisgtration(object):
             extra_info['batch_id']=img1_name+'_'+img0_name
 
             Ic1, hdrc, spacing, _ = self.im_io.read_to_nc_format(filename=img_path, intensity_normalize=True)
+
+            #self.im_io.write(os.path.join(saving_folder_path, img1_name + '_source.nii.gz'), np.squeeze(Ic1), hdrc0)
+
 
             if LTarget is not None:
                 if label_path:
@@ -363,59 +376,64 @@ class OAILongitudeReisgtration(object):
                 Ic1 = LSource
                 Ic0 = LTarget
 
-            #
-            # self.si.set_light_analysis_on(True)
-            # self.si.set_initial_map(None)
-            # self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
-            #                         model_name=self.model0_name,
-            #                         map_low_res_factor=self.map0_low_res_factor,
-            #                         nr_of_iterations=self.nr_of_iterations,
-            #                         visualize_step=None,
-            #                         optimizer_name=self.optimizer0_name,
-            #                         use_multi_scale=True,
-            #                         rel_ftol=0,
-            #                         similarity_measure_type=self.similarity_measure_type,
-            #                         similarity_measure_sigma=self.similarity_measure_sigma,
-            #                         json_config_out_filename='cur_settings.json',
-            #                         compute_inverse_map=True,
-            #                         params ='cur_settings.json')
-            # wi = self.si.get_warped_image()
-            # #self.im_io.write(os.path.join(saving_folder_path, img1_name + '_affine.nii.gz'), torch.squeeze(wi[0:1,0:1,...]), hdrc0)
-            #
-            # wi=wi.cpu().data.numpy()
-            # LSource_warped= None
-            #
-            # if not self.light_analysis_on:
-            #     self.si.opt.optimizer.ssOpt.set_source_label(AdaptVal(torch.from_numpy(LSource)))
-            #     LSource_warped = self.si.get_warped_label()
-            #     self.record_cur_performance(LSource_warped, LTarget, extra_info['pair_name'], extra_info['batch_id'], 'affine_finished')
-            # affine_param = self.si.opt.optimizer.ssOpt.model.Ab.data.cpu().numpy().reshape((4,3))
-            # affine_param = np.transpose(affine_param)
-            # print(" the affine param is {}".format(affine_param))
-            # det_affine_param = np.linalg.det(affine_param[:,:3])
-            # print("the determinant of the affine param is {}".format(det_affine_param))
-            #
-            #
-            #
-            # if self.label_affine_img_svg:
-            #     self.si.opt.optimizer.ssOpt.set_source_image(AdaptVal(torch.from_numpy(Ic1_copy)))
-            #     wi = self.si.get_warped_image().cpu().data.numpy()
-            #     Ic0 = Ic0_copy
-            #
-            #
-            #
-            # print("let's come to step 2 ")
-            # ###########################################################self.si.set_light_analysis_on(self.light_analysis_on)
-            # self.si.set_light_analysis_on(True)
-            # LSource_warped = LSource_warped.cpu().data.numpy()
+
+            self.si.set_light_analysis_on(True)
+            self.si.set_initial_map(None)
+            self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
+                                    model_name=self.model0_name,
+                                    map_low_res_factor=self.map0_low_res_factor,
+                                    nr_of_iterations=self.nr_of_iterations,
+                                    visualize_step=None,
+                                    optimizer_name=self.optimizer0_name,
+                                    use_multi_scale=True,
+                                    rel_ftol=0,
+                                    similarity_measure_type=self.similarity_measure_type,
+                                    similarity_measure_sigma=self.similarity_measure_sigma,
+                                    json_config_out_filename='cur_settings.json',
+                                    compute_inverse_map=True,
+                                    params ='cur_settings.json')
+            wi = self.si.get_warped_image()
+
+
+            self.im_io.write(os.path.join(saving_folder_path, img1_name + '_affine.nii.gz'), torch.squeeze(wi[0:1,0:1,...]), hdrc0)
+
+            wi=wi.cpu().data.numpy()
+            LSource_warped= None
+
+            if not self.light_analysis_on:
+                self.si.opt.optimizer.ssOpt.set_source_label(AdaptVal(torch.from_numpy(LSource)))
+                LSource_warped = self.si.get_warped_label()
+                self.record_cur_performance(LSource_warped, LTarget, extra_info['pair_name'], extra_info['batch_id'], 'affine_finished')
+
+
+            Ab = self.si.opt.optimizer.ssOpt.model.Ab
+            affine_param =Ab.detach().cpu().numpy().reshape((4,3))
+            affine_param = np.transpose(affine_param)
+            print(" the affine param is {}".format(affine_param))
+            det_affine_param = np.linalg.det(affine_param[:,:3])
+            print("the determinant of the affine param is {}".format(det_affine_param))
+
+
+
+            if self.label_affine_img_svg:
+                self.si.opt.optimizer.ssOpt.set_source_image(AdaptVal(torch.from_numpy(Ic1_copy)))
+                wi = self.si.get_warped_image().cpu().data.numpy()
+                Ic0 = Ic0_copy
+
+
+
+            print("let's come to step 2 ")
+            ###########################################################self.si.set_light_analysis_on(self.light_analysis_on)
+            self.si.set_light_analysis_on(True)
+            LSource_warped = LSource_warped.cpu().data.numpy()
 
 
 
 
-            #
-            # affine_map =  self.si.opt.optimizer.ssOpt.get_map()
-            # self.si.opt = None
-            # self.si.set_initial_map(affine_map.detach())
+
+            affine_map =  self.si.opt.optimizer.ssOpt.get_map()
+            self.si.opt = None
+            self.si.set_initial_map(affine_map.detach())
 
             self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
                                     model_name=self.model1_name,
@@ -432,9 +450,41 @@ class OAILongitudeReisgtration(object):
                                     params='cur_settings_lbfgs.json')
 
             wi = self.si.get_warped_image()
+
+            inversed_map = None
+            if self.cal_inverse_map:
+                inversed_map_svf = self.si.get_inverse_map().detach()
+                inv_Ab = get_inverse_affine_param(Ab.detach())
+                #inversed_map =  apply_affine_transform_to_map_multiNC(inv_Ab, inversed_map_svf)
+                #inversed_map = apply_affine_transform_to_map_multiNC(inv_Ab, inversed_map)  ##########################3
+
+                inv_Ab = update_affine_param(inv_Ab,inv_Ab)
+                inversed_map = apply_affine_transform_to_map_multiNC(inv_Ab, inversed_map_svf)  ##########################3
+                recovered_source = compute_warped_image_multiNC(AdaptVal(torch.from_numpy(Ic0)), inversed_map, spacing, 1)
+                # self.im_io.write(os.path.join(saving_folder_path, img1_name + '_recovered_source.nii.gz'),
+                #                  torch.squeeze(recovered_source[0:1, 0:1, ...]), hdrc0)
+
             self.im_io.write(os.path.join(saving_folder_path,img1_name+'_warpped.nii.gz'), torch.squeeze(wi[0:1,0:1,...]), hdrc0)
 
-        return 1
+
+
+
+            #############################  code for mesh interpolation  #########################################33
+            if self.cal_inverse_map:
+
+                #  write a new function     read_mesh_into_tensor    B*3*N*1*1
+                ##################    using randomized mesh for debugging   ###############################3
+                mesh =  torch.rand(inversed_map.shape[0],3,200,1,1)*2-1
+                #######################################################
+                mesh =  AdaptVal(mesh)
+                mesh_itp = self.mesh_interpolation(inversed_map, mesh, spacing)
+                print("debugging mesh_itp")
+
+
+    def mesh_interpolation (self,map, mesh, spacing):
+        mesh_itp = compute_warped_image_multiNC(map, mesh,spacing=spacing,spline_order=1)
+        return mesh_itp
+
 
 
 

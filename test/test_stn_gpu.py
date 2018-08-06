@@ -15,7 +15,6 @@ ffi = FFI()
 import numpy as np
 import numpy.testing as npt
 import torch
-from torch.autograd import Variable
 
 from pyreg.libraries.functions.stn_nd import STNFunction_ND_BCXYZ
 
@@ -32,6 +31,13 @@ except ImportError:
 # done with all the setup
 
 # testing code starts here
+
+torch.backends.cudnn.deterministic = True
+
+torch.manual_seed(999)
+
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(999)
 
 
 class Test_stn_1d(unittest.TestCase):
@@ -92,8 +98,8 @@ class Test_stn_2d(unittest.TestCase):
         device_c[0] = device
         nframes = 3
         height = 120
-        width = 126
-        ratio = 2
+        width = 100
+        ratio = 1
         grid_height = int(height / ratio)
         grid_width = int(width / ratio)
         channels = 3
@@ -101,13 +107,15 @@ class Test_stn_2d(unittest.TestCase):
         self.device = device
         self.device_c = device_c
         self.inputImage = torch.randn(nframes, channels, width, height)
-        self.inputGrids = (torch.rand(nframes, 2, grid_width, grid_height))
-        self.output = torch.rand(nframes, channels, grid_width, grid_height)
+        self.inputGrids = (torch.rand(nframes, 2, grid_width, grid_height))*2-1
+        self.output = torch.zeros(nframes, channels, grid_width, grid_height)
         self.inputImage_cuda = self.inputImage.cuda(device)
         self.inputGrids_cuda = self.inputGrids.cuda(device)
         self.output_cuda = self.output.cuda(device)
-
-        spacing = np.array([1./(grid_width-1.),1./(grid_height-1.)])
+        try:
+            spacing = np.array([1./(grid_width-1.),1./(grid_height-1.)])
+        except:
+            spacing = [1,1,1]
         self.stn = STNFunction_ND_BCXYZ(spacing)
 
     def tearDown(self):
@@ -141,9 +149,9 @@ class Test_stn_3d(unittest.TestCase):
         device_c = ffi.new("int *")
         device_c[0] = device
         nframes = 3
-        depth = 128
+        depth = 10
         height = 137
-        width = 128
+        width = 100
         ratio = 1
         grid_depth = int(depth / ratio)
         grid_height = int(height / ratio)
@@ -158,8 +166,10 @@ class Test_stn_3d(unittest.TestCase):
         self.inputImage_cuda = self.inputImage.cuda(device)
         self.inputGrids_cuda = self.inputGrids.cuda(device)
         self.output_cuda = self.output.cuda(device)
-
-        spacing = np.array([1./(grid_width-1.),1./(grid_height-1.),1./(grid_depth-1.)])
+        try:
+            spacing = np.array([1./(grid_width-1.),1./(grid_height-1.),1./(grid_depth-1.)])
+        except:
+            spacing  = np.array([1,1,1])
         self.stn = STNFunction_ND_BCXYZ(spacing)
 
     def tearDown(self):
