@@ -931,6 +931,12 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.optimize_over_deep_network = params[('optimize_over_deep_network', False, 'if set to true the smoother will optimize over the deep network parameters; otherwise will ignore the deep network')]
         """determines if we should optimize over the smoother global weights"""
 
+        self.evaluate_but_do_not_optimize_over_deep_network = params[('evaluate_but_do_not_optimize_over_deep_network',False,'If set to true then the network is evaluated (should have been loaded from a previously computed optimized state), but the network weights are not being optimized over')]
+        """If set to true then the network is evaluated (should have been loaded from a previously computed optimized state), but the network weights are not being optimized over"""
+
+        if self.optimize_over_deep_network and self.evaluate_but_do_not_optimize_over_deep_network:
+            raise ValueError('optimize_over_deep_network and evaluate_but_do_not_optimize_over_deep_network cannot be set at the same time. Choose one!')
+
         self.only_use_smallest_standard_deviation_for_regularization_energy = \
             params[('only_use_smallest_standard_deviation_for_regularization_energy',True,
                     'When set to True the regularization energy only used the Gaussian with smallest standard deviation to compute the velocity field for the energy computation')]
@@ -967,7 +973,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.load_dnn_parameters_from_this_file = params[('load_dnn_parameters_from_this_file','',
                                                           'If not empty, this is the file the DNN parameters are read from; useful to run a pre-initialized network')]
         """To allow pre-initializing a network"""
-        if self.load_dnn_parameters_from_this_file!='':
+        if self.load_dnn_parameters_from_this_file!='' and self.load_dnn_parameters_from_this_file is not None:
             print('INFO: Loading network configuration from {:s}'.format(self.load_dnn_parameters_from_this_file))
             self.set_state_dict(torch.load(self.load_dnn_parameters_from_this_file))
 
@@ -1017,9 +1023,12 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             s.add('multi_gaussian_weights')
 
         # freeze parameters if needed
+
+        freeze_deep_network_parameters = self.freeze_parameters or self.evaluate_but_do_not_optimize_over_deep_network
+
         for child in self.ws.children():
             for cur_param in child.parameters():
-                cur_param.requires_grad = not self.freeze_parameters
+                cur_param.requires_grad = not freeze_deep_network_parameters
 
         module.add_module('weighted_smoothing_net',self.ws)
         sd = self.ws.state_dict()
@@ -1218,7 +1227,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             self._is_optimizing_over_deep_network = False
 
         # we are ready to optimize over the deep network and want to optimize over it
-        if self._is_optimizing_over_deep_network and not smooth_to_compute_regularizer_energy:
+        if (self._is_optimizing_over_deep_network or self.evaluate_but_do_not_optimize_over_deep_network) and not smooth_to_compute_regularizer_energy:
             # here the deep learning model kicks in
             if self.debug_retain_computed_local_weights:
                 # v is actually the vector-valued momentum here; changed the interface to pass this also

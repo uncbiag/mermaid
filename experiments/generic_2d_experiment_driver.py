@@ -77,7 +77,10 @@ def run_optimization(stage,nr_of_epochs,image_pair_config_pt,nr_of_image_pairs,
                      only_run_stage0_with_unchanged_config,
                      skip_stage_1_and_start_stage_2_from_stage_0,
                      input_image_directory,output_directory,
-                     main_json,seed,
+                     main_json,
+                     load_shared_parameters_from_file,
+                     only_optimize_over_registration_parameters_for_stage_nr,
+                     seed,
                      key_value_overwrites=dict(),string_key_value_overwrites=dict(),
                      cuda_visible_devices=None,pre_command=None):
 
@@ -120,6 +123,12 @@ def run_optimization(stage,nr_of_epochs,image_pair_config_pt,nr_of_image_pairs,
 
     if skip_stage_1_and_start_stage_2_from_stage_0:
         args['skip_stage_1_and_start_stage_2_from_stage_0']=''
+
+    if load_shared_parameters_from_file is not None:
+        args['load_shared_parameters_from_file'] = load_shared_parameters_from_file
+
+    if only_optimize_over_registration_parameters_for_stage_nr is not None:
+        args['only_optimize_over_registration_parameters_for_stage_nr'] = only_optimize_over_registration_parameters_for_stage_nr
 
     # now run the command
     cmd_arg_list = _make_arg_list(args)
@@ -199,6 +208,10 @@ def run(stage,nr_of_epochs,main_json,
         output_base_directory,postfix,
         validation_dataset_directory,
         validation_dataset_name,
+        previous_output_base_directory,
+        only_optimize_over_registration_parameters_for_stage_nr,
+        load_shared_parameters_from_previous_stage_nr,
+        move_to_directory,
         key_value_overwrites=dict(),
         string_key_value_overwrites=dict(),
         seed=1234,
@@ -229,6 +242,30 @@ def run(stage,nr_of_epochs,main_json,
         os.mkdir(output_directory)
 
     if parts_to_run['run_optimization']:
+
+        #output_directory = os.path.join(output_base_directory, 'out_' + postfix)
+        #
+        #if move_to_directory is not None:
+        #    if not os.path.exists(move_to_directory):
+        #        print('Creating output directory: {:s}'.format(move_to_directory))
+        #        os.mkdir(move_to_directory)
+
+        #previous_output_base_directory,
+        #only_optimize_over_registration_parameters_for_stage_nr,
+        #load_shared_parameters_from_previous_stage_nr,
+        #move_to_directory,
+
+        if load_shared_parameters_from_previous_stage_nr is not None:
+            # we need to load the previous shared parameters, so construct the filename from where to load first
+            load_shared_parameters_from_file = os.path.join(move_to_directory, 'out_' + postfix,
+                                                            'results_after_stage_{}'.format(load_shared_parameters_from_previous_stage_nr),
+                                                            'shared', 'shared_parameters.pt')
+
+            if not os.path.exists(load_shared_parameters_from_file):
+                raise ValueError('Could not find file: {}'.format(load_shared_parameters_from_file))
+        else:
+            load_shared_parameters_from_file = None
+
         run_optimization(stage=stage,
                          nr_of_epochs=nr_of_epochs,
                          image_pair_config_pt=image_pair_config_pt,
@@ -238,6 +275,8 @@ def run(stage,nr_of_epochs,main_json,
                          input_image_directory=input_image_directory,
                          output_directory=output_directory,
                          main_json=main_json,
+                         load_shared_parameters_from_file=load_shared_parameters_from_file,
+                         only_optimize_over_registration_parameters_for_stage_nr=only_optimize_over_registration_parameters_for_stage_nr,
                          key_value_overwrites=key_value_overwrites,
                          string_key_value_overwrites=string_key_value_overwrites,
                          seed=seed,
@@ -408,18 +447,27 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Main driver to perform experiments')
 
-    parser.add_argument('--dataset', required=False, default=None, help='Which validation dataset is being used: [CUMC|LPBA|IBSR|MGH|SYNTH]; if none is specified validation results are not computed')
     parser.add_argument('--config', required=True, help='The main json configuration file to generate the results')
 
     parser.add_argument('--dataset_config', required=False, default=None, help='Allows to specify all the needed directories and the dataset type in a JSON file.')
+    """dataset_config contains settings for: image_pair_config_pt, input_image_directory, output_base_directory, validation_dataset, and validation_dataset_directory"""
 
     parser.add_argument('--cuda_device', required=False, default=0, type=int, help='The CUDA device the code is run on if CUDA is enabled')
     parser.add_argument('--precommand', required=False, default=None, type=str, help='Command to execute before; for example to activate a virtual environment; "source activate p27"')
 
+    parser.add_argument('--dataset', required=False, default=None, help='Which validation dataset is being used: [CUMC|LPBA|IBSR|MGH|SYNTH]; if none is specified validation results are not computed')
     parser.add_argument('--input_image_directory', required=False, default=None, help='Directory where all the images are')
     parser.add_argument('--output_base_directory', required=False, default='experimental_results', help='Base directory where the output is stored')
     parser.add_argument('--validation_dataset_directory', required=False, default=None, help='Directory where the validation data can be found')
     parser.add_argument('--image_pair_config_pt', required=False, default=None, help='If specified then the image-pairs are determined based on the information in this file; can simply point to a previous configuration.pt file')
+
+    parser.add_argument('--previous_dataset_config', required=False, default=None,
+                        help='Point to the directory config file of a previous run; this allows reusing these results for example to compute evaluations on a separate test set. Use this together with --load_shared_parameters_from_previous_stage_nr and --only_optimize_over_registration_parameters_for_stage_nr')
+    parser.add_argument('--load_shared_parameters_from_previous_stage_nr', required=False, type=str,default=None,
+                        help='Specifies which stage from the previous run the shared parameters should be taken from {0,1,2})')
+    parser.add_argument('--only_optimize_over_registration_parameters_for_stage_nr', required=False, type=str,default=None,
+                        help='If set, only the registration parameters (e.g., momentum) are optimized for the given stages (as a comma separated list; e.g., 0,1,2), but not the smoother. Default is None (i.e., optimization happens in all stages). Best used in conjunction with --load_shared_parameters_from_file; similar in effect to freezing iterations, but will be stored in default directories; so good for validation ')
+
     parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=0, help='number of image pairs that will be used; if not set all pairs will be used')
 
     parser.add_argument('--compute_only_pair_nr', required=False, type=int, default=None, help='When specified only this pair is computed; otherwise all of them')
@@ -464,6 +512,9 @@ if __name__ == "__main__":
     parser.add_argument('--run_vizval_only_for_stage_2', action='store_true', help='If set to True the costly visualization and evaluation is only run for stage 2')
 
     args = parser.parse_args()
+
+    if args.load_shared_parameters_from_previous_stage_nr is not None and args.previous_dataset_config is None:
+        raise ValueError('To specify a previous stage for the shared parameters requires a previous dataset configuration file')
 
     if args.nr_of_image_pairs==0:
         nr_of_image_pairs = None
@@ -600,6 +651,44 @@ if __name__ == "__main__":
                                     args.sweep_value_name_c, args.sweep_values_c)
 
 
+    # check if there is a previous dataset config file specified
+
+    load_shared_parameters_from_previous_stage_nr = None
+    previous_output_base_directory = None
+    if args.previous_dataset_config is not None:
+        print('Reading previous dataset configuration from: {:s}'.format(args.previous_dataset_config))
+        previous_data_params = pars.ParameterDict()
+
+        if not os.path.exists(args.previous_dataset_config):
+            raise ValueError('Could not find previous dataset config file: {}'.format(args.previous_dataset_config))
+        else:
+            print('Reading previous dataset config file: {}'.format(args.previous_dataset_config))
+
+            previous_data_params.load_JSON(args.previous_dataset_config)
+            previous_output_base_directory = previous_data_params[('output_base_directory','','previous output directory')]
+            if previous_output_base_directory=='':
+                raise ValueError('Could not find key output_base_directory in file {}'.format(args.previous_dataset_config))
+
+            if args.load_shared_parameters_from_previous_stage_nr is None:
+                load_shared_parameters_from_previous_stage_nr = None
+            else:
+                specified_previous_stage_nr = [int(item) for item in args.load_shared_parameters_from_previous_stage_nr.split(',')]
+                if len(specified_previous_stage_nr)==1:
+                    if specified_previous_stage_nr[0] in [0,1,2]:
+                        load_shared_parameters_from_previous_stage_nr = specified_previous_stage_nr[0]
+                    else:
+                        raise ValueError('The previous stage number needs to be in {0,1,2}. Instead it was: {}'.format(specified_previous_stage_nr[0]))
+                else:
+                    raise ValueError('Exactly one previous stage nr needs to be specified. Instead the following was specified: {}'.format(args.load_shared_parameters_from_previous_stage_nr))
+
+    else:
+        if args.load_shared_parameters_from_previous_stage_nr is not None:
+            raise ValueError('Previous dataset config was not specified use --previous_dataset_config')
+
+
+    # what stages we want to optimize parameters for (typically these are all; but for evaluation on
+    # a separate test set one might want to restrict this)
+    only_optimize_over_registration_parameters_for_stage_nr = args.only_optimize_over_registration_parameters_for_stage_nr
 
     # key value pairs
     kvos_str = dict()
@@ -668,6 +757,11 @@ if __name__ == "__main__":
                 postfix=postfix,
                 validation_dataset_directory=validation_dataset_directory,
                 validation_dataset_name=validation_dataset_name,
+                previous_output_base_directory=previous_output_base_directory,
+                only_optimize_over_registration_parameters_for_stage_nr=
+                only_optimize_over_registration_parameters_for_stage_nr,
+                load_shared_parameters_from_previous_stage_nr=load_shared_parameters_from_previous_stage_nr,
+                move_to_directory=move_to_directory,
                 key_value_overwrites=kvo,
                 string_key_value_overwrites=kvos_str,
                 seed=seed,
@@ -720,6 +814,11 @@ if __name__ == "__main__":
                     postfix=current_postfix,
                     validation_dataset_directory=validation_dataset_directory,
                     validation_dataset_name=validation_dataset_name,
+                    previous_output_base_directory=previous_output_base_directory,
+                    only_optimize_over_registration_parameters_for_stage_nr=
+                    only_optimize_over_registration_parameters_for_stage_nr,
+                    load_shared_parameters_from_previous_stage_nr=load_shared_parameters_from_previous_stage_nr,
+                    move_to_directory=move_to_directory,
                     key_value_overwrites=combined_kvs,
                     string_key_value_overwrites=kvos_str,
                     seed=seed,
