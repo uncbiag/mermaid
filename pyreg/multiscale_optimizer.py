@@ -1365,7 +1365,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     desiredSz = self.initialMap.size()[2::]
                     self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.lowResSpacing, desiredSz, self.spline_order)
                     if self.compute_inverse_map and rec_inv_tmp is not None:
-                        self.rec_phiInverseWarped, _ = self.sampler.upsample_image_to_size(rec_inv_tmp, self.spacing, desiredSz,self.spline_order)
+                        self.rec_phiInverseWarped, _ = self.sampler.upsample_image_to_size(rec_inv_tmp, self.lowResSpacing, desiredSz,self.spline_order)
             else:
                 ret = self.model(self.initialMap, self.ISource, opt_variables)
                 if self.compute_inverse_map:

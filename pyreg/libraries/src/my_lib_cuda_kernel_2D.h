@@ -4,9 +4,9 @@ extern "C" {
 
 
 
-int BilinearSamplerBCWH_updateOutput_cuda_kernel_2D(/*output->size[2]*/int szw,
-                                                 /*output->size[1]*/int szc,
-                                                 /*output->size[0]*/int sz3,
+int BilinearSamplerBCWH_updateOutput_cuda_kernel_2D(/*THCudaTensor_size(state,output,2)*/int szw,
+                                                 /*THCudaTensor_size(state,output,1)*/int szc,
+                                                 /*THCudaTensor_size(state,output,0)*/int sz3,
                                                  /*THCudaTensor_size(state, inputImages, 3)*/int ic,
                                                  /*THCudaTensor_size(state, inputImages, 1)*/int iw,
                                                  /*THCudaTensor_size(state, inputImages, 2)*/int ih,
@@ -20,9 +20,9 @@ int BilinearSamplerBCWH_updateOutput_cuda_kernel_2D(/*output->size[2]*/int szw,
 
 
 
-int BilinearSamplerBCWH_updateGradInput_cuda_kernel_2D(/*gradOutput->size[2]*/int szw, 
-                                                    /*gradOutput->size[1]*/int szc,
-                                                    /*gradOutput->size[0]*/int sz3,
+int BilinearSamplerBCWH_updateGradInput_cuda_kernel_2D(/*THCudaTensor_size(state,gradOutput,2)*/int szw,
+                                                    /*THCudaTensor_size(state,gradOutput,1)*/int szc,
+                                                    /*THCudaTensor_size(state,gradOutput,0)*/int sz3,
                                                     /*THCudaTensor_size(state, inputImages, 3)*/int ic,
                                                     /*THCudaTensor_size(state, inputImages, 1)*/int iw,
                                                     /*THCudaTensor_size(state, inputImages, 2)*/int ih,
@@ -36,9 +36,9 @@ int BilinearSamplerBCWH_updateGradInput_cuda_kernel_2D(/*gradOutput->size[2]*/in
                                                     /*THCState_getCurrentStream(state)*/cudaStream_t stream, int zero_boundary);
 
 int BilinearSamplerBCWH_updateGradInputOnlyGrid_cuda_kernel_2D(
-                                        /*gradOutput->size[2]*/int szw, 
-                                        /*gradOutput->size[1]*/int szc,
-                                        /*gradOutput->size[0]*/int sz3,
+                                        /*THCudaTensor_size(state,gradOutput,2)*/int szw,
+                                        /*THCudaTensor_size(state,gradOutput,1)*/int szc,
+                                        /*THCudaTensor_size(state,gradOutput,0)*/int sz3,
                                         /*THCudaTensor_size(state, inputImages, 3)*/int ic,
                                         /*THCudaTensor_size(state, inputImages, 1)*/int iw,
                                         /*THCudaTensor_size(state, inputImages, 2)*/int ih,

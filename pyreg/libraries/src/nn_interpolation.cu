@@ -174,9 +174,9 @@ extern "C" {
 
 
 
-int nearestNeighBCW_updateOutput_cuda_kernel_1D(/*output->size[2]*/int szw,
-                                                 /*output->size[1]*/int szc,
-                                                 /*output->size[0]*/int sz3,
+int nearestNeighBCW_updateOutput_cuda_kernel_1D(/*THCudaTensor_size(state,output,2)*/int szw,
+                                                 /*THCudaTensor_size(state,output,1)*/int szc,
+                                                 /*THCudaTensor_size(state,output,0)*/int sz3,
                                                  /*THCudaTensor_size(state, inputImages, 3)*/int ic,
                                                  /*THCudaTensor_size(state, inputImages, 1)*/int iw,
                                                  /*THCudaTensor_size(state, output, 2)*/int ow,
@@ -187,7 +187,7 @@ int nearestNeighBCW_updateOutput_cuda_kernel_1D(/*output->size[2]*/int szw,
 {
   // batch channel x y
   //  0      1     2 3 
-   //dim3 blocks((output->size[2]+15)/16, output->size[1], output->size[0]);
+   //dim3 blocks((THCudaTensor_size(state,output,2)+15)/16, THCudaTensor_size(state,output,1), THCudaTensor_size(state,output,0));
    dim3 blocks((ow+bdx-1)/bdx, sz3);
    dim3 threads(bdx);
 
@@ -223,9 +223,9 @@ int nearestNeighBCW_updateOutput_cuda_kernel_1D(/*output->size[2]*/int szw,
 
 
 
-int nearestNeighBCWH_updateOutput_cuda_kernel_2D(/*output->size[2]*/int szw,
-                                                 /*output->size[1]*/int szc,
-                                                 /*output->size[0]*/int sz3,
+int nearestNeighBCWH_updateOutput_cuda_kernel_2D(/*THCudaTensor_size(state,output,2)*/int szw,
+                                                 /*THCudaTensor_size(state,output,1)*/int szc,
+                                                 /*THCudaTensor_size(state,output,0)*/int sz3,
                                                  /*THCudaTensor_size(state, inputImages, 3)*/int ic,
                                                  /*THCudaTensor_size(state, inputImages, 1)*/int iw,
                                                  /*THCudaTensor_size(state, inputImages, 2)*/int ih,
@@ -238,7 +238,7 @@ int nearestNeighBCWH_updateOutput_cuda_kernel_2D(/*output->size[2]*/int szw,
 {
   // batch channel x y
   //  0      1     2 3 
-   //dim3 blocks((output->size[2]+15)/16, output->size[1], output->size[0]);
+   //dim3 blocks((THCudaTensor_size(state,output,2)+15)/16, THCudaTensor_size(state,output,1), THCudaTensor_size(state,output,0));
    dim3 blocks((oh+bdx-1)/bdx, (ow+bdy-1)/bdy, sz3);
    dim3 threads(bdx,bdy);
    //printf(" iw, ih, ow, oh  %d %d %d %d",iw,ih,ow,oh);
@@ -281,9 +281,9 @@ int nearestNeighBCWH_updateOutput_cuda_kernel_2D(/*output->size[2]*/int szw,
 
 
 
-int nearestNeighBCWHD_updateOutput_cuda_kernel_3D(/*output->size[2]*/int szw,
-                                                 /*output->size[1]*/int szc,
-                                                 /*output->size[0]*/int szb,
+int nearestNeighBCWHD_updateOutput_cuda_kernel_3D(/*THCudaTensor_size(state,output,2)*/int szw,
+                                                 /*THCudaTensor_size(state,output,1)*/int szc,
+                                                 /*THCudaTensor_size(state,output,0)*/int szb,
                                                  /*THCudaTensor_size(state, inputImages, 1)*/int ic,
                                                  /*THCudaTensor_size(state, inputImages, 2)*/int iw,
                                                  /*THCudaTensor_size(state, inputImages, 3)*/int ih,
@@ -298,7 +298,7 @@ int nearestNeighBCWHD_updateOutput_cuda_kernel_3D(/*output->size[2]*/int szw,
 {
   // batch channel x y  z
   //  0      1     2 3  4
-   //dim3 blocks((output->size[2]+15)/16, output->size[1], output->size[0]);
+   //dim3 blocks((THCudaTensor_size(state,output,2)+15)/16, THCudaTensor_size(state,output,1), THCudaTensor_size(state,output,0));
    dim3 blocks((od+bdx-1)/bdx, (oh+bdy-1)/bdy, szw*szb);
    dim3 threads(bdx,bdy);
    //printf(" gsh %d  gsc %d osh %d osc %d  ic %d id %d ih %d\n!!!!",gsh,gsc,osh,osc,ic,id,ih);

@@ -24,9 +24,9 @@ int BilinearSamplerBCWH_updateOutput_cuda_2D(THCudaTensor *inputImages, THCudaTe
 
   cudaSetDevice(device[0]);
   int success = 0;
-  success = BilinearSamplerBCWH_updateOutput_cuda_kernel_2D(output->size[2],
-                                               output->size[1],
-                                               output->size[0],
+  success = BilinearSamplerBCWH_updateOutput_cuda_kernel_2D(THCudaTensor_size(state,output,2),
+                                               THCudaTensor_size(state,output,1),
+                                               THCudaTensor_size(state,output,0),
                                                THCudaTensor_size(state, inputImages, 1),
                                                THCudaTensor_size(state, inputImages, 2),
                                                THCudaTensor_size(state, inputImages, 3),
@@ -71,9 +71,9 @@ int BilinearSamplerBCWH_updateGradInput_cuda_2D(THCudaTensor *inputImages, THCud
 
   cudaSetDevice(device[0]);
   int success = 0;
-  success = BilinearSamplerBCWH_updateGradInput_cuda_kernel_2D(gradOutput->size[2],
-                                                  gradOutput->size[1],
-                                                  gradOutput->size[0],
+  success = BilinearSamplerBCWH_updateGradInput_cuda_kernel_2D(THCudaTensor_size(state,gradOutput,2),
+                                                  THCudaTensor_size(state,gradOutput,1),
+                                                  THCudaTensor_size(state,gradOutput,0),
                                                   THCudaTensor_size(state, inputImages, 1),
                                                   THCudaTensor_size(state, inputImages, 2),
                                                   THCudaTensor_size(state, inputImages, 3),
@@ -126,9 +126,9 @@ int BilinearSamplerBCWH_updateGradInputOnlyGrid_cuda_2D(THCudaTensor *inputImage
   cudaSetDevice(device[0]);
   int success = 0;
   success = BilinearSamplerBCWH_updateGradInputOnlyGrid_cuda_kernel_2D(
-                                                  gradOutput->size[2],
-                                                  gradOutput->size[1],
-                                                  gradOutput->size[0],
+                                                  THCudaTensor_size(state,gradOutput,2),
+                                                  THCudaTensor_size(state,gradOutput,1),
+                                                  THCudaTensor_size(state,gradOutput,0),
                                                   THCudaTensor_size(state, inputImages, 1),
                                                   THCudaTensor_size(state, inputImages, 2),
                                                   THCudaTensor_size(state, inputImages, 3),

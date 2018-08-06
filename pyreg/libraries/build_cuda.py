@@ -59,7 +59,8 @@ ffi_1D = create_extension(
     define_macros=defines,
     relative_to=__file__,
     with_cuda=with_cuda,
-    extra_objects=extra_objects_1D
+    extra_objects=extra_objects_1D,
+extra_compile_args=["-std=c99"]
 )
 
 
@@ -70,7 +71,8 @@ ffi_2D = create_extension(
     define_macros=defines,
     relative_to=__file__,
     with_cuda=with_cuda,
-    extra_objects=extra_objects_2D
+    extra_objects=extra_objects_2D,
+extra_compile_args=["-std=c99"]
 )
 
 
@@ -81,7 +83,8 @@ ffi_3D = create_extension(
     define_macros=defines,
     relative_to=__file__,
     with_cuda=with_cuda,
-    extra_objects=extra_objects_3D
+    extra_objects=extra_objects_3D,
+extra_compile_args=["-std=c99"]
 )
 
 ffi_nn = create_extension(
@@ -91,7 +94,8 @@ ffi_nn = create_extension(
     define_macros=defines,
     relative_to=__file__,
     with_cuda=with_cuda,
-    extra_objects=extra_objects_nn
+    extra_objects=extra_objects_nn,
+extra_compile_args=["-std=c99"]
 )
 
 if __name__ == '__main__':

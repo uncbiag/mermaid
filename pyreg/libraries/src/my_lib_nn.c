@@ -12,23 +12,23 @@
 int nearestNeighBCX_updateOutput_1D(THFloatTensor *inputImages, THFloatTensor *grids, THFloatTensor *output )
 {
   // *B*atch, *C*hannel, *X*-coors
-  int batchsize = inputImages->size[0];
-  int inputImages_X = inputImages->size[2];
-  int inputImages_C = inputImages->size[1];
-  int output_X = output->size[2];
-  int output_C = output->size[1];
+  int batchsize = THFloatTensor_size(inputImages,0);
+  int inputImages_X = THFloatTensor_size(inputImages,2);
+  int inputImages_C = THFloatTensor_size(inputImages,1);
+  int output_X = THFloatTensor_size(output,2);
+  int output_C = THFloatTensor_size(output,1);
 
-  int output_strideBatch = output->stride[0];
-  int output_stride_X = output->stride[2];
-  int output_stride_C = output->stride[1];
+  int output_strideBatch = THFloatTensor_stride(output,0);
+  int output_stride_X = THFloatTensor_stride(output,2);
+  int output_stride_C = THFloatTensor_stride(output,1);
 
-  int inputImages_strideBatch = inputImages->stride[0];
-  int inputImages_stride_X = inputImages->stride[2];
-  int inputImages_stride_C = inputImages->stride[1];
+  int inputImages_strideBatch = THFloatTensor_stride(inputImages,0);
+  int inputImages_stride_X = THFloatTensor_stride(inputImages,2);
+  int inputImages_stride_C = THFloatTensor_stride(inputImages,1);
 
-  int grids_strideBatch = grids->stride[0];
-  int grids_stride_X = grids->stride[2];
-  int grids_stride_C = grids->stride[1];
+  int grids_strideBatch = THFloatTensor_stride(grids,0);
+  int grids_stride_X = THFloatTensor_stride(grids,2);
+  int grids_stride_C = THFloatTensor_stride(grids,1);
 
   real *inputImages_data, *output_data, *grids_data;
   inputImages_data = THFloatTensor_data(inputImages);
@@ -82,27 +82,27 @@ int nearestNeighBCX_updateOutput_1D(THFloatTensor *inputImages, THFloatTensor *g
 int nearestNeighBCXY_updateOutput_2D(THFloatTensor *inputImages, THFloatTensor *grids, THFloatTensor *output )
 {
   // This is actua
-  int batchsize = inputImages->size[0];
-  int inputImages_X = inputImages->size[2];
-  int inputImages_Y = inputImages->size[3];
-  int inputImages_C = inputImages->size[1];
-  int output_X = output->size[2];
-  int output_Y = output->size[3];
+  int batchsize = THFloatTensor_size(inputImages,0);
+  int inputImages_X = THFloatTensor_size(inputImages,2);
+  int inputImages_Y = THFloatTensor_size(inputImages,3);
+  int inputImages_C = THFloatTensor_size(inputImages,1);
+  int output_X = THFloatTensor_size(output,2);
+  int output_Y = THFloatTensor_size(output,3);
 
-  int output_strideBatch = output->stride[0];
-  int output_stride_X = output->stride[2];
-  int output_stride_Y = output->stride[3];
-  int output_stride_C = output->stride[1];
+  int output_strideBatch = THFloatTensor_stride(output,0);
+  int output_stride_X = THFloatTensor_stride(output,2);
+  int output_stride_Y = THFloatTensor_stride(output,3);
+  int output_stride_C = THFloatTensor_stride(output,1);
 
-  int inputImages_strideBatch = inputImages->stride[0];
-  int inputImages_stride_X = inputImages->stride[2];
-  int inputImages_stride_Y = inputImages->stride[3];
-  int inputImages_stride_C = inputImages->stride[1];
+  int inputImages_strideBatch = THFloatTensor_stride(inputImages,0);
+  int inputImages_stride_X = THFloatTensor_stride(inputImages,2);
+  int inputImages_stride_Y = THFloatTensor_stride(inputImages,3);
+  int inputImages_stride_C = THFloatTensor_stride(inputImages,1);
 
-  int grids_strideBatch = grids->stride[0];
-  int grids_stride_C = grids->stride[1];
-  int grids_stride_X = grids->stride[2];
-  int grids_stride_Y = grids->stride[3];
+  int grids_strideBatch = THFloatTensor_stride(grids,0);
+  int grids_stride_C = THFloatTensor_stride(grids,1);
+  int grids_stride_X = THFloatTensor_stride(grids,2);
+  int grids_stride_Y = THFloatTensor_stride(grids,3);
 
   real *inputImages_data, *output_data, *grids_data;
   inputImages_data = THFloatTensor_data(inputImages);
@@ -167,32 +167,32 @@ int nearestNeighBCXY_updateOutput_2D(THFloatTensor *inputImages, THFloatTensor *
 int nearestNeighBCXYZ_updateOutput_3D(THFloatTensor *inputImages, THFloatTensor *grids, THFloatTensor *output )
 {
   // This is actua
-  int batchsize = inputImages->size[0];
-  int inputImages_X = inputImages->size[2];
-  int inputImages_Y = inputImages->size[3];
-  int inputImages_Z = inputImages->size[4];
-  int inputImages_C = inputImages->size[1];
-  int output_X = output->size[2];
-  int output_Y = output->size[3];
-  int output_Z = output->size[4];
+  int batchsize = THFloatTensor_size(inputImages,0);
+  int inputImages_X = THFloatTensor_size(inputImages,2);
+  int inputImages_Y = THFloatTensor_size(inputImages,3);
+  int inputImages_Z = THFloatTensor_size(inputImages,4);
+  int inputImages_C = THFloatTensor_size(inputImages,1);
+  int output_X = THFloatTensor_size(output,2);
+  int output_Y = THFloatTensor_size(output,3);
+  int output_Z = THFloatTensor_size(output,4);
 
-  int output_strideBatch = output->stride[0];
-  int output_stride_X = output->stride[2];
-  int output_stride_Y = output->stride[3];
-  int output_stride_Z = output->stride[4];
-  int output_stride_C = output->stride[1];
+  int output_strideBatch = THFloatTensor_stride(output,0);
+  int output_stride_X = THFloatTensor_stride(output,2);
+  int output_stride_Y = THFloatTensor_stride(output,3);
+  int output_stride_Z = THFloatTensor_stride(output,4);
+  int output_stride_C = THFloatTensor_stride(output,1);
 
-  int inputImages_strideBatch = inputImages->stride[0];
-  int inputImages_stride_X = inputImages->stride[2];
-  int inputImages_stride_Y = inputImages->stride[3];
-  int inputImages_stride_Z = inputImages->stride[4];
-  int inputImages_stride_C = inputImages->stride[1];
+  int inputImages_strideBatch = THFloatTensor_stride(inputImages,0);
+  int inputImages_stride_X = THFloatTensor_stride(inputImages,2);
+  int inputImages_stride_Y = THFloatTensor_stride(inputImages,3);
+  int inputImages_stride_Z = THFloatTensor_stride(inputImages,4);
+  int inputImages_stride_C = THFloatTensor_stride(inputImages,1);
 
-  int grids_strideBatch = grids->stride[0];
-  int grids_stride_X = grids->stride[2];
-  int grids_stride_Y = grids->stride[3];
-  int grids_stride_Z = grids->stride[4];
-  int grids_stride_C = grids->stride[1];
+  int grids_strideBatch = THFloatTensor_stride(grids,0);
+  int grids_stride_X = THFloatTensor_stride(grids,2);
+  int grids_stride_Y = THFloatTensor_stride(grids,3);
+  int grids_stride_Z = THFloatTensor_stride(grids,4);
+  int grids_stride_C = THFloatTensor_stride(grids,1);
 
   real *inputImages_data, *output_data, *grids_data;
   inputImages_data = THFloatTensor_data(inputImages);
