@@ -200,7 +200,7 @@ def downsample_to_compatible_size(gt_weights_orig,weights):
 
     return gt_weights
 
-def upsample_to_compatible_size_single_image(gt_weight,weight,interpolation_order=3):
+def upsample_to_compatible_size_single_image(gt_weight,weight,interpolation_order=1):
     # upsample the weights if needed
     if gt_weight.shape==weight.shape:
         return weight
