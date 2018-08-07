@@ -38,8 +38,9 @@ class CreateSquares(CreateExample):
     """
     Class to create two example squares in arbitrary dimension as registration test cases
     """
-    def __init__(self,dim):
+    def __init__(self,dim, add_noise_to_bg=False):
         super(CreateSquares, self).__init__(dim)
+        self.add_noise_to_bg = add_noise_to_bg
 
     def create_image_pair(self,sz,params):
         """
@@ -50,9 +51,12 @@ class CreateSquares(CreateExample):
             the large squares which will be generated 
         :return: Returns two images of squares and the spacing (I0,I1,spacing)
         """
-
-        I0 = np.zeros(sz, dtype='float32')
-        I1 = np.zeros(sz, dtype='float32')
+        if not self.add_noise_to_bg:
+            I0 = np.zeros(sz, dtype='float32')
+            I1 = np.zeros(sz, dtype='float32')
+        else:
+            I0 = np.random.rand(*sz).astype(np.float32)/4.
+            I1 = np.random.rand(*sz).astype(np.float32)/4.
         # get parameters and replace with defaults if necessary
 
         # create a new category if it does not exist
@@ -82,6 +86,9 @@ class CreateSquares(CreateExample):
         spacing = 1. / (sz[2::] - 1)  # the first two dimensions are batch size and number of image channels
 
         return I0,I1,spacing
+
+
+
 
 class CreateRealExampleImages(CreateExample):
     """

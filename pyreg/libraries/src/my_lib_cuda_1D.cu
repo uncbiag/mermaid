@@ -78,7 +78,7 @@ __global__ void bilinearSamplingFromGrid_1D(float* inputImages_data, int inputIm
 
     ///////////////  using  non zero border condition
 
-    if (zero_boundary_bool) {
+    if (!zero_boundary_bool) {
         if (xBeyondLow)
             xInLeft = 0;
         if (xBeyondHigh)
@@ -99,7 +99,7 @@ __global__ void bilinearSamplingFromGrid_1D(float* inputImages_data, int inputIm
    // interpolation happens here
    for(int t=0; t<inputImages_channels; t++)
    {
-      if (zero_boundary_bool || (! (xBeyondLow || xBeyondHigh))){
+      if (!zero_boundary_bool || (! (xBeyondLow || xBeyondHigh))){
 
           inLeft = inputImages_data[inLeftAddress + t*inputImages_strideChannels];
           inRight = inputImages_data[inRightAddress + t*inputImages_strideChannels];
@@ -147,7 +147,7 @@ template<bool onlyGrid> __global__ void backwardBilinearSampling_1D(float* input
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xInLeft = 0;
             if (xBeyondHigh)
@@ -176,7 +176,7 @@ template<bool onlyGrid> __global__ void backwardBilinearSampling_1D(float* input
         int tch = t*gradInputImages_strideChannels;
          float gradOutValue = gradOutput_data[gradOutputAddress + t*gradOutput_strideChannels];
          // bool between_1D(int value, int lowerBound, int upperBound)
-        if (zero_boundary_bool || (! (xBeyondLow || xBeyondHigh))){
+        if (!zero_boundary_bool || (! (xBeyondLow || xBeyondHigh))){
             float inLeft = inputImages_data[inLeftAddress + tch];
             LeftDotProduct += inLeft * gradOutValue;
             if(!onlyGrid) atomicAdd(&gradInputImages_data[gradInputImagesLeftAddress + tch], xWeightLeft * gradOutValue);

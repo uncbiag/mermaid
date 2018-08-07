@@ -82,6 +82,7 @@ def register_pair_img(moving, target, spacing, register_param):
     inv_Ab = get_inverse_affine_param(Ab.detach())
     inv_Ab = update_affine_param(inv_Ab, inv_Ab)
     inversed_map = apply_affine_transform_to_map_multiNC(inv_Ab, inversed_map_svf)
+    print(inversed_map.shape)
 
     return inversed_map
 
@@ -92,7 +93,7 @@ def read_mesh_into_tensor():
     # example
     #  write a new function     read_mesh_into_tensor    B*3*N*1*1
     ##################    using randomized mesh for debugging   ###############################3
-    mesh = torch.rand(1, 3, 200, 1, 1) * 2 - 1
+    mesh = torch.rand(1, 3, 200, 1, 1).cuda()
 
     return mesh
 
@@ -110,3 +111,4 @@ moving,target, spacing = read_source_and_moving_img(moving_img_path, target_img_
 inversed_map = register_pair_img(moving,target, spacing, register_param)
 mesh = read_mesh_into_tensor()
 interoplated_result = do_mesh_interoplation(inversed_map, mesh, spacing)
+print(interoplated_result.shape)

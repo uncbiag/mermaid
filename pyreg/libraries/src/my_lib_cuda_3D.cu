@@ -101,7 +101,7 @@ __global__ void bilinearSamplingFromGrid_3D(float* inputImages_data, int inputIm
 
     ///////////////  using  non zero border condition
 
-    if (zero_boundary_bool) {
+    if (!zero_boundary_bool) {
     if (xBeyondLow)
         xInTopLeft = 0;
     if (xBeyondHigh)
@@ -146,7 +146,7 @@ __global__ void bilinearSamplingFromGrid_3D(float* inputImages_data, int inputIm
    for(int t=0; t<inputImages_channels; t++)
    {
 
-      if (zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh || zBeyondLow || zBeyondHigh))){
+      if (!zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh || zBeyondLow || zBeyondHigh))){
       inTopLeftFront = inputImages_data[inTopLeftFrontAddress + t*inputImages_strideChannels];
       inTopRightFront=inputImages_data[inTopRightFrontAddress + t*inputImages_strideChannels];
       inBottomLeftFront=inputImages_data[inBottomLeftFrontAddress + t*inputImages_strideChannels];
@@ -242,7 +242,7 @@ template<bool onlyGrid> __global__ void backwardBilinearSampling_3D(float* input
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
         if (xBeyondLow)
             xInTopLeft = 0;
         if (xBeyondHigh)
@@ -300,7 +300,7 @@ template<bool onlyGrid> __global__ void backwardBilinearSampling_3D(float* input
         float gradOutValue = gradOutput_data[gradOutputAddress + t*gradOutput_strideChannels];
          // bool between_3D(int value, int lowerBound, int upperBound)
 
-         if (zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh || zBeyondLow || zBeyondHigh))){
+         if (!zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh || zBeyondLow || zBeyondHigh))){
             float inTopLeftFront = inputImages_data[inTopLeftFrontAddress + tch];
             TopLeftFrontDP += inTopLeftFront * gradOutValue;
             if(!onlyGrid) atomicAdd(&gradInputImages_data[gradInputImagesTopLeftFrontAddress + tch], xWeightTopLeft * yWeightTopLeft * zWeightTopLeft * gradOutValue);

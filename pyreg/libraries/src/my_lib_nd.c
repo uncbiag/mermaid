@@ -61,7 +61,7 @@ int BilinearSamplerBXC_updateOutput_1D(THFloatTensor *inputImages, THFloatTensor
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xLow = 0;
             if (xBeyondHigh)
@@ -84,7 +84,7 @@ int BilinearSamplerBXC_updateOutput_1D(THFloatTensor *inputImages, THFloatTensor
 	  // interpolation happens here
 	  for(t=0; t<inputImages_C; t++)
 	    {
-            if (zero_boundary_bool || (! (xBeyondLow || xBeyondHigh ))){
+            if (!zero_boundary_bool || (! (xBeyondLow || xBeyondHigh ))){
 
               inLow = inputImages_data[inLowAddress + t];
               inHigh = inputImages_data[inHighAddress + t];
@@ -152,7 +152,7 @@ int BilinearSamplerBCX_updateOutput_1D(THFloatTensor *inputImages, THFloatTensor
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xLow = 0;
             if (xBeyondHigh)
@@ -174,7 +174,7 @@ int BilinearSamplerBCX_updateOutput_1D(THFloatTensor *inputImages, THFloatTensor
 	  for(t=0; t<inputImages_C; t++)
 	    {
 
-	     if (zero_boundary_bool || (! (xBeyondLow || xBeyondHigh ))){
+	     if (!zero_boundary_bool || (! (xBeyondLow || xBeyondHigh ))){
 
 	      inLow = inputImages_data[inLowAddress + t*inputImages_stride_C];
 	      inHigh = inputImages_data[inHighAddress + t*inputImages_stride_C];
@@ -252,7 +252,7 @@ int BilinearSamplerBXYC_updateOutput_2D(THFloatTensor *inputImages, THFloatTenso
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xInLowLow = 0;
             if (xBeyondHigh)
@@ -284,7 +284,7 @@ int BilinearSamplerBXYC_updateOutput_2D(THFloatTensor *inputImages, THFloatTenso
         for(t=0; t<inputImages_C; t++)
         {
         // if the first is for non zero condition and the second is for zero condition
-         if (zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh))){
+         if (!zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh))){
            inLowLow = inputImages_data[inLowLowAddress + t];
            inLowHigh = inputImages_data[inLowHighAddress + t];
            inHighLow = inputImages_data[inHighLowAddress + t];
@@ -378,7 +378,7 @@ int BilinearSamplerBCXY_updateOutput_2D(THFloatTensor *inputImages, THFloatTenso
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xInLowLow = 0;
             if (xBeyondHigh)
@@ -410,7 +410,7 @@ int BilinearSamplerBCXY_updateOutput_2D(THFloatTensor *inputImages, THFloatTenso
         for(t=0; t<inputImages_C; t++)
         {
            // if the first is for non zero condition and the second is for zero condition
-         if (zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh))){
+         if (!zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh))){
            inLowLow = inputImages_data[inLowLowAddress + t*inputImages_stride_C];
            inLowHigh = inputImages_data[inLowHighAddress + t*inputImages_stride_C];
            inHighLow = inputImages_data[inHighLowAddress + t*inputImages_stride_C];
@@ -623,7 +623,7 @@ int BilinearSamplerBXYZC_updateOutput_3D(THFloatTensor *inputImages, THFloatTens
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xInLowLowLow = 0;
             if (xBeyondHigh)
@@ -670,7 +670,7 @@ int BilinearSamplerBXYZC_updateOutput_3D(THFloatTensor *inputImages, THFloatTens
 		for(t=0; t<inputImages_C; t++)
 		  {
 
-		  if (zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh || zBeyondLow || zBeyondHigh))){
+		  if (!zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh || zBeyondLow || zBeyondHigh))){
             inLowLowLow = inputImages_data[inLowLowLowAddress + t];
 		    inLowLowHigh = inputImages_data[inLowLowHighAddress + t];
 		    inLowHighLow = inputImages_data[inLowHighLowAddress + t];
@@ -780,7 +780,7 @@ int BilinearSamplerBCXYZ_updateOutput_3D(THFloatTensor *inputImages, THFloatTens
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xInLowLowLow = 0;
             if (xBeyondHigh)
@@ -822,7 +822,7 @@ int BilinearSamplerBCXYZ_updateOutput_3D(THFloatTensor *inputImages, THFloatTens
 		// interpolation happens here
 		for(t=0; t<inputImages_C; t++)
 		  {
-		    if (zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh || zBeyondLow || zBeyondHigh))){
+		    if (!zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh || zBeyondLow || zBeyondHigh))){
             inLowLowLow = inputImages_data[inLowLowLowAddress + t*inputImages_stride_C];
 		    inLowLowHigh = inputImages_data[inLowLowHighAddress + t*inputImages_stride_C];
 		    inLowHighLow = inputImages_data[inLowHighLowAddress + t*inputImages_stride_C];
@@ -1030,7 +1030,7 @@ int BilinearSamplerBXC_updateGradInput_1D(THFloatTensor *inputImages, THFloatTen
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xInLow = 0;
             if (xBeyondHigh)
@@ -1063,7 +1063,7 @@ int BilinearSamplerBXC_updateGradInput_1D(THFloatTensor *inputImages, THFloatTen
       for(t=0; t<inputImages_C; t++)
         {
 	  real gradOutValue = gradOutput_data[gradOutputAddress + t];
-	     if (zero_boundary_bool || (! (xBeyondLow || xBeyondHigh ))){
+	     if (!zero_boundary_bool || (! (xBeyondLow || xBeyondHigh ))){
               real inLow = inputImages_data[inLowAddress + t];
               lowDotProduct += inLow * gradOutValue;
               if(!onlyGrid) gradInputImages_data[gradInputImagesLowAddress + t] += xWeightLow * gradOutValue;
@@ -1145,7 +1145,7 @@ int BilinearSamplerBCX_updateGradInput_1D(THFloatTensor *inputImages, THFloatTen
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xInLow = 0;
             if (xBeyondHigh)
@@ -1176,7 +1176,7 @@ int BilinearSamplerBCX_updateGradInput_1D(THFloatTensor *inputImages, THFloatTen
       for(t=0; t<inputImages_C; t++)
         {
 	  real gradOutValue = gradOutput_data[gradOutputAddress + t*gradOutput_stride_C];
-	     if (zero_boundary_bool || (! (xBeyondLow || xBeyondHigh ))){
+	     if (!zero_boundary_bool || (! (xBeyondLow || xBeyondHigh ))){
               real inLow = inputImages_data[inLowAddress + t*inputImages_stride_C];
               lowDotProduct += inLow * gradOutValue;
               if(!onlyGrid) gradInputImages_data[gradInputImagesLowAddress + t*gradInputImages_stride_C] += xWeightLow * gradOutValue;
@@ -1272,7 +1272,7 @@ int BilinearSamplerBXYC_updateGradInput_2D(THFloatTensor *inputImages, THFloatTe
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xInLowLow = 0;
             if (xBeyondHigh)
@@ -1316,7 +1316,7 @@ int BilinearSamplerBXYC_updateGradInput_2D(THFloatTensor *inputImages, THFloatTe
         for(t=0; t<inputImages_C; t++)
         {
            real gradOutValue = gradOutput_data[gradOutputAddress + t];
-           if (zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh))){
+           if (!zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh))){
               real inLowLow = inputImages_data[inLowLowAddress + t];
               lowLowDotProduct += inLowLow * gradOutValue;
               if(!onlyGrid) gradInputImages_data[gradInputImagesLowLowAddress + t] += xWeightLowLow * yWeightLowLow * gradOutValue;
@@ -1430,7 +1430,7 @@ int BilinearSamplerBCXY_updateGradInput_2D(THFloatTensor *inputImages, THFloatTe
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xInLowLow = 0;
             if (xBeyondHigh)
@@ -1472,7 +1472,7 @@ int BilinearSamplerBCXY_updateGradInput_2D(THFloatTensor *inputImages, THFloatTe
         for(t=0; t<inputImages_C; t++)
         {
            real gradOutValue = gradOutput_data[gradOutputAddress + t*gradOutput_stride_C];
-           if (zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh))){
+           if (!zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh))){
               real inLowLow = inputImages_data[inLowLowAddress + t*inputImages_stride_C];
               lowLowDotProduct += inLowLow * gradOutValue;
               if(!onlyGrid) gradInputImages_data[gradInputImagesLowLowAddress + t*gradInputImages_stride_C] += xWeightLowLow * yWeightLowLow * gradOutValue;
@@ -1596,7 +1596,7 @@ int BilinearSamplerBXYZC_updateGradInput_3D(THFloatTensor *inputImages, THFloatT
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xInLowLowLow = 0;
             if (xBeyondHigh)
@@ -1665,7 +1665,7 @@ int BilinearSamplerBXYZC_updateGradInput_3D(THFloatTensor *inputImages, THFloatT
 	    for(t=0; t<inputImages_C; t++)
 	      {
 		    real gradOutValue = gradOutput_data[gradOutputAddress + t];
-		    if (zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh || zBeyondLow || zBeyondHigh))){
+		    if (!zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh || zBeyondLow || zBeyondHigh))){
                 real inLowLowLow = inputImages_data[inLowLowLowAddress + t];
                 lowLowLowDotProduct += inLowLowLow * gradOutValue;
                 if(!onlyGrid) gradInputImages_data[gradInputImagesLowLowLowAddress + t] += xWeightLowLowLow * yWeightLowLowLow * zWeightLowLowLow * gradOutValue;
@@ -1824,7 +1824,7 @@ int BilinearSamplerBCXYZ_updateGradInput_3D(THFloatTensor *inputImages, THFloatT
 
         ///////////////  using  non zero border condition
 
-        if (zero_boundary_bool) {
+        if (!zero_boundary_bool) {
             if (xBeyondLow)
                 xInLowLowLow = 0;
             if (xBeyondHigh)
@@ -1890,7 +1890,7 @@ int BilinearSamplerBCXYZ_updateGradInput_3D(THFloatTensor *inputImages, THFloatT
        for(t=0; t<inputImages_C; t++)
        {
 		    real gradOutValue = gradOutput_data[gradOutputAddress + t*gradOutput_stride_C];
-		   if (zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh || zBeyondLow || zBeyondHigh))){
+		   if (!zero_boundary_bool || (! (xBeyondLow || yBeyondLow || xBeyondHigh || yBeyondHigh || zBeyondLow || zBeyondHigh))){
 		    real inLowLowLow = inputImages_data[inLowLowLowAddress + t*inputImages_stride_C];
 		    lowLowLowDotProduct += inLowLowLow * gradOutValue;
 		    if(!onlyGrid) gradInputImages_data[gradInputImagesLowLowLowAddress + t*gradInputImages_stride_C] += xWeightLowLowLow * yWeightLowLowLow * zWeightLowLowLow * gradOutValue;
