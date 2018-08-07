@@ -205,10 +205,12 @@ def run(stage,nr_of_epochs,main_json,
         image_pair_config_pt,
         nr_of_image_pairs,
         input_image_directory,
-        output_base_directory,postfix,
+        output_base_directory,
+        postfix,
         validation_dataset_directory,
         validation_dataset_name,
         previous_output_base_directory,
+        previous_postfix,
         only_optimize_over_registration_parameters_for_stage_nr,
         load_shared_parameters_from_previous_stage_nr,
         move_to_directory,
@@ -257,9 +259,17 @@ def run(stage,nr_of_epochs,main_json,
 
         if load_shared_parameters_from_previous_stage_nr is not None:
             # we need to load the previous shared parameters, so construct the filename from where to load first
-            load_shared_parameters_from_file = os.path.join(move_to_directory, 'out_' + postfix,
-                                                            'results_after_stage_{}'.format(load_shared_parameters_from_previous_stage_nr),
-                                                            'shared', 'shared_parameters.pt')
+
+            if move_to_directory is None:
+                load_shared_parameters_from_file = os.path.join(previous_output_base_directory, 'out_' + previous_postfix,
+                                                                'results_after_stage_{}'.format(
+                                                                    load_shared_parameters_from_previous_stage_nr),
+                                                                'shared', 'shared_parameters.pt')
+            else:
+                load_shared_parameters_from_file = os.path.join(move_to_directory, 'out_' + previous_postfix,
+                                                                'results_after_stage_{}'.format(
+                                                                    load_shared_parameters_from_previous_stage_nr),
+                                                                'shared', 'shared_parameters.pt')
 
             if not os.path.exists(load_shared_parameters_from_file):
                 raise ValueError('Could not find file: {}'.format(load_shared_parameters_from_file))
@@ -467,6 +477,7 @@ if __name__ == "__main__":
                         help='Specifies which stage from the previous run the shared parameters should be taken from {0,1,2})')
     parser.add_argument('--only_optimize_over_registration_parameters_for_stage_nr', required=False, type=str,default=None,
                         help='If set, only the registration parameters (e.g., momentum) are optimized for the given stages (as a comma separated list; e.g., 0,1,2), but not the smoother. Default is None (i.e., optimization happens in all stages). Best used in conjunction with --load_shared_parameters_from_file; similar in effect to freezing iterations, but will be stored in default directories; so good for validation ')
+    parser.add_argument('--previous_postfix', required=False, default=None, help='Output subdirectory of previous run, out_postfix')
 
     parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=0, help='number of image pairs that will be used; if not set all pairs will be used')
 
@@ -619,9 +630,6 @@ if __name__ == "__main__":
 
     main_json = args.config # e.g., 'test2d_025.json'
 
-    if args.postfix is None:
-        postfix = 'test'
-
     # directory to move results to after computation
     move_to_directory = args.move_to_directory
 
@@ -690,6 +698,26 @@ if __name__ == "__main__":
     # a separate test set one might want to restrict this)
     only_optimize_over_registration_parameters_for_stage_nr = args.only_optimize_over_registration_parameters_for_stage_nr
 
+    if load_shared_parameters_from_previous_stage_nr is not None:
+        if args.previous_postfix is None:
+            previous_postfix = 'test'
+        else:
+            previous_postfix = args.previous_postfix
+    else:
+        previous_postfix = None
+
+    if args.postfix is None:
+        if previous_postfix is not None:
+            postfix = 'init_from_' + previous_postfix
+        else:
+            postfix = 'test'
+    else:
+        postifx = args.postfix
+
+    if previous_postfix is not None:
+        if previous_postfix==postfix:
+            raise ValueError('previous_postfix={} and postfix={} are not allowed to be the same to avoid overwriting results; use --postfix and --previous_postfix to specify differt values'.format(previous_postfix,postfix))
+
     # key value pairs
     kvos_str = dict()
     kvos_str['default'] = args.config_kvs
@@ -755,6 +783,7 @@ if __name__ == "__main__":
                 input_image_directory=input_image_directory,
                 output_base_directory=output_base_directory,
                 postfix=postfix,
+                previous_postfix=previous_postfix,
                 validation_dataset_directory=validation_dataset_directory,
                 validation_dataset_name=validation_dataset_name,
                 previous_output_base_directory=previous_output_base_directory,
@@ -791,6 +820,7 @@ if __name__ == "__main__":
             current_kvs = s['kvs']
             current_label = s['label']
             current_postfix = postfix + '_' + current_label
+            current_previous_postfix = previous_postfix + '_' + current_label
 
             combined_kvs = merge_kvs(kvo,current_kvs)
 
@@ -812,6 +842,7 @@ if __name__ == "__main__":
                     input_image_directory=input_image_directory,
                     output_base_directory=output_base_directory,
                     postfix=current_postfix,
+                    previous_postfix=current_previous_postfix,
                     validation_dataset_directory=validation_dataset_directory,
                     validation_dataset_name=validation_dataset_name,
                     previous_output_base_directory=previous_output_base_directory,
