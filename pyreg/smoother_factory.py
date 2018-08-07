@@ -1222,9 +1222,10 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         if not self._is_optimizing_over_deep_network:
             current_penalty = _compute_omt_penalty_for_weight_vectors(self.get_gaussian_weights(),
-                                                                      self.get_gaussian_stds(), self.omt_power, self.omt_use_log_transformed_std)
+                                                                      self.get_gaussian_stds(), omt_power=self.omt_power, use_log_transform=self.omt_use_log_transformed_std)
 
             penalty = current_penalty * self.omt_weight_penalty*self.spacing.prod()*float(self.sz.prod())
+            #print('global OMT_penalty = {}'.format(penalty.detach().cpu().numpy()))
 
         else:
 
