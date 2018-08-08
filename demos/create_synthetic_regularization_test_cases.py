@@ -805,6 +805,7 @@ if __name__ == "__main__":
     if args.seed is not None:
         print('Setting the random seed to {:}'.format(args.seed))
         random.seed(args.seed)
+        torch.manual_seed(args.seed)
 
     params = pars.ParameterDict()
     if args.config is not None:
