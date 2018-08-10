@@ -247,8 +247,8 @@ int BilinearSamplerBXYC_updateOutput_2D(THFloatTensor *inputImages, THFloatTenso
 
         bool xBeyondLow = xInLowLow < 0;
         bool yBeyondLow = yInLowLow < 0;
-        bool xBeyondHigh = xInLowLow > inputImages_X-1;
-        bool yBeyondHigh = yInLowLow > inputImages_Y-1;
+        bool xBeyondHigh = xInLowLow+1 > inputImages_X-1;
+        bool yBeyondHigh = yInLowLow+1 > inputImages_Y-1;
 
         ///////////////  using  non zero border condition
 
@@ -256,11 +256,11 @@ int BilinearSamplerBXYC_updateOutput_2D(THFloatTensor *inputImages, THFloatTenso
             if (xBeyondLow)
                 xInLowLow = 0;
             if (xBeyondHigh)
-                xInLowLow = inputImages_X-1;
+                xInLowLow = inputImages_X-2;
             if (yBeyondLow)
                 yInLowLow = 0;
             if (yBeyondHigh)
-                yInLowLow = inputImages_Y-1;
+                yInLowLow = inputImages_Y-2;
          }
 
 

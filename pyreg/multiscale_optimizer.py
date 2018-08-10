@@ -1526,14 +1526,14 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.ISource)
                 if self.useMap:
                     if self.compute_similarity_measure_at_low_res:
-                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing, self.spline_order)
+                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing, self.spline_order,zero_boundary=False)
                         lowResLWarped = utils.get_warped_label_map(self.lowResLSource, phi_or_warped_image,
                                                                     self.spacing)
                         vizReg.show_current_images(iter=iter, iS=self.lowResISource, iT=self.lowResITarget, iW=I1Warped,
                                                    iSL=self.lowResLSource,iTL=self.lowResLTarget,iWL=lowResLWarped,
                                                    vizImages=vizImage, vizName=vizName, phiWarped=phi_or_warped_image, visual_param=visual_param)
                     else:
-                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.spline_order)
+                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.spline_order, zero_boundary=False)
                         vizImage = vizImage if len(vizImage)>2 else None
                         LWarped = None
                         if self.LSource is not None  and self.LTarget is not None:
