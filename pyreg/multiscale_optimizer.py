@@ -1031,7 +1031,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     self.lowResInitialMap = AdaptVal(torch.from_numpy(lowres_id))
                 else:
                     sampler = IS.ResampleImage()
-                    lowres_id, _ = sampler.downsample_image_to_size(self.initialMap , self.spacing,self.lowResSize[2::] , 1)
+                    lowres_id, _ = sampler.downsample_image_to_size(self.initialMap , self.spacing,self.lowResSize[2::] , 1,zero_boundary=False)
                     self.lowResInitialMap = AdaptVal(lowres_id)
 
 
@@ -1364,9 +1364,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                         rec_tmp = ret
                     # now upsample to correct resolution
                     desiredSz = self.initialMap.size()[2::]
-                    self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.lowResSpacing, desiredSz, self.spline_order)
+                    self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.lowResSpacing, desiredSz, self.spline_order,zero_boundary=False)
                     if self.compute_inverse_map and rec_inv_tmp is not None:
-                        self.rec_phiInverseWarped, _ = self.sampler.upsample_image_to_size(rec_inv_tmp, self.spacing, desiredSz,self.spline_order)
+                        self.rec_phiInverseWarped, _ = self.sampler.upsample_image_to_size(rec_inv_tmp, self.lowResSpacing, desiredSz,self.spline_order,zero_boundary=False)
             else:
                 ret = self.model(self.initialMap, self.ISource, opt_variables)
                 if self.compute_inverse_map:
@@ -3488,7 +3488,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 LTargetC, spacingC = self.sampler.downsample_image_to_size(self.LTarget, self.spacing, currentDesiredSz[2::],0)
             initialMap = None
             if self.initialMap is not None:
-                initialMap,_ = self.sampler.downsample_image_to_size(self.initialMap,self.spacing, currentDesiredSz[2::],1)
+                initialMap,_ = self.sampler.downsample_image_to_size(self.initialMap,self.spacing, currentDesiredSz[2::],1,zero_boundary=False)
             szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
 
             self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)

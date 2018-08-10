@@ -24,9 +24,9 @@ int nearestNeighBCW_updateOutput_cuda_1D(THCudaTensor *inputImages, THCudaTensor
 
   cudaSetDevice(device[0]);
   int success = 0;
-  success = nearestNeighBCW_updateOutput_cuda_kernel_1D(output->size[2],
-                                               output->size[1],
-                                               output->size[0],
+  success = nearestNeighBCW_updateOutput_cuda_kernel_1D(THCudaTensor_size(state,output,2),
+                                               THCudaTensor_size(state,output,1),
+                                               THCudaTensor_size(state,output,0),
                                                THCudaTensor_size(state, inputImages, 1),
                                                THCudaTensor_size(state, inputImages, 2),
                                                THCudaTensor_size(state, output, 2),
@@ -64,9 +64,9 @@ int nearestNeighBCWH_updateOutput_cuda_2D(THCudaTensor *inputImages, THCudaTenso
 
   cudaSetDevice(device[0]);
   int success = 0;
-  success = nearestNeighBCWH_updateOutput_cuda_kernel_2D(output->size[2],
-                                               output->size[1],
-                                               output->size[0],
+  success = nearestNeighBCWH_updateOutput_cuda_kernel_2D(THCudaTensor_size(state,output,2),
+                                               THCudaTensor_size(state,output,1),
+                                               THCudaTensor_size(state,output,0),
                                                THCudaTensor_size(state, inputImages, 1),
                                                THCudaTensor_size(state, inputImages, 2),
                                                THCudaTensor_size(state, inputImages, 3),
@@ -106,9 +106,9 @@ int nearestNeighBCWHD_updateOutput_cuda_3D(THCudaTensor *inputImages, THCudaTens
 //  THCudaTensor *inputImages = (THCudaTensor *)luaT_checkudata(L, 2, "torch.CudaTensor");
 //  THCudaTensor *grids = (THCudaTensor *)luaT_checkudata(L, 3, "torch.CudaTensor");
 //  THCudaTensor *output = (THCudaTensor *)luaT_checkudata(L, 4, "torch.CudaTensor");
-// /*output->size[2]*/int szw,
-//                                                  /*output->size[1]*/int szc,
-//                                                  /*output->size[0]*/int szb,
+// /*THCudaTensor_size(state,output,2)*/int szw,
+//                                                  /*THCudaTensor_size(state,output,1)*/int szc,
+//                                                  /*THCudaTensor_size(state,output,0)*/int szb,
 //                                                  /*THCudaTensor_size(state, inputImages, 1)*/int ic,
 //                                                  /*THCudaTensor_size(state, inputImages, 2)*/int iw,
 //                                                  /*THCudaTensor_size(state, inputImages, 3)*/int ih,
@@ -121,9 +121,9 @@ int nearestNeighBCWHD_updateOutput_cuda_3D(THCudaTensor *inputImages, THCudaTens
 
   cudaSetDevice(device[0]);
   int success = 0;
-  success = nearestNeighBCWHD_updateOutput_cuda_kernel_3D(output->size[2],
-                                               output->size[1],
-                                               output->size[0],
+  success = nearestNeighBCWHD_updateOutput_cuda_kernel_3D(THCudaTensor_size(state,output,2),
+                                               THCudaTensor_size(state,output,1),
+                                               THCudaTensor_size(state,output,0),
                                                THCudaTensor_size(state, inputImages, 1),
                                                THCudaTensor_size(state, inputImages, 2),
                                                THCudaTensor_size(state, inputImages, 3),

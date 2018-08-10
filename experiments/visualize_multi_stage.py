@@ -262,7 +262,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
                 # now upsample to correct resolution
                 desiredSz = identityMap.size()[2::]
                 sampler = IS.ResampleImage()
-                rec_phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing, desiredSz,spline_order)
+                rec_phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing, desiredSz,spline_order,zero_boundary=False)
         else:
             rec_phiWarped = model(identityMap, ISource)
 

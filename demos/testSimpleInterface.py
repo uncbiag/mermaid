@@ -14,11 +14,11 @@ params = pars.ParameterDict()
 use_synthetic_test_case = True
 dim = 2
 try_all_models = False
-
+add_noise_to_bg = True
 if use_synthetic_test_case:
     len = 64
     szEx = np.tile( len, dim )         # size of the desired images: (sz)^dim
-    I0,I1,spacing= EG.CreateSquares(dim).create_image_pair(szEx,params) # create a default image size with two sample squares
+    I0,I1,spacing= EG.CreateSquares(dim,add_noise_to_bg).create_image_pair(szEx,params) # create a default image size with two sample squares
 else:
     I0,I1,spacing = EG.CreateRealExampleImages(dim).create_image_pair() # create a default image size with two sample squares
 

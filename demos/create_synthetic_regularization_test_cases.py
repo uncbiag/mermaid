@@ -812,7 +812,7 @@ if __name__ == "__main__":
         # load the configuration
         params.load_JSON(args.config)
 
-    visualize = False
+    visualize = True
     visualize_warped = True
     print_images = True
 

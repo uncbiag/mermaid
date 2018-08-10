@@ -21,9 +21,9 @@ int BilinearSamplerBCWHD_updateOutput_cuda_3D(THCudaTensor *inputImages, THCudaT
 //  THCudaTensor *inputImages = (THCudaTensor *)luaT_checkudata(L, 2, "torch.CudaTensor");
 //  THCudaTensor *grids = (THCudaTensor *)luaT_checkudata(L, 3, "torch.CudaTensor");
 //  THCudaTensor *output = (THCudaTensor *)luaT_checkudata(L, 4, "torch.CudaTensor");
-// /*output->size[2]*/int szw,
-//                                                  /*output->size[1]*/int szc,
-//                                                  /*output->size[0]*/int szb,
+// /*THCudaTensor_size(state,output,2)*/int szw,
+//                                                  /*THCudaTensor_size(state,output,1)*/int szc,
+//                                                  /*THCudaTensor_size(state,output,0)*/int szb,
 //                                                  /*THCudaTensor_size(state, inputImages, 1)*/int ic,
 //                                                  /*THCudaTensor_size(state, inputImages, 2)*/int iw,
 //                                                  /*THCudaTensor_size(state, inputImages, 3)*/int ih,
@@ -36,9 +36,9 @@ int BilinearSamplerBCWHD_updateOutput_cuda_3D(THCudaTensor *inputImages, THCudaT
 
   cudaSetDevice(device[0]);
   int success = 0;
-  success = BilinearSamplerBCWHD_updateOutput_cuda_kernel_3D(output->size[2],
-                                               output->size[1],
-                                               output->size[0],
+  success = BilinearSamplerBCWHD_updateOutput_cuda_kernel_3D(THCudaTensor_size(state,output,2),
+                                               THCudaTensor_size(state,output,1),
+                                               THCudaTensor_size(state,output,0),
                                                THCudaTensor_size(state, inputImages, 1),
                                                THCudaTensor_size(state, inputImages, 2),
                                                THCudaTensor_size(state, inputImages, 3),
@@ -86,9 +86,9 @@ int BilinearSamplerBCWHD_updateGradInput_cuda_3D(THCudaTensor *inputImages, THCu
 //  THCudaTensor *gradGrids = (THCudaTensor *)luaT_checkudata(L, 5, "torch.CudaTensor");
 //  THCudaTensor *gradOutput = (THCudaTensor *)luaT_checkudata(L, 6, "torch.CudaTensor");
 
-  // /*gradOutput->size[2]*/int szw, 
-  //                                                   /*gradOutput->size[1]*/int szc,
-  //                                                   /*gradOutput->size[0]*/int szb,
+  // /*THCudaTensor_size(state,gradOutput,2)*/int szw,
+  //                                                   /*THCudaTensor_size(state,gradOutput,1)*/int szc,
+  //                                                   /*THCudaTensor_size(state,gradOutput,0)*/int szb,
   //                                                   /*THCudaTensor_size(state, inputImages, 1)*/int ic,
   //                                                   /*THCudaTensor_size(state, inputImages, 2)*/int iw,
   //                                                   /*THCudaTensor_size(state, inputImages, 3)*/int ih,
@@ -102,9 +102,9 @@ int BilinearSamplerBCWHD_updateGradInput_cuda_3D(THCudaTensor *inputImages, THCu
 
   cudaSetDevice(device[0]);
   int success = 0;
-  success = BilinearSamplerBCWHD_updateGradInput_cuda_kernel_3D(gradOutput->size[2],
-                                                  gradOutput->size[1],
-                                                  gradOutput->size[0],
+  success = BilinearSamplerBCWHD_updateGradInput_cuda_kernel_3D(THCudaTensor_size(state,gradOutput,2),
+                                                  THCudaTensor_size(state,gradOutput,1),
+                                                  THCudaTensor_size(state,gradOutput,0),
                                                   THCudaTensor_size(state, inputImages, 1),
                                                   THCudaTensor_size(state, inputImages, 2),
                                                   THCudaTensor_size(state, inputImages, 3),
@@ -164,9 +164,9 @@ int BilinearSamplerBCWHD_updateGradInputOnlyGrid_cuda_3D(THCudaTensor *inputImag
   cudaSetDevice(device[0]);
   int success = 0;
   success = BilinearSamplerBCWHD_updateGradInputOnlyGrid_cuda_kernel_3D(
-                                                  gradOutput->size[2],
-                                                  gradOutput->size[1],
-                                                  gradOutput->size[0],
+                                                  THCudaTensor_size(state,gradOutput,2),
+                                                  THCudaTensor_size(state,gradOutput,1),
+                                                  THCudaTensor_size(state,gradOutput,0),
                                                   THCudaTensor_size(state, inputImages, 1),
                                                   THCudaTensor_size(state, inputImages, 2),
                                                   THCudaTensor_size(state, inputImages, 3),

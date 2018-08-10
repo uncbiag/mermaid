@@ -11,6 +11,7 @@ if MATPLOTLIB_AGG:
     matplt.use('Agg')
 import numpy as np
 import torch
+import torch.nn.functional as F
 import random
 from pyreg.utils import apply_affine_transform_to_map_multiNC, get_inverse_affine_param, compute_warped_image_multiNC, \
     update_affine_param
@@ -42,9 +43,9 @@ def read_source_and_moving_img(moving_path, target_path):
     moving, hdrc0, spacing0, _ = im_io.read_to_nc_format(filename=moving_path, intensity_normalize=True)
     target, hdrc, spacing1, _ = im_io.read_to_nc_format(filename=target_path, intensity_normalize=True)
 
-    return moving, target, spacing1
+    return moving, target, spacing1, hdrc0
 
-def register_pair_img(moving, target, spacing, register_param):
+def register_pair_img(moving, target, spacing, register_param, hdrc0=None):
     si = register_param['si']
     model0_name = register_param['model0_name']
     model1_name = register_param['model1_name']
@@ -77,13 +78,14 @@ def register_pair_img(moving, target, spacing, register_param):
                             compute_inverse_map=True,
                             params='cur_settings_lbfgs.json')
 
-
+    warped_image = si.get_warped_image()
     inversed_map_svf = si.get_inverse_map().detach()
     inv_Ab = get_inverse_affine_param(Ab.detach())
     inv_Ab = update_affine_param(inv_Ab, inv_Ab)
     inversed_map = apply_affine_transform_to_map_multiNC(inv_Ab, inversed_map_svf)
+    print(inversed_map.shape)
 
-    return inversed_map
+    return inversed_map, warped_image
 
 
 def read_mesh_into_tensor():
@@ -92,21 +94,31 @@ def read_mesh_into_tensor():
     # example
     #  write a new function     read_mesh_into_tensor    B*3*N*1*1
     ##################    using randomized mesh for debugging   ###############################3
-    mesh = torch.rand(1, 3, 200, 1, 1) * 2 - 1
+    mesh = torch.rand(1, 3, 200, 1, 1).cuda()
 
     return mesh
 
-def do_mesh_interoplation(inversed_map, mesh, spacing):
-    mesh_itp = compute_warped_image_multiNC(inversed_map, mesh, spacing=spacing, spline_order=1)
+def do_points_interoplation(inversed_map, points, spacing):
+    if isinstance(points, np.ndarray):
+        points = torch.from_numpy(points)
 
-    return mesh_itp
+    #points_wraped = compute_warped_image_multiNC(inversed_map, poipointsnts, spacing=spacing, spline_order=1, zero_boundary=True)
+    points_wraped = F.grid_sample(inversed_map, points.permute([0, 2, 3, 4, 1]), mode='trilinear', padding_mode='zeros')
+    return points_wraped
 
 
-moving_img_path = '/playpen/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled/9002116_20050715_SAG_3D_DESS_RIGHT_10423916_image.nii.gz'
-target_img_path = '/playpen/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled/9002116_20060804_SAG_3D_DESS_RIGHT_11269909_image.nii.gz'
+def main():
+    moving_img_path = '/playpen-raid/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled/9002116_20050715_SAG_3D_DESS_RIGHT_10423916_image.nii.gz'
+    target_img_path = '/playpen-raid/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled/9002116_20060804_SAG_3D_DESS_RIGHT_11269909_image.nii.gz'
+moving_img_path = '/playpen/raid/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled/9002116_20050715_SAG_3D_DESS_RIGHT_10423916_image.nii.gz'
+target_img_path = '/playpen/raid/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled/9002116_20060804_SAG_3D_DESS_RIGHT_11269909_image.nii.gz'
 
-register_param = setup_pair_register()
-moving,target, spacing = read_source_and_moving_img(moving_img_path, target_img_path)
-inversed_map = register_pair_img(moving,target, spacing, register_param)
-mesh = read_mesh_into_tensor()
-interoplated_result = do_mesh_interoplation(inversed_map, mesh, spacing)
+    register_param = setup_pair_register()
+    moving,target, spacing, _ = read_source_and_moving_img(moving_img_path, target_img_path)
+    inversed_map = register_pair_img(moving,target, spacing, register_param)
+    mesh = read_mesh_into_tensor()
+    interoplated_result = do_points_interoplation(inversed_map, mesh, spacing)
+
+
+if __name__ == '__main__':
+    main()
