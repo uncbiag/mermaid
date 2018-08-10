@@ -31,13 +31,13 @@ ffi = FFI()
 
 
 
-#
+
 # class STNFunction_ND_BCXYZ(Module):
 #     """
 #    Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox).
 #    """
 #
-#     def __init__(self, spacing):
+#     def __init__(self, spacing, zero_boundary = False):
 #         """
 #         Constructor
 #
@@ -46,15 +46,17 @@ ffi = FFI()
 #         super(STNFunction_ND_BCXYZ, self).__init__()
 #         self.spacing = spacing
 #         self.ndim = len(spacing)
+#         zero_boundary = True
+#         self.zero_boundary = 'zeros' if zero_boundary else 'border'
 #
 #     def forward_stn(self, input1, input2, ndim):
 #         if ndim==1:
 #             raise ValueError("Not implemented")
 #         if ndim==2:
 #             output = torch.nn.functional.grid_sample(input1, input2.permute([0, 2, 3, 1]), mode='bilinear',
-#                                           padding_mode='border')
+#                                           padding_mode=self.zero_boundary)
 #         if ndim==3:
-#             output = torch.nn.functional.grid_sample(input1, input2.permute([0, 2, 3, 4, 1]), mode='trilinear', padding_mode='border')
+#             output = torch.nn.functional.grid_sample(input1, input2.permute([0, 2, 3, 4, 1]), mode='bilinear', padding_mode=self.zero_boundary)
 #         return output
 #
 #     def forward(self, input1, input2):
@@ -71,7 +73,7 @@ ffi = FFI()
 #         output = self.forward_stn(input1, map_scale_utils.scale_map(input2,self.spacing), self.ndim)
 #         # print(STNVal(output, ini=-1).sum())
 #         return output
-#
+
 
 
 
@@ -89,9 +91,13 @@ ffi = FFI()
 class STNFunction_ND_BCXYZ(Function):
     """
    Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox).
-   """
+     TODO, the boundary issue is still there and would be triggered at 1, so it would cause the boundary a little bit shrink,
+     this can be solved by adding more strick judgement when boundary is 1, it would inflence a lot at low-resolution case, and
+     will influence the high resolution case by upsampling the map
+     currently we put it aside
+     """
 
-    def __init__(self, spacing,zero_boundary=False):
+    def __init__(self, spacing,zero_boundary=True):
         """
         Constructor
 
@@ -100,9 +106,10 @@ class STNFunction_ND_BCXYZ(Function):
         super(STNFunction_ND_BCXYZ, self).__init__()
         self.spacing = spacing
         self.ndim = len(spacing)
+        #zero_boundary = True
         self.zero_boundary = zero_boundary
 
-    def forward_stn(self, input1, input2, output, ndim, device_c, use_cuda=USE_CUDA,zero_boundary=False):
+    def forward_stn(self, input1, input2, output, ndim, device_c, use_cuda=USE_CUDA,zero_boundary=True):
         if use_cuda:
             if ndim == 1:
                 my_lib_1D.BilinearSamplerBCW_updateOutput_cuda_1D(input1, input2, output, device_c, int(zero_boundary))
@@ -113,7 +120,7 @@ class STNFunction_ND_BCXYZ(Function):
         else:
             my_lib_nd.BilinearSamplerBCXYZ_updateOutput_ND(input1, input2, output, ndim, int(zero_boundary))
 
-    def backward_stn(self, input1, input2, grad_input1, grad_input2, grad_output, ndim, device_c, use_cuda=USE_CUDA,zero_boundary=False):
+    def backward_stn(self, input1, input2, grad_input1, grad_input2, grad_output, ndim, device_c, use_cuda=USE_CUDA,zero_boundary=True):
         if use_cuda:
             if ndim == 1:
                 my_lib_1D.BilinearSamplerBCW_updateGradInput_cuda_1D(input1, input2, grad_input1, grad_input2,
@@ -187,5 +194,5 @@ class STNFunction_ND_BCXYZ(Function):
         return STNVal(grad_input1, ini=-1), STNVal(grad_input2, ini=-1)
 
 
-###################################################################################################################
+##################################################################################################################
 

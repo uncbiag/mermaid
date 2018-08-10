@@ -55,8 +55,8 @@ class CreateSquares(CreateExample):
             I0 = np.zeros(sz, dtype='float32')
             I1 = np.zeros(sz, dtype='float32')
         else:
-            I0 = np.random.rand(*sz).astype(np.float32)/4.
-            I1 = np.random.rand(*sz).astype(np.float32)/4.
+            I0 = np.random.rand(*sz).astype(np.float32)/5.
+            I1 = np.random.rand(*sz).astype(np.float32)/5.
         # get parameters and replace with defaults if necessary
 
         # create a new category if it does not exist

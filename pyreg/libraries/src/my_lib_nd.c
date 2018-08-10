@@ -279,6 +279,7 @@ int BilinearSamplerBXYC_updateOutput_2D(THFloatTensor *inputImages, THFloatTenso
         real inHighHigh=0;
 
 
+
         int t;
         // interpolation happens here
         for(t=0; t<inputImages_C; t++)
@@ -402,6 +403,18 @@ int BilinearSamplerBCXY_updateOutput_2D(THFloatTensor *inputImages, THFloatTenso
         real inLowHigh=0;
         real inHighLow=0;
         real inHighHigh=0;
+
+
+
+//        if (xcoord == 1.0){
+//            inLowLowAddress = inHighLowAddress;
+//            inLowHighAddress = inHighHighAddress;
+//            }
+//        if (ycoord == 1.0){
+//            inLowLowAddress = inLowHighAddress;
+//            inHighLowAddress = inHighHighAddress;
+//            }
+
 
 
 

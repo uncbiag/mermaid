@@ -16,7 +16,7 @@ spline_order = d['spline_order']
 desired_size = np.array(list(d['desiredSz']))//sf
 
 #with torch.autograd.profiler.profile() as prof:
-phiWarped, _ = sampler.upsample_image_to_size(tst_phi_lr, spacing, desired_size, spline_order)
+phiWarped, _ = sampler.upsample_image_to_size(tst_phi_lr, spacing, desired_size, spline_order,zero_boundary=False)
 
 #print(prof)
 

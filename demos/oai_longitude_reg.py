@@ -6,9 +6,9 @@ sys.path.insert(0,os.path.abspath('..'))
 sys.path.insert(0,os.path.abspath('../pyreg'))
 sys.path.insert(0,os.path.abspath('../pyreg/libraries'))
 import matplotlib as matplt
-from pyreg.config_parser import MATPLOTLIB_AGG
-if MATPLOTLIB_AGG:
-    matplt.use('Agg')
+# from pyreg.config_parser import MATPLOTLIB_AGG
+# if MATPLOTLIB_AGG:
+#     matplt.use('Agg')
 import sys
 import numpy as np
 import os
