@@ -129,11 +129,11 @@ display_colorbar = True
 
 im_sz = np.array([128,128])
 reconstruction_weight = 10000.0
-totalvariation_weight = 0.01
-omt_weight = 35.0
+totalvariation_weight = 0.001
+omt_weight = 0.0001
 omt_power=1.0
 omt_use_log_transformed_std=True
-lr = 0.025
+lr = 0.05
 seed = 75
 
 if seed is not None:
@@ -235,7 +235,8 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
 
         # enforce minimum weight for numerical reasons
         # todo: check if this is really needed, this was for the sqrt
-        pre_weights = deep_smoothers._project_weights_to_min(pre_weights, 0.001)
+        # todo, maybe make this conditional
+        pre_weights = deep_smoothers._project_weights_to_min(pre_weights, 0.001, norm_type='sum')
 
         # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
         if deep_network_local_weight_smoothing > 0 and deep_network_weight_smoother is None:
@@ -250,7 +251,9 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
             # now we smooth all the weights
             weights = deep_network_weight_smoother.smooth(pre_weights)
             # make sure they are all still positive (#todo: may not be necessary, since we set a minumum weight above now; but risky as we take the square root below)
-            weights = torch.clamp(weights, 0.0, 1.0)
+
+            # todo: put back in?
+            #weights = torch.clamp(weights, 0.0, 1.0)
         else:
             weights = pre_weights
 

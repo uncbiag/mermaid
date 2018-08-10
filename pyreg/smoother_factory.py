@@ -940,10 +940,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         if self.optimize_over_deep_network and self.evaluate_but_do_not_optimize_over_deep_network:
             raise ValueError('optimize_over_deep_network and evaluate_but_do_not_optimize_over_deep_network cannot be set at the same time. Choose one!')
 
-        self.only_use_smallest_standard_deviation_for_regularization_energy = \
-            params[('only_use_smallest_standard_deviation_for_regularization_energy',True,
-                    'When set to True the regularization energy only used the Gaussian with smallest standard deviation to compute the velocity field for the energy computation')]
-
         self.freeze_parameters = params[('freeze_parameters', False, 'if set to true then all the parameters that are optimized over are frozen (but they still influence the optimization indirectly; they just do not change themselves)')]
         """Freezes parameters; this, for example, allows optimizing for a few extra steps without changing their current value"""
 
@@ -982,6 +978,16 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,dim=self.dim,spacing=self.spacing,im_sz=self.sz).create_deep_smoother(params)
         """learned mini-network to predict multi-Gaussian smoothing weights"""
+
+        self.weighting_type = self.ws.get_weighting_type() # 'w_K','w_K_w','sqrt_w_K_sqrt_w'
+
+        if self.weighting_type=='w_K':
+            # this setting only matter for the w_K registration model
+            self.only_use_smallest_standard_deviation_for_regularization_energy = \
+                params[('only_use_smallest_standard_deviation_for_regularization_energy', True,
+                        'When set to True the regularization energy only used the Gaussian with smallest standard deviation to compute the velocity field for the energy computation')]
+        else:
+            self.only_use_smallest_standard_deviation_for_regularization_energy = False
 
         self.load_dnn_parameters_from_this_file = params[('load_dnn_parameters_from_this_file','',
                                                           'If not empty, this is the file the DNN parameters are read from; useful to run a pre-initialized network')]
@@ -1242,6 +1248,49 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         return penalty
 
+    def _smooth_via_deep_network(self,I,additional_inputs,retain_computed_local_weights=False):
+        if retain_computed_local_weights:
+            # v is actually the vector-valued momentum here; changed the interface to pass this also
+            smoothed_v = self.ws(I=I, additional_inputs=additional_inputs,
+                                 global_multi_gaussian_weights=self.get_gaussian_weights(),
+                                 gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
+                                 retain_weights=retain_computed_local_weights)
+
+            self.debug_computed_local_weights = self.ws.get_computed_weights()
+            self.debug_computed_local_pre_weights = self.ws.get_computed_pre_weights()
+        else:
+            smoothed_v = self.ws(I=I, additional_inputs=additional_inputs,
+                                 global_multi_gaussian_weights=self.get_gaussian_weights(),
+                                 gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator)
+            self.debug_computed_local_pre_weights = None
+            self.debug_computed_local_pre_weights = None
+
+        return smoothed_v
+
+    def _smooth_via_the_smallest_gaussian(self, v, compute_std_gradients):
+
+        # only smooth with the smallest standard deviation
+        smoothed_v = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
+                                                             AdaptVal(torch.from_numpy(
+                                                                 np.array([self.smallest_gaussian_std],
+                                                                          dtype='float32'))),
+                                                             compute_std_gradients)
+        return smoothed_v
+
+    def _smooth_via_std_multi_gaussian(self, v, compute_std_gradients):
+
+        # we can smooth over everything
+        # collection of smoothed vector fields
+        vcollection = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
+                                                              self.get_gaussian_stds(), compute_std_gradients)
+
+        # just do global weighting here
+        smoothed_v = torch.zeros_like(vcollection[0, ...])
+        for i, w in enumerate(self.get_gaussian_weights()):
+            smoothed_v += w * vcollection[i, ...]
+
+        return smoothed_v
+
     def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
         """
         Smooth the scalar field using Gaussian smoothing in the Fourier domain
@@ -1292,39 +1341,40 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         if not self.optimize_over_deep_network:
             self._is_optimizing_over_deep_network = False
 
-        # we are ready to optimize over the deep network and want to optimize over it
-        if (self._is_optimizing_over_deep_network or self.evaluate_but_do_not_optimize_over_deep_network) and not smooth_to_compute_regularizer_energy:
-            # here the deep learning model kicks in
-            if self.debug_retain_computed_local_weights:
-                # v is actually the vector-valued momentum here; changed the interface to pass this also
-                smoothed_v = self.ws(I=I, additional_inputs=additional_inputs, global_multi_gaussian_weights=self.get_gaussian_weights(),
-                                     gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
-                                     retain_weights=self.debug_retain_computed_local_weights)
 
-                self.debug_computed_local_weights = self.ws.get_computed_weights()
-                self.debug_computed_local_pre_weights = self.ws.get_computed_pre_weights()
-            else:
-                smoothed_v = self.ws(I=I, additional_inputs=additional_inputs, global_multi_gaussian_weights=self.get_gaussian_weights(),
-                                     gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator)
-        else:
-            # if we are either not optimizing over the deep network or we are computing the energy of the regularizer
+        # distiniguish the two cases where we compute the vector field (for the deformation) versus where we compute for regularization
+        if smooth_to_compute_regularizer_energy:
+            # we need to distinguish here the standard model, versus the different flavors for the deep network
+            if (self._is_optimizing_over_deep_network or self.evaluate_but_do_not_optimize_over_deep_network):
 
-            if smooth_to_compute_regularizer_energy and self.only_use_smallest_standard_deviation_for_regularization_energy:
-                # only smooth with the smallest standard deviation
-                smoothed_v = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
-                                                                     AdaptVal(torch.from_numpy(np.array([self.smallest_gaussian_std],dtype='float32'))),
-                                                                     compute_std_gradients)
+                if self.weighting_type=='w_K':
+                    if self.only_use_smallest_standard_deviation_for_regularization_energy:
+                        # only use the smallest std for regularization
+                        smoothed_v = self._smooth_via_smallest_gaussian(v=v,compute_std_gradients=compute_std_gradients)
+                    else:
+                        # use standard multi-Gaussian for regularization
+                        smoothed_v = self._smooth_via_std_multi_gaussian(v=v,compute_std_gradients=compute_std_gradients)
 
-            else:
-                # we can smooth over everything
-                # collection of smoothed vector fields
-                vcollection = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
-                                                                      self.get_gaussian_stds(), compute_std_gradients)
+                elif self.weighting_type=='sqrt_w_K_sqrt_w':
+                    smoothed_v = self._smooth_via_deep_network(I=I, additional_inputs=additional_inputs)
 
-                # just do global weighting here
-                smoothed_v = torch.zeros_like(vcollection[0, ...])
-                for i, w in enumerate(self.get_gaussian_weights()):
-                    smoothed_v += w * vcollection[i, ...]
+                elif self.weighting_type=='w_K_w':
+                    smoothed_v = self._smooth_via_deep_network(I=I, additional_inputs=additional_inputs)
+                else:
+                    raise ValueError('Unknown weighting type')
+
+            else: # standard SVF
+                smoothed_v = self._smooth_via_std_multi_gaussian(v=v,compute_std_gradients=compute_std_gradients)
+
+        else: # here this will be the velocity driving the deformation
+            # we need to distinguish here the standard model, versus the different flavors for the deep network
+            if (self._is_optimizing_over_deep_network or self.evaluate_but_do_not_optimize_over_deep_network):
+                smoothed_v = self._smooth_via_deep_network(I=I,
+                                                           additional_inputs=additional_inputs,
+                                                           retain_computed_local_weights=self.debug_retain_computed_local_weights)
+            else:  # standard SVF
+                smoothed_v = self._smooth_via_std_multi_gaussian(v=v,compute_std_gradients=compute_std_gradients)
+
 
         smoothed_v = self._do_CFL_clamping_if_necessary(smoothed_v,clampCFL_dt=clampCFL_dt)
 

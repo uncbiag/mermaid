@@ -506,7 +506,8 @@ def weighted_linear_softmax(input, dim=None, weights=None ):
 
     ret = torch.zeros_like(input)
 
-    max_in,_ = torch.max(input, dim=dim)
+    # todo: subtracting the input mean (so that the values perturb around the offset and leave the sum constant)
+    # todo: seems highly beneficial for training, find a theoretical justification for this (-> tangent space)
 
     if dim==0:
         input_offset = input.sum(dim=0)/sz[0]
@@ -547,6 +548,7 @@ def weighted_linear_softmax(input, dim=None, weights=None ):
         raise ValueError('weighted_softmax is only supported for dimensions 0, 1, 2, 3, and 4.')
 
     return ret
+
 
 class WeightedLinearSoftmax(nn.Module):
     r"""Applies the a WeightedLinearSoftmax function to an n-dimensional input Tensor
@@ -594,6 +596,342 @@ class WeightedLinearSoftmax(nn.Module):
     def forward(self, input):
 
         return weighted_linear_softmax(input, self.dim, self.weights, _stacklevel=5)
+
+    def __repr__(self):
+
+        return self.__class__.__name__ + '()'
+
+def weighted_linear_softnorm(input, dim=None, weights=None ):
+    r"""Applies a weighted linear softnorm function.
+
+    Weighted_linear_softnorm is defined as:
+
+    :math:`weighted_linear_softnorm(x) = \frac{clamp(x_i+w_i,0,1)}{\sqrt{\sum_j clamp(x_j+w_j,0,1)**2}}`
+
+    It is applied to all slices along dim, and will rescale them so that the elements
+    lie in the range `(0, 1)` and sum to 1.
+
+    See :class:`~torch.nn.WeightedLinearSoftnorm` for more details.
+
+    Arguments:
+        input (Variable): input
+        dim (int): A dimension along which weighted_linear_softnorm will be computed.
+
+    """
+    if dim is None:
+        raise ValueError('dimension needs to be defined!')
+
+    sz = input.size()
+    if weights is None: # just make them all one/nr_of_weights
+        weights = [1./sz[dim]]*sz[dim]
+
+    nr_of_weights = len(weights)
+    assert( sz[dim]==nr_of_weights )
+
+    ret = torch.zeros_like(input)
+
+    # todo: subtracting the input mean (so that the values perturb around the offset and leave the sum constant)
+    # todo: seems highly beneficial for training, find a theoretical justification for this (-> tangent space)
+
+    # clamped_vals = torch.clamp(input, min=0, max=1)
+    # norm = torch.norm(clamped_vals, p=2, dim=dim)
+    #
+    # # todo: subtracting the input mean (so that the values perturb around the offset and leave the sum constant)
+    # # todo: seems highly beneficial for training, find a theoretical justification for this (-> tangent space)
+    #
+    # if dim == 0:
+    #     for c in range(sz[0]):
+    #         ret[c, ...] = clamped_vals[c, ...] / norm
+
+    clamped_vals = torch.zeros_like(input)
+
+    if dim==0:
+        input_offset = input.sum(dim=0)/sz[0]
+        for c in range(sz[0]):
+            clamped_vals[c,...] = torch.clamp(weights[c]+input[c,...]-input_offset,min=0,max=1)
+        norm = torch.norm(clamped_vals, p=2, dim=dim)
+        for c in range(sz[0]):
+            ret[c,...] = clamped_vals[c,...]/norm
+    elif dim==1:
+        input_offset = input.sum(dim=1)/sz[1]
+        for c in range(sz[1]):
+            clamped_vals[:,c,...] = torch.clamp(weights[c]+input[:,c, ...]-input_offset,min=0,max=1)
+        norm = torch.norm(clamped_vals, p=2, dim=dim)
+        for c in range(sz[1]):
+            ret[:,c, ...] = clamped_vals[:,c,...]/norm
+    elif dim==2:
+        input_offset = input.sum(dim=2)/sz[2]
+        for c in range(sz[2]):
+            clamped_vals[:,:,c,...] = torch.clamp(weights[c]+input[:,:,c, ...]-input_offset,min=0,max=1)
+        norm = torch.norm(clamped_vals, p=2, dim=dim)
+        for c in range(sz[2]):
+            ret[:,:,c, ...] = clamped_vals[:,:,c, ...]/norm
+    elif dim==3:
+        input_offset = input.sum(dim=3)/sz[3]
+        for c in range(sz[3]):
+            clamped_vals[:,:,:,c,...] = torch.clamp(weights[c]+input[:,:,:,c, ...]-input_offset,min=0,max=1)
+        norm = torch.norm(clamped_vals, p=2, dim=dim)
+        for c in range(sz[3]):
+            ret[:,:,:,c, ...] = clamped_vals[:,:,:,c, ...]/norm
+    elif dim==4:
+        input_offset = input.sum(dim=4)/sz[4]
+        for c in range(sz[4]):
+            clamped_vals[:,:,:,:,c,...] = torch.clamp(weights[c]+input[:,:,:,:,c, ...]-input_offset,min=0,max=1)
+        norm = torch.norm(clamped_vals, p=2, dim=dim)
+        for c in range(sz[4]):
+            ret[:,:,:,:,c, ...] = clamped_vals[:,:,:,:,c, ...]/norm
+    else:
+        raise ValueError('weighted_softmax is only supported for dimensions 0, 1, 2, 3, and 4.')
+
+    return ret
+
+
+class WeightedLinearSoftnorm(nn.Module):
+    r"""Applies the a WeightedLinearSoftnorm function to an n-dimensional input Tensor
+    rescaling them so that the elements of the n-dimensional output Tensor
+    lie in the range (0,1) and the square sum to 1
+
+    WeightedLinearSoftnorm is defined as
+    :math:`f_i(x) = \frac{clamp(x_i+w_i,0,1)}{\sqrt{\sum_j clamp(x_j+w_j,0,1)**2}}`
+
+    It is assumed that 0<=w_i<=1 and that the weights sum up to one.
+    The effect of this weighting is that for a zero input (x=0) the output for f_i(x) will be w_i.
+
+    Shape:
+        - Input: any shape
+        - Output: same as input
+
+    Returns:
+        a Tensor of the same dimension and shape as the input with
+        values in the range [0, 1]
+
+    Arguments:
+        dim (int): A dimension along which WeightedSoftmax will be computed (so every slice
+            along dim will sum to 1).
+
+    Examples::
+
+        >>> m = nn.WeightedLinearSoftnorm()
+        >>> input = torch.randn(2, 3)
+        >>> print(input)
+        >>> print(m(input))
+    """
+
+    def __init__(self, dim=None, weights=None):
+        super(WeightedLinearSoftnorm, self).__init__()
+        self.dim = dim
+        self.weights = weights
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if not hasattr(self, 'dim'):
+            self.dim = None
+        if not hasattr(self, 'weights'):
+            self.weights = None
+
+    def forward(self, input):
+
+        return weighted_linear_softnorm(input, self.dim, self.weights, _stacklevel=5)
+
+    def __repr__(self):
+
+        return self.__class__.__name__ + '()'
+
+def linear_softnorm(input, dim=None):
+    r"""Normalizes so that the squares of the resulting values sum up to one and are positive.
+
+    linear_softnorm is defined as:
+
+    :math:`linear_softnorm(x) = \frac{clamp(x_i,0,1)}{\sqrt{\sum_j clamp(x_j,0,1)^2}}`
+
+    It is applied to all slices along dim, and will rescale them so that the elements
+    lie in the range `(0, 1)` and their squares sum to 1.
+
+    See :class:`~torch.nn.LinearSoftnorm` for more details.
+
+    Arguments:
+        input (Variable): input
+        dim (int): A dimension along which linear_softnorm will be computed.
+
+    """
+    if dim is None:
+        raise ValueError('dimension needs to be defined!')
+
+    sz = input.size()
+
+    ret = torch.zeros_like(input)
+    clamped_vals = torch.clamp(input, min=0, max=1)
+    norm = torch.norm(clamped_vals,p=2,dim=dim)
+
+    # todo: subtracting the input mean (so that the values perturb around the offset and leave the sum constant)
+    # todo: seems highly beneficial for training, find a theoretical justification for this (-> tangent space)
+
+    if dim==0:
+        for c in range(sz[0]):
+            ret[c,...] = clamped_vals[c,...]/norm
+    elif dim==1:
+        for c in range(sz[1]):
+            ret[:,c, ...] = clamped_vals[:,c,...]/norm
+    elif dim==2:
+        for c in range(sz[2]):
+            ret[:,:,c, ...] = clamped_vals[:,:,c,...]/norm
+    elif dim==3:
+        for c in range(sz[3]):
+            ret[:,:,:,c, ...] = clamped_vals[:,:,:,c,...]/norm
+    elif dim==4:
+        for c in range(sz[4]):
+            ret[:,:,:,:,c, ...] = clamped_vals[:,:,:,:,c,...]/norm
+    else:
+        raise ValueError('linear_softnorm is only supported for dimensions 0, 1, 2, 3, and 4.')
+
+    return ret
+
+
+class LinearSoftnorm(nn.Module):
+    r"""Applies the a LinearSoftnrom function to an n-dimensional input Tensor
+    rescaling them so that the elements of the n-dimensional output Tensor
+    lie in the range (0,1) and their square sums up to 1
+
+    LinearSoftnorm is defined as
+    :math:`f_i(x) = \frac{clamp(x_i,0,1)}{\sqrt{\sum_j clamp(x_j,0,1)**2}}`
+
+    Shape:
+        - Input: any shape
+        - Output: same as input
+
+    Returns:
+        a Tensor of the same dimension and shape as the input with
+        values in the range [0, 1]
+
+    Arguments:
+        dim (int): A dimension along which WeightedSoftmax will be computed (so every slice
+            along dim will sum to 1).
+
+    Examples::
+
+        >>> m = nn.LinearSoftnorm()
+        >>> input = torch.randn(2, 3)
+        >>> print(input)
+        >>> print(m(input))
+    """
+
+    def __init__(self, dim=None):
+        super(LinearSoftnorm, self).__init__()
+        self.dim = dim
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if not hasattr(self, 'dim'):
+            self.dim = None
+
+    def forward(self, input):
+
+        return linear_softnorm(input, self.dim, _stacklevel=5)
+
+    def __repr__(self):
+
+        return self.__class__.__name__ + '()'
+
+def linear_softmax(input, dim=None):
+    r"""Applies linear a softmax function.
+
+    linear_softmax is defined as:
+
+    :math:`linear_softmax(x) = \frac{clamp(x_i,0,1)}{\sum_j clamp(x_j,0,1)}`
+
+    It is applied to all slices along dim, and will rescale them so that the elements
+    lie in the range `(0, 1)` and sum to 1.
+
+    See :class:`~torch.nn.LinearSoftmax` for more details.
+
+    Arguments:
+        input (Variable): input
+        dim (int): A dimension along which linear_softmax will be computed.
+
+    """
+    if dim is None:
+        raise ValueError('dimension needs to be defined!')
+
+    sz = input.size()
+
+    ret = torch.zeros_like(input)
+
+    if dim==0:
+        norm = torch.zeros_like(input[0,...])
+        for c in range(sz[0]):
+            norm += torch.clamp(input[c,...],min=0,max=1)
+        for c in range(sz[0]):
+            ret[c,...] = torch.clamp(input[c,...],min=0,max=1)/norm
+    elif dim==1:
+        norm = torch.zeros_like(input[:,0, ...])
+        for c in range(sz[1]):
+            norm += torch.clamp(input[:,c, ...],min=0,max=1)
+        for c in range(sz[1]):
+            ret[:,c, ...] = torch.clamp(input[:,c, ...],min=0,max=1)/norm
+    elif dim==2:
+        norm = torch.zeros_like(input[:,:,0, ...])
+        for c in range(sz[2]):
+            norm += torch.clamp(input[:,:,c, ...],min=0,max=1)
+        for c in range(sz[2]):
+            ret[:,:,c, ...] = torch.clamp(input[:,:,c, ...],min=0,max=1)/norm
+    elif dim==3:
+        norm = torch.zeros_like(input[:,:,:,0, ...])
+        for c in range(sz[3]):
+            norm += torch.clamp(input[:,:,:,c, ...],min=0,max=1)
+        for c in range(sz[3]):
+            ret[:,:,:,c, ...] = torch.clamp(input[:,:,:,c, ...],min=0,max=1)/norm
+    elif dim==4:
+        norm = torch.zeros_like(input[:,:,:,:,0, ...])
+        for c in range(sz[4]):
+            norm += torch.clamp(input[:,:,:,:,c, ...],min=0,max=1)
+        for c in range(sz[4]):
+            ret[:,:,:,:,c, ...] = torch.clamp(input[:,:,:,:,c, ...],min=0,max=1)/norm
+    else:
+        raise ValueError('linear_softmax is only supported for dimensions 0, 1, 2, 3, and 4.')
+
+    return ret
+
+
+class LinearSoftmax(nn.Module):
+    r"""Applies the a LinearSoftmax function to an n-dimensional input Tensor
+    rescaling them so that the elements of the n-dimensional output Tensor
+    lie in the range (0,1) and sum to 1
+
+    WeightedSoftmax is defined as
+    :math:`f_i(x) = \frac{clamp(x_i,0,1)}{\sum_j clamp(x_j,0,1)}`
+
+    Shape:
+        - Input: any shape
+        - Output: same as input
+
+    Returns:
+        a Tensor of the same dimension and shape as the input with
+        values in the range [0, 1]
+
+    Arguments:
+        dim (int): A dimension along which WeightedSoftmax will be computed (so every slice
+            along dim will sum to 1).
+
+    Examples::
+
+        >>> m = nn.LinearSoftmax()
+        >>> input = torch.randn(2, 3)
+        >>> print(input)
+        >>> print(m(input))
+    """
+
+    def __init__(self, dim=None):
+        super(LinearSoftmax, self).__init__()
+        self.dim = dim
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if not hasattr(self, 'dim'):
+            self.dim = None
+
+    def forward(self, input):
+
+        return linear_softmax(input, self.dim, _stacklevel=5)
 
     def __repr__(self):
 
@@ -751,16 +1089,58 @@ def compute_weighted_multi_smooth_v(momentum, weights, gaussian_stds, gaussian_f
 
     return weighted_multi_smooth_v
 
-def _project_weights_to_min(weights,min_val):
-    clamped_weights = torch.clamp(weights,min_val,1.0-min_val)
-    clamped_weight_sum = torch.sum(clamped_weights, dim=1)
-    sz = clamped_weights.size()
-    nr_of_weights = sz[1]
-    projected_weights = torch.zeros_like(clamped_weights)
-    for n in range(nr_of_weights):
-        projected_weights[:,n,...] = clamped_weights[:,n,...]/clamped_weight_sum
+def _project_weights_to_min_sum_one(weights,min_val):
 
-    #plt.clf()
+    sz = weights.size()
+    nr_of_weights = sz[1]
+
+    # this assures that the minimum value will indeed be min_val
+    eff_min_val = min_val/(1.-nr_of_weights*min_val)
+
+    max_weights = torch.clamp(weights,min=eff_min_val)
+    max_weight_sum = torch.sum(max_weights, dim=1)
+
+    projected_weights = torch.zeros_like(max_weights)
+    for n in range(nr_of_weights):
+        projected_weights[:,n,...] = max_weights[:,n,...]/max_weight_sum
+
+    return projected_weights
+
+def _project_weights_to_min_sum_of_squares_one(weights,min_val):
+    sz = weights.size()
+    nr_of_weights = sz[1]
+
+    # this assures that the minimum value will indeed be min_val
+    eff_min_val = float(min_val / np.sqrt(1. - nr_of_weights * min_val**2))
+
+    max_weights = torch.clamp(weights, min=eff_min_val)
+    max_weight_norm = torch.sqrt(torch.sum(max_weights**2, dim=1))
+
+    projected_weights = torch.zeros_like(max_weights)
+    for n in range(nr_of_weights):
+        projected_weights[:, n, ...] = max_weights[:, n, ...] / max_weight_norm
+
+    return projected_weights
+
+def _project_weights_to_min(weights,min_val,norm_type='sum'):
+
+    if norm_type=='sum':
+        return _project_weights_to_min_sum_one(weights=weights,min_val=min_val)
+    elif norm_type=='sum_of_squares':
+        return _project_weights_to_min_sum_of_squares_one(weights=weights,min_val=min_val)
+    else:
+        raise ValueError('Unknown projection type')
+
+    # clamped_weights = torch.clamp(weights, min_val, 1.0 - min_val)
+    # clamped_weight_sum = torch.sum(clamped_weights, dim=1)
+    # sz = clamped_weights.size()
+    # nr_of_weights = sz[1]
+    # projected_weights = torch.zeros_like(clamped_weights)
+    # for n in range(nr_of_weights):
+    #     projected_weights[:, n, ...] = clamped_weights[:, n, ...] / clamped_weight_sum
+
+
+    # #plt.clf()
     #plt.subplot(1,2,1)
     #plt.imshow(weights[0,nr_of_weights-1,...].data.cpu().numpy())
     #plt.colorbar()
@@ -769,8 +1149,6 @@ def _project_weights_to_min(weights,min_val):
     #plt.colorbar()
     #plt.show()
 
-
-    return clamped_weights
 
 class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
     """
@@ -890,6 +1268,9 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         self.omt_loss = dn.OMTLoss(spacing=spacing, desired_power=self.omt_power,
                                        use_log_transform=self.omt_use_log_transformed_std, params=params).to(device)
 
+
+    def get_weighting_type(self):
+        return self.weighting_type
 
     def get_number_of_input_channels(self, nr_of_image_channels, dim):
         """
@@ -1103,6 +1484,31 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         pass
 
 
+    def _compute_weights_from_pre_weights(self, pre_weights,retain_weights):
+        # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
+        if self.deep_network_local_weight_smoothing > 0 and self.deep_network_weight_smoother is None:
+            import pyreg.smoother_factory as sf
+            s_m_params = pars.ParameterDict()
+            s_m_params['smoother']['type'] = 'gaussian'
+            s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
+            self.deep_network_weight_smoother = sf.SmootherFactory(pre_weights.size()[2::], self.spacing).create_smoother(
+                s_m_params)
+
+        if self.deep_network_local_weight_smoothing > 0:
+            # now we smooth all the weights
+            if retain_weights:
+                # todo: change visualization to work with this new format:
+                # B x weights x X x Y instead of weights x B x X x Y
+                self.computed_pre_weights[:] = pre_weights.data
+
+            weights = self.deep_network_weight_smoother.smooth(pre_weights)
+            # make sure they are all still positive (#todo: may not be necessary, since we set a minumum weight above now; but risky as we take the square root below)
+            weights = torch.clamp(weights, 0.0, 1.0)
+        else:
+            weights = pre_weights
+
+        return weights
+
     def forward(self, I, additional_inputs, global_multi_gaussian_weights, gaussian_fourier_filter_generator, retain_weights=False):
 
         # format of multi_smooth_v is multi_v x batch x channels x X x Y
@@ -1165,29 +1571,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
             for g in range(self.nr_of_gaussians):
                 diffusion_penalty += self.compute_diffusion(pre_weights[:, g, ...])
 
-        # enforce minimum weight for numerical reasons
-        pre_weights = _project_weights_to_min(pre_weights, self.gaussianWeight_min)
-
-        # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
-        if self.deep_network_local_weight_smoothing > 0 and self.deep_network_weight_smoother is None:
-            import pyreg.smoother_factory as sf
-            s_m_params = pars.ParameterDict()
-            s_m_params['smoother']['type'] = 'gaussian'
-            s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing
-            self.deep_network_weight_smoother = sf.SmootherFactory(ret.size()[2::], self.spacing).create_smoother(s_m_params)
-
-        if self.deep_network_local_weight_smoothing>0:
-            # now we smooth all the weights
-            if retain_weights:
-                # todo: change visualization to work with this new format:
-                # B x weights x X x Y instead of weights x B x X x Y
-                self.computed_pre_weights[:] = pre_weights.data
-
-            weights = self.deep_network_weight_smoother.smooth(pre_weights)
-            # make sure they are all still positive (#todo: may not be necessary, since we set a minumum weight above now; but risky as we take the square root below)
-            weights = torch.clamp(weights,0.0,1.0)
-        else:
-            weights = pre_weights
+        weights = self._compute_weights_from_pre_weights(pre_weights=pre_weights,retain_weights=retain_weights)
 
         # multiply the velocity fields by the weights and sum over them
         # this is then the multi-Gaussian output
@@ -1201,9 +1585,10 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
             weighted_multi_smooth_v = compute_weighted_multi_smooth_v( momentum=momentum, weights=weights, gaussian_stds=self.gaussian_stds,
                                                                        gaussian_fourier_filter_generator=gaussian_fourier_filter_generator )
         elif self.weighting_type=='w_K':
+            # todo: check if we can do a more generic datatype conversion than using .float()
             multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(momentum,
                                                                      gaussian_fourier_filter_generator=gaussian_fourier_filter_generator,
-                                                                     sigma=torch.from_numpy(self.gaussian_stds),
+                                                                     sigma=torch.from_numpy(self.gaussian_stds).float(),
                                                                      compute_std_gradients=False)
         else:
             raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
@@ -1325,7 +1710,6 @@ class GeneralNetworkWeightedSmoothingModel(DeepSmoothingModel):
             self.network = network_type(dim=dim, n_in_channel=nr_of_input_channels, n_out_channel=self.nr_of_gaussians,
                                      im_sz=self.im_sz, params=self.params)
 
-        #self._initialize_weights()
         self.network.initialize_network_weights()
 
     def _compute_pre_weights(self, x, I, global_multi_gaussian_weights):
@@ -1335,11 +1719,34 @@ class GeneralNetworkWeightedSmoothingModel(DeepSmoothingModel):
 
         x = self.network(x)
 
-        # now we are ready for the weighted softmax (will be like softmax if no weights are specified)
-        if self.estimate_around_global_weights:
-            pre_weights = weighted_linear_softmax(x, dim=1, weights=global_multi_gaussian_weights)
+        if self.weighting_type=='sqrt_w_K_sqrt_w' or self.weighting_type=='w_K':
+
+            # for both of these models that weights should sum up to one
+
+            # now we are ready for the weighted softmax (will be like softmax if no weights are specified)
+            if self.estimate_around_global_weights:
+                pre_weights = weighted_linear_softmax(x, dim=1, weights=global_multi_gaussian_weights)
+                ## the weighted softmax is an approximation to the Exp map (see paper by Schnoerr)
+                #pre_weights = weighted_softmax(x, dim=1, weights=global_multi_gaussian_weights)
+            else:
+                pre_weights = linear_softmax(x, dim=1)
+
+            # enforce minimum weight for numerical reasons
+            pre_weights = _project_weights_to_min(pre_weights, self.gaussianWeight_min, norm_type='sum')
+
+        elif self.weighting_type=='w_K_w':
+            # for this model the square of the weights should sum to one
+            if self.estimate_around_global_weights:
+                pre_weights = weighted_linear_softnorm(x, dim=1, weights=global_multi_gaussian_weights)
+            else:
+                pre_weights = linear_softnorm(x, dim=1)
+
+            # enforce minimum weight for numerical reasons
+            pre_weights = _project_weights_to_min(pre_weights, self.gaussianWeight_min, norm_type='sum_of_squares')
+
+            pass
         else:
-            pre_weights = stable_softmax(x, dim=1)
+            raise ValueError('Unknown weighting type: {}'.format(self.weighting_type))
 
         return pre_weights
 
@@ -1404,6 +1811,8 @@ class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
         sz_weight = [sz_weight[1]] + [sz_weight[0]] + sz_weight[3:]
 
         # apply the mapping to normalize the pre_lsm_weights (these are parameters that are being optimized over)
+        #print('TODO: check that it is indeed good here as well to use weighted_softmax instead of weighted_linear_softmax')
+        #lsm_weights = weighted_softmax(self.pre_lsm_weights, dim=0, weights=global_multi_gaussian_weights)
         lsm_weights = weighted_linear_softmax(self.pre_lsm_weights, dim=0, weights=global_multi_gaussian_weights)
 
         print('pre_lsm_weights')
