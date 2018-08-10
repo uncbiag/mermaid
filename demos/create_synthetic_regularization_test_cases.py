@@ -902,6 +902,13 @@ if __name__ == "__main__":
     weights_neutral = get_parameter_value(weights_neutral_p, params, 'weights_neutral', list(np.array([0,0,0,1.0])), 'weights in the neutral/background region')
     weights_neutral = np.array(weights_neutral).astype('float32')
 
+    if kernel_weighting_type=='w_K_w':
+        print('INFO: converting weights to w_K_w format, i.e., taking their square root')
+        # square of weights needs to sum up to one, so simply take the square root of the specified weights here
+        weights_fluid = np.sqrt(weights_fluid)
+        weights_neutral = np.sqrt(weights_neutral)
+        weights_not_fluid = np.sqrt(weights_not_fluid)
+
     if len(weights_neutral)!=len(multi_gaussian_stds):
         raise ValueError('Need as many weights as there are standard deviations')
 
