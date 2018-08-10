@@ -712,7 +712,7 @@ if __name__ == "__main__":
         else:
             postfix = 'test'
     else:
-        postifx = args.postfix
+        postfix = args.postfix
 
     if previous_postfix is not None:
         if previous_postfix==postfix:
@@ -820,7 +820,11 @@ if __name__ == "__main__":
             current_kvs = s['kvs']
             current_label = s['label']
             current_postfix = postfix + '_' + current_label
-            current_previous_postfix = previous_postfix + '_' + current_label
+
+            if previous_postfix is not None:
+                current_previous_postfix = previous_postfix + '_' + current_label
+            else:
+                current_previous_postfix = None
 
             combined_kvs = merge_kvs(kvo,current_kvs)
 
