@@ -675,6 +675,9 @@ def identity_map(sz,spacing,dtype='float32'):
     else:
         raise ValueError('Only dimensions 1-3 are currently supported for the identity map')
 
+    idnp = np.flip(idnp,0)
+
+
     return idnp
 
 
