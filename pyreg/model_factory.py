@@ -218,7 +218,15 @@ class ModelFactory(object):
                 print('Using ' + modelName + ' model')
                 model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams)
 
-            loss = self.models[modelName][1](list(model.parameters())[0], self.sz_sim, self.spacing_sim, self.sz_model, self.spacing_model, cparams)
+            try:
+                loss = self.models[modelName][1](model.m, self.sz_sim, self.spacing_sim, self.sz_model,
+                                                 self.spacing_model, cparams)
+            except:
+                loss = self.models[modelName][1](list(model.parameters())[0], self.sz_sim, self.spacing_sim,
+                                                 self.sz_model, self.spacing_model, cparams)
+            # loss = self.models[modelName][1](list(model.parameters())[0], self.sz_sim, self.spacing_sim,
+            #                                  self.sz_model, self.spacing_model, cparams)
+
             return model, loss
         else:
             self.print_available_models()

@@ -53,16 +53,9 @@ class STNFunction_ND_BCXYZ(Module):
         if ndim==1:
             raise ValueError("Not implemented")
         if ndim==2:
-            # input2_ordered = torch.zeros_like(input2)
-            # input2_ordered[:,0,...] = input2[:,1,...]
-            # input2_ordered[:,1,...] = input2[:,0,...]
             output = torch.nn.functional.grid_sample(input1, input2.permute([0, 2, 3, 1]), mode='bilinear',
                                           padding_mode=self.zero_boundary)
         if ndim==3:
-            # input2_ordered = torch.zeros_like(input2)
-            # input2_ordered[:, 0, ...] = input2[:, 2, ...]
-            # input2_ordered[:, 1, ...] = input2[:, 1, ...]
-            # input2_ordered[:, 2, ...] = input2[:, 0, ...]
             output = torch.nn.functional.grid_sample(input1, input2.permute([0, 2, 3, 4, 1]), mode='bilinear', padding_mode=self.zero_boundary)
         return output
 

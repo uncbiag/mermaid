@@ -3485,7 +3485,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             initialMap = None
             if self.initialMap is not None:
                 initialMap,_ = self.sampler.downsample_image_to_size(self.initialMap,self.spacing, currentDesiredSz[2::],1,zero_boundary=False)
-            szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
+            szC = np.array(ISourceC.size() ) # this assumes the BxCxXxYxZ format
 
             self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)
             print('Setting learning rate to ' + str( lastSuccessfulStepSizeTaken ))

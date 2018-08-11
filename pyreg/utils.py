@@ -520,7 +520,10 @@ def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
 
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,nrOfC]+list(csz))
-    return Parameter(MyTensor(*(csz.tolist())).zero_())
+    tmp = Variable(MyTensor(*(csz.tolist())).zero_())  ###############3
+    tmp.requires_grad = True
+    # tmp = Parameter(MyTensor(*(csz.tolist())).zero_())
+    return tmp
 
 def centered_identity_map_multiN(sz, spacing, dtype='float32'):
     """
