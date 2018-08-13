@@ -1588,7 +1588,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
             # todo: check if we can do a more generic datatype conversion than using .float()
             multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(momentum,
                                                                      gaussian_fourier_filter_generator=gaussian_fourier_filter_generator,
-                                                                     sigma=torch.from_numpy(self.gaussian_stds).float(),
+                                                                     sigma=AdaptVal(torch.from_numpy(self.gaussian_stds).float()),
                                                                      compute_std_gradients=False)
         else:
             raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
@@ -1630,7 +1630,11 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
 
         current_diffusion_penalty = self.diffusion_weight_penalty * diffusion_penalty
 
-        current_omt_penalty = self.omt_weight_penalty*self.omt_loss(weights=weights, gaussian_stds=self.gaussian_stds)
+        if self.weighting_type == 'w_K_w':
+            current_omt_penalty = self.omt_weight_penalty*self.omt_loss(weights=weights**2, gaussian_stds=self.gaussian_stds)
+        else:
+            current_omt_penalty = self.omt_weight_penalty*self.omt_loss(weights=weights, gaussian_stds=self.gaussian_stds)
+
         current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
         self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
 

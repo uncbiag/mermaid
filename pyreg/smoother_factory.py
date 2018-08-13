@@ -1267,7 +1267,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         return smoothed_v
 
-    def _smooth_via_the_smallest_gaussian(self, v, compute_std_gradients):
+    def _smooth_via_smallest_gaussian(self, v, compute_std_gradients):
 
         # only smooth with the smallest standard deviation
         smoothed_v = ce.fourier_set_of_gaussian_convolutions(v, self.gaussian_fourier_filter_generator,
