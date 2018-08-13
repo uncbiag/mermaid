@@ -981,7 +981,13 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         self.weighting_type = self.ws.get_weighting_type() # 'w_K','w_K_w','sqrt_w_K_sqrt_w'
 
-        if self.weighting_type=='w_K':
+        if self.weighting_type=='w_K_w' or self.weighting_type=='sqrt_w_K_sqrt_w':
+            self.use_multi_gaussian_regularization = self.params[('use_multi_gaussian_regularization',False,'If set to true then the regularization for w_K_w or sqrt_w_K_sqrt_w will use multi-Gaussian smoothing (not the velocity) of the deep smoother')]
+            """If set to true then the regularization for w_K_w or sqrt_w_K_sqrt_w will use multi-Gaussian smoothing (not the velocity) of the deep smoother"""
+        else:
+            self.use_multi_gaussian_regularization = False
+
+        if self.weighting_type=='w_K' or self.use_multi_gaussian_regularization:
             # this setting only matter for the w_K registration model
             self.only_use_smallest_standard_deviation_for_regularization_energy = \
                 params[('only_use_smallest_standard_deviation_for_regularization_energy', True,
@@ -1347,7 +1353,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             # we need to distinguish here the standard model, versus the different flavors for the deep network
             if (self._is_optimizing_over_deep_network or self.evaluate_but_do_not_optimize_over_deep_network):
 
-                if self.weighting_type=='w_K':
+                if self.weighting_type=='w_K' or self.use_multi_gaussian_regularization:
                     if self.only_use_smallest_standard_deviation_for_regularization_energy:
                         # only use the smallest std for regularization
                         smoothed_v = self._smooth_via_smallest_gaussian(v=v,compute_std_gradients=compute_std_gradients)
