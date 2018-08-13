@@ -43,3 +43,4 @@ def scale_map_grad(grad_map,spacing):
             grad_map[:, d, ...]  *= (2. / (sz[d + 2] - 1.) / spacing[d])
         else:
             grad_map[:, d, ...] = grad_map[:, d, ...]
+

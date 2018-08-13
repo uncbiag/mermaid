@@ -14,10 +14,9 @@ params = pars.ParameterDict()
 
 use_synthetic_test_case = True
 dim = 3
-try_all_models = False
 add_noise_to_bg = True
 if use_synthetic_test_case:
-    len = 64
+    len = 128
     szEx = np.tile( len, dim )         # size of the desired images: (sz)^dim
     I0,I1,spacing= EG.CreateSquares(dim,add_noise_to_bg).create_image_pair(szEx,params) # create a default image size with two sample squares
 else:
@@ -26,10 +25,12 @@ else:
 if dim ==2:
     Ab = AdaptVal(torch.zeros(1,6))
     Ab[0,0]=1.2#0.8
+    Ab[0,1]=0.2#0.8
     Ab[0,3]=1.2 #0.8
 elif dim==3:
     Ab = AdaptVal(torch.zeros(1, 12))
     Ab[0, 0] = 1.2
+    Ab[0, 1] = 0.2
     Ab[0, 4] = 1.2
     Ab[0, 8] = 1.2
 

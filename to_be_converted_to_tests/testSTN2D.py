@@ -3,6 +3,7 @@ from __future__ import print_function
 import torch
 import numpy as np
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.autograd import Variable
 from cffi import FFI
 import time
@@ -15,8 +16,8 @@ device = torch.cuda.current_device()
 device_c = ffi.new("int *")
 device_c[0] = device
 nframes = 1
-height = 120
-width = 126
+height = 1000
+width = 1000
 ratio =2
 grid_height = int(height/ratio)
 grid_width= int(width/ratio)
@@ -24,7 +25,7 @@ channels = 3
 device = torch.cuda.current_device()
 
 inputImage = torch.randn(nframes, channels, width, height)
-inputGrids = (torch.rand(nframes, 3,  grid_width,grid_height)*2 -1)
+inputGrids = (torch.rand(nframes, 2,  grid_width,grid_height)*2 -1)
 output = torch.rand(nframes, channels, grid_width,grid_height)
 output_old = torch.rand(nframes, channels, grid_width,grid_height)
 
@@ -33,17 +34,21 @@ output_old = torch.rand(nframes, channels, grid_width,grid_height)
 inputImage_cuda = inputImage.cuda(device)
 inputGrids_cuda = inputGrids.cuda(device)
 output_cuda = output.cuda(device)
-using_zero_boundary = True
-
+using_zero_boundary = False
+torch_border  = 'zeros' if using_zero_boundary else 'border'
 
 
 
 start = time.time()
 my_lib_nd.BilinearSamplerBCXY_updateOutput_2D(inputImage, inputGrids, output,using_zero_boundary)
-my_lib_nd.BilinearSamplerBCXY_updateOutput_2D_old(inputImage, inputGrids, output_old,using_zero_boundary)
 print('sampling cpu time taking:', time.time() - start)
-out0 = (output-output_old).view(-1).sum()
-print(output-output_old)
+
+inputGrids_ordered = torch.zeros_like(inputGrids)
+inputGrids_ordered[:, 0, ...] = inputGrids[:, 1, ...]
+inputGrids_ordered[:, 1, ...] = inputGrids[:, 0, ...]
+output_torch = F.grid_sample(inputImage, inputGrids_ordered.permute([0, 2, 3,1]), 'bilinear',torch_border)
+out0 = (output-output_torch).view(-1).sum()
+print(output-output_torch)
 print("the difference of the current code and old code is {}".format(out0))
 
 

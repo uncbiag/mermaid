@@ -786,7 +786,7 @@ class RegistrationMapLoss(RegistrationLoss):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: registration energy
         """
-        I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1, self.spacing_sim,self.spline_order)
+        I1_warped = utils.compute_warped_image_multiNC(I0_source, phi1, self.spacing_sim,self.spline_order,zero_boundary=False)
         sim = self.compute_similarity_energy(I1_warped, I1_target, I0_source, phi1, variables_from_forward_model, variables_from_optimizer)
         if lowres_I0 is not None:
             reg = self.compute_regularization_energy(lowres_I0, variables_from_forward_model, variables_from_optimizer)

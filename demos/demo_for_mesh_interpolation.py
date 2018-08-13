@@ -110,8 +110,6 @@ def do_points_interoplation(inversed_map, points, spacing):
 def main():
     moving_img_path = '/playpen-raid/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled/9002116_20050715_SAG_3D_DESS_RIGHT_10423916_image.nii.gz'
     target_img_path = '/playpen-raid/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled/9002116_20060804_SAG_3D_DESS_RIGHT_11269909_image.nii.gz'
-moving_img_path = '/playpen/raid/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled/9002116_20050715_SAG_3D_DESS_RIGHT_10423916_image.nii.gz'
-target_img_path = '/playpen/raid/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled/9002116_20060804_SAG_3D_DESS_RIGHT_11269909_image.nii.gz'
 
     register_param = setup_pair_register()
     moving,target, spacing, _ = read_source_and_moving_img(moving_img_path, target_img_path)
