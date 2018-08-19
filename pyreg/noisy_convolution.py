@@ -94,7 +94,7 @@ class NoisyLinear(nn.Module):
                + str(self.out_features) + ')'
 
 class NoisyLayer(nn.Module):
-    def __init__(self, std_init=None):
+    def __init__(self, std_init=None, start_reducing_from_iter=25):
         super(NoisyLayer, self).__init__()
 
         self.std_init = std_init
@@ -104,12 +104,15 @@ class NoisyLayer(nn.Module):
         else:
             self.std_init = std_init
 
+        self.start_reducing_from_iter = start_reducing_from_iter
+
     def forward(self, input, iter=0):
 
         noise_epsilon = MyTensor(input.size()).normal_()
 
         if self.training:
-            output = input + 1. / (iter + 1) * self.std_init * noise_epsilon
+            effective_iter = max(0,iter-self.start_reducing_from_iter)
+            output = input + 1. / (effective_iter + 1) * self.std_init * noise_epsilon
         else:
             output = input
 
@@ -119,7 +122,7 @@ class NoisyLayer(nn.Module):
 class _NoisyConvNd(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride,
-                 padding, dilation, transposed, output_padding, groups, bias, scalar_sigmas=True, optimize_sigmas=False, std_init=None):
+                 padding, dilation, transposed, output_padding, groups, bias, scalar_sigmas=True, optimize_sigmas=False, std_init=None, start_reducing_from_iter=25):
         super(_NoisyConvNd, self).__init__()
         if in_channels % groups != 0:
             raise ValueError('in_channels must be divisible by groups')
@@ -138,6 +141,8 @@ class _NoisyConvNd(nn.Module):
         self.scalar_sigmas = scalar_sigmas
         self.optimize_sigmas = optimize_sigmas
         self.std_init = std_init
+
+        self.start_reducing_from_iter = start_reducing_from_iter
 
         if self.std_init is None:
             self.std_init = 0.25
@@ -329,14 +334,14 @@ class NoisyConv1d(_NoisyConvNd):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, dilation=1, groups=1, bias=True,
-                 scalar_sigmas=True, optimize_sigmas=False, std_init=None):
+                 scalar_sigmas=True, optimize_sigmas=False, std_init=None, start_reducing_from_iter=25):
         kernel_size = _single(kernel_size)
         stride = _single(stride)
         padding = _single(padding)
         dilation = _single(dilation)
         super(NoisyConv1d, self).__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
-            False, _single(0), groups, bias, scalar_sigmas, optimize_sigmas, std_init)
+            False, _single(0), groups, bias, scalar_sigmas, optimize_sigmas, std_init, start_reducing_from_iter)
 
     def forward(self, input, iter=0):
 
@@ -345,7 +350,8 @@ class NoisyConv1d(_NoisyConvNd):
 
         if self.bias is not None:
             if self.training:
-                new_bias_value = self.bias + 1./(iter+1)*self.bias_sigma * bias_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_bias_value = self.bias + 1./(effective_iter+1)*self.bias_sigma * bias_epsilon
             else:
                 new_bias_value = self.bias
         else:
@@ -361,7 +367,8 @@ class NoisyConv1d(_NoisyConvNd):
                     print('Noisy convolution: sigma_conv={:2.4f}'.format(self.weight_sigma.item()))
 
             if self.training:
-                new_weight_value = self.weight + 1./(iter+1)*self.weight_sigma * weight_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_weight_value = self.weight + 1./(effective_iter+1)*self.weight_sigma * weight_epsilon
             else:
                 new_weight_value = self.weight
 
@@ -378,7 +385,8 @@ class NoisyConv1d(_NoisyConvNd):
                 for i in range(sz[0]):
                     delta_weight[i, ...] *= self.weight_sigma[i]
 
-                new_weight_value = self.weight + 1./(iter+1)*delta_weight
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_weight_value = self.weight + 1./(effective_iter+1)*delta_weight
             else:
                 new_weight_value = self.weight
 
@@ -502,14 +510,14 @@ class NoisyConv2d(_NoisyConvNd):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, dilation=1, groups=1, bias=True,
-                 scalar_sigmas=True, optimize_sigmas=False, std_init=None):
+                 scalar_sigmas=True, optimize_sigmas=False, std_init=None, start_reducing_from_iter=25):
         kernel_size = _pair(kernel_size)
         stride = _pair(stride)
         padding = _pair(padding)
         dilation = _pair(dilation)
         super(NoisyConv2d, self).__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
-            False, _pair(0), groups, bias, scalar_sigmas, optimize_sigmas, std_init)
+            False, _pair(0), groups, bias, scalar_sigmas, optimize_sigmas, std_init, start_reducing_from_iter)
 
     def forward(self, input, iter=0):
 
@@ -518,7 +526,8 @@ class NoisyConv2d(_NoisyConvNd):
 
         if self.bias is not None:
             if self.training:
-                new_bias_value = self.bias + 1./(iter+1)*self.bias_sigma * bias_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_bias_value = self.bias + 1./(effective_iter+1)*self.bias_sigma * bias_epsilon
             else:
                 new_bias_value = self.bias
         else:
@@ -533,7 +542,8 @@ class NoisyConv2d(_NoisyConvNd):
                     print('Noisy convolution: sigma_conv={:2.4f}'.format(self.weight_sigma.item()))
 
             if self.training:
-                new_weight_value = self.weight + 1./(iter+1)*self.weight_sigma*weight_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_weight_value = self.weight + 1./(effective_iter+1)*self.weight_sigma*weight_epsilon
             else:
                 new_weight_value = self.weight
 
@@ -552,7 +562,8 @@ class NoisyConv2d(_NoisyConvNd):
                     for j in range(sz[1]):
                         delta_weight[i,j,...] *= self.weight_sigma[i,j]
 
-                new_weight_value = self.weight + 1./(iter+1)*delta_weight
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_weight_value = self.weight + 1./(effective_iter+1)*delta_weight
             else:
                 new_weight_value = self.weight
 
@@ -671,14 +682,14 @@ class NoisyConv3d(_NoisyConvNd):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, dilation=1, groups=1, bias=True,
-                 scalar_sigmas=True, optimize_sigmas=False, std_init=None):
+                 scalar_sigmas=True, optimize_sigmas=False, std_init=None, start_reducing_from_iter=25):
         kernel_size = _triple(kernel_size)
         stride = _triple(stride)
         padding = _triple(padding)
         dilation = _triple(dilation)
         super(NoisyConv3d, self).__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
-            False, _triple(0), groups, bias, scalar_sigmas, optimize_sigmas, std_init)
+            False, _triple(0), groups, bias, scalar_sigmas, optimize_sigmas, std_init, start_reducing_from_iter)
 
     def forward(self, input):
 
@@ -687,7 +698,8 @@ class NoisyConv3d(_NoisyConvNd):
 
         if self.bias is not None:
             if self.training:
-                new_bias_value = self.bias + 1./(iter+1)*self.bias_sigma * bias_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_bias_value = self.bias + 1./(effective_iter+1)*self.bias_sigma * bias_epsilon
             else:
                 new_bias_value = self.bias
         else:
@@ -703,7 +715,8 @@ class NoisyConv3d(_NoisyConvNd):
                     print('Noisy convolution: sigma_conv={:2.4f}'.format(self.weight_sigma.item()))
 
             if self.training:
-                new_weight_value = self.weight + 1./(iter+1)*self.weight_sigma * weight_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_weight_value = self.weight + 1./(effective_iter+1)*self.weight_sigma * weight_epsilon
             else:
                 new_weight_value = self.weight
 
@@ -723,7 +736,8 @@ class NoisyConv3d(_NoisyConvNd):
                         for k in range(sz[2]):
                             delta_weight[i, j, k, ...] *= self.weight_sigma[i, j, k]
 
-                new_weight_value = self.weight + 1./(iter+1)*delta_weight
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_weight_value = self.weight + 1./(effective_iter+1)*delta_weight
             else:
                 new_weight_value = self.weight
 
@@ -856,7 +870,7 @@ class NoisyConvTranspose1d(_NoisyConvTransposeMixin, _NoisyConvNd):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, output_padding=0, groups=1, bias=True, dilation=1,
-                 scalar_sigmas=True, optimize_sigmas=False, std_init=None):
+                 scalar_sigmas=True, optimize_sigmas=False, std_init=None, start_reducing_from_iter=25):
         kernel_size = _single(kernel_size)
         stride = _single(stride)
         padding = _single(padding)
@@ -865,7 +879,8 @@ class NoisyConvTranspose1d(_NoisyConvTransposeMixin, _NoisyConvNd):
         super(NoisyConvTranspose1d, self).__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
             True, output_padding, groups, bias,
-            scalar_sigmas=scalar_sigmas, optimize_sigmas=optimize_sigmas, std_init=std_init)
+            scalar_sigmas=scalar_sigmas, optimize_sigmas=optimize_sigmas, std_init=std_init,
+            start_reducing_from_iter=start_reducing_from_iter)
 
     def forward(self, input, output_size=None, iter=0):
         output_padding = self._output_padding(input, output_size)
@@ -875,7 +890,8 @@ class NoisyConvTranspose1d(_NoisyConvTransposeMixin, _NoisyConvNd):
 
         if self.bias is not None:
             if self.training:
-                new_bias_value = self.bias + 1./(iter+1)*self.bias_sigma * bias_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_bias_value = self.bias + 1./(effective_iter+1)*self.bias_sigma * bias_epsilon
             else:
                 new_bias_value = self.bias
         else:
@@ -891,7 +907,8 @@ class NoisyConvTranspose1d(_NoisyConvTransposeMixin, _NoisyConvNd):
                     print('Noisy convolution: sigma_conv={:2.4f}'.format(self.weight_sigma.item()))
 
             if self.training:
-                new_weight_value = self.weight + 1./(1+iter)*self.weight_sigma * weight_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_weight_value = self.weight + 1./(1+effective_iter)*self.weight_sigma * weight_epsilon
             else:
                 new_weight_value = self.weight
 
@@ -909,7 +926,8 @@ class NoisyConvTranspose1d(_NoisyConvTransposeMixin, _NoisyConvNd):
                 for i in range(sz[0]):
                     delta_weight[i, ...] *= self.weight_sigma[i]
 
-                new_weight_value = self.weight + 1./(1+iter)*self.weight_sigma * weight_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_weight_value = self.weight + 1./(1+effective_iter)*self.weight_sigma * weight_epsilon
             else:
                 new_weight_value = self.weight
 
@@ -1036,7 +1054,7 @@ class NoisyConvTranspose2d(_NoisyConvTransposeMixin, _NoisyConvNd):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, output_padding=0, groups=1, bias=True, dilation=1,
-                 scalar_sigmas=True, optimize_sigmas=False, std_init=None):
+                 scalar_sigmas=True, optimize_sigmas=False, std_init=None, start_reducing_from_iter=25):
         kernel_size = _pair(kernel_size)
         stride = _pair(stride)
         padding = _pair(padding)
@@ -1045,7 +1063,8 @@ class NoisyConvTranspose2d(_NoisyConvTransposeMixin, _NoisyConvNd):
         super(NoisyConvTranspose2d, self).__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
             True, output_padding, groups, bias,
-            scalar_sigmas=scalar_sigmas, optimize_sigmas=optimize_sigmas, std_init=std_init)
+            scalar_sigmas=scalar_sigmas, optimize_sigmas=optimize_sigmas, std_init=std_init,
+            start_reducing_from_iter=start_reducing_from_iter)
 
     def forward(self, input, output_size=None, iter=0):
         output_padding = self._output_padding(input, output_size)
@@ -1055,7 +1074,8 @@ class NoisyConvTranspose2d(_NoisyConvTransposeMixin, _NoisyConvNd):
 
         if self.bias is not None:
             if self.training:
-                new_bias_value = self.bias + 1./(1+iter)*self.bias_sigma * bias_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_bias_value = self.bias + 1./(1+effective_iter)*self.bias_sigma * bias_epsilon
             else:
                 new_bias_value = self.bias
         else:
@@ -1071,7 +1091,8 @@ class NoisyConvTranspose2d(_NoisyConvTransposeMixin, _NoisyConvNd):
                     print('Noisy convolution: sigma_conv={:2.4f}'.format(self.weight_sigma.item()))
 
             if self.training:
-                new_weight_value = self.weight + 1./(1+iter)*self.weight_sigma * weight_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_weight_value = self.weight + 1./(1+effective_iter)*self.weight_sigma * weight_epsilon
             else:
                 new_weight_value = self.weight
 
@@ -1090,7 +1111,8 @@ class NoisyConvTranspose2d(_NoisyConvTransposeMixin, _NoisyConvNd):
                     for j in range(sz[1]):
                         delta_weight[i, j, ...] *= self.weight_sigma[i, j]
 
-                new_weight_value = self.weight + 1./(1+iter)*self.weight_sigma * weight_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_weight_value = self.weight + 1./(1+effective_iter)*self.weight_sigma * weight_epsilon
             else:
                 new_weight_value = self.weight
 
@@ -1213,7 +1235,7 @@ class NoisyConvTranspose3d(_NoisyConvTransposeMixin, _NoisyConvNd):
 
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, output_padding=0, groups=1, bias=True, dilation=1,
-                 scalar_sigmas=True, optimize_sigmas=False, std_init=None):
+                 scalar_sigmas=True, optimize_sigmas=False, std_init=None, start_reducing_from_iter=25):
         kernel_size = _triple(kernel_size)
         stride = _triple(stride)
         padding = _triple(padding)
@@ -1222,7 +1244,8 @@ class NoisyConvTranspose3d(_NoisyConvTransposeMixin, _NoisyConvNd):
         super(NoisyConvTranspose3d, self).__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
             True, output_padding, groups, bias,
-            scalar_sigmas=scalar_sigmas, optimize_sigmas=optimize_sigmas, std_init=std_init)
+            scalar_sigmas=scalar_sigmas, optimize_sigmas=optimize_sigmas, std_init=std_init,
+            start_reducing_from_iter=start_reducing_from_iter)
 
     def forward(self, input, output_size=None):
         output_padding = self._output_padding(input, output_size)
@@ -1232,7 +1255,8 @@ class NoisyConvTranspose3d(_NoisyConvTransposeMixin, _NoisyConvNd):
 
         if self.bias is not None:
             if self.training:
-                new_bias_value = self.bias + 1./(iter+1)*self.bias_sigma * bias_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_bias_value = self.bias + 1./(effective_iter+1)*self.bias_sigma * bias_epsilon
             else:
                 new_bias_value = self.bias
         else:
@@ -1248,7 +1272,8 @@ class NoisyConvTranspose3d(_NoisyConvTransposeMixin, _NoisyConvNd):
                     print('Noisy convolution: sigma_conv={:2.4f}'.format(self.weight_sigma.item()))
 
             if self.training:
-                new_weight_value = self.weight + 1./(iter+1)*self.weight_sigma * weight_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_weight_value = self.weight + 1./(effective_iter+1)*self.weight_sigma * weight_epsilon
             else:
                 new_weight_value = self.weight
 
@@ -1268,7 +1293,8 @@ class NoisyConvTranspose3d(_NoisyConvTransposeMixin, _NoisyConvNd):
                         for k in range(sz[2]):
                             delta_weight[i, j, k, ...] *= self.weight_sigma[i, j, k]
 
-                new_weight_value = self.weight + 1./(iter+1)*self.weight_sigma * weight_epsilon
+                effective_iter = max(0, iter - self.start_reducing_from_iter)
+                new_weight_value = self.weight + 1./(effective_iter+1)*self.weight_sigma * weight_epsilon
             else:
                 new_weight_value = self.weight
 
