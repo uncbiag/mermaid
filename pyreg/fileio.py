@@ -391,9 +391,9 @@ class ImageIO(FileIO):
             im = itk.GetImageFromArray(np_im.view().reshape(list(hdr['sizes'])))
 
             if 'original_spacing' in hdr:
-                im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['original_spacing']))
+                im.SetSpacing(self._convert_numpy_vector_to_itk(np.flipud(hdr['original_spacing'])))
             else:
-                im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['spacing']))
+                im.SetSpacing(self._convert_numpy_vector_to_itk(np.flipud(hdr['spacing'])))
             im.SetOrigin(self._convert_numpy_vector_to_itk(hdr['space origin']))
             im.SetDirection(self._convert_numpy_matrix_to_itk(hdr['space directions']))
         else:
@@ -470,9 +470,9 @@ class ImageIO(FileIO):
             vec_view_np[...,d]=0
 
         if 'original_spacing' in hdr:
-            vec_im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['original_spacing']))
+            vec_im.SetSpacing(self._convert_numpy_vector_to_itk(np.flipud(hdr['original_spacing'])))
         else:
-            vec_im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['spacing']))
+            vec_im.SetSpacing(self._convert_numpy_vector_to_itk(np.flipud(hdr['spacing'])))
 
         vec_im.SetOrigin(self._convert_numpy_vector_to_itk(hdr['space origin']))
         vec_im.SetDirection(self._convert_numpy_matrix_to_itk(hdr['space directions']))
@@ -665,7 +665,7 @@ class ImageIO(FileIO):
         if self.normalize_spacing:
             if not silent_mode:
                 print('INFO: Normalizing the spacing to [0,1] in the largest dimension. (Turn normalize_spacing off if this is not desired.)')
-            hdr['original_spacing'] = hdr['spacing']
+            hdr['original_spacing'] = spacing
 
 
             if hdr['is_vector_image']:
