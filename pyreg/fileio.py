@@ -665,7 +665,7 @@ class ImageIO(FileIO):
         if self.normalize_spacing:
             if not silent_mode:
                 print('INFO: Normalizing the spacing to [0,1] in the largest dimension. (Turn normalize_spacing off if this is not desired.)')
-            hdr['original_spacing'] = spacing
+            hdr['original_spacing'] = hdr['spacing']
 
 
             if hdr['is_vector_image']:
