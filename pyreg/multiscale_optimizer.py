@@ -120,7 +120,7 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
         else:
             return None
 
-    def set_initial_map(self,map0):
+    def set_initial_map(self,map0,initial_inverse_map=None):
         """
         Sets the initial map for the registrations; by default (w/o setting anything) this will be the identity
         map, but by setting it to a different initial condition one can concatenate transformations.
@@ -130,6 +130,7 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
         """
         if self.optimizer is not None:
             self.optimizer.set_initial_map(map0)
+            self.optimizer.set_initial_inverse_map(initial_inverse_map)
 
     def get_initial_map(self):
         """
@@ -144,6 +145,18 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
         else:
             return None
 
+    def get_initial_inverse_map(self):
+        """
+        Returns the initial inverse map; this will typically be the identity map, but can be set to a different initial
+        condition using set_initial_map
+
+        :return: returns the initial map (if applicable)
+        """
+
+        if self.optimizer is not None:
+            return self.optimizer.get_initial_inverse_map()
+        else:
+            return None
 
     def get_map(self):
         """
@@ -553,8 +566,10 @@ class ImageRegistrationOptimizer(Optimizer):
 
         self.lowResLTarget = None
         """if mapLowResFactor <1, a lowres target label image needs to be created to parameterize some of the registration algorithms"""
-        self.initialMap =None
+        self.initialMap = None
         """  initial map"""
+        self.initialInverseMap = None
+        """ initial inverse map"""
         self.optimizer_name = None #''lbfgs_ls'
         """name of the optimizer to use"""
         self.optimizer_params = {}
@@ -862,10 +877,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.initialMap = None
         """initial map, will be needed for map-based solutions; by default this will be the identity map, but can be set to something different externally"""
+        self.initialInverseMap = None
+        """initial inverse map; will be the same as the initial map, unless it was set externally"""
+        self.map0_inverse_external = None
+        """initial inverse map, set externally, will be needed for map-based solutions; by default this will be the identity map, but can be set to something different externally"""
         self.map0_external = None
         """intial map, set externally"""
         self.lowResInitialMap = None
-        """low res initila map, by default the identity map, will be needed for map-based solutions which are computed at lower resolution"""
+        """low res initial map, by default the identity map, will be needed for map-based solutions which are computed at lower resolution"""
+        self.lowResInitialInverseMap = None
+        """low res initial inverse map, by default the identity map, will be needed for map-based solutions which are computed at lower resolution"""
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
@@ -991,7 +1012,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             return None
 
-
     def get_map(self):
         """
         Returns the deformation map
@@ -1024,6 +1044,15 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 id = utils.identity_map_multiN(self.sz, self.spacing)
                 self.initialMap = AdaptVal(torch.from_numpy(id))
 
+            if self.map0_inverse_external is not None:
+                self.initialInverseMap = self.map0_inverse_external
+            else:
+                if self.map0_external is None:
+                    # will be the same identity map in this case
+                    self.initialInverseMap = self.initialMap
+                else:
+                    self.initialInverseMap = None
+
             if self.mapLowResFactor is not None:
                 # create a lower resolution map for the computations
                 if self.map0_external is None:
@@ -1033,6 +1062,17 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     sampler = IS.ResampleImage()
                     lowres_id, _ = sampler.downsample_image_to_size(self.initialMap , self.spacing,self.lowResSize[2::] , 1,zero_boundary=False)
                     self.lowResInitialMap = AdaptVal(lowres_id)
+
+                if self.map0_inverse_external is None:
+                    if self.map0_external is None:
+                        self.lowResInitialInverseMap = self.lowResInitialMap
+                    else:
+                        self.lowResInitialInverseMap = None
+                else:
+                    sampler = IS.ResampleImage()
+                    lowres_inverse_id, _ = sampler.downsample_image_to_size(self.initialInverseMap, self.spacing, self.lowResSize[2::],
+                                                                    1, zero_boundary=False)
+                    self.lowResInitialMap = AdaptVal(lowres_inverse_id)
 
 
     def set_model(self, modelName):
@@ -1050,14 +1090,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self._create_initial_maps()
 
 
-    def set_initial_map(self,map0):
+    def set_initial_map(self,map0,map0_inverse=None):
         """
         Sets the initial map (overwrites the default identity map)
         :param map0: intial map
+        :param map0_inverse: initial inverse map
         :return: n/a
         """
 
         self.map0_external = map0
+        self.map0_inverse_external = map0_inverse
 
         if self.initialMap is not None:
             # was already set, so let's modify it
@@ -1077,6 +1119,19 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             return None
 
+    def get_initial_inverse_map(self):
+        """
+        Returns the initial inverse map
+
+        :return: initial inverse map
+        """
+
+        if self.initialInverseMap is not None:
+            return self.initialInverseMap
+        elif self.map0_inverse_external is not None:
+            return self.map0_inverse_external
+        else:
+            return None
 
     def add_similarity_measure(self, simName, simMeasure):
         """
@@ -1342,7 +1397,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.useMap:
             if self.mapLowResFactor is not None:
                 if self.compute_similarity_measure_at_low_res:
-                    ret = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
+                    ret = self.model(self.lowResInitialMap, self.lowResISource,
+                                     phi_inv=self.lowResInitialInverseMap, variables_from_optimizer=opt_variables)
                     if self.compute_inverse_map:
                         if type(ret)==tuple: # if it is a tuple it is returning the inverse
                             self.rec_phiWarped = ret[0]
@@ -1352,7 +1408,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     else:
                         self.rec_phiWarped = ret
                 else:
-                    ret = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
+                    ret = self.model(self.lowResInitialMap, self.lowResISource,
+                                     phi_inv=self.lowResInitialInverseMap, variables_from_optimizer=opt_variables)
                     if self.compute_inverse_map:
                         if type(ret)==tuple:
                             rec_tmp = ret[0]
@@ -1367,8 +1424,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.lowResSpacing, desiredSz, self.spline_order,zero_boundary=False)
                     if self.compute_inverse_map and rec_inv_tmp is not None:
                         self.rec_phiInverseWarped, _ = self.sampler.upsample_image_to_size(rec_inv_tmp, self.lowResSpacing, desiredSz,self.spline_order,zero_boundary=False)
+                    else:
+                        self.rec_phiInverseWarped = None
             else:
-                ret = self.model(self.initialMap, self.ISource, opt_variables)
+                ret = self.model(self.initialMap, self.ISource,
+                                 phi_inv=self.lowResInitialInverseMap, variables_from_optimizer=opt_variables)
                 if self.compute_inverse_map:
                     if type(ret)==tuple:
                         self.rec_phiWarped = ret[0]
@@ -3276,7 +3336,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.model_name = modelName
 
 
-    def set_initial_map(self,map0):
+    def set_initial_map(self,map0,map0_inverse=None):
         """
         Sets the initial map (overwrites the default identity map)
         :param map0: intial map
@@ -3284,6 +3344,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         if self.ssOpt is None:
             self.initialMap = map0
+            self.initialInverseMap = map0_inverse
 
 
     def set_pair_path(self,pair_paths):
@@ -3487,14 +3548,17 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 LSourceC, spacingC = self.sampler.downsample_image_to_size(self.LSource, self.spacing, currentDesiredSz[2::],0)
                 LTargetC, spacingC = self.sampler.downsample_image_to_size(self.LTarget, self.spacing, currentDesiredSz[2::],0)
             initialMap = None
+            initialInverseMap = None
             if self.initialMap is not None:
                 initialMap,_ = self.sampler.downsample_image_to_size(self.initialMap,self.spacing, currentDesiredSz[2::],1,zero_boundary=False)
+            if self.initialInverseMap is not None:
+                initialInverseMap,_ = self.sampler.downsample_image_to_size(self.initialInverseMap,self.spacing, currentDesiredSz[2::],1,zero_boundary=False)
             szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
 
             self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)
             print('Setting learning rate to ' + str( lastSuccessfulStepSizeTaken ))
             self.ssOpt.set_last_successful_step_size_taken( lastSuccessfulStepSizeTaken )
-            self.ssOpt.set_initial_map(initialMap)
+            self.ssOpt.set_initial_map(initialMap,initialInverseMap)
 
             if ((self.add_model_name is not None) and
                     (self.add_model_networkClass is not None) and

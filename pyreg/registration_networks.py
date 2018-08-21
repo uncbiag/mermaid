@@ -343,7 +343,7 @@ class RegistrationNetDisplacement(RegistrationNet):
 
     def downsample_registration_parameters(self, desiredSz):
         """
-        Downsamples the displacemebt field to a desired size
+        Downsamples the displacement field to a desired size
     
         :param desiredSz: desired size of the downsampled displacement field 
         :return: returns a tuple (downsampled_state,downsampled_spacing)
@@ -353,12 +353,13 @@ class RegistrationNetDisplacement(RegistrationNet):
         dstate['d'], downsampled_spacing = sampler.downsample_image_to_size(self.d, self.spacing, desiredSz,self.spline_order)
         return dstate, downsampled_spacing
 
-    def forward(self, phi, I0_source, variables_from_optimizer=None):
+    def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
         Solved the map-based equation forward
 
         :param phi: initial condition for the map
         :param I0_source: not used
+        :param phi_inv: inverse intial map (not used)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the map with the displacement subtracted
         """
@@ -941,19 +942,24 @@ class SVFMapNet(SVFNet):
         pars_to_pass = utils.combine_dict({'v':self.v}, self._get_default_dictionary_to_pass_to_integrator())
         return RK.RK4(advectionMap.f, advectionMap.u, pars_to_pass, cparams)
 
-    def forward(self, phi, I0_source, variables_from_optimizer=None):
+    def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
         Solved the map-based equation forward
         
         :param phi: initial condition for the map
         :param I0_source: not used
+        :param phi_inv: inverse initial map
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the map at time tTo
         """
         if self.compute_inverse_map:
-            phi1 = self.integrator.solve([phi,phi], self.tFrom, self.tTo, variables_from_optimizer)
-            return (phi1[0],phi1[1])
+            if phi_inv is not None:
+                phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                return (phi1[0],phi1[1])
+            else:
+                phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+                return (phi1[0],None)
         else:
             phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
             return phi1[0]
@@ -1128,12 +1134,13 @@ class AffineMapNet(RegistrationNet):
         downsampled_spacing = self.spacing*((self.sz[2::].astype('float')-1.)/(desiredSz[2::].astype('float')-1.))
         return dstate, downsampled_spacing
 
-    def forward(self, phi, I0_source, variables_from_optimizer=None):
+    def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
         Solved the map-based equation forward
 
         :param phi: initial condition for the map
         :param I0_source: not used
+        :param phi_inv: inverse initial map (not used)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the map at time tTo
         """
@@ -1406,20 +1413,25 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         epdiffMap = FM.EPDiffMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
         return RK.RK4(epdiffMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), self.params)
 
-    def forward(self, phi, I0_source, variables_from_optimizer=None):
+    def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
         Solves EPDiff + advection equation forward and returns the map at time tTo
         
         :param phi: initial condition for the map 
         :param I0_source: not used
+        :param phi_inv: inverse initial map
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the map at time tTo
         """
 
         self.smoother.set_source_image(I0_source)
         if self.compute_inverse_map:
-            mphi1 = self.integrator.solve([self.m, phi, phi], self.tFrom, self.tTo, variables_from_optimizer)
-            return (mphi1[1],mphi1[2])
+            if phi_inv is not None:
+                mphi1 = self.integrator.solve([self.m, phi, phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                return (mphi1[1],mphi1[2])
+            else:
+                mphi1 = self.integrator.solve([self.m, phi], self.tFrom, self.tTo, variables_from_optimizer)
+                return (mphi1[1],None)
         else:
             mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo, variables_from_optimizer)
             return mphi1[1]
@@ -1487,12 +1499,13 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
         return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
 
-    def forward(self, phi, I0_source, variables_from_optimizer=None):
+    def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
         Solved the scalar momentum forward equation and returns the map at time tTo
 
         :param phi: initial map
         :param I0_source: not used
+        :param phi_inv: initial inverse map
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: image at time tTo
         """
@@ -1504,8 +1517,12 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
 
         if self.compute_inverse_map:
-            phi1 = self.integrator.solve([phi,phi], self.tFrom, self.tTo, variables_from_optimizer)
-            return (phi1[0],phi1[1])
+            if phi_inv is not None:
+                phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                return (phi1[0],phi1[1])
+            else:
+                phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+                return (phi1[0],None)
         else:
             phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
             return phi1[0]
@@ -1799,19 +1816,25 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
         epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
         return RK.RK4(epdiffScalarMomentumMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
 
-    def forward(self, phi, I0_source, variables_from_optimizer=None):
+    def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
         Solves the scalar conservation law and the two advection equations forward in time.
         
         :param phi: initial condition for the map 
         :param I0_source: initial condition for the image
+        :param phi_inv: initial condition for the inverse map
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the map at time tTo
         """
         self.smoother.set_source_image(I0_source)
         if self.compute_inverse_map:
-            lamIphi1 = self.integrator.solve([self.lam,I0_source, phi, phi], self.tFrom, self.tTo, variables_from_optimizer)
-            return (lamIphi1[2],lamIphi1[3])
+            if phi_inv is not None:
+                lamIphi1 = self.integrator.solve([self.lam,I0_source, phi, phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                return (lamIphi1[2],lamIphi1[3])
+            else:
+                lamIphi1 = self.integrator.solve([self.lam, I0_source, phi], self.tFrom, self.tTo,
+                                                 variables_from_optimizer)
+                return (lamIphi1[2],None)
         else:
             lamIphi1 = self.integrator.solve([self.lam,I0_source, phi], self.tFrom, self.tTo, variables_from_optimizer)
             return lamIphi1[2]
@@ -1874,7 +1897,7 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
         return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
 
-    def forward(self, phi, I0_source, variables_from_optimizer=None):
+    def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
         Solved the scalar momentum forward equation and returns the map at time tTo
 
@@ -1890,8 +1913,12 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
 
         if self.compute_inverse_map:
-            phi1 = self.integrator.solve([phi,phi], self.tFrom, self.tTo, variables_from_optimizer)
-            return (phi1[0],phi1[1])
+            if phi_inv is not None:
+                phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                return (phi1[0],phi1[1])
+            else:
+                phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+                return (phi1[0],None)
         else:
             phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
             return phi1[0]
