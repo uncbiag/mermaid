@@ -129,8 +129,8 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
         :return: n/a
         """
         if self.optimizer is not None:
-            self.optimizer.set_initial_map(map0)
-            self.optimizer.set_initial_inverse_map(initial_inverse_map)
+            self.optimizer.set_initial_map(map0, initial_inverse_map)
+            # self.optimizer.set_initial_inverse_map(initial_inverse_map)
 
     def get_initial_map(self):
         """
@@ -3332,7 +3332,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.model_name = modelName
 
 
-    def set_initial_map(self,map0,map0_inverse=None):
+    def set_initial_map(self, map0, map0_inverse=None):
         """
         Sets the initial map (overwrites the default identity map)
         :param map0: intial map
