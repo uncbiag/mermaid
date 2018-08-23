@@ -1071,7 +1071,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     sampler = IS.ResampleImage()
                     lowres_inverse_id, _ = sampler.downsample_image_to_size(self.initialInverseMap, self.spacing, self.lowResSize[2::],
                                                                     1, zero_boundary=False)
-                    self.lowResInitialMap = AdaptVal(lowres_inverse_id)
+                    self.lowResInitialInverseMap = AdaptVal(lowres_inverse_id)
 
 
     def set_model(self, modelName):
