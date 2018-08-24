@@ -1349,6 +1349,27 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         return self.model.get_individual_registration_parameters()
 
+    def load_shared_state_dict(self,sd):
+        """
+        Loads the shared part of a state dictionary
+        :param sd: shared state dictionary
+        :return: n/a
+        """
+        self.model.load_shared_state_dict(sd)
+
+    def shared_state_dict(self):
+        """
+        Returns the shared part of a state dictionary
+        :return:
+        """
+        return self.model.shared_state_dict()
+
+    def load_individual_state_dict(self):
+        raise ValueError('Not yet implemented')
+
+    def individual_state_dict(self):
+        raise ValueError('Not yet implemented')
+
     def upsample_model_parameters(self, desiredSize):
         """
         Upsamples the model parameters
@@ -2493,6 +2514,8 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
         :return: n/a
         """
 
+        #todo: maybe switch loading and writing individual parameters to individual states; this would assure that all states (such as running averages, etc.) are included and not only parameters
+
         if self.optimizer is not None:
             raise ValueError('Custom optimizers are currently not supported for batch optimization.\
                                   Set the optimizer by name (e.g., in the json configuration) instead. Should be some form of stochastic gradient descent.')
@@ -2617,8 +2640,8 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                                                                                     patience=self.scheduler_patience)
 
                     if load_shared_parameters_before_first_epoch:
-                        print('Loading the shared parameters.')
-                        self.ssOpt.set_shared_model_parameters(torch.load(shared_parameter_filename))
+                        print('Loading the shared parameters/state.')
+                        self.ssOpt.load_shared_state_dict(torch.load(shared_parameter_filename))
 
                 last_batch_size = batch_size
 
@@ -2736,12 +2759,9 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.use_step_size_scheduler:
                 self.scheduler.step(last_energy)
 
-        print('Writing out shared parameter file to ' + shared_parameter_filename )
-        torch.save(self.ssOpt.get_shared_model_parameters(),shared_parameter_filename)
+        print('Writing out shared parameter/state file to ' + shared_parameter_filename )
+        torch.save(self.ssOpt.shared_state_dict(),shared_parameter_filename)
 
-        # debug:
-        # todo: remove, just for debugging
-        #self.ssOpt._closure()
 
 class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 

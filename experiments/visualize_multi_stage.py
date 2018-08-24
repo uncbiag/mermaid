@@ -245,7 +245,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
 
     model.set_dictionary_to_pass_to_integrator(dictionary_to_pass_to_integrator)
 
-    model.set_shared_registration_parameters(shared_parameters)
+    model.load_shared_state_dict(shared_parameters)
     model_pars = individual_parameters_to_model_parameters(individual_parameters)
     model.set_individual_registration_parameters(model_pars)
 
