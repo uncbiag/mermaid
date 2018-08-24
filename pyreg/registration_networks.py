@@ -190,6 +190,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
 
         for key_value in cs:
             if self._shared_parameters.issuperset({key_value[0]}):
+                #todo: implement this properly
                 shared_params[key_value[0]] = key_value[1]
 
         return shared_params

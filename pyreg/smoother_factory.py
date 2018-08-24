@@ -948,6 +948,11 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                     'Does not optimize the parameters before this iteration')]
         """at what iteration the optimization over weights or stds should start"""
 
+        self.start_optimize_over_nn_smoother_parameters_at_iteration = \
+            params[('start_optimize_over_nn_smoother_parameters_at_iteration', 0,
+                    'Does not optimize the nn smoother parameters before this iteration')]
+        """at what iteration the optimization over nn parameters should start"""
+
         self.nr_of_gaussians = len(self.multi_gaussian_stds)
         """number of Gaussians"""
         # todo: maybe make this more generic; there is an explicit float here
@@ -1017,6 +1022,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         self._is_optimizing_over_deep_network = True
 
+        self._nn_hooks = None
+
     def get_default_multi_gaussian_weights(self):
         # todo: check, should it really return this?
         return self.multi_gaussian_weights_optimizer_params
@@ -1029,6 +1036,27 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
     def set_debug_retain_computed_local_weights(self,val=True):
         self.debug_retain_computed_local_weights = val
+
+
+    def _remove_all_nn_hooks(self):
+
+        if self._nn_hooks is None:
+            return
+
+        for h in self._nn_hooks:
+            h.remove()
+
+        self._nn_hooks = None
+
+    def _enable_force_nn_gradients_to_zero_hooks(self):
+
+        if self._nn_hooks is None:
+            self._nn_hooks = []
+
+            for child in self.ws.children():
+                for cur_param in child.parameters():
+                    current_hook = cur_param.register_hook(lambda grad: grad*0)
+                    self._nn_hooks.append(current_hook)
 
     def associate_parameters_with_module(self,module):
         s = set()
@@ -1228,6 +1256,18 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             self.pre_multi_gaussian_weights_optimizer_params.data[i] = self.multi_gaussian_weights[i]/self.global_parameter_scaling_factor
         return self.pre_multi_gaussian_weights_optimizer_params
 
+    def _compute_current_nn_weight_l2(self):
+
+        total_number_of_parameters = 1
+        par_penalty = MyTensor(1).zero_()
+        for p in self.ws.parameters():
+            total_number_of_parameters += p.numel()
+            par_penalty += (p ** 2).sum()
+
+        par_penalty /= total_number_of_parameters
+
+        return par_penalty
+
     def get_penalty(self):
         # puts an squared two-norm penalty on the weights as deviations from the baseline
         # also adds a penalty for the network parameters
@@ -1242,24 +1282,17 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         else:
 
             penalty = self.ws.get_current_penalty()
-
-            total_number_of_parameters = 1
-            par_penalty = MyTensor(1).zero_()
-            for p in self.ws.parameters():
-                total_number_of_parameters += p.numel()
-                par_penalty += (p ** 2).sum()
-
-            par_penalty *= self.network_penalty/total_number_of_parameters
-            penalty += par_penalty
+            penalty += self.network_penalty*self._compute_current_nn_weight_l2()
 
         return penalty
 
-    def _smooth_via_deep_network(self,I,additional_inputs,retain_computed_local_weights=False):
+    def _smooth_via_deep_network(self,I,additional_inputs,iter=0,retain_computed_local_weights=False):
         if retain_computed_local_weights:
             # v is actually the vector-valued momentum here; changed the interface to pass this also
             smoothed_v = self.ws(I=I, additional_inputs=additional_inputs,
                                  global_multi_gaussian_weights=self.get_gaussian_weights(),
                                  gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
+                                 iter=iter,
                                  retain_weights=retain_computed_local_weights)
 
             self.debug_computed_local_weights = self.ws.get_computed_weights()
@@ -1267,7 +1300,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         else:
             smoothed_v = self.ws(I=I, additional_inputs=additional_inputs,
                                  global_multi_gaussian_weights=self.get_gaussian_weights(),
-                                 gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator)
+                                 gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
+                                 iter=iter)
             self.debug_computed_local_pre_weights = None
             self.debug_computed_local_pre_weights = None
 
@@ -1312,7 +1346,16 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         compute_std_gradients = self.optimize_over_smoother_stds
 
         if variables_from_optimizer is not None:
-            if self.start_optimize_over_smoother_parameters_at_iteration > variables_from_optimizer['iter']:
+            # if we deal with epochs then use them to indicate iteration progress, otherwise use iterations
+            if variables_from_optimizer['epoch'] is not None:
+                iter_or_epoch = variables_from_optimizer['epoch']
+            else:
+                iter_or_epoch = variables_from_optimizer['iter']
+        else:
+            iter_or_epoch = None
+
+        if variables_from_optimizer is not None:
+            if self.start_optimize_over_smoother_parameters_at_iteration > iter_or_epoch:
                 compute_std_gradients = False
                 compute_weight_gradients = False
 
@@ -1335,18 +1378,31 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         # todo: make this more generic later
         additional_inputs = {'m':v,'I0':pars['I0'],'I1':pars['I1']}
 
-        if variables_from_optimizer is not None:
-            if self.start_optimize_over_smoother_parameters_at_iteration > variables_from_optimizer['iter']:
-                # just apply the global weights for smoothing
-                self._is_optimizing_over_deep_network = False
-            else:
-                self._is_optimizing_over_deep_network = True
-        else:
-            self._is_optimizing_over_deep_network = True
+        # if variables_from_optimizer is not None:
+        #     if self.start_optimize_over_smoother_parameters_at_iteration > variables_from_optimizer['iter']:
+        #         # just apply the global weights for smoothing
+        #         self._is_optimizing_over_deep_network = False
+        #     else:
+        #         self._is_optimizing_over_deep_network = True
+        # else:
+        #     self._is_optimizing_over_deep_network = True
+        #
+        # if not self.optimize_over_deep_network:
+        #     self._is_optimizing_over_deep_network = False
 
-        if not self.optimize_over_deep_network:
-            self._is_optimizing_over_deep_network = False
+        #print('Current weight l2 = {}'.format(self._compute_current_nn_weight_l2().item()))
 
+        self._is_optimizing_over_deep_network = self.optimize_over_deep_network
+        if self._is_optimizing_over_deep_network:
+            if variables_from_optimizer is not None:
+                if self.start_optimize_over_nn_smoother_parameters_at_iteration > iter_or_epoch:
+                    print('INFO: disabling the deep smoother network gradients, i.e., FORCING them to zero')
+                    # just apply the global weights for smoothing
+                    self._enable_force_nn_gradients_to_zero_hooks()
+                else:
+                    if self.start_optimize_over_nn_smoother_parameters_at_iteration == iter_or_epoch:
+                        print('INFO: Allowing optimization over deep smoother network')
+                    self._remove_all_nn_hooks()
 
         # distiniguish the two cases where we compute the vector field (for the deformation) versus where we compute for regularization
         if smooth_to_compute_regularizer_energy:
@@ -1362,10 +1418,10 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                         smoothed_v = self._smooth_via_std_multi_gaussian(v=v,compute_std_gradients=compute_std_gradients)
 
                 elif self.weighting_type=='sqrt_w_K_sqrt_w':
-                    smoothed_v = self._smooth_via_deep_network(I=I, additional_inputs=additional_inputs)
+                    smoothed_v = self._smooth_via_deep_network(I=I, additional_inputs=additional_inputs, iter=iter_or_epoch)
 
                 elif self.weighting_type=='w_K_w':
-                    smoothed_v = self._smooth_via_deep_network(I=I, additional_inputs=additional_inputs)
+                    smoothed_v = self._smooth_via_deep_network(I=I, additional_inputs=additional_inputs, iter=iter_or_epoch)
                 else:
                     raise ValueError('Unknown weighting type')
 
@@ -1377,6 +1433,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             if (self._is_optimizing_over_deep_network or self.evaluate_but_do_not_optimize_over_deep_network):
                 smoothed_v = self._smooth_via_deep_network(I=I,
                                                            additional_inputs=additional_inputs,
+                                                           iter=iter_or_epoch,
                                                            retain_computed_local_weights=self.debug_retain_computed_local_weights)
             else:  # standard SVF
                 smoothed_v = self._smooth_via_std_multi_gaussian(v=v,compute_std_gradients=compute_std_gradients)

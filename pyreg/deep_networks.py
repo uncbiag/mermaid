@@ -128,7 +128,8 @@ class conv_norm_in_rel(nn.Module):
                  noisy_convolution_std=0.25,
                  noisy_convolution_optimize_over_std=False,
                  use_noise_layer=False,
-                 noise_layer_std=0.25
+                 noise_layer_std=0.25,
+                 start_reducing_from_iter=0
                  ):
 
         super(conv_norm_in_rel, self).__init__()
@@ -158,7 +159,7 @@ class conv_norm_in_rel(nn.Module):
 
         self.normalization = DimNormalization(dim,normalization_type,out_channels,im_sz) if normalization_type else None
 
-        self.noisy_layer = nc.NoisyLayer(std_init=noise_layer_std) if self.use_noise_layer else None
+        self.noisy_layer = nc.NoisyLayer(std_init=noise_layer_std,start_reducing_from_iter=start_reducing_from_iter) if self.use_noise_layer else None
 
         if active_unit == 'relu':
             self.active_unit = nn.ReLU(inplace=True)
@@ -359,6 +360,11 @@ class DeepNetwork(with_metaclass(ABCMeta,nn.Module)):
             self.noise_layer_std = None
             self.last_noise_layer_std = None
 
+        if self.use_noise_layers or self.use_noisy_convolution:
+            self.start_reducing_from_iter = self.params[('start_reducing_from_iter',10,'After which iteration the noise is reduced')]
+        else:
+            self.start_reducing_from_iter = None
+
         if self.use_noise_layers and self.use_noisy_convolution:
             raise ValueError('Noise layers and noisy convolution are not intended to be used together. Pick one or the other!')
 
@@ -438,56 +444,64 @@ class Unet(DeepNetwork):
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.down_path_2_1 = conv_norm_in_rel(dim, 16, 32, kernel_size=3, im_sz=im_sz_down_1, stride=2, active_unit='leaky_relu', same_padding=True, normalization_type=self.normalization_type,
                                               use_noisy_convolution=self.use_noisy_convolution,
                                               noisy_convolution_std=self.noisy_convolution_std,
                                               noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                               use_noise_layer=self.use_noise_layers,
-                                              noise_layer_std=self.noise_layer_std
+                                              noise_layer_std=self.noise_layer_std,
+                                              start_reducing_from_iter=self.start_reducing_from_iter
                                               )
         self.down_path_2_2 = conv_norm_in_rel(dim, 32, 32, kernel_size=3, im_sz=im_sz_down_1, stride=1, active_unit='leaky_relu', same_padding=True, normalization_type=self.normalization_type,
                                               use_noisy_convolution=self.use_noisy_convolution,
                                               noisy_convolution_std=self.noisy_convolution_std,
                                               noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                               use_noise_layer=self.use_noise_layers,
-                                              noise_layer_std=self.noise_layer_std
+                                              noise_layer_std=self.noise_layer_std,
+                                              start_reducing_from_iter=self.start_reducing_from_iter
                                               )
         self.down_path_4_1 = conv_norm_in_rel(dim, 32, 32, kernel_size=3, im_sz=im_sz_down_2, stride=2, active_unit='leaky_relu', same_padding=True, normalization_type=self.normalization_type,
                                               use_noisy_convolution=self.use_noisy_convolution,
                                               noisy_convolution_std=self.noisy_convolution_std,
                                               noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                               use_noise_layer=self.use_noise_layers,
-                                              noise_layer_std=self.noise_layer_std
+                                              noise_layer_std=self.noise_layer_std,
+                                              start_reducing_from_iter=self.start_reducing_from_iter
                                               )
         self.down_path_4_2 = conv_norm_in_rel(dim, 32, 32, kernel_size=3, im_sz=im_sz_down_2, stride=1, active_unit='leaky_relu', same_padding=True, normalization_type=self.normalization_type,
                                               use_noisy_convolution=self.use_noisy_convolution,
                                               noisy_convolution_std=self.noisy_convolution_std,
                                               noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                               use_noise_layer=self.use_noise_layers,
-                                              noise_layer_std=self.noise_layer_std
+                                              noise_layer_std=self.noise_layer_std,
+                                              start_reducing_from_iter=self.start_reducing_from_iter
                                               )
         self.down_path_8_1 = conv_norm_in_rel(dim, 32, 64, kernel_size=3, im_sz=im_sz_down_3, stride=2, active_unit='leaky_relu', same_padding=True, normalization_type=self.normalization_type,
                                               use_noisy_convolution=self.use_noisy_convolution,
                                               noisy_convolution_std=self.noisy_convolution_std,
                                               noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                               use_noise_layer=self.use_noise_layers,
-                                              noise_layer_std=self.noise_layer_std
+                                              noise_layer_std=self.noise_layer_std,
+                                              start_reducing_from_iter=self.start_reducing_from_iter
                                               )
         self.down_path_8_2 = conv_norm_in_rel(dim, 64, 64, kernel_size=3, im_sz=im_sz_down_3, stride=1, active_unit='leaky_relu', same_padding=True, normalization_type=self.normalization_type,
                                               use_noisy_convolution=self.use_noisy_convolution,
                                               noisy_convolution_std=self.noisy_convolution_std,
                                               noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                               use_noise_layer=self.use_noise_layers,
-                                              noise_layer_std=self.noise_layer_std
+                                              noise_layer_std=self.noise_layer_std,
+                                              start_reducing_from_iter=self.start_reducing_from_iter
                                               )
         self.down_path_16 = conv_norm_in_rel(dim, 64, 64, kernel_size=3, im_sz=im_sz_down_4, stride=2, active_unit='leaky_relu', same_padding=True, normalization_type=self.normalization_type,
                                              use_noisy_convolution=self.use_noisy_convolution,
                                              noisy_convolution_std=self.noisy_convolution_std,
                                              noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                              use_noise_layer=self.use_noise_layers,
-                                             noise_layer_std=self.noise_layer_std
+                                             noise_layer_std=self.noise_layer_std,
+                                             start_reducing_from_iter=self.start_reducing_from_iter
                                              )
 
 
@@ -497,49 +511,56 @@ class Unet(DeepNetwork):
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.up_path_8_2 = conv_norm_in_rel(dim, 128, 64, kernel_size=3, im_sz=im_sz_down_3, stride=1, active_unit='leaky_relu', same_padding=True, normalization_type=self.normalization_type,
                                             use_noisy_convolution=self.use_noisy_convolution,
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.up_path_4_1 = conv_norm_in_rel(dim, 64, 64, kernel_size=2, im_sz=im_sz_down_2, stride=2, active_unit='leaky_relu', same_padding=False, normalization_type=self.normalization_type, reverse=True,
                                             use_noisy_convolution=self.use_noisy_convolution,
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.up_path_4_2 = conv_norm_in_rel(dim, 96, 32, kernel_size=3, im_sz=im_sz_down_2, stride=1, active_unit='leaky_relu', same_padding=True, normalization_type=self.normalization_type,
                                             use_noisy_convolution=self.use_noisy_convolution,
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.up_path_2_1 = conv_norm_in_rel(dim, 32, 32, kernel_size=2, im_sz=im_sz_down_1, stride=2, active_unit='leaky_relu', same_padding=False, normalization_type=self.normalization_type,reverse=True,
                                             use_noisy_convolution=self.use_noisy_convolution,
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.up_path_2_2 = conv_norm_in_rel(dim, 64, 8, kernel_size=3, im_sz=im_sz_down_1, stride=1, active_unit='leaky_relu', same_padding=True, normalization_type=self.normalization_type,
                                             use_noisy_convolution=self.use_noisy_convolution,
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.up_path_1_1 = conv_norm_in_rel(dim, 8, 8, kernel_size=2, im_sz=im_sz, stride=2, active_unit='None', same_padding=False, normalization_type=self.normalization_type, reverse=True,
                                             use_noisy_convolution=self.use_noisy_convolution,
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
 
         # we do not want to normalize the last layer as it will create the output
@@ -554,7 +575,8 @@ class Unet(DeepNetwork):
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.last_noise_layer_std
+                                            noise_layer_std=self.last_noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
 
     def forward(self, x, iter=0):
@@ -695,6 +717,13 @@ class Simple_consistent(DeepNetwork):
         else:
             raise ValueError('Active unit needs to be specified: unkown active unit: {}'.format(self.active_unit_to_use))
 
+        self.use_dropout = self.params[('use_dropout', True, 'If set to true, dropout witll be used')]
+        if self.use_dropout:
+            self.dropout_prob = self.params[('dropout_prob',0.25,'dropout probability')]
+            self.dropout = nn.Dropout(self.dropout_prob)
+        else:
+            self.dropout = None
+
         self.conv_layers = None
         self.normalizations = None
         self.noise_layers = None
@@ -704,6 +733,12 @@ class Simple_consistent(DeepNetwork):
         # todo: this would allow removing dim and nr_of_image_channels from interface
         # todo: because it could be compute on the fly when forward is executed
         self._init(self.nr_of_image_channels, dim=self.dim, im_sz=self.im_sz)
+
+    def apply_dropout(self, input):
+        if self.use_dropout:
+            return self.dropout(input)
+        else:
+            return input
 
     def _init(self, nr_of_image_channels, dim, im_sz):
         """
@@ -762,8 +797,8 @@ class Simple_consistent(DeepNetwork):
         if self.use_noise_layers:
             noise_layers = [None] * self.nr_of_layers
             for nl in range(self.nr_of_layers-1):
-                noise_layers[nl] = nc.NoisyLayer(std_init=self.noise_layer_std)
-            noise_layers[-1] = nc.NoisyLayer(std_init=self.last_noise_layer_std)
+                noise_layers[nl] = nc.NoisyLayer(std_init=self.noise_layer_std,start_reducing_from_iter=self.start_reducing_from_iter)
+            noise_layers[-1] = nc.NoisyLayer(std_init=self.last_noise_layer_std,start_reducing_from_iter=self.start_reducing_from_iter)
 
             self.noise_layers = nn.ModuleList()
             for nl in noise_layers:
@@ -780,27 +815,27 @@ class Simple_consistent(DeepNetwork):
                 if self.use_noisy_convolution:
                     y = self.normalizations[l](self.conv_layers[l](x,iter=iter))
                     if self.use_noise_layers:
-                        x = self.active_unit(self.noise_layers[l](y,iter=iter))
+                        x = self.apply_dropout(self.active_unit(self.noise_layers[l](y,iter=iter)))
                     else:
-                        x = self.active_unit(y)
+                        x = self.apply_dropout(self.active_unit(y))
                 else:
                     y = self.normalizations[l](self.conv_layers[l](x))
                     if self.use_noise_layers:
-                        x = self.active_unit(self.noise_layers[l](y,iter=iter))
+                        x = self.apply_dropout(self.active_unit(self.noise_layers[l](y,iter=iter)))
                     else:
-                        x = self.active_unit(y)
+                        x = self.apply_dropout(self.active_unit(y))
         else:
             for l in range(len(self.conv_layers) - 1):
                 if self.use_noisy_convolution:
                     if self.use_noise_layers:
-                        x = self.active_unit(self.noise_layers[l](self.conv_layers[l](x,iter=iter),iter=iter))
+                        x = self.apply_dropout(self.active_unit(self.noise_layers[l](self.conv_layers[l](x,iter=iter),iter=iter)))
                     else:
-                        x = self.active_unit(self.conv_layers[l](x,iter=iter))
+                        x = self.apply_dropout(self.active_unit(self.conv_layers[l](x,iter=iter)))
                 else:
                     if self.use_noise_layers:
-                        x = self.active_unit(self.noise_layers[l](self.conv_layers[l](x),iter=iter))
+                        x = self.apply_dropout(self.active_unit(self.noise_layers[l](self.conv_layers[l](x),iter=iter)))
                     else:
-                        x = self.active_unit(self.conv_layers[l](x))
+                        x = self.apply_dropout(self.active_unit(self.conv_layers[l](x)))
 
 
         # and now apply the last one without an activation for now
@@ -843,7 +878,8 @@ class Unet_no_skip(DeepNetwork):
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.down_path_2_1 = conv_norm_in_rel(dim, 16, 32, kernel_size=3, im_sz=im_sz_down_1, stride=2, active_unit='leaky_relu', same_padding=True,
                                               normalization_type=self.normalization_type,
@@ -851,7 +887,8 @@ class Unet_no_skip(DeepNetwork):
                                               noisy_convolution_std=self.noisy_convolution_std,
                                               noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                               use_noise_layer=self.use_noise_layers,
-                                              noise_layer_std=self.noise_layer_std
+                                              noise_layer_std=self.noise_layer_std,
+                                              start_reducing_from_iter=self.start_reducing_from_iter
                                               )
         self.down_path_2_2 = conv_norm_in_rel(dim, 32, 32, kernel_size=3, im_sz=im_sz_down_1, stride=1, active_unit='leaky_relu', same_padding=True,
                                               normalization_type=self.normalization_type,
@@ -859,7 +896,8 @@ class Unet_no_skip(DeepNetwork):
                                               noisy_convolution_std=self.noisy_convolution_std,
                                               noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                               use_noise_layer=self.use_noise_layers,
-                                              noise_layer_std=self.noise_layer_std
+                                              noise_layer_std=self.noise_layer_std,
+                                              start_reducing_from_iter=self.start_reducing_from_iter
                                               )
         self.down_path_4_1 = conv_norm_in_rel(dim, 32, 32, kernel_size=3, im_sz=im_sz_down_2, stride=2, active_unit='leaky_relu', same_padding=True,
                                               normalization_type=self.normalization_type,
@@ -867,7 +905,8 @@ class Unet_no_skip(DeepNetwork):
                                               noisy_convolution_std=self.noisy_convolution_std,
                                               noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                               use_noise_layer=self.use_noise_layers,
-                                              noise_layer_std=self.noise_layer_std
+                                              noise_layer_std=self.noise_layer_std,
+                                              start_reducing_from_iter=self.start_reducing_from_iter
                                               )
         self.down_path_4_2 = conv_norm_in_rel(dim, 32, 32, kernel_size=3, im_sz=im_sz_down_2, stride=1, active_unit='leaky_relu', same_padding=True,
                                               normalization_type=self.normalization_type,
@@ -875,7 +914,8 @@ class Unet_no_skip(DeepNetwork):
                                               noisy_convolution_std=self.noisy_convolution_std,
                                               noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                               use_noise_layer=self.use_noise_layers,
-                                              noise_layer_std=self.noise_layer_std
+                                              noise_layer_std=self.noise_layer_std,
+                                              start_reducing_from_iter=self.start_reducing_from_iter
                                               )
         self.down_path_8_1 = conv_norm_in_rel(dim, 32, 64, kernel_size=3, im_sz=im_sz_down_3, stride=2, active_unit='leaky_relu', same_padding=True,
                                               normalization_type=self.normalization_type,
@@ -883,7 +923,8 @@ class Unet_no_skip(DeepNetwork):
                                               noisy_convolution_std=self.noisy_convolution_std,
                                               noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                               use_noise_layer=self.use_noise_layers,
-                                              noise_layer_std=self.noise_layer_std
+                                              noise_layer_std=self.noise_layer_std,
+                                              start_reducing_from_iter=self.start_reducing_from_iter
                                               )
         self.down_path_8_2 = conv_norm_in_rel(dim, 64, 64, kernel_size=3, im_sz=im_sz_down_3, stride=1, active_unit='leaky_relu', same_padding=True,
                                               normalization_type=self.normalization_type,
@@ -891,7 +932,8 @@ class Unet_no_skip(DeepNetwork):
                                               noisy_convolution_std=self.noisy_convolution_std,
                                               noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                               use_noise_layer=self.use_noise_layers,
-                                              noise_layer_std=self.noise_layer_std
+                                              noise_layer_std=self.noise_layer_std,
+                                              start_reducing_from_iter=self.start_reducing_from_iter
                                               )
         self.down_path_16 = conv_norm_in_rel(dim, 64, 64, kernel_size=3, im_sz=im_sz_down_4, stride=2, active_unit='leaky_relu', same_padding=True,
                                              normalization_type=self.normalization_type,
@@ -899,7 +941,8 @@ class Unet_no_skip(DeepNetwork):
                                              noisy_convolution_std=self.noisy_convolution_std,
                                              noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                              use_noise_layer=self.use_noise_layers,
-                                             noise_layer_std=self.noise_layer_std
+                                             noise_layer_std=self.noise_layer_std,
+                                             start_reducing_from_iter=self.start_reducing_from_iter
                                              )
 
 
@@ -910,7 +953,8 @@ class Unet_no_skip(DeepNetwork):
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.up_path_8_2 = conv_norm_in_rel(dim, 64, 64, kernel_size=3, im_sz=im_sz_down_3, stride=1, active_unit='leaky_relu', same_padding=True,
                                             normalization_type=self.normalization_type,
@@ -918,7 +962,8 @@ class Unet_no_skip(DeepNetwork):
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.up_path_4_1 = conv_norm_in_rel(dim, 64, 64, kernel_size=2, im_sz=im_sz_down_2, stride=2, active_unit='leaky_relu', same_padding=False,
                                             normalization_type=self.normalization_type,reverse=True,
@@ -926,7 +971,8 @@ class Unet_no_skip(DeepNetwork):
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.up_path_4_2 = conv_norm_in_rel(dim, 64, 32, kernel_size=3, im_sz=im_sz_down_2, stride=1, active_unit='leaky_relu', same_padding=True,
                                             normalization_type=self.normalization_type,
@@ -934,7 +980,8 @@ class Unet_no_skip(DeepNetwork):
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.up_path_2_1 = conv_norm_in_rel(dim, 32, 32, kernel_size=2, im_sz=im_sz_down_1, stride=2, active_unit='leaky_relu', same_padding=False,
                                             normalization_type=self.normalization_type,
@@ -942,7 +989,8 @@ class Unet_no_skip(DeepNetwork):
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
         self.up_path_1_1 = conv_norm_in_rel(dim, 8, 8, kernel_size=2, im_sz=im_sz, stride=2, active_unit='None', same_padding=False,
                                             normalization_type=self.normalization_type, reverse=True,
@@ -950,7 +998,8 @@ class Unet_no_skip(DeepNetwork):
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std
+                                            noise_layer_std=self.noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
 
         if self.normalize_last_layer:
@@ -964,7 +1013,8 @@ class Unet_no_skip(DeepNetwork):
                                             noisy_convolution_std=self.noisy_convolution_std,
                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
                                             use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.last_noise_layer_std
+                                            noise_layer_std=self.last_noise_layer_std,
+                                            start_reducing_from_iter=self.start_reducing_from_iter
                                             )
 
     def forward(self, x):

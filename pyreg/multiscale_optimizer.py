@@ -582,6 +582,8 @@ class ImageRegistrationOptimizer(Optimizer):
         """how often the figures are updated; each self.visualize_step-th iteration"""
         self.nrOfIterations = None
         """the maximum number of iterations for the optimizer"""
+        self.current_epoch = None
+        """Can be set externally, so the optimizer knowns in which epoch we are"""
 
         self.save_fig_path=None
         self.save_fig=None
@@ -593,6 +595,12 @@ class ImageRegistrationOptimizer(Optimizer):
         self.light_analysis_on = None
         self.limit_max_batch = -1
 
+
+    def set_current_epoch(self,current_epoch):
+        self.current_epoch = current_epoch
+
+    def get_current_epoch(self):
+        return self.current_epoch
 
     def set_light_analysis_on(self, light_analysis_on):
         self.light_analysis_on = light_analysis_on
@@ -1392,7 +1400,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # 2) Compute loss
 
         # first define variables that will be passed to the model and the criterion (for further use)
-        opt_variables = {'iter': self.iter_count}
+        opt_variables = {'iter': self.iter_count,'epoch': self.current_epoch}
 
         if self.useMap:
             if self.mapLowResFactor is not None:
@@ -2589,6 +2597,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                 # images need to be set before calling _set_all_still_missing_parameters
                 self.ssOpt.set_source_image(current_source_batch)
                 self.ssOpt.set_target_image(current_target_batch)
+                self.ssOpt.set_current_epoch(iter_epoch)
 
                 if initialize_optimizer:
                     # to make sure we have the model initialized, force parameter installation
@@ -2609,7 +2618,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
                     if load_shared_parameters_before_first_epoch:
                         print('Loading the shared parameters.')
-                        self.ssOpt.set_sgd_shared_model_parameters_and_optimizer_states(torch.load(shared_parameter_filename))
+                        self.ssOpt.set_shared_model_parameters(torch.load(shared_parameter_filename))
 
                 last_batch_size = batch_size
 

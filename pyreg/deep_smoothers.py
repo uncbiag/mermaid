@@ -1475,10 +1475,11 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         return self.current_penalty
 
     @abstractmethod
-    def _compute_pre_weights(self,x):
+    def _compute_pre_weights(self,x,iter=0):
         """
         Method which generates the output of a neural network (before it gets mapped to the pre-weights
         :param x: input to the network
+        :param iter: iteration or epoch (for batch-based optimization)
         :return: output of the network
         """
         pass
@@ -1509,7 +1510,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
 
         return weights
 
-    def forward(self, I, additional_inputs, global_multi_gaussian_weights, gaussian_fourier_filter_generator, retain_weights=False):
+    def forward(self, I, additional_inputs, global_multi_gaussian_weights, gaussian_fourier_filter_generator, iter=0, retain_weights=False):
 
         # format of multi_smooth_v is multi_v x batch x channels x X x Y
         # (channels here are the vector field components)
@@ -1558,7 +1559,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         if self.use_target_image_as_input:
             x = torch.cat([x, sI1], dim=1)
 
-        pre_weights = self._compute_pre_weights(x, I, global_multi_gaussian_weights)
+        pre_weights = self._compute_pre_weights(x, I, global_multi_gaussian_weights, iter=iter)
 
         # compute the total variation penalty; compute this on the pre (non-smoothed) weights
         total_variation_penalty = MyTensor(1).zero_()
@@ -1631,15 +1632,16 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         current_diffusion_penalty = self.diffusion_weight_penalty * diffusion_penalty
 
         if self.weighting_type == 'w_K_w':
-            current_omt_penalty = self.omt_weight_penalty*self.omt_loss(weights=weights**2, gaussian_stds=self.gaussian_stds)
+            omt_penalty = self.omt_loss(weights=weights**2, gaussian_stds=self.gaussian_stds)
         else:
-            current_omt_penalty = self.omt_weight_penalty*self.omt_loss(weights=weights, gaussian_stds=self.gaussian_stds)
+            omt_penalty = self.omt_loss(weights=weights, gaussian_stds=self.gaussian_stds)
 
+        current_omt_penalty = self.omt_weight_penalty * omt_penalty
         current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
         self.current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty
 
-        print('TV_penalty = ' + str(current_tv_penalty.detach().cpu().numpy()) + \
-              '; OMT_penalty = ' + str(current_omt_penalty.detach().cpu().numpy()) + \
+        print('TV/TV_penalty = ' + str(total_variation_penalty.detach().cpu().numpy()) + '/' + str(current_tv_penalty.detach().cpu().numpy()) + \
+              '; OMT/OMT_penalty = ' + str(omt_penalty.detach().cpu().numpy()) + '/' + str(current_omt_penalty.detach().cpu().numpy()) + \
               '; diffusion_penalty = ' + str(current_diffusion_penalty.detach().cpu().numpy()))
 
 
@@ -1668,6 +1670,8 @@ class GeneralNetworkWeightedSmoothingModel(DeepSmoothingModel):
                                                                      params=params)
 
 
+        self.randomly_initialize_network = self.params[('randomly_initialize_network', True, 'Randomly initialize the network weights')]
+        """Can be set to false, to load a previously saved network"""
 
         self.network = None
         self.network_type = network_type
@@ -1714,14 +1718,21 @@ class GeneralNetworkWeightedSmoothingModel(DeepSmoothingModel):
             self.network = network_type(dim=dim, n_in_channel=nr_of_input_channels, n_out_channel=self.nr_of_gaussians,
                                      im_sz=self.im_sz, params=self.params)
 
-        self.network.initialize_network_weights()
+        # todo: Check how the initialization of these weights works (for training and testing)
+        # todo: this may explain the issue w/ batch normalization
 
-    def _compute_pre_weights(self, x, I, global_multi_gaussian_weights):
+        if self.randomly_initialize_network:
+            self.network.initialize_network_weights()
+            print('INFO: nn weights WERE randomly initialized')
+        else:
+            print('INFO: nn weights were NOT randomly initialized')
+
+    def _compute_pre_weights(self, x_in, I, global_multi_gaussian_weights, iter=0):
 
         # now let's apply all the convolution layers, until the last
         # (because the last one is not relu-ed
 
-        x = self.network(x)
+        x = self.network(x_in,iter=iter)
 
         if self.weighting_type=='sqrt_w_K_sqrt_w' or self.weighting_type=='w_K':
 
@@ -1801,7 +1812,7 @@ class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
         else:
             raise ValueError('Unknown cluster number {}. Needs to be 0,1, or 2.'.format(cluster_number))
 
-    def _compute_pre_weights(self, x, I, global_multi_gaussian_weights):
+    def _compute_pre_weights(self, x, I, global_multi_gaussian_weights, iter=0):
 
         # get the size of the batch x channels x X x Y
         sz = x.size()
