@@ -37,7 +37,7 @@ class STNFunction_ND_BCXYZ(Module):
    Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox).
    """
 
-    def __init__(self, spacing, zero_boundary = True):
+    def __init__(self, spacing, zero_boundary = False):
         """
         Constructor
 

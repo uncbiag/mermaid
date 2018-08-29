@@ -1046,11 +1046,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.map0_inverse_external is not None:
                 self.initialInverseMap = self.map0_inverse_external
             else:
-                if self.map0_external is None:
-                    # will be the same identity map in this case
-                    self.initialInverseMap = self.initialMap
-                else:
-                    self.initialInverseMap = None
+                id =utils.identity_map_multiN(self.sz, self.spacing)
+                self.initialInverseMap =  AdaptVal(torch.from_numpy(id))
 
             if self.mapLowResFactor is not None:
                 # create a lower resolution map for the computations
@@ -1063,10 +1060,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     self.lowResInitialMap = AdaptVal(lowres_id)
 
                 if self.map0_inverse_external is None:
-                    if self.map0_external is None:
-                        self.lowResInitialInverseMap = self.lowResInitialMap
-                    else:
-                        self.lowResInitialInverseMap = None
+                    lowres_id = utils.identity_map_multiN(self.lowResSize, self.lowResSpacing)
+                    self.lowResInitialInverseMap = AdaptVal(torch.from_numpy(lowres_id))
                 else:
                     sampler = IS.ResampleImage()
                     lowres_inverse_id, _ = sampler.downsample_image_to_size(self.initialInverseMap, self.spacing, self.lowResSize[2::],

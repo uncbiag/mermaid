@@ -336,7 +336,7 @@ def compute_normalized_gaussian(X, mu, sig):
         raise ValueError('Can only compute Gaussians in dimensions 1-3')
 
 
-def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order,zero_boundary=True):
+def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order,zero_boundary=False):
 
     if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
@@ -351,7 +351,7 @@ def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order,zero_boundar
 
     return I1_warped
 
-def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order,zero_boundary=True):
+def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order,zero_boundary=False):
 
     if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
@@ -366,7 +366,7 @@ def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order,zero_boundar
 
     return I1_warped
 
-def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order,zero_boundary=True):
+def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order,zero_boundary=False):
 
     if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
@@ -382,7 +382,7 @@ def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order,zero_boundar
     return I1_warped
 
 
-def compute_warped_image(I0,phi,spacing,spline_order,zero_boundary=True):
+def compute_warped_image(I0,phi,spacing,spline_order,zero_boundary=False):
     """
     Warps image.
 
@@ -397,7 +397,7 @@ def compute_warped_image(I0,phi,spacing,spline_order,zero_boundary=True):
                                         phi.view(torch.Size([1]+ list(phi.size()))),spacing,spline_order,zero_boundary)
     return Iw.view(I0.size())
 
-def compute_warped_image_multiNC(I0, phi, spacing, spline_order,zero_boundary=True):
+def compute_warped_image_multiNC(I0, phi, spacing, spline_order,zero_boundary=False):
     """
     Warps image.
 
