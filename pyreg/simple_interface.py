@@ -195,8 +195,8 @@ class RegisterImagePair(object):
         """
 
         if self.opt is not None:
-            self.opt.set_initial_map(map0)
-            self.opt.set_initial_inverse_map(initial_inverse_map)
+            self.opt.set_initial_map(map0, initial_inverse_map)
+            # self.opt.set_initial_inverse_map(initial_inverse_map)
             self.delayed_initial_map_still_to_be_set = False
         else:
             self.delayed_initial_map_still_to_be_set = True

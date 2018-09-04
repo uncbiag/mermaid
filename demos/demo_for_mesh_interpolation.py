@@ -14,10 +14,10 @@ import torch
 import torch.nn.functional as F
 import random
 from pyreg.utils import apply_affine_transform_to_map_multiNC, get_inverse_affine_param, compute_warped_image_multiNC, \
-    update_affine_param
+    update_affine_param, identity_map_multiN
 import pyreg.simple_interface as SI
 import pyreg.fileio as FIO
-
+torch.cuda.set_device(1)
     
 def setup_pair_register():
     """
@@ -50,12 +50,14 @@ def register_pair_img(moving, target, spacing, register_param, hdrc0=None):
     model0_name = register_param['model0_name']
     model1_name = register_param['model1_name']
 
+    #moving[np.where(moving==0)]=0.6
     si.set_initial_map(None)
     si.register_images(moving, target, spacing,
                             model_name=model0_name,
                             use_multi_scale=True,
+                       visualize_step=None,
                             rel_ftol=1e-7,
-                            json_config_out_filename='cur_settings.json',
+                            json_config_out_filename='output_cur_settings.json',
                             compute_inverse_map=True,
                             params='cur_settings.json')
 
@@ -63,6 +65,14 @@ def register_pair_img(moving, target, spacing, register_param, hdrc0=None):
     affine_param = Ab.detach().cpu().numpy().reshape((4, 3))
     affine_param = np.transpose(affine_param)
     print(" the affine param is {}".format(affine_param))
+
+    inv_Ab = get_inverse_affine_param(Ab.detach())
+    #id_Ab = update_affine_param(Ab,inv_Ab)
+    identity_map = torch.Tensor(identity_map_multiN(moving.shape, spacing)).cuda()
+    inversed_affine_map = apply_affine_transform_to_map_multiNC(inv_Ab, identity_map)
+
+
+
 
     print("let's come to step 2 ")
 
@@ -73,6 +83,7 @@ def register_pair_img(moving, target, spacing, register_param, hdrc0=None):
     si.register_images(moving, target, spacing,
                             model_name=model1_name,
                             use_multi_scale=True,
+                       visualize_step=None,
                             rel_ftol=1e-7,
                             json_config_out_filename='output_settings_lbfgs.json',
                             compute_inverse_map=True,
@@ -80,10 +91,16 @@ def register_pair_img(moving, target, spacing, register_param, hdrc0=None):
 
     warped_image = si.get_warped_image()
     inversed_map_svf = si.get_inverse_map().detach()
-    inv_Ab = get_inverse_affine_param(Ab.detach())
-    inv_Ab = update_affine_param(inv_Ab, inv_Ab)
-    inversed_map = apply_affine_transform_to_map_multiNC(inv_Ab, inversed_map_svf)
-    print(inversed_map.shape)
+    inversed_map =  compute_warped_image_multiNC(inversed_affine_map,inversed_map_svf,spacing,1)
+
+    #inv_Ab = update_affine_param(inv_Ab, inv_Ab)
+    #inversed_map = apply_affine_transform_to_map_multiNC(inv_Ab, inversed_map_svf)
+    #forward_map = si.get_map()
+    forward_map=si.opt.optimizer.ssOpt.get_map()
+    forward_inversed_map =  compute_warped_image_multiNC(forward_map, inversed_map,spacing,1)
+    difference = forward_inversed_map.detach().cpu().numpy()-identity_map.detach().cpu().numpy()
+    print(difference)
+    print(np.sum(difference))
 
     return inversed_map, warped_image
 
@@ -103,13 +120,13 @@ def do_points_interoplation(inversed_map, points, spacing):
         points = torch.from_numpy(points)
 
     #points_wraped = compute_warped_image_multiNC(inversed_map, poipointsnts, spacing=spacing, spline_order=1, zero_boundary=True)
-    points_wraped = F.grid_sample(inversed_map, points.permute([0, 2, 3, 4, 1]), mode='trilinear', padding_mode='zeros')
+    points_wraped = F.grid_sample(inversed_map, points.permute([0, 2, 3, 4, 1]), mode='bilinear', padding_mode='border')
     return points_wraped
 
 
 def main():
-    moving_img_path = '/playpen-raid/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled/9002116_20050715_SAG_3D_DESS_RIGHT_10423916_image.nii.gz'
-    target_img_path = '/playpen-raid/zhenlinx/Data/OAI_segmentation/Nifti_6sets_rescaled/9002116_20060804_SAG_3D_DESS_RIGHT_11269909_image.nii.gz'
+    moving_img_path = '/playpen/zhenlinx/Data/OAI_segmentation/Nifti_rescaled/9085290_20040915_SAG_3D_DESS_LEFT_016610243503_image.nii.gz'
+    target_img_path = '/playpen/zhenlinx/Data/OAI_segmentation/Nifti_rescaled/9085290_20051103_SAG_3D_DESS_LEFT_016610952703_image.nii.gz'
 
     register_param = setup_pair_register()
     moving,target, spacing, _ = read_source_and_moving_img(moving_img_path, target_img_path)

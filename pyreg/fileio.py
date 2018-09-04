@@ -470,9 +470,9 @@ class ImageIO(FileIO):
             vec_view_np[...,d]=0
 
         if 'original_spacing' in hdr:
-            vec_im.SetSpacing(self._convert_numpy_vector_to_itk(np.flipud(hdr['original_spacing'])))
+            vec_im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['original_spacing']))
         else:
-            vec_im.SetSpacing(self._convert_numpy_vector_to_itk(np.flipud(hdr['spacing'])))
+            vec_im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['spacing']))
 
         vec_im.SetOrigin(self._convert_numpy_vector_to_itk(hdr['space origin']))
         vec_im.SetDirection(self._convert_numpy_matrix_to_itk(hdr['space directions']))

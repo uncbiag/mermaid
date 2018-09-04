@@ -95,7 +95,7 @@ class ResampleImage(object):
 
         return Iz,newSpacing
 
-    def upsample_image_to_size(self,I,spacing,desiredSize,spline_order,zero_boundary=True):
+    def upsample_image_to_size(self,I,spacing,desiredSize,spline_order,zero_boundary=False):
         """
         Upsamples an image to a given desired size
         
@@ -131,7 +131,7 @@ class ResampleImage(object):
 
         return smoothedImage_multiNC,newspacing
 
-    def downsample_image_to_size(self,I,spacing,desiredSize, spline_order,zero_boundary=True):
+    def downsample_image_to_size(self,I,spacing,desiredSize, spline_order,zero_boundary=False):
         """
         Downsamples an image to a given desired size
 
