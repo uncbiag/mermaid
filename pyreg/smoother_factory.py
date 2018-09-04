@@ -919,9 +919,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.smallest_gaussian_std = self.multi_gaussian_stds.min()
         """The smallest of the standard deviations"""
 
-        self.network_penalty = params[('network_penalty', 0.0, 'factor by which the L2 norm of network weights is penalized')]
-        """penalty factor for L2 norm of network weights"""
-
         self.optimize_over_smoother_stds = params[('optimize_over_smoother_stds', False, 'if set to true the smoother will optimize over standard deviations')]
         """determines if we should optimize over the smoother standard deviations"""
 
@@ -1256,18 +1253,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             self.pre_multi_gaussian_weights_optimizer_params.data[i] = self.multi_gaussian_weights[i]/self.global_parameter_scaling_factor
         return self.pre_multi_gaussian_weights_optimizer_params
 
-    def _compute_current_nn_weight_l2(self):
-
-        total_number_of_parameters = 1
-        par_penalty = MyTensor(1).zero_()
-        for p in self.ws.parameters():
-            total_number_of_parameters += p.numel()
-            par_penalty += (p ** 2).sum()
-
-        par_penalty /= total_number_of_parameters
-
-        return par_penalty
-
     def get_penalty(self):
         # puts an squared two-norm penalty on the weights as deviations from the baseline
         # also adds a penalty for the network parameters
@@ -1282,7 +1267,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         else:
 
             penalty = self.ws.get_current_penalty()
-            penalty += self.network_penalty*self._compute_current_nn_weight_l2()
+            penalty += self.ws.compute_l2_parameter_weight_penalty()
 
         return penalty
 

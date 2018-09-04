@@ -1257,6 +1257,9 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         self.use_source_image_as_input = self.params[('use_source_image_as_input', False, 'If true, uses the source image as additional input')]
         self.use_target_image_as_input = self.params[('use_target_image_as_input', False, 'If true, uses the target image as additional input')]
 
+        self.network_penalty = self.params[('network_penalty', 1e-5, 'factor by which the L2 norm of network weights is penalized')]
+        """penalty factor for L2 norm of network weights"""
+
 
         # loss functions
         self.tv_loss = dn.TotalVariationLoss(dim=dim, im_sz=im_sz, spacing=spacing,
@@ -1489,6 +1492,13 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         """
         pass
 
+    @abstractmethod
+    def compute_l2_parameter_weight_penalty(self):
+        """
+        Computes the l2 penalty over all the parameters
+        :return: n/a
+        """
+        pass
 
     def _compute_weights_from_pre_weights(self, pre_weights):
         # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
@@ -1760,6 +1770,18 @@ class GeneralNetworkWeightedSmoothingModel(DeepSmoothingModel):
         else:
             print('INFO: nn weights were NOT randomly initialized')
 
+    def compute_l2_parameter_weight_penalty(self):
+
+        total_number_of_parameters = 1
+        par_penalty = MyTensor(1).zero_()
+        for p in self.network.parameters():
+            total_number_of_parameters += p.numel()
+            par_penalty += (p ** 2).sum()
+
+        par_penalty /= total_number_of_parameters
+
+        return par_penalty
+
     def _compute_pre_weights(self, x_in, I, global_multi_gaussian_weights, iter=0):
 
         # now let's apply all the convolution layers, until the last
@@ -1843,6 +1865,18 @@ class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
             return (I[:,0,...]>1.5)
         else:
             raise ValueError('Unknown cluster number {}. Needs to be 0,1, or 2.'.format(cluster_number))
+
+    def compute_l2_parameter_weight_penalty(self):
+
+        total_number_of_parameters = 1
+        par_penalty = MyTensor(1).zero_()
+        p = self.pre_lsm_weights
+        total_number_of_parameters += p.numel()
+        par_penalty += (p ** 2).sum()
+
+        par_penalty /= total_number_of_parameters
+
+        return par_penalty
 
     def _compute_pre_weights(self, x, I, global_multi_gaussian_weights, iter=0):
 

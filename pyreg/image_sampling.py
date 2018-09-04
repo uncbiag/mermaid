@@ -31,7 +31,7 @@ class ResampleImage(object):
     """
 
     def __init__(self):
-        self.params = MP.ParameterDict()
+        self.params = MP.ParameterDict(printSettings=False)
         self.params['iter']=0
 
     def set_iter(self,nrIter):

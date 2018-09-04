@@ -169,8 +169,8 @@ reconstruction_weight = 100.0
 only_use_reconstruction_loss = False
 disable_weight_range_penalty = False
 
-lr = 0.1
-seed = 1
+lr = 0.25
+seed = 75
 
 if seed is not None:
     print('Setting the seed to: {}'.format(seed))
@@ -204,6 +204,7 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
     running_totalvariation_loss = 0.0
     running_omt_loss = 0.0
     running_weight_range_loss = 0.0
+    running_l2_weight_loss = 0.0
     running_effective_weight_range_loss = 0.0
 
     for i, data in enumerate(trainloader, 0):
@@ -296,11 +297,13 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
             used_weight_range_penalty = current_weight_range_penalty
             effective_weight_range_penalty = current_weight_range_penalty
 
+        current_l2_weight_penalty = deep_smoother.compute_l2_parameter_weight_penalty()
+
         # compute the overall loss
         if only_use_reconstruction_loss:
-            loss = reconstruction_loss + used_weight_range_penalty
+            loss = reconstruction_loss + used_weight_range_penalty + current_l2_weight_penalty
         else:
-            loss = reconstruction_loss + used_weight_range_penalty + current_tv_penalty + current_omt_penalty + current_diffusion_penalty
+            loss = reconstruction_loss + used_weight_range_penalty + current_l2_weight_penalty + current_tv_penalty + current_omt_penalty + current_diffusion_penalty
 
         # compute the gradient
         loss.backward()
@@ -317,25 +320,29 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
             running_effective_weight_range_loss += effective_weight_range_penalty.item() / nr_of_datasets
             running_weight_range_loss += effective_weight_range_penalty.item() / nr_of_datasets
 
+            running_l2_weight_loss += current_l2_weight_penalty.item() / nr_of_datasets
+
             if i == nr_of_batches - 1:
                 # print statistics
                 print(
-                    'Epoch: {}; loss={:.6f}, r_loss={:.6f}, tv_loss={:.6f}, omt_loss={:.6f}, wr_loss={:.6f}'
+                    'Epoch: {}; loss={:.6f}, r_loss={:.6f}, tv_loss={:.6f}, omt_loss={:.6f}, wr_loss={:.6f}, weight_loss={:.6f}'
                     .format(epoch + 1, running_loss,
                             running_reconstruction_loss,
                             running_totalvariation_loss,
                             running_omt_loss,
-                            running_weight_range_loss))
+                            running_weight_range_loss,
+                            running_l2_weight_loss))
         else:
             # print statistics
 
             print(
-                'Epoch: {}; batch: {}; loss={:.6f}, r_loss={:.6f}, tv_loss={:.6f}, omt_loss={:.6f}, wr_loss={:.6f}'
+                'Epoch: {}; batch: {}; loss={:.6f}, r_loss={:.6f}, tv_loss={:.6f}, omt_loss={:.6f}, wr_loss={:.6f}, weight_loss={:.6f}'
                 .format(epoch + 1, i + 1, loss.item(),
                         reconstruction_loss.item(),
                         current_tv_penalty.item(),
                         current_omt_penalty.item(),
-                        effective_weight_range_penalty.item()))
+                        effective_weight_range_penalty.item(),
+                        current_l2_weight_penalty.item()))
 
         if i == 0 and (epoch % 10 == 0):
 
