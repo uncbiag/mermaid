@@ -73,14 +73,16 @@ def DimNormalization(dim,normalization_type,nr_channels,im_sz):
     else:
         return None
 
+    #todo: make the momentum a parameter
+
     if normalization_type.lower()=='batch':
-        return DimBatchNorm(dim)(nr_channels, eps=0.0001, momentum=0.1, affine=True)
+        return DimBatchNorm(dim)(nr_channels, eps=0.0001, momentum=0.75, affine=True)
     elif normalization_type.lower()=='layer':
         int_im_sz = [int(elem) for elem in im_sz]
         layer_sz = [int(nr_channels)] + int_im_sz
         return nn.LayerNorm(layer_sz)
     elif normalization_type.lower()=='instance':
-        return DimInstanceNorm(dim)(nr_channels, eps=0.0001, momentum=0.1, affine=True)
+        return DimInstanceNorm(dim)(nr_channels, eps=0.0001, momentum=0.75, affine=True)
     elif normalization_type.lower()=='group':
         channels_per_group = nr_channels # just create one channel here
         nr_groups = max(1,nr_channels//channels_per_group)
@@ -1040,6 +1042,33 @@ class Unet_no_skip(DeepNetwork):
         return output
 
 # custom loss function
+
+class WeightInputRangeLoss(nn.Module):
+    def __init__(self):
+        super(WeightInputRangeLoss, self).__init__()
+
+    def forward(self, x, spacing, use_weighted_linear_softmax=False, weights=None):
+        volumeElement = spacing.prod()
+        batch_size = x.size()[0]
+
+        if not use_weighted_linear_softmax:
+            # checks what is hit by the clamping
+            xd = x-torch.clamp(x,0.0,1.0)
+            loss = (xd**2).sum()*volumeElement/batch_size
+        else:
+            # weights are in dimension 1; assumes that weighted linear softmax is used
+            # Here, we account for the fact that the input is modulated by the global weights
+            sz = x.size()
+            input_offset = x.sum(dim=1) / sz[1]
+
+            loss = MyTensor(1).zero_()
+
+            for c in range(sz[1]):
+                eff_input = weights[c] + x[:, c, ...] - input_offset
+                eff_input_d = eff_input-torch.clamp(eff_input,0.0,1.0)
+                loss += (eff_input_d**2).sum()*volumeElement/batch_size
+
+        return loss
 
 class HLoss(nn.Module):
     def __init__(self):

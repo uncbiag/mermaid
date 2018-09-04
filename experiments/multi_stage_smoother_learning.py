@@ -106,7 +106,7 @@ def get_n_pairwise_image_combinations(input_directory,n=10,no_random_shuffle=Fal
             if i!=j:
                 c_target = all_files[j]
                 if no_random_shuffle:
-                    print(str(current_n) + ': Source: ' + c_source + ' -> target: ' + c_target)
+                    print(str(current_n) + ': Source: ' +  c_source + ' -> target: ' + c_target)
                 source_files.append(c_source)
                 target_files.append(c_target)
                 source_ids.append(i)
