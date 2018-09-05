@@ -1054,7 +1054,8 @@ class WeightInputRangeLoss(nn.Module):
         if not use_weighted_linear_softmax:
             # checks what is hit by the clamping
             xd = x-torch.clamp(x,0.0,1.0)
-            loss = (xd**2).sum()*volumeElement/batch_size
+            #loss = (xd**2).sum()*volumeElement/batch_size
+            loss = torch.abs(xd).sum() * volumeElement / batch_size
         else:
             # weights are in dimension 1; assumes that weighted linear softmax is used
             # Here, we account for the fact that the input is modulated by the global weights
@@ -1066,7 +1067,8 @@ class WeightInputRangeLoss(nn.Module):
             for c in range(sz[1]):
                 eff_input = weights[c] + x[:, c, ...] - input_offset
                 eff_input_d = eff_input-torch.clamp(eff_input,0.0,1.0)
-                loss += (eff_input_d**2).sum()*volumeElement/batch_size
+                #loss += (eff_input_d**2).sum()*volumeElement/batch_size
+                loss += torch.abs(eff_input_d).sum() * volumeElement / batch_size
 
         return loss
 
