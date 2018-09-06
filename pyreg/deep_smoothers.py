@@ -235,11 +235,10 @@ def _compute_total_variation(d, spacing, pnorm=2):
     # just do the standard component-wise Euclidean norm of the gradient, but muliplied locally by a weight
     # format needs to be B x X x Y x Z
 
-    batch_size = d.size()[0]
     volumeElement = spacing.prod()
 
     tv = _compute_local_norm_of_gradient(d,spacing,pnorm)
-    return (tv).sum()*volumeElement/batch_size
+    return (tv).sum()*volumeElement
 
 
 def weighted_softmax(input, dim=None, weights=None ):
@@ -1444,26 +1443,23 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
     def _compute_diffusion_1d(self, d):
 
         # need to use torch.abs here to make sure the proper subgradient is computed at zero
-        batch_size = d.size()[0]
         t0 = (self.fdt.dXc(d))**2
 
-        return (t0).sum() * self.volumeElement / batch_size
+        return (t0).sum() * self.volumeElement
 
     def _compute_diffusion_2d(self, d):
 
         # need to use torch.norm here to make sure the proper subgradient is computed at zero
-        batch_size = d.size()[0]
         t0 = self.fdt.dXc(d)**2+self.fdt.dYc(d)**2
 
-        return t0.sum() * self.volumeElement / batch_size
+        return t0.sum() * self.volumeElement
 
     def _compute_diffusion_3d(self, d):
 
         # need to use torch.norm here to make sure the proper subgradient is computed at zero
-        batch_size = d.size()[0]
         t0 = self.fdt.dXc(d)**2 + self.fdt.dYc(d)**2 + self.fdt.dZc(d)**2
 
-        return t0.sum() * self.volumeElement / batch_size
+        return t0.sum() * self.volumeElement
 
     def spatially_average(self, x):
         """
