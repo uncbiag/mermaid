@@ -1051,16 +1051,14 @@ class WeightInputRangeLoss(nn.Module):
 
         if spacing is not None:
             volumeElement = spacing.prod()
-            batch_size = x.size()[0]
         else:
             volumeElement = 1.0
-            batch_size = 1
 
         if not use_weighted_linear_softmax:
             # checks what is hit by the clamping
             xd = x-torch.clamp(x,min_weight,max_weight)
-            loss = (xd**2).sum()*volumeElement/batch_size
-            #loss = torch.abs(xd).sum() * volumeElement / batch_size
+            loss = (xd**2).sum()*volumeElement
+            #loss = torch.abs(xd).sum() * volumeElement
         else:
             # weights are in dimension 1; assumes that weighted linear softmax is used
             # Here, we account for the fact that the input is modulated by the global weights
@@ -1087,8 +1085,8 @@ class WeightInputRangeLoss(nn.Module):
                 else:
                     raise ValueError('Only dimensions {0,1,2,3,4} are supported')
                 eff_input_d = eff_input-torch.clamp(eff_input,min_weight,max_weight)
-                loss += (eff_input_d**2).sum()*volumeElement/batch_size
-                #loss += torch.abs(eff_input_d).sum() * volumeElement / batch_size
+                loss += (eff_input_d**2).sum()*volumeElement
+                #loss += torch.abs(eff_input_d).sum() * volumeElement
 
         return loss
 
@@ -1098,11 +1096,10 @@ class HLoss(nn.Module):
 
     def forward(self, x, spacing):
         volumeElement = spacing.prod()
-        batch_size = x.size()[0]
         b = x*torch.log(x)
         #F.softmax(x, dim=1) * F.log_softmax(x, dim=1)
-        #b = -1.0 * b.sum()*volumeElement/batch_size
-        b = -1.0*b.sum()*volumeElement/batch_size
+        #b = -1.0 * b.sum()*volumeElement
+        b = -1.0*b.sum()*volumeElement
         return b
 
 class GlobalHLoss(nn.Module):
@@ -1150,7 +1147,6 @@ class OMTLoss(nn.Module):
                 'Number of weights need to be the same as number of Gaussians. Format recently changed for weights to B x weights x X x Y')
 
         penalty = MyTensor(1).zero_()
-        batch_size = weights.size()[0]
 
         max_std = max(multi_gaussian_stds)
         min_std = min(multi_gaussian_stds)
@@ -1178,7 +1174,6 @@ class OMTLoss(nn.Module):
             else:
                 penalty /= abs(max_std - min_std) ** self.desired_power
 
-        penalty /= batch_size
         penalty *= self.volume_element
 
         return penalty
@@ -1274,13 +1269,12 @@ class TotalVariationLoss(nn.Module):
             I_edge = I
 
         g_I = deep_smoothers.compute_localized_edge_penalty(I_edge[:, 0, ...], spacing, self.params)
-        batch_size = I.size()[0]
 
         # now computed weighted TV norm channel-by-channel, square it and then take the square root (this is like in color TV)
         for g in range(nr_of_gaussians):
             c_local_norm_grad = deep_smoothers._compute_local_norm_of_gradient(weights[:, g, ...], spacing, pnorm)
 
-            to_sum = g_I * c_local_norm_grad * volumeElement / batch_size
+            to_sum = g_I * c_local_norm_grad * volumeElement
             current_tv = (to_sum).sum()
 
             individual_sum_of_total_variation_penalty[g] = current_tv

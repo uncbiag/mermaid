@@ -66,7 +66,7 @@ class SimilarityMeasure(with_metaclass(ABCMeta, object)):
             for nrI in range(sz[0]):  # loop over all the images
                 sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], I0Source[nrI,...], phi[nrI,...])
 
-        return sim/sz[0] # needs to be normalized based on batch size
+        return sim
 
 
     def compute_similarity_multiC(self, I0, I1, I0Source=None, phi=None):

@@ -1522,6 +1522,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :return: returns tuple: first entry True if termination tolerance was reached, otherwise returns False; second entry if the image was visualized
         """
 
+        current_batch_size = phi_or_warped_image.size()[0]
+
         was_visualized = False
         reached_tolerance = False
 
@@ -1545,7 +1547,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self._add_to_history('relF',self.rel_f[0])
 
             if self.show_iteration_output:
-                print('Iter {iter}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF={relF} {cos}'
+                print('Iter {iter:5d}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF={relF} {cos}'
                       .format(iter=self.iter_count,
                               energy=cur_energy,
                               similarityE=utils.t2np(similarityEnergy.float()),
@@ -1553,6 +1555,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                               optParE=utils.t2np(opt_par_energy.float()),
                               relF=self.rel_f,
                               cos=custom_optimizer_output_string))
+                print('   / image: E={energy}, simE={similarityE}, regE={regE}'
+                      .format(energy=cur_energy/current_batch_size,
+                              similarityE=utils.t2np(similarityEnergy.float())/current_batch_size,
+                              regE=utils.t2np(regEnergy.float())/current_batch_size))
 
             # check if relative convergence tolerance is reached
             if self.rel_f < self.rel_ftol:
@@ -1563,13 +1569,18 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             self._add_to_history('relF',None)
             if self.show_iteration_output:
-                print('Iter {iter}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF=n/a {cos}'
+                print('Iter {iter:5d}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF=n/a {cos}'
                       .format(iter=self.iter_count,
                               energy=cur_energy,
                               similarityE=utils.t2np(similarityEnergy.float()),
                               regE=utils.t2np(regEnergy.float()),
                               optParE=utils.t2np(opt_par_energy.float()),
                               cos=custom_optimizer_output_string))
+                print('   / image: E={energy}, simE={similarityE}, regE={regE}'
+                      .format(energy=cur_energy/current_batch_size,
+                              similarityE=utils.t2np(similarityEnergy.float())/current_batch_size,
+                              regE=utils.t2np(regEnergy.float())/current_batch_size))
+
 
         self.last_energy = cur_energy
         iter = self.iter_count
@@ -2737,6 +2748,8 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                 if (last_energy is not None) and (last_sim_energy is not None) and (last_reg_energy is not None):
                     print('\n\nEpoch {:05d}: Last energies   : E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}], optE=[{:2.5f}]'\
                           .format(iter_epoch-1,last_energy[0],last_sim_energy[0],last_reg_energy[0],last_opt_energy[0]))
+                    print('    / image: Last energies   : E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}]' \
+                        .format(last_energy[0]/batch_size[0], last_sim_energy[0]/batch_size[0], last_reg_energy[0]/batch_size[0]))
                 else:
                     print('\n\n')
 
@@ -2748,12 +2761,18 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.show_sample_optimizer_output:
                 print('Epoch {:05d}: Current energies: E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}], optE=[{:2.5f}]'\
                   .format(iter_epoch,last_energy[0], last_sim_energy[0],last_reg_energy[0],last_opt_energy[0]))
+                print('    / image: Current energies: E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}]' \
+                      .format(last_energy[0]/batch_size[0], last_sim_energy[0]/batch_size[0], last_reg_energy[0]/batch_size[0]))
             else:
                 print('Epoch {:05d}: Current energies: E={:2.5f}:[{:1.2f},{:1.2f}], simE={:2.5f}:[{:1.2f},{:1.2f}], regE={:2.5f}:[{:1.2f},{:1.2f}], optE={:1.2f}:[{:1.2f},{:1.2f}]'\
                       .format(iter_epoch, last_energy[0], cur_min_energy[0], cur_max_energy[0],
                               last_sim_energy[0], cur_min_sim_energy[0], cur_max_sim_energy[0],
                               last_reg_energy[0], cur_min_reg_energy[0], cur_max_reg_energy[0],
                               last_opt_energy[0], cur_min_opt_energy[0], cur_max_opt_energy[0]))
+                print('    / image: Current energies: E={:2.5f}:[{:1.2f},{:1.2f}], simE={:2.5f}:[{:1.2f},{:1.2f}], regE={:2.5f}:[{:1.2f},{:1.2f}]' \
+                    .format(last_energy[0]/batch_size[0], cur_min_energy[0]/batch_size[0], cur_max_energy[0]/batch_size[0],
+                            last_sim_energy[0]/batch_size[0], cur_min_sim_energy[0]/batch_size[0], cur_max_sim_energy[0]/batch_size[0],
+                            last_reg_energy[0]/batch_size[0], cur_min_reg_energy[0]/batch_size[0], cur_max_reg_energy[0]/batch_size[0]))
 
             if self.show_sample_optimizer_output:
                 print('\n\n')

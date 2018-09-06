@@ -1324,7 +1324,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         Ia_mean = Ia.mean().detach().cpu().numpy()
         Ia_std = Ia.std().detach().cpu().numpy()
 
-        print('{}: before: [{:.2f},{:.2f},{:.2f}]({:.2f}); after: [{:.2f},{:.2f},{:.2f}]({:.2f})'.format(iname, Ib_min,Ib_mean,Ib_max,Ib_std,Ia_min,Ia_mean,Ia_max,Ia_std))
+        print('     {}: before: [{:.2f},{:.2f},{:.2f}]({:.2f}); after: [{:.2f},{:.2f},{:.2f}]({:.2f})'.format(iname, Ib_min,Ib_mean,Ib_max,Ib_std,Ia_min,Ia_mean,Ia_max,Ia_std))
 
     def _standardize_input_if_necessary(self, I, momentum=None, I0=None, I1=None):
 
@@ -1602,14 +1602,15 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
 
         current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty + current_preweight_input_range_penalty
 
+        current_batch_size = I.size()[0]
 
-        print('TV/TV_penalty = ' + str(total_variation_penalty.detach().cpu().numpy()) + '/' \
-              + str(current_tv_penalty.detach().cpu().numpy()) + \
-              '; OMT/OMT_penalty = ' + str(omt_penalty.detach().cpu().numpy()) + '/' \
-              + str(current_omt_penalty.detach().cpu().numpy()) + \
-              '; PWI/PWI_penalty = ' + str(preweight_input_range_penalty.detach().cpu().numpy()) + '/' \
-              + str(current_preweight_input_range_penalty.detach().cpu().numpy()) + \
-              '; diffusion_penalty = ' + str(current_diffusion_penalty.detach().cpu().numpy()))
+        print('     TV/TV_penalty = ' + str(total_variation_penalty.detach().cpu().numpy()/current_batch_size) + '/' \
+              + str(current_tv_penalty.detach().cpu().numpy()/current_batch_size) + \
+              '; OMT/OMT_penalty = ' + str(omt_penalty.detach().cpu().numpy()/current_batch_size) + '/' \
+              + str(current_omt_penalty.detach().cpu().numpy()/current_batch_size) + \
+              '; PWI/PWI_penalty = ' + str(preweight_input_range_penalty.detach().cpu().numpy()/current_batch_size) + '/' \
+              + str(current_preweight_input_range_penalty.detach().cpu().numpy()/current_batch_size) + \
+              '; diffusion_penalty = ' + str(current_diffusion_penalty.detach().cpu().numpy()/current_batch_size))
 
         return current_penalty, current_omt_penalty, current_tv_penalty, current_diffusion_penalty, current_preweight_input_range_penalty
 

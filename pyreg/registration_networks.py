@@ -923,8 +923,7 @@ class SVFImageLoss(RegistrationImageLoss):
         :return: returns the regularization energy
         """
 
-        batch_size = self.v.size()[0]
-        return self.regularizer.compute_regularizer_multiN(self.v)/batch_size
+        return self.regularizer.compute_regularizer_multiN(self.v)
 
 
 class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
@@ -973,8 +972,7 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
         m = self.m
         pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
         v = self.smoother.smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
-        batch_size = self.m.size()[0]
-        return self.regularizer.compute_regularizer_multiN(v)/batch_size + self.smoother.get_penalty()
+        return self.regularizer.compute_regularizer_multiN(v) + self.smoother.get_penalty()
 
 class SVFMapNet(SVFNet):
     """
@@ -1045,8 +1043,7 @@ class SVFMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
 
-        batch_size = self.v.size()[0]
-        return self.regularizer.compute_regularizer_multiN(self.v)/batch_size
+        return self.regularizer.compute_regularizer_multiN(self.v)
 
 class DiffusionMapLoss(RegistrationMapLoss):
     """
@@ -1074,8 +1071,7 @@ class DiffusionMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
 
-        batch_size = self.d.size()[0]
-        return self.regularizer.compute_regularizer_multiN(self.d)/batch_size
+        return self.regularizer.compute_regularizer_multiN(self.d)
 
 class TotalVariationMapLoss(RegistrationMapLoss):
     """
@@ -1103,8 +1099,7 @@ class TotalVariationMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
 
-        batch_size = self.d.size()[0]
-        return self.regularizer.compute_regularizer_multiN(self.d)/batch_size
+        return self.regularizer.compute_regularizer_multiN(self.d)
 
 class CurvatureMapLoss(RegistrationMapLoss):
     """
@@ -1132,8 +1127,7 @@ class CurvatureMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
 
-        batch_size = self.d.size()[0]
-        return self.regularizer.compute_regularizer_multiN(self.d)/batch_size
+        return self.regularizer.compute_regularizer_multiN(self.d)
 
 class AffineMapNet(RegistrationNet):
     """
@@ -1370,8 +1364,7 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = self.m.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
@@ -1442,8 +1435,7 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = self.m.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
 
         return reg
 
@@ -1528,8 +1520,7 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = self.m.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
@@ -1614,8 +1605,7 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = self.m.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
@@ -1779,8 +1769,7 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer,smooth_to_compute_regularizer_energy=True)
 
-        batch_size = v.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 
@@ -1845,8 +1834,7 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = v.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 
@@ -1926,8 +1914,7 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = v.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
@@ -2010,6 +1997,5 @@ class SVFScalarMomentumMapLoss(RegistrationMapLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = v.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
