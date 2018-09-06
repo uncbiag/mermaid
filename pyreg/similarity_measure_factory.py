@@ -245,8 +245,8 @@ class NCCSimilarity(SimilarityMeasure):
 
 class LNCCSimilarity(SimilarityMeasure):
     """
-    Computes a normalized-cross correlation based similarity measure between two images.
-    :math:`sim = (1-ncc^2)/(\\sigma^2)`
+    Computes a localized normalized-cross correlation based similarity measure between two images.
+    :math:`ncc = (1-ncc^2)/(\\sigma^2)`
     """
     def __init__(self, spacing, params):
         super(LNCCSimilarity,self).__init__(spacing,params)
@@ -255,13 +255,16 @@ class LNCCSimilarity(SimilarityMeasure):
 
     def __stepup(self,img_sz):
         max_scale  = min(img_sz)
-        if max_scale>64:
-            self.scale = [int(max_scale/8), int(max_scale/4), int(max_scale/2)]
+        if max_scale>128:
+            self.scale = [int(max_scale/16), int(max_scale/8), int(max_scale/4)]
             self.scale_weight = [0.5, 0.3, 0.2]
-        elif max_scale>32:
-            self.scale = [int(max_scale / 4), int(max_scale / 2)]
+        elif max_scale>64:
+            self.scale = [int(max_scale / 8), int(max_scale / 4)]
             self.scale_weight = [0.6,0.4]
-        elif max_scale >16:
+        elif max_scale>32:
+            self.scale = [int(max_scale / 4)]
+            self.scale_weight = [1.0]
+        else :
             self.scale = [int(max_scale / 2)]
             self.scale_weight = [1.0]
         self.num_scale = len(self.scale)
