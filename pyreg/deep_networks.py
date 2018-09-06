@@ -1047,28 +1047,48 @@ class WeightInputRangeLoss(nn.Module):
     def __init__(self):
         super(WeightInputRangeLoss, self).__init__()
 
-    def forward(self, x, spacing, use_weighted_linear_softmax=False, weights=None):
-        volumeElement = spacing.prod()
-        batch_size = x.size()[0]
+    def forward(self, x, spacing, use_weighted_linear_softmax=False, weights=None, min_weight=0.0, max_weight=1.0, dim=None):
+
+        if spacing is not None:
+            volumeElement = spacing.prod()
+            batch_size = x.size()[0]
+        else:
+            volumeElement = 1.0
+            batch_size = 1
 
         if not use_weighted_linear_softmax:
             # checks what is hit by the clamping
-            xd = x-torch.clamp(x,0.0,1.0)
-            #loss = (xd**2).sum()*volumeElement/batch_size
-            loss = torch.abs(xd).sum() * volumeElement / batch_size
+            xd = x-torch.clamp(x,min_weight,max_weight)
+            loss = (xd**2).sum()*volumeElement/batch_size
+            #loss = torch.abs(xd).sum() * volumeElement / batch_size
         else:
             # weights are in dimension 1; assumes that weighted linear softmax is used
             # Here, we account for the fact that the input is modulated by the global weights
+
+            if (weights is None) or (dim is None):
+                raise ValueError('Weights and dim need to be defined to use the weighted linear softmax')
+
             sz = x.size()
-            input_offset = x.sum(dim=1) / sz[1]
+            input_offset = x.sum(dim=dim)/sz[dim]
 
             loss = MyTensor(1).zero_()
 
-            for c in range(sz[1]):
-                eff_input = weights[c] + x[:, c, ...] - input_offset
-                eff_input_d = eff_input-torch.clamp(eff_input,0.0,1.0)
-                #loss += (eff_input_d**2).sum()*volumeElement/batch_size
-                loss += torch.abs(eff_input_d).sum() * volumeElement / batch_size
+            for c in range(sz[dim]):
+                if dim==0:
+                    eff_input = weights[c] + x[c, ...] - input_offset
+                elif dim==1:
+                    eff_input = weights[c] + x[:, c, ...] - input_offset
+                elif dim==2:
+                    eff_input = weights[c] + x[:, :, c, ...] - input_offset
+                elif dim==3:
+                    eff_input = weights[c] + x[:, :, :, c, ...] - input_offset
+                elif dim==4:
+                    eff_input = weights[c] + x[:, :, :, :, c, ...] - input_offset
+                else:
+                    raise ValueError('Only dimensions {0,1,2,3,4} are supported')
+                eff_input_d = eff_input-torch.clamp(eff_input,min_weight,max_weight)
+                loss += (eff_input_d**2).sum()*volumeElement/batch_size
+                #loss += torch.abs(eff_input_d).sum() * volumeElement / batch_size
 
         return loss
 

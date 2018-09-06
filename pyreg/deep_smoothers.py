@@ -509,36 +509,33 @@ def weighted_linear_softmax(input, dim=None, weights=None ):
     # todo: subtracting the input mean (so that the values perturb around the offset and leave the sum constant)
     # todo: seems highly beneficial for training, find a theoretical justification for this (-> tangent space)
 
+    input_offset = input.sum(dim=dim) / sz[dim]
+
     if dim==0:
-        input_offset = input.sum(dim=0)/sz[0]
         norm = torch.zeros_like(input[0,...])
         for c in range(sz[0]):
             norm += torch.clamp(weights[c]+input[c,...]-input_offset,min=0,max=1)
         for c in range(sz[0]):
             ret[c,...] = torch.clamp(weights[c]+input[c,...]-input_offset,min=0,max=1)/norm
     elif dim==1:
-        input_offset = input.sum(dim=1)/sz[1]
         norm = torch.zeros_like(input[:,0, ...])
         for c in range(sz[1]):
             norm += torch.clamp(weights[c]+input[:,c, ...]-input_offset,min=0,max=1)
         for c in range(sz[1]):
             ret[:,c, ...] = torch.clamp(weights[c]+input[:,c, ...]-input_offset,min=0,max=1)/norm
     elif dim==2:
-        input_offset = input.sum(dim=2)/sz[2]
         norm = torch.zeros_like(input[:,:,0, ...])
         for c in range(sz[2]):
             norm += torch.clamp(weights[c]+input[:,:,c, ...]-input_offset,min=0,max=1)
         for c in range(sz[2]):
             ret[:,:,c, ...] = torch.clamp(weights[c]+input[:,:,c, ...]-input_offset,min=0,max=1)/norm
     elif dim==3:
-        input_offset = input.sum(dim=3)/sz[3]
         norm = torch.zeros_like(input[:,:,:,0, ...])
         for c in range(sz[3]):
             norm += torch.clamp(weights[c]+input[:,:,:,c, ...]-input_offset,min=0,max=1)
         for c in range(sz[3]):
             ret[:,:,:,c, ...] = torch.clamp(weights[c]+input[:,:,:,c, ...]-input_offset,min=0,max=1)/norm
     elif dim==4:
-        input_offset = input.sum(dim=4)/sz[4]
         norm = torch.zeros_like(input[:,:,:,:,0, ...])
         for c in range(sz[4]):
             norm += torch.clamp(weights[c]+input[:,:,:,:,c, ...]-input_offset,min=0,max=1)
@@ -1089,45 +1086,65 @@ def compute_weighted_multi_smooth_v(momentum, weights, gaussian_stds, gaussian_f
 
     return weighted_multi_smooth_v
 
-def _project_weights_to_min_sum_one(weights,min_val):
+def _project_weights_to_min_sum_one(weights,min_val,dim=1):
 
     sz = weights.size()
-    nr_of_weights = sz[1]
+    nr_of_weights = sz[dim]
+
+    if not dim in [0,1]:
+        raise ValueError('Only dimensions 0 or 1 are currently supported')
 
     # this assures that the minimum value will indeed be min_val
     eff_min_val = min_val/(1.-nr_of_weights*min_val)
 
     max_weights = torch.clamp(weights,min=eff_min_val)
-    max_weight_sum = torch.sum(max_weights, dim=1)
+    max_weight_sum = torch.sum(max_weights, dim=dim)
 
     projected_weights = torch.zeros_like(max_weights)
-    for n in range(nr_of_weights):
-        projected_weights[:,n,...] = max_weights[:,n,...]/max_weight_sum
+
+    if dim==0:
+        for n in range(nr_of_weights):
+            projected_weights[n,...] = max_weights[n,...]/max_weight_sum
+    elif dim==1:
+        for n in range(nr_of_weights):
+            projected_weights[:,n,...] = max_weights[:,n,...]/max_weight_sum
+    else:
+        raise ValueError('Only dimensions 0 or 1 are currently supported')
 
     return projected_weights
 
-def _project_weights_to_min_sum_of_squares_one(weights,min_val):
+def _project_weights_to_min_sum_of_squares_one(weights,min_val,dim=1):
     sz = weights.size()
-    nr_of_weights = sz[1]
+    nr_of_weights = sz[dim]
+
+    if not dim in [0,1]:
+        raise ValueError('Only dimensions 0 or 1 are currently supported')
 
     # this assures that the minimum value will indeed be min_val
     eff_min_val = float(min_val / np.sqrt(1. - nr_of_weights * min_val**2))
 
     max_weights = torch.clamp(weights, min=eff_min_val)
-    max_weight_norm = torch.sqrt(torch.sum(max_weights**2, dim=1))
+    max_weight_norm = torch.sqrt(torch.sum(max_weights**2, dim=dim))
 
     projected_weights = torch.zeros_like(max_weights)
-    for n in range(nr_of_weights):
-        projected_weights[:, n, ...] = max_weights[:, n, ...] / max_weight_norm
+
+    if dim==0:
+        for n in range(nr_of_weights):
+            projected_weights[n, ...] = max_weights[n, ...] / max_weight_norm
+    elif dim==1:
+        for n in range(nr_of_weights):
+            projected_weights[:, n, ...] = max_weights[:, n, ...] / max_weight_norm
+    else:
+        raise ValueError('Only dimensions 0 or 1 are currently supported')
 
     return projected_weights
 
-def _project_weights_to_min(weights,min_val,norm_type='sum'):
+def _project_weights_to_min(weights,min_val,norm_type='sum',dim=1):
 
     if norm_type=='sum':
-        return _project_weights_to_min_sum_one(weights=weights,min_val=min_val)
+        return _project_weights_to_min_sum_one(weights=weights,min_val=min_val,dim=dim)
     elif norm_type=='sum_of_squares':
-        return _project_weights_to_min_sum_of_squares_one(weights=weights,min_val=min_val)
+        return _project_weights_to_min_sum_of_squares_one(weights=weights,min_val=min_val,dim=dim)
     else:
         raise ValueError('Unknown projection type')
 
@@ -1178,7 +1195,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         self.volumeElement = self.spacing.prod()
 
         # check that the largest standard deviation is the largest one
-        if max(gaussian_stds) > gaussian_stds[-1]:
+        if gaussian_stds.max() > gaussian_stds[-1]:
             raise ValueError('The last standard deviation needs to be the largest')
 
         self.omt_weight_penalty = params[('omt_weight_penalty', 25.0, 'Penalty for the optimal mass transport')]
@@ -1192,6 +1209,9 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         self.gaussianWeight_min = params[('gaussian_weight_min', 0.001, 'minimal allowed weight for the Gaussians')]
         """minimal allowed weight during optimization"""
 
+        self.preweight_input_range_weight_penalty = params[('preweight_input_range_weight_penalty', 1.0,
+                                                                 'Penalty for the input to the preweight computation; weights should be between 0 and 1. If they are not they get quadratically penalized; use this with weighted_linear_softmax only.')]
+
         cparams = params[('deep_smoother',{})]
         self.params = cparams
 
@@ -1202,7 +1222,6 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
 
         self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty', 0.0, 'Penalized the squared gradient of the weights')]
         self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 0.1, 'Penalize the total variation of the weights if desired')]
-        self.preweight_input_range_weight_penalty = self.params[('preweight_input_range_weight_penalty',1.0,'Penalty for the input to the preweight computation; weights should be between 0 and 1. If they are not they get quadratically penalized; use this with weighted_linear_softmax only.')]
 
         self.standardize_input_images = self.params[('standardize_input_images',True,'if true, subtracts the value specified by standardize_subtract_from_input_images followed by division by standardize_divide_input_images from all input images to the network')]
         """if true then we subtract standardize_subtract_from_input_images from all network input images"""
@@ -1568,12 +1587,18 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
             preweight_input_range_penalty = self.preweight_input_range_loss(input_to_preweights,
                                                                             spacing=self.spacing,
                                                                             use_weighted_linear_softmax=True,
-                                                                            weights=global_multi_gaussian_weights)
+                                                                            weights=global_multi_gaussian_weights,
+                                                                            min_weight=self.gaussianWeight_min,
+                                                                            max_weight=1.0,
+                                                                            dim=1)
         else:
             preweight_input_range_penalty = self.preweight_input_range_loss(input_to_preweights,
                                                                             spacing=self.spacing,
                                                                             use_weighted_linear_softmax=False,
-                                                                            weights=None)
+                                                                            weights=None,
+                                                                            min_weight=self.gaussianWeight_min,
+                                                                            max_weight=1.0,
+                                                                            dim=None)
 
         current_omt_penalty = self.omt_weight_penalty * omt_penalty
         current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty

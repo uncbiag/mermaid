@@ -1483,6 +1483,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         opt_par_loss_energy = self.compute_optimizer_parameter_loss(self.model.get_shared_registration_parameters())
         loss_overall_energy = loss_overall_energy + opt_par_loss_energy
         loss_overall_energy.backward()
+
+        # do gradient clipping
+        #clip_to_grad_norm = 1.0
+        #current_grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(),clip_to_grad_norm)
+        #print('DEBUG: gradient clipping {} -> {}'.format(current_grad_norm,clip_to_grad_norm))
+
         #torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
 
         self.rec_custom_optimizer_output_string = self.model.get_custom_optimizer_output_string()
@@ -2195,6 +2201,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             # take a step of the optimizer
             # for p in self.optimizer_instance._params:
             #     p.data = p.data.float()
+
             current_loss = self.optimizer_instance.step(self._closure)
 
             # do weight clipping if it is desired
