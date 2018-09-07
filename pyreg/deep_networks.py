@@ -1148,31 +1148,31 @@ class OMTLoss(nn.Module):
 
         penalty = MyTensor(1).zero_()
 
-        max_std = max(multi_gaussian_stds)
-        min_std = min(multi_gaussian_stds)
+        max_std = multi_gaussian_stds.max()
+        min_std = multi_gaussian_stds.min()
 
         if self.desired_power == 2:
             for i, s in enumerate(multi_gaussian_stds):
                 if self.use_log_transform:
-                    penalty += ((weights[:, i, ...]).sum()) * ((np.log(max_std / s)) ** self.desired_power)
+                    penalty += ((weights[:, i, ...]).sum()) * ((torch.log(max_std / s)) ** self.desired_power)
                 else:
                     penalty += ((weights[:, i, ...]).sum()) * ((s - max_std) ** self.desired_power)
 
             if self.use_log_transform:
-                penalty /= (np.log(max_std / min_std)) ** self.desired_power
+                penalty /= (torch.log(max_std / min_std)) ** self.desired_power
             else:
                 penalty /= (max_std - min_std) ** self.desired_power
         else:
             for i, s in enumerate(multi_gaussian_stds):
                 if self.use_log_transform:
-                    penalty += ((weights[:, i, ...]).sum()) * (abs(np.log(max_std / s)) ** self.desired_power)
+                    penalty += ((weights[:, i, ...]).sum()) * (torch.abs(torch.log(max_std / s)) ** self.desired_power)
                 else:
-                    penalty += ((weights[:, i, ...]).sum()) * (abs(s - max_std) ** self.desired_power)
+                    penalty += ((weights[:, i, ...]).sum()) * (torch.abs(s - max_std) ** self.desired_power)
 
             if self.use_log_transform:
-                penalty /= abs(np.log(max_std / min_std)) ** self.desired_power
+                penalty /= torch.abs(torch.log(max_std / min_std)) ** self.desired_power
             else:
-                penalty /= abs(max_std - min_std) ** self.desired_power
+                penalty /= torch.abs(max_std - min_std) ** self.desired_power
 
         penalty *= self.volume_element
 
