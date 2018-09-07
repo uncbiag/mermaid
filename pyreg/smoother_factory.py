@@ -71,6 +71,9 @@ class Smoother(with_metaclass(ABCMeta, object)):
         """parameters that will be exposed to the optimizer"""
         self.ISource = None
         """For smoothers that make use of the map, stores the source image to which the map can be applied"""
+        self.batch_size = None
+        """batch size of what is being smoothed"""
+
 
     def associate_parameters_with_module(self,module):
         """
@@ -221,6 +224,8 @@ class Smoother(with_metaclass(ABCMeta, object)):
         :return: smoothed vector field BxCxXxYxZ
         """
         sz = v.size()
+        self.batch_size = sz[0]
+
         if vout is not None:
             Sv = vout
         else:
@@ -1223,7 +1228,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         else:
 
-            penalty = self.ws.get_current_penalty()
+            # norrmalize by  batch size to make it consistent with the global approach above
+            penalty = self.ws.get_current_penalty()/self.batch_size
             penalty += self.ws.compute_l2_parameter_weight_penalty()
 
         return penalty
