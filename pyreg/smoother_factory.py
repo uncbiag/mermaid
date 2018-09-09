@@ -1223,13 +1223,14 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                 penalty += current_std_penalty
                 #print('Current std penalty = {}'.format(current_std_penalty.item()))
             penalty *= self.spacing.prod()*float(self.sz.prod())
+            penalty *= self.batch_size
 
             #print('global OMT_penalty = {}'.format(penalty.detach().cpu().numpy()))
 
         else:
 
             # norrmalize by  batch size to make it consistent with the global approach above
-            penalty = self.ws.get_current_penalty()/self.batch_size
+            penalty = self.ws.get_current_penalty()
             penalty += self.ws.compute_l2_parameter_weight_penalty()
 
         return penalty
