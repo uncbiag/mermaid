@@ -30,6 +30,8 @@ def quantile_to_cdf(qf,nr_of_bins):
     for b in bins[1:]:
         cdf.append(sstats.percentileofscore(qf,b))
 
+    cdf = np.array(cdf)
+
     return cdf,bins
 
 def compute_quantile_function(vals,nr_of_quantiles):
