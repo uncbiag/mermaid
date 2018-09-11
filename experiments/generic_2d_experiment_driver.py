@@ -260,16 +260,21 @@ def run(stage,nr_of_epochs,main_json,
         if load_shared_parameters_from_previous_stage_nr is not None:
             # we need to load the previous shared parameters, so construct the filename from where to load first
 
-            if move_to_directory is None:
-                load_shared_parameters_from_file = os.path.join(previous_output_base_directory, 'out_' + previous_postfix,
-                                                                'results_after_stage_{}'.format(
-                                                                    load_shared_parameters_from_previous_stage_nr),
-                                                                'shared', 'shared_parameters.pt')
-            else:
-                load_shared_parameters_from_file = os.path.join(move_to_directory, 'out_' + previous_postfix,
-                                                                'results_after_stage_{}'.format(
-                                                                    load_shared_parameters_from_previous_stage_nr),
-                                                                'shared', 'shared_parameters.pt')
+            load_shared_parameters_from_file = os.path.join(previous_output_base_directory, 'out_' + previous_postfix,
+                                                            'results_after_stage_{}'.format(
+                                                                load_shared_parameters_from_previous_stage_nr),
+                                                            'shared', 'shared_parameters.pt')
+
+            # if move_to_directory is None:
+            #     load_shared_parameters_from_file = os.path.join(previous_output_base_directory, 'out_' + previous_postfix,
+            #                                                     'results_after_stage_{}'.format(
+            #                                                         load_shared_parameters_from_previous_stage_nr),
+            #                                                     'shared', 'shared_parameters.pt')
+            # else:
+            #     load_shared_parameters_from_file = os.path.join(move_to_directory, 'out_' + previous_postfix,
+            #                                                     'results_after_stage_{}'.format(
+            #                                                         load_shared_parameters_from_previous_stage_nr),
+            #                                                     'shared', 'shared_parameters.pt')
 
             if not os.path.exists(load_shared_parameters_from_file):
                 raise ValueError('Could not find file: {}'.format(load_shared_parameters_from_file))
