@@ -78,7 +78,7 @@ def run_optimization(stage,nr_of_epochs,image_pair_config_pt,nr_of_image_pairs,
                      skip_stage_1_and_start_stage_2_from_stage_0,
                      input_image_directory,output_directory,
                      main_json,
-                     load_shared_parameters_from_file,
+                     load_shared_parameters_for_stages_from_directory,
                      only_optimize_over_registration_parameters_for_stage_nr,
                      seed,
                      key_value_overwrites=dict(),string_key_value_overwrites=dict(),
@@ -124,8 +124,8 @@ def run_optimization(stage,nr_of_epochs,image_pair_config_pt,nr_of_image_pairs,
     if skip_stage_1_and_start_stage_2_from_stage_0:
         args['skip_stage_1_and_start_stage_2_from_stage_0']=''
 
-    if load_shared_parameters_from_file is not None:
-        args['load_shared_parameters_from_file'] = load_shared_parameters_from_file
+    if load_shared_parameters_for_stages_from_directory is not None:
+        args['load_shared_parameters_for_stages_from_directory '] = load_shared_parameters_for_stages_from_directory
 
     if only_optimize_over_registration_parameters_for_stage_nr is not None:
         args['only_optimize_over_registration_parameters_for_stage_nr'] = only_optimize_over_registration_parameters_for_stage_nr
@@ -245,25 +245,15 @@ def run(stage,nr_of_epochs,main_json,
 
     if parts_to_run['run_optimization']:
 
-        #output_directory = os.path.join(output_base_directory, 'out_' + postfix)
-        #
-        #if move_to_directory is not None:
-        #    if not os.path.exists(move_to_directory):
-        #        print('Creating output directory: {:s}'.format(move_to_directory))
-        #        os.mkdir(move_to_directory)
-
-        #previous_output_base_directory,
-        #only_optimize_over_registration_parameters_for_stage_nr,
-        #load_shared_parameters_from_previous_stage_nr,
-        #move_to_directory,
-
-        if load_shared_parameters_from_previous_stage_nr is not None:
+        if load_shared_parameters_from_previous_stage_nr:
             # we need to load the previous shared parameters, so construct the filename from where to load first
 
-            load_shared_parameters_from_file = os.path.join(previous_output_base_directory, 'out_' + previous_postfix,
-                                                            'results_after_stage_{}'.format(
-                                                                load_shared_parameters_from_previous_stage_nr),
-                                                            'shared', 'shared_parameters.pt')
+            load_shared_parameters_for_stages_from_directory = os.path.join(previous_output_base_directory, 'out_' + previous_postfix )
+
+            # load_shared_parameters_from_file = os.path.join(previous_output_base_directory, 'out_' + previous_postfix,
+            #                                                 'results_after_stage_{}'.format(
+            #                                                     load_shared_parameters_from_previous_stage_nr),
+            #                                                 'shared', 'shared_parameters.pt')
 
             # if move_to_directory is None:
             #     load_shared_parameters_from_file = os.path.join(previous_output_base_directory, 'out_' + previous_postfix,
@@ -276,10 +266,11 @@ def run(stage,nr_of_epochs,main_json,
             #                                                         load_shared_parameters_from_previous_stage_nr),
             #                                                     'shared', 'shared_parameters.pt')
 
-            if not os.path.exists(load_shared_parameters_from_file):
-                raise ValueError('Could not find file: {}'.format(load_shared_parameters_from_file))
+            #if not os.path.exists(load_shared_parameters_from_file):
+            #    raise ValueError('Could not find file: {}'.format(load_shared_parameters_from_file))
         else:
-            load_shared_parameters_from_file = None
+            #load_shared_parameters_from_file = None
+            load_shared_parameters_for_stages_from_directory = None
 
         run_optimization(stage=stage,
                          nr_of_epochs=nr_of_epochs,
@@ -290,7 +281,7 @@ def run(stage,nr_of_epochs,main_json,
                          input_image_directory=input_image_directory,
                          output_directory=output_directory,
                          main_json=main_json,
-                         load_shared_parameters_from_file=load_shared_parameters_from_file,
+                         load_shared_parameters_for_stages_from_directory=load_shared_parameters_for_stages_from_directory,
                          only_optimize_over_registration_parameters_for_stage_nr=only_optimize_over_registration_parameters_for_stage_nr,
                          key_value_overwrites=key_value_overwrites,
                          string_key_value_overwrites=string_key_value_overwrites,
@@ -369,6 +360,11 @@ def move_output_directory(move_to_directory,output_base_directory,postfix):
         # now delete the original directory
         print('Removing directory {:s}'.format(output_directory))
         shutil.rmtree(output_directory)
+
+        # and create a link
+        moved_directory_name = os.path.abspath(relocate_dir)
+        print('Creating symbolic link {} -> {}'.format(output_directory,moved_directory_name))
+        os.symlink(moved_directory_name, output_directory)
 
 def _get_kv_info(kv_name,vals_str):
 
@@ -478,10 +474,13 @@ if __name__ == "__main__":
 
     parser.add_argument('--previous_dataset_config', required=False, default=None,
                         help='Point to the directory config file of a previous run; this allows reusing these results for example to compute evaluations on a separate test set. Use this together with --load_shared_parameters_from_previous_stage_nr and --only_optimize_over_registration_parameters_for_stage_nr')
-    parser.add_argument('--load_shared_parameters_from_previous_stage_nr', required=False, type=str,default=None,
-                        help='Specifies which stage from the previous run the shared parameters should be taken from {0,1,2})')
+
+    parser.add_argument('--load_shared_parameters_from_previous_stage_nr', action='store_true',
+                        help='If specified will load the shared parameters for a given stage from the corresponding previous stage')
+
     parser.add_argument('--only_optimize_over_registration_parameters_for_stage_nr', required=False, type=str,default=None,
-                        help='If set, only the registration parameters (e.g., momentum) are optimized for the given stages (as a comma separated list; e.g., 0,1,2), but not the smoother. Default is None (i.e., optimization happens in all stages). Best used in conjunction with --load_shared_parameters_from_file; similar in effect to freezing iterations, but will be stored in default directories; so good for validation ')
+                        help='If set, only the registration parameters (e.g., momentum) are optimized for the given stages (as a comma separated list; e.g., 0,1,2), but not the smoother. Default is None (i.e., optimization happens in all stages). Best used in conjunction with --load_shared_parameters_for_previous_stage_nr; similar in effect to freezing iterations, but will be stored in default directories; so good for validation ')
+
     parser.add_argument('--previous_postfix', required=False, default=None, help='Output subdirectory of previous run, out_postfix')
 
     parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=0, help='number of image pairs that will be used; if not set all pairs will be used')
@@ -666,7 +665,7 @@ if __name__ == "__main__":
 
     # check if there is a previous dataset config file specified
 
-    load_shared_parameters_from_previous_stage_nr = None
+    #load_shared_parameters_from_previous_stage_nr = False
     previous_output_base_directory = None
     if args.previous_dataset_config is not None:
         print('Reading previous dataset configuration from: {:s}'.format(args.previous_dataset_config))
@@ -682,20 +681,21 @@ if __name__ == "__main__":
             if previous_output_base_directory=='':
                 raise ValueError('Could not find key output_base_directory in file {}'.format(args.previous_dataset_config))
 
-            if args.load_shared_parameters_from_previous_stage_nr is None:
-                load_shared_parameters_from_previous_stage_nr = None
-            else:
-                specified_previous_stage_nr = [int(item) for item in args.load_shared_parameters_from_previous_stage_nr.split(',')]
-                if len(specified_previous_stage_nr)==1:
-                    if specified_previous_stage_nr[0] in [0,1,2]:
-                        load_shared_parameters_from_previous_stage_nr = specified_previous_stage_nr[0]
-                    else:
-                        raise ValueError('The previous stage number needs to be in {0,1,2}. Instead it was: {}'.format(specified_previous_stage_nr[0]))
-                else:
-                    raise ValueError('Exactly one previous stage nr needs to be specified. Instead the following was specified: {}'.format(args.load_shared_parameters_from_previous_stage_nr))
+            # todo: probably remove this part
+            # if args.load_shared_parameters_from_previous_stage_nr is None:
+            #     load_shared_parameters_from_previous_stage_nr = None
+            # else:
+            #     specified_previous_stage_nr = [int(item) for item in args.load_shared_parameters_from_previous_stage_nr.split(',')]
+            #     if len(specified_previous_stage_nr)==1:
+            #         if specified_previous_stage_nr[0] in [0,1,2]:
+            #             load_shared_parameters_from_previous_stage_nr = specified_previous_stage_nr[0]
+            #         else:
+            #             raise ValueError('The previous stage number needs to be in {0,1,2}. Instead it was: {}'.format(specified_previous_stage_nr[0]))
+            #     else:
+            #         raise ValueError('Exactly one previous stage nr needs to be specified. Instead the following was specified: {}'.format(args.load_shared_parameters_from_previous_stage_nr))
 
     else:
-        if args.load_shared_parameters_from_previous_stage_nr is not None:
+        if args.load_shared_parameters_from_previous_stage_nr:
             raise ValueError('Previous dataset config was not specified use --previous_dataset_config')
 
 
@@ -703,7 +703,7 @@ if __name__ == "__main__":
     # a separate test set one might want to restrict this)
     only_optimize_over_registration_parameters_for_stage_nr = args.only_optimize_over_registration_parameters_for_stage_nr
 
-    if load_shared_parameters_from_previous_stage_nr is not None:
+    if args.load_shared_parameters_from_previous_stage_nr:
         if args.previous_postfix is None:
             previous_postfix = 'training'
         else:
@@ -794,7 +794,7 @@ if __name__ == "__main__":
                 previous_output_base_directory=previous_output_base_directory,
                 only_optimize_over_registration_parameters_for_stage_nr=
                 only_optimize_over_registration_parameters_for_stage_nr,
-                load_shared_parameters_from_previous_stage_nr=load_shared_parameters_from_previous_stage_nr,
+                load_shared_parameters_from_previous_stage_nr=args.load_shared_parameters_from_previous_stage_nr,
                 move_to_directory=move_to_directory,
                 key_value_overwrites=kvo,
                 string_key_value_overwrites=kvos_str,
@@ -857,7 +857,7 @@ if __name__ == "__main__":
                     previous_output_base_directory=previous_output_base_directory,
                     only_optimize_over_registration_parameters_for_stage_nr=
                     only_optimize_over_registration_parameters_for_stage_nr,
-                    load_shared_parameters_from_previous_stage_nr=load_shared_parameters_from_previous_stage_nr,
+                    load_shared_parameters_from_previous_stage_nr=args.load_shared_parameters_from_previous_stage_nr,
                     move_to_directory=move_to_directory,
                     key_value_overwrites=combined_kvs,
                     string_key_value_overwrites=kvos_str,

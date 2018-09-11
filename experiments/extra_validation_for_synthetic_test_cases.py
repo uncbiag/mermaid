@@ -510,7 +510,7 @@ def compute_and_visualize_validation_result(multi_gaussian_stds_synth,
     else:
         print_output_directory_eff = None
 
-    if printing_single_pair:
+    if printing_single_pair or pair_nr==0:
         clean_publication_dir_eff = clean_publication_dir
         visualize = True
     else:

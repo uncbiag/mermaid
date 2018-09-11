@@ -683,11 +683,17 @@ def compute_and_visualize_results(json_file,output_dir,
         print_output_dir = os.path.join(os.path.normpath(output_dir),'pdf_stage_{:d}'.format(stage))
 
     clean_publication_dir = None
-    if clean_publication_print and printing_single_pair:
-        # we don't want to write this out for all sorts of pairs
-        clean_publication_dir = os.path.join(print_output_dir,'clean_publication_prints')
-        # In this case we only create the publication prints, any other output is suppressed
-        visualize = True
+    if clean_publication_print:
+        if printing_single_pair:
+            do_not_recompute_solutions = True
+        else:
+            do_not_recompute_solutions = False
+
+        if printing_single_pair or pair_nr==0: # print it
+            # we don't want to write this out for all sorts of pairs
+            clean_publication_dir = os.path.join(print_output_dir,'clean_publication_prints')
+            # In this case we only create the publication prints, any other output is suppressed
+            visualize = True
 
     if write_out_warped_image or write_out_map or compute_det_of_jacobian:
         if not os.path.exists(image_and_map_output_dir):
@@ -786,7 +792,7 @@ def compute_and_visualize_results(json_file,output_dir,
         # apply the actual model and get the warped image and the map (if applicable)
         IWarped,phi,model_dict = evaluate_model(ISource,ITarget,sz,spacing,individual_parameters,shared_parameters,params,visualize=False)
 
-        if write_out_map and (clean_publication_dir is None):
+        if write_out_map and (not do_not_recompute_solutions):
             map_io = FIO.MapIO()
             map_io.write_to_validation_map_format(map_output_filename, phi[0,...], hdr)
             torch.save( phi, map_output_filename_pt)
@@ -799,7 +805,7 @@ def compute_and_visualize_results(json_file,output_dir,
 
         norm_m = ((model_dict['m']**2).sum(dim=1,keepdim=True))**0.5
 
-        if write_out_weights and (clean_publication_dir is None):
+        if write_out_weights and (not do_not_recompute_solutions):
             wd = dict()
             if stage==2:
                 wd['local_weights'] = model_dict['local_weights']
@@ -807,7 +813,7 @@ def compute_and_visualize_results(json_file,output_dir,
             wd['default_multi_gaussian_weights'] = model_dict['default_multi_gaussian_weights']
             torch.save(wd,weights_output_filename_pt)
 
-        if write_out_momentum and (clean_publication_dir is None):
+        if write_out_momentum and (not do_not_recompute_solutions):
             torch.save(model_dict['m'],momentum_output_filename_pt)
 
         if visualize:
@@ -916,18 +922,18 @@ def compute_and_visualize_results(json_file,output_dir,
 
 
         # save the images
-        if write_out_warped_image and (clean_publication_dir is None):
+        if write_out_warped_image and (not do_not_recompute_solutions):
             im_io = FIO.ImageIO()
             im_io.write(warped_output_filename, IWarped[0,0,...], hdr)
 
-        if write_out_source_image and (clean_publication_dir is None):
+        if write_out_source_image and (not do_not_recompute_solutions):
             if use_sym_links:
                 utils.create_symlink_with_correct_ext(current_source_filename,source_image_output_filename)
             else:
                 im_io = FIO.ImageIO()
                 im_io.write(source_image_output_filename, ISource[0,0,...], hdr)
 
-        if write_out_target_image and (clean_publication_dir is None):
+        if write_out_target_image and (not do_not_recompute_solutions):
             if use_sym_links:
                 utils.create_symlink_with_correct_ext(current_target_filename,target_image_output_filename)
             else:
@@ -935,7 +941,7 @@ def compute_and_visualize_results(json_file,output_dir,
                 im_io.write(target_image_output_filename, ITarget[0, 0, ...], hdr)
 
     # compute determinant of Jacobian of map
-    if (compute_det_of_jacobian and (clean_publication_dir is None)) or compute_or_recompute_det_jac:
+    if (compute_det_of_jacobian and (not do_not_recompute_solutions)) or compute_or_recompute_det_jac:
 
         im_io = FIO.ImageIO()
 

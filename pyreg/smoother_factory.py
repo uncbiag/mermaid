@@ -937,11 +937,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.optimize_over_deep_network = params[('optimize_over_deep_network', False, 'if set to true the smoother will optimize over the deep network parameters; otherwise will ignore the deep network')]
         """determines if we should optimize over the smoother global weights"""
 
-        self.evaluate_but_do_not_optimize_over_deep_network = params[('evaluate_but_do_not_optimize_over_deep_network',False,'If set to true then the network is evaluated (should have been loaded from a previously computed optimized state), but the network weights are not being optimized over')]
+        self.evaluate_but_do_not_optimize_over_shared_registration_parameters = params[('evaluate_but_do_not_optimize_over_shared_registration_parameters',False,'If set to true then shared registration parameters (e.g., the network or global weights) are evaluated (should have been loaded from a previously computed optimized state), but are not being optimized over')]
         """If set to true then the network is evaluated (should have been loaded from a previously computed optimized state), but the network weights are not being optimized over"""
-
-        if self.optimize_over_deep_network and self.evaluate_but_do_not_optimize_over_deep_network:
-            raise ValueError('optimize_over_deep_network and evaluate_but_do_not_optimize_over_deep_network cannot be set at the same time. Choose one!')
 
         self.freeze_parameters = params[('freeze_parameters', False, 'if set to true then all the parameters that are optimized over are frozen (but they still influence the optimization indirectly; they just do not change themselves)')]
         """Freezes parameters; this, for example, allows optimizing for a few extra steps without changing their current value"""
@@ -1086,23 +1083,22 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
     def associate_parameters_with_module(self,module):
         s = set()
 
+        # freeze parameters if needed
+        freeze_shared_parameters = self.freeze_parameters or self.evaluate_but_do_not_optimize_over_shared_registration_parameters
+
         if self.optimize_over_smoother_stds:
-            self.pre_multi_gaussian_stds_optimizer_params.requires_grad = not self.freeze_parameters
+            self.pre_multi_gaussian_stds_optimizer_params.requires_grad = not freeze_shared_parameters
             module.register_parameter('pre_multi_gaussian_stds', self.pre_multi_gaussian_stds_optimizer_params)
             s.add('pre_multi_gaussian_stds')
 
         if self.optimize_over_smoother_weights:
-            self.pre_multi_gaussian_weights_optimizer_params.requires_grad = not self.freeze_parameters
+            self.pre_multi_gaussian_weights_optimizer_params.requires_grad = not freeze_shared_parameters
             module.register_parameter('pre_multi_gaussian_weights', self.pre_multi_gaussian_weights_optimizer_params)
             s.add('pre_multi_gaussian_weights')
 
-        # freeze parameters if needed
-
-        freeze_deep_network_parameters = self.freeze_parameters or self.evaluate_but_do_not_optimize_over_deep_network
-
         for child in self.ws.children():
             for cur_param in child.parameters():
-                cur_param.requires_grad = not freeze_deep_network_parameters
+                cur_param.requires_grad = not freeze_shared_parameters
 
         module.add_module('weighted_smoothing_net',self.ws)
         sd = self.ws.state_dict()
@@ -1354,7 +1350,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         # distiniguish the two cases where we compute the vector field (for the deformation) versus where we compute for regularization
         if smooth_to_compute_regularizer_energy:
             # we need to distinguish here the standard model, versus the different flavors for the deep network
-            if (self._is_optimizing_over_deep_network or self.evaluate_but_do_not_optimize_over_deep_network):
+            if self._is_optimizing_over_deep_network:
 
                 if self.weighting_type=='w_K' or self.use_multi_gaussian_regularization:
                     if self.only_use_smallest_standard_deviation_for_regularization_energy:
@@ -1377,7 +1373,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         else: # here this will be the velocity driving the deformation
             # we need to distinguish here the standard model, versus the different flavors for the deep network
-            if (self._is_optimizing_over_deep_network or self.evaluate_but_do_not_optimize_over_deep_network):
+            if self._is_optimizing_over_deep_network:
                 smoothed_v = self._smooth_via_deep_network(I=I,
                                                            additional_inputs=additional_inputs,
                                                            iter=iter_or_epoch,
