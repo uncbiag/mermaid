@@ -130,9 +130,9 @@ def _get_low_res_size_from_size(sz, factor):
         lowResSize = np.array(sz)
         lowResSize[2::] = (np.ceil((np.array(sz[2::]) * factor))).astype('int16')
 
-        if lowResSize[-1]%2!=0:
-            lowResSize[-1]-=1
-            print('\n\nWARNING: forcing last dimension to be even: fix properly in the Fourier transform later!\n\n')
+        #if lowResSize[-1]%2!=0:
+        #    lowResSize[-1]-=1
+        #    print('\n\nWARNING: forcing last dimension to be even: fix properly in the Fourier transform later!\n\n')
 
         return lowResSize
 
