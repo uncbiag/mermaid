@@ -705,7 +705,7 @@ if __name__ == "__main__":
 
     if load_shared_parameters_from_previous_stage_nr is not None:
         if args.previous_postfix is None:
-            previous_postfix = 'test'
+            previous_postfix = 'training'
         else:
             previous_postfix = args.previous_postfix
     else:
@@ -715,7 +715,7 @@ if __name__ == "__main__":
         if previous_postfix is not None:
             postfix = 'init_from_' + previous_postfix
         else:
-            postfix = 'test'
+            postfix = 'training'
     else:
         postfix = args.postfix
 
