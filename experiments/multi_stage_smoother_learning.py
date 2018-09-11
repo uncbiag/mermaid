@@ -325,7 +325,9 @@ if __name__ == "__main__":
             if os.path.isfile(current_shared_parameter_file):
                 load_shared_parameters_from_file[s] = current_shared_parameter_file
             else:
-                raise ValueError('Shared parameter file {} did not exist'.format(current_shared_parameter_file))
+                if s in stage_nr:
+                    if not (s==1 and args.skip_stage_1_and_start_stage_2_from_stage_0):
+                        raise ValueError('Shared parameter file {} did not exist'.format(current_shared_parameter_file))
 
 
     if args.nr_of_image_pairs==0:
