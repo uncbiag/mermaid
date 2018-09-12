@@ -528,7 +528,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.load_shared_parameters_from_previous_stage_nr is not None and args.previous_dataset_config is None:
+    if args.load_shared_parameters_from_previous_stage_nr and args.previous_dataset_config is None:
         raise ValueError('To specify a previous stage for the shared parameters requires a previous dataset configuration file')
 
     if args.nr_of_image_pairs==0:
