@@ -95,8 +95,17 @@ def compute_variances(weights,stds):
 
     return ret
 
+only_evaluate = False
+
 rel_path = '../experiments'
-input_directory = 'synthetic_example_out_kernel_weighting_type_sqrt_w_K_sqrt_w'
+
+save_network_state_dict_file = 'network_conf.pt'
+
+if only_evaluate:
+    input_directory = 'test_nn_synthetic_example_out_kernel_weighting_type_sqrt_w_K_sqrt_w'
+else:
+    input_directory = 'synthetic_example_out_kernel_weighting_type_sqrt_w_K_sqrt_w'
+
 image_input_directory = os.path.join(rel_path,input_directory,'brain_affine_icbm')
 
 dim = 2
@@ -105,6 +114,14 @@ nr_of_epochs = 100
 visualize_intermediate_results = True
 only_display_epoch_results = True
 image_offset = 1.0
+
+if only_evaluate:
+    if nr_of_epochs!=1:
+        print('INFO: Setting number of epochs to 1 for evaluation-only mode')
+        nr_of_epochs = 1
+    if batch_size!=1:
+        print('INFO: Setting batch size to 1 for evaluation-only mode')
+        batch_size = 1
 
 # todo: read this values from the configuration file
 nr_of_weights = 4
@@ -178,6 +195,10 @@ omt_criterion = None
 
 reconstruction_unet = network_type(dim=dim, n_in_channel=1, n_out_channel=nr_of_weights, im_sz=im_sz, params=params).to(device)
 reconstruction_unet.initialize_network_weights()
+
+if only_evaluate:
+    print('INFO: Loading the network state from {}'.format(save_network_state_dict_file))
+    reconstruction_unet.load_state_dict(torch.load(save_network_state_dict_file))
 
 all_optimization_parameters = reconstruction_unet.parameters()
 
@@ -276,10 +297,10 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
         # compute the overall loss
         loss = reconstruction_loss + totalvariation_loss + omt_loss
 
-        # compute the gradient
-        loss.backward()
-
-        optimizer.step()
+        if not only_evaluate:
+            # compute the gradient
+            loss.backward()
+            optimizer.step()
 
         if only_display_epoch_results:
             running_reconstruction_loss += reconstruction_loss.item() / nr_of_datasets
@@ -364,3 +385,7 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
             plt.show()
 
 print('Finished Training')
+
+if not only_evaluate:
+    print('Saving network state dict to {}'.format(save_network_state_dict_file))
+    torch.save(reconstruction_unet.state_dict(),save_network_state_dict_file)

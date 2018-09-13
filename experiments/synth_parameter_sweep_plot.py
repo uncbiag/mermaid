@@ -145,15 +145,27 @@ def plot_results(all_stats,all_names,showfliers,normalize_by_spacing,ylabel,outp
             current_median_value = np.percentile(s, 50)
             print('{:s}: median={:f}'.format(n, current_median_value))
 
-datapath = '/Users/mn/data/stat_results'
-prefix = 'out_test'
+#datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc'
+#stages = [0,1,2]
+
+datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc-skip-stage-1'
+stages = [0,2]
+
+
+prefix = 'out_testing'
 use_all_directories = False
+
+if not use_all_directories:
+    desired_tv = [0.1]
+    desired_omt = [25,50,75,100]
+else:
+    desired_tv = None
+    desired_omt = None
 
 #datapath = './experimental_results_synth_2d'
 #prefix = 'out_test'
 #use_all_directories = True
 
-stages = [0,1,2]
 #desired_stat = 'mean'
 desired_stat = 'median'
 showfliers = False
@@ -172,13 +184,20 @@ if print_output_directory is not None:
 if use_all_directories:
     desired_directories = glob.glob(os.path.join(datapath,'{:s}*'.format(prefix)))
 else:
-    desired_directories = ['/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.010000_omt_weight_penalty_1.000000',
-                           '/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.010000_omt_weight_penalty_10.000000',
-                           #'/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.010000_omt_weight_penalty_100.000000',
-                           '/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_1.000000',
-                           '/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_10.000000',
-                           #'/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_100.000000'
-                           ]
+    desired_directories = []
+    for c_tv in desired_tv:
+        for c_omt in desired_omt:
+            current_dir_name = os.path.join(datapath,'{}_total_variation_weight_penalty_{:f}_omt_weight_penalty_{:f}'.format(prefix,c_tv,c_omt))
+            print('Adding directory: {}'.format(current_dir_name))
+            desired_directories.append(current_dir_name)
+
+    # desired_directories = ['/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.010000_omt_weight_penalty_1.000000',
+    #                        '/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.010000_omt_weight_penalty_10.000000',
+    #                        #'/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.010000_omt_weight_penalty_100.000000',
+    #                        '/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_1.000000',
+    #                        '/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_10.000000',
+    #                        #'/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_100.000000'
+    #                        ]
 
 split_keys = ['total_variation_weight_penalty','omt_weight_penalty']
 abbrv_keys = ['t','o']

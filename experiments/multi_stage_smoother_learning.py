@@ -32,6 +32,14 @@ def do_registration(source_images,target_images,model_name,output_directory,
                     args_kvs=None,
                     only_run_stage0_with_unchanged_config=False):
 
+    if load_shared_parameters_from_file is not None:
+        shared_target_dir = os.path.join(output_directory,'shared')
+        if not os.path.exists(shared_target_dir):
+            print('INFO: creating current shared directory {}'.format(shared_target_dir))
+            os.makedirs(shared_target_dir)
+        print('INFO: copying the shared parameter file {} to the current shared parameter directory {}'.format(load_shared_parameters_from_file,shared_target_dir))
+        shutil.copy(load_shared_parameters_from_file,shared_target_dir)
+
     reg = si.RegisterImagePair()
 
     # load the json file if it is a file and make necessary modifications
@@ -313,7 +321,7 @@ if __name__ == "__main__":
 
             if args.load_shared_parameters_from_frozen:
                     current_shared_parameter_file = os.path.join(load_shared_parameters_for_stages_from_directory,
-                                                                  'results_forzen_after_stage_{}'.format(s),
+                                                                  'results_frozen_after_stage_{}'.format(s),
                                                                   'shared',
                                                                   'shared_parameters.pt')
             else:
@@ -368,7 +376,7 @@ if __name__ == "__main__":
             if not os.path.isfile(backup_out_json_stage_0):
                 raise ValueError('json configuration file does not exist: ' + backup_out_json_stage_0)
 
-            shutil.copy(backup_out_json_stage_0)
+            shutil.copy(backup_out_json_stage_0,target_dir)
 
             if not os.path.exists(backup_source_dir):
                 raise ValueError('Source directory does not exist: ' + backup_source_dir)
@@ -387,7 +395,7 @@ if __name__ == "__main__":
             if not os.path.isfile(backup_out_json_stage_1):
                 raise ValueError('json configuration file does not exist: ' + backup_out_json_stage_1)
 
-            shutil.copy(backup_out_json_stage_1)
+            shutil.copy(backup_out_json_stage_1,target_dir)
 
             if not os.path.exists(backup_source_dir):
                 raise ValueError('Source directory does not exist: ' + backup_source_dir)

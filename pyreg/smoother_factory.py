@@ -1000,6 +1000,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         """To allow pre-initializing a network"""
         if self.load_dnn_parameters_from_this_file!='' and self.load_dnn_parameters_from_this_file is not None:
             print('INFO: Loading network configuration from {:s}'.format(self.load_dnn_parameters_from_this_file))
+            print('WARNING: If start_from_previously_saved_parameters is set to True then this setting may get ignored; current HACK: overwrites shared parameters in the current results directory')
             self.set_state_dict(torch.load(self.load_dnn_parameters_from_this_file))
 
         self.omt_weight_penalty = self.ws.get_omt_weight_penalty()
@@ -1096,6 +1097,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             module.register_parameter('pre_multi_gaussian_weights', self.pre_multi_gaussian_weights_optimizer_params)
             s.add('pre_multi_gaussian_weights')
 
+        # todo: is it possible that the following code not properly disable parameter updates
         for child in self.ws.children():
             for cur_param in child.parameters():
                 cur_param.requires_grad = not freeze_shared_parameters
@@ -1104,6 +1106,10 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         sd = self.ws.state_dict()
         for key in sd:
             s.add('weighted_smoothing_net.' + str(key))
+
+        if self.evaluate_but_do_not_optimize_over_shared_registration_parameters:
+             print('INFO: Setting network to evaluation mode')
+             self.ws.network.eval()
 
         return s
 

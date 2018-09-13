@@ -137,7 +137,15 @@ def compute_variances(weights,stds):
     return ret
 
 rel_path = '../experiments'
-input_directory = 'synthetic_example_out_kernel_weighting_type_sqrt_w_K_sqrt_w'
+only_evaluate = True
+
+save_network_state_dict_file = 'network_conf.pt'
+
+if only_evaluate:
+    input_directory = 'test_nn_synthetic_example_out_kernel_weighting_type_sqrt_w_K_sqrt_w'
+else:
+    input_directory = 'synthetic_example_out_kernel_weighting_type_sqrt_w_K_sqrt_w'
+
 json_config = 'test_simple_consistent.json'
 
 image_input_directory = os.path.join(rel_path,input_directory,'brain_affine_icbm')
@@ -150,6 +158,10 @@ map_low_res_factor = params['model']['deformation'][('map_low_res_factor',1.0,'M
 spline_order = params['model']['registration_model'][('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
 params_smoother = params['model']['registration_model']['forward_model']['smoother']
 
+params_smoother['omt_weight_penalty'] = 0.1
+params_smoother['deep_smoother']['total_variation_penalty'] = 0.1
+params_smoother['deep_smoother']['network_penalty'] = 0.0
+
 gaussian_stds = torch.from_numpy(np.array(params_smoother['multi_gaussian_stds'],dtype='float32'))
 global_multi_gaussian_weights = torch.from_numpy(np.array(params_smoother['multi_gaussian_weights'],dtype='float32'))
 nr_of_weights = len(gaussian_stds)
@@ -159,17 +171,29 @@ batch_size = 40
 nr_of_epochs = 100
 visualize_intermediate_results = True
 only_display_epoch_results = True
+display_interval = 10
+
+if only_evaluate:
+    if nr_of_epochs!=1:
+        print('INFO: Setting number of epochs to 1 for evaluation-only mode')
+        nr_of_epochs = 1
+    if batch_size!=1:
+        print('INFO: Setting batch size to 1 for evaluation-only mode')
+        batch_size = 1
+    if display_interval!=1:
+        print('INFO: Setting display interval to 1 for evalutation-only mode')
+        display_interval = 1
 
 reconstruct_variances = False
 reconstruct_stds = True
 
 display_colorbar = True
 
-reconstruction_weight = 100.0
+reconstruction_weight = 1000.0
 only_use_reconstruction_loss = False
 disable_weight_range_penalty = False
 
-lr = 0.25
+lr = 0.0025
 seed = 75
 
 if seed is not None:
@@ -248,6 +272,10 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
                                                                spacing=spacing,
                                                                im_sz=im_sz).create_deep_smoother(params_smoother).to(device)
 
+            if only_evaluate:
+                print('INFO: Loading the network state from {}'.format(save_network_state_dict_file))
+                deep_smoother.network.load_state_dict(torch.load(save_network_state_dict_file))
+
         weights, pre_weights, pre_weights_input = deep_smoother._compute_weights_and_preweights(I=I,
                                                                              additional_inputs=additional_inputs,
                                                                              global_multi_gaussian_weights=global_multi_gaussian_weights,
@@ -305,11 +333,12 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
         else:
             loss = reconstruction_loss + used_weight_range_penalty + current_l2_weight_penalty + current_tv_penalty + current_omt_penalty + current_diffusion_penalty
 
-        # compute the gradient
-        loss.backward()
+        if not only_evaluate:
+            # compute the gradient
+            loss.backward()
 
-        optimizer.step()
-        scheduler.step(loss.item())
+            optimizer.step()
+            scheduler.step(loss.item())
 
         if only_display_epoch_results:
             running_reconstruction_loss += reconstruction_loss.item() / nr_of_datasets
@@ -344,7 +373,7 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
                         effective_weight_range_penalty.item(),
                         current_l2_weight_penalty.item()))
 
-        if i == 0 and (epoch % 10 == 0):
+        if (i == 0 and (epoch % display_interval == 0)) or only_evaluate:
 
             nr_of_current_images = I.size()[0]
             currently_selected_image = np.random.randint(low=0, high=nr_of_current_images)
@@ -409,4 +438,10 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
             #plt.tight_layout(pad=0.0, w_pad=0.0, h_pad=0.0)
             plt.show()
 
-print('Finished Training')
+if not only_evaluate:
+    print('Finished Training')
+    print('Saving network state dict to {}'.format(save_network_state_dict_file))
+    torch.save(deep_smoother.network.state_dict(),save_network_state_dict_file)
+else:
+    print('Finished Evaluation')
+
