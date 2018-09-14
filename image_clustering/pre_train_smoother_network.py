@@ -141,6 +141,13 @@ def _plot_current_images(I,gt_variances,pred_variances,gt_weights,weights,
                          selected_image,
                          write_prefix=None):
 
+    currently_selected_image = selected_image
+
+    if display_colorbar:
+        cb_str = '_with_colorbar'
+    else:
+        cb_str = ''
+
     clean_print_path = 'clean_figures'
     if not os.path.exists(clean_print_path):
         print('INFO: Creating directory {}'.format(clean_print_path))
@@ -159,7 +166,7 @@ def _plot_current_images(I,gt_variances,pred_variances,gt_weights,weights,
         plt.colorbar()
 
     if write_prefix is not None:
-        plt.savefig(os.path.join(clean_print_path,'input_image_{}.pdf'.format(write_prefix)),bbox_inches='tight',pad_inches=0)
+        plt.savefig(os.path.join(clean_print_path,'input_image{}.pdf'.format(cb_str)),bbox_inches='tight',pad_inches=0)
         plt.clf()
     else:
         plt.subplot(4, nr_of_weights, 2)
@@ -171,7 +178,7 @@ def _plot_current_images(I,gt_variances,pred_variances,gt_weights,weights,
         plt.colorbar()
 
     if write_prefix is not None:
-        plt.savefig(os.path.join(clean_print_path,'gt_stds_{}.pdf'.format(write_prefix)),bbox_inches='tight',pad_inches=0)
+        plt.savefig(os.path.join(clean_print_path,'gt_stds{}.pdf'.format(cb_str)),bbox_inches='tight',pad_inches=0)
         plt.clf()
     else:
         plt.subplot(4, nr_of_weights, 3)
@@ -210,7 +217,7 @@ def _plot_current_images(I,gt_variances,pred_variances,gt_weights,weights,
         if display_colorbar:
             plt.colorbar()
         if write_prefix is not None:
-            plt.savefig(os.path.join(clean_print_path, 'gt_weights_{}_{}.pdf'.format(nw,write_prefix)),
+            plt.savefig(os.path.join(clean_print_path, 'gt_weights_{}{}.pdf'.format(nw,cb_str)),
                         bbox_inches='tight', pad_inches=0)
 
     # plot the computed weights
@@ -266,7 +273,7 @@ map_low_res_factor = params['model']['deformation'][('map_low_res_factor',1.0,'M
 spline_order = params['model']['registration_model'][('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
 params_smoother = params['model']['registration_model']['forward_model']['smoother']
 
-all_omt_weight_penalties = [5.0,15.0,25.0,50.0,75.0,100.0] # 1.0
+all_omt_weight_penalties = [1.0,5.0,15.0,25.0,50.0,75.0,100.0]
 all_tv_penalties = [0.1]
 
 for omt_weight_penalty in all_omt_weight_penalties:
