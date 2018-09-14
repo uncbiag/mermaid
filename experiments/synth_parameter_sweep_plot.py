@@ -2,6 +2,7 @@ import experiment_utils as eu
 import os
 import glob
 import torch
+import copy
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 rcParams.update({'figure.autolayout': True})
@@ -125,7 +126,7 @@ def plot_results(all_stats,all_names,nr_of_measures,showfliers,normalize_by_spac
             plt.show()
 
     # median normalized (with respect to stage 0 -- first entry, check this; this should be more or less constant as it does not depend on the OMT or TV penalty
-    all_stats_mn = all_stats.copy()
+    all_stats_mn = copy.deepcopy(all_stats)
     for k in all_stats_mn:
         c_stats = all_stats_mn[k]
         print('Normalizing based on {:s}'.format(all_names[k][0]))
@@ -189,6 +190,7 @@ else:
 
 #desired_stat = 'mean'
 desired_stat = 'median'
+use_custom_boxplot_ranges = True
 showfliers = False
 normalize_by_spacing = True
 spacing = 1./(128.-1.)
@@ -299,16 +301,26 @@ else:
 # first the visualization for the map results
 
 # custom ranges for the boxplots
-custom_ranges_map_raw = None
-custom_ranges_map_norm = None
-custom_ranges_det_jac_raw = None
-custom_ranges_det_jac_norm = None
+if use_custom_boxplot_ranges:
+    # only stage 0,2
+    # custom_ranges_map_raw = {0.0:[0,6.5], 1.0:[0,6.5], 2.0:[0,6.5], 'global':[0,6.5]}
+    # custom_ranges_map_norm = {0.0:[0,2.5], 1.0:[0,2.5], 2.0:[0,2.5], 'global':[0,2.5]}
+    #
+    # custom_ranges_det_jac_raw = {0.0:[-0.15,0.05], 1.0:[-0.4,0.4], 2.0:[-0.05,0.7], 'global':[-0.1,0.1]}
+    # custom_ranges_det_jac_norm = {0.0:[-1.5,6.0], 1.0:[-10.0,10.0], 2.0:[-0.25,3.0], 'global':[-10.0,15.0]}
 
-# custom_ranges_map_raw = {0.0:[0,6.5], 1.0:[0,6.5], 2.0:[0,6.5], 'global':[0,6.5]}
-# custom_ranges_map_norm = {0.0:[0,2.5], 1.0:[0,2.5], 2.0:[0,2.5], 'global':[0,2.5]}
-#
-# custom_ranges_det_jac_raw = {0.0:[-0.15,0.05], 1.0:[-0.4,0.4], 2.0:[-0.05,0.7], 'global':[-0.1,0.1]}
-# custom_ranges_det_jac_norm = {0.0:[-1.5,6.0], 1.0:[-10.0,10.0], 2.0:[-0.25,3.0], 'global':[-10.0,15.0]}
+    # stages 0,1,2
+    custom_ranges_map_raw = {0.0: [0, 6.0], 1.0: [0, 6.0], 2.0: [0, 6.0], 'global': [0, 6.0]}
+    custom_ranges_map_norm = {0.0: [0, 2.5], 1.0: [0, 2.5], 2.0: [0, 2.5], 'global': [0, 2.5]}
+
+    custom_ranges_det_jac_raw = {0.0: [-0.125, 0.05], 1.0: [-0.6, 0.4], 2.0: [-0.08, 0.65], 'global': [-0.08, 0.055]}
+    custom_ranges_det_jac_norm = {0.0: [-2.5, 6.5], 1.0: [-17.5, 11.0], 2.0: [-0.25, 2.75], 'global': [-20.0, 27.5]}
+else:
+    custom_ranges_map_raw = None
+    custom_ranges_map_norm = None
+    custom_ranges_det_jac_raw = None
+    custom_ranges_det_jac_norm = None
+
 
 plot_results(all_stats=all_stats_map, all_names=all_names_map, nr_of_measures=nr_of_measures, showfliers=showfliers,
              normalize_by_spacing=normalize_by_spacing, ylabel='disp error (est-GT)', output_prefix='map',
