@@ -486,7 +486,7 @@ if __name__ == "__main__":
     parser.add_argument('--nr_of_image_pairs', required=False, type=int, default=0, help='number of image pairs that will be used; if not set all pairs will be used')
 
     parser.add_argument('--compute_only_pair_nr', required=False, type=int, default=None, help='When specified only this pair is computed; otherwise all of them')
-    parser.add_argument('--create_clean_publication_print_for_pair_nr', required=False, type=int, default=None, help="When specified creates the publication prints only for the specified pairs numnber")
+    parser.add_argument('--create_clean_publication_print_for_pair_nr', required=False, type=int, default=None, help="When specified creates the publication prints only for the specified pairs number")
     parser.add_argument('--only_recompute_validation_measures', action='store_true', help='When set only the valiation measures are recomputed (nothing else; no images are written and no PDFs except for the validation boxplot are created)')
 
     parser.add_argument('--only_run_stage0_with_unchanged_config', action='store_true', help='This is a convenience setting which allows using the script to run any json config file unchanged (as if it were stage 0); i.e., it will optimize over the smoother if set as such; should only be used for debugging; will terminate after stage 0.')

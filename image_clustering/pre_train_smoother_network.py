@@ -171,7 +171,7 @@ def _plot_current_images(I,gt_variances,pred_variances,gt_weights,weights,
     else:
         plt.subplot(4, nr_of_weights, 2)
 
-    plt.imshow((gt_variances[currently_selected_image,...].detach().cpu().numpy())**0.5)
+    plt.imshow((gt_variances[currently_selected_image,...].detach().cpu().numpy())**0.5,clim=(0,0.2))
     plt.axis('image')
     plt.axis('off')
     if display_colorbar:
@@ -183,7 +183,7 @@ def _plot_current_images(I,gt_variances,pred_variances,gt_weights,weights,
     else:
         plt.subplot(4, nr_of_weights, 3)
 
-    plt.imshow((pred_variances[currently_selected_image, ...].detach().cpu().numpy())**0.5)
+    plt.imshow((pred_variances[currently_selected_image, ...].detach().cpu().numpy())**0.5,clim=(0,0.2))
     plt.axis('image')
     plt.axis('off')
     if display_colorbar:
@@ -195,7 +195,7 @@ def _plot_current_images(I,gt_variances,pred_variances,gt_weights,weights,
     else:
         plt.subplot(4, nr_of_weights, 4)
 
-    plt.imshow((pred_variances[currently_selected_image, ...].detach().cpu().numpy())**0.5-(gt_variances[currently_selected_image,...].detach().cpu().numpy())**0.5)
+    plt.imshow((pred_variances[currently_selected_image, ...].detach().cpu().numpy())**0.5-(gt_variances[currently_selected_image,...].detach().cpu().numpy())**0.5,clim=(-0.2,0.2))
     plt.axis('image')
     plt.axis('off')
     if display_colorbar:
