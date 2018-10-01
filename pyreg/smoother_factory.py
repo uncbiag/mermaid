@@ -968,16 +968,17 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, nr_of_slots=self.nr_of_gaussians)
         """creates the smoothed vector fields"""
 
+        self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,dim=self.dim,spacing=self.spacing,im_sz=self.sz).create_deep_smoother(params)
+        """learned mini-network to predict multi-Gaussian smoothing weights"""
+
+        last_kernel_size = self.ws.get_last_kernel_size()
         if self.scale_global_parameters:
-            self.global_parameter_scaling_factor = float(np.sqrt(1./self.sz.prod()))
+            self.global_parameter_scaling_factor = float(np.sqrt(float(last_kernel_size**self.dim) / self.sz.prod()))
         else:
             self.global_parameter_scaling_factor = 1.0
 
         self.pre_multi_gaussian_stds_optimizer_params = self._create_pre_multi_gaussian_stds_optimization_vector_parameters()
         self.pre_multi_gaussian_weights_optimizer_params = self._create_pre_multi_gaussian_weights_optimization_vector_parameters()
-
-        self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,dim=self.dim,spacing=self.spacing,im_sz=self.sz).create_deep_smoother(params)
-        """learned mini-network to predict multi-Gaussian smoothing weights"""
 
         self.weighting_type = self.ws.get_weighting_type() # 'w_K','w_K_w','sqrt_w_K_sqrt_w'
 

@@ -23,6 +23,7 @@ import math
 import torch
 from torch.nn.parameter import Parameter
 import torch.nn.functional as F
+import pyreg.utils as utils
 
 def DimNoisyConv(dim):
     if dim == 1:
@@ -390,6 +391,15 @@ class DeepNetwork(with_metaclass(ABCMeta,nn.Module)):
         ln = self._find_last_layer_of_type([nc.NoisyLayer])
         return ln
 
+    @abstractmethod
+    def get_last_kernel_size(self):
+        """
+        Returns the size of the kernel along one direction (needs to be taken to the power of the dimension) for the last convolutional layer.
+        This allows for example to scale numerical algorithms with respect to it.
+        :return:
+        """
+        pass
+
     def initialize_network_weights(self):
 
 
@@ -581,6 +591,9 @@ class Unet(DeepNetwork):
                                             start_reducing_from_iter=self.start_reducing_from_iter
                                             )
 
+    def get_last_kernel_size(self):
+        return 3
+
     def forward(self, x, iter=0):
         d1 = self.down_path_1(x, iter=iter)
         d2_1 = self.down_path_2_1(d1, iter=iter)
@@ -653,6 +666,9 @@ class Encoder_decoder(DeepNetwork):
                                                   use_dropout=use_dropout, normalization_type=self.normalization_type,dim=dim)
             self.decoder_2 = decoder_block_2d(feature_num, self.nr_of_gaussians, im_sz=im_sz, pooling_filter=2,
                                               use_dropout=use_dropout, normalization_type=self.normalization_type,dim=dim, last_block=True) # 3?
+
+    def get_last_kernel_size(self):
+        return 3
 
     def forward(self, x):
 
@@ -806,6 +822,9 @@ class Simple_consistent(DeepNetwork):
             for nl in noise_layers:
                 self.noise_layers.append(nl)
 
+
+    def get_last_kernel_size(self):
+        return self.kernel_sizes[-1]
 
     def forward(self, x, iter=0):
 
@@ -1019,6 +1038,9 @@ class Unet_no_skip(DeepNetwork):
                                             start_reducing_from_iter=self.start_reducing_from_iter
                                             )
 
+    def get_last_kernel_size(self):
+        return 3
+
     def forward(self, x):
         d1 = self.down_path_1(x)
         d2_1 = self.down_path_2_1(d1)
@@ -1057,7 +1079,7 @@ class WeightInputRangeLoss(nn.Module):
         if not use_weighted_linear_softmax:
             # checks what is hit by the clamping
             xd = x-torch.clamp(x,min_weight,max_weight)
-            loss = (xd**2).sum()*volumeElement
+            loss = utils.remove_infs_from_variable((xd**2)).sum()*volumeElement
             #loss = torch.abs(xd).sum() * volumeElement
         else:
             # weights are in dimension 1; assumes that weighted linear softmax is used
@@ -1085,7 +1107,7 @@ class WeightInputRangeLoss(nn.Module):
                 else:
                     raise ValueError('Only dimensions {0,1,2,3,4} are supported')
                 eff_input_d = eff_input-torch.clamp(eff_input,min_weight,max_weight)
-                loss += (eff_input_d**2).sum()*volumeElement
+                loss += utils.remove_infs_from_variable(eff_input_d**2).sum()*volumeElement
                 #loss += torch.abs(eff_input_d).sum() * volumeElement
 
         return loss
@@ -1352,6 +1374,9 @@ class ClusteringLoss(nn.Module):
             return self._compute_cut_cost_for_label_k_3d(w_edge, p)
         else:
             raise ValueError('Only defined for dimensions {1,2,3}')
+
+    def get_last_kernel_size(self):
+        return 1
 
     def forward(self, input_images, spacing, label_probabilities):
         import pyreg.deep_smoothers as deep_smoothers

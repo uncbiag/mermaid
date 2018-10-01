@@ -1614,6 +1614,9 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
 
         return current_penalty, current_omt_penalty, current_tv_penalty, current_diffusion_penalty, current_preweight_input_range_penalty
 
+    @abstractmethod
+    def get_last_kernel_size(self):
+        pass
 
     def forward(self, I, additional_inputs, global_multi_gaussian_weights, gaussian_fourier_filter_generator, iter=0, retain_weights=False):
 
@@ -1841,6 +1844,9 @@ class GeneralNetworkWeightedSmoothingModel(DeepSmoothingModel):
 
         return pre_weights,x
 
+    def get_last_kernel_size(self):
+        return self.network.get_last_kernel_size()
+
 class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
     """
     Assumes a given clustering of an input image and estimates weights for this clustering
@@ -1935,6 +1941,9 @@ class ClusteredWeightedSmoothingModel(DeepSmoothingModel):
                 pre_weights[:,w,...] = pre_weights[:,w,...] + current_indices.float()*lsm_weights[w,c]
 
         return pre_weights,self.pre_lsm_weights
+
+    def get_last_kernel_size(self):
+        return 1
 
 class DeepSmootherFactory(object):
     """
