@@ -3,3 +3,5 @@
 *~
 *.json
 .idea/
+!test/json/test_affine_settings.json
+!test/json/test_svf_settings.json

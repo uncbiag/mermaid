@@ -12,7 +12,7 @@
                 "max_displacement":0.1
             },
             "similarity_measure": {
-                "sigma": 0.5,
+                "sigma": 1,
                 "type": "ncc"
             },
             "spline_order": 1,
@@ -22,9 +22,13 @@
     "optimizer": {
         "multi_scale": {
             "scale_factors": [
-                1.0
+                1.0,
+                0.5,
+                0.25
             ],
             "scale_iterations": [
+                1,
+                1,
                 1
             ]
         },

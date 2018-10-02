@@ -1,32 +1,29 @@
 #!/usr/bin/env python
 """
 For debug the issue that the combination of forward map and inverse map is not an identity map
-2D images are used for debugging
+2D toy images are used for debugging
 Created by zhenlinx on 9/4/18
 """
 
 import sys
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = '1'
-os.environ["CUDA_CACHE_PATH"] = "/playpen/zhenlinx/.cuda_cache"
+os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+# os.environ["CUDA_CACHE_PATH"] = "/playpen/zhenlinx/.cuda_cache"
 sys.path.append(os.path.realpath(".."))
-
 sys.path.append(os.path.realpath("../mermaid"))
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import torch.nn.functional as F
 from pyreg.utils import apply_affine_transform_to_map_multiNC, get_inverse_affine_param, update_affine_param
 import pyreg.simple_interface as SI
 import pyreg.fileio as FIO
 import pyreg.utils as pyreg_utils
-import pymesh
-import SimpleITK as sitk
+
 import imageio
 
-class TestRegister:
+class Test2DRegister:
     def __init__(self, reg_models):
         """
         initialize with a sequence of registration mode
@@ -84,9 +81,11 @@ class TestRegister:
 
         print("\n######### Affine Registration Stage #########\n")
 
-        # if self.map is not None and self.inverse_map is not None:
-        #     self.si_.set_initial_map(self.map, self.inverse_map)
-        #     print("Initialize with existing Affine params")
+        # if there are init affine params
+        if self.map is not None and self.inverse_map is not None:
+            self.si_.set_initial_map(self.map, self.inverse_map)
+            print("Initialize with existing Affine params")
+
         self.si_.register_images(self.moving_image_np, self.target_image_np, self.moving_spacing_normalized,
                                  model_name=self.model_0_name,
                                  use_multi_scale=True,
@@ -95,19 +94,21 @@ class TestRegister:
                                  json_config_out_filename=config_saving_path,
                                  compute_inverse_map=True,
                                  params=self.model_0_setting)
-        # if self.Ab is not None:
-        #     self.Ab = update_affine_param(self.Ab, self.si_.opt.optimizer.ssOpt.model.Ab.detach()) # forward affine parameters
-        # else:
-        self.Ab = self.si_.opt.optimizer.ssOpt.model.Ab.detach()
+
+        # if there are non-identity init affine params, combine them with affine registration result
+        if self.Ab is not None:
+            self.Ab = update_affine_param(self.Ab, self.si_.opt.optimizer.ssOpt.model.Ab.detach()) # forward affine parameters
+        else:
+            self.Ab = self.si_.opt.optimizer.ssOpt.model.Ab.detach()
         self.inv_Ab = get_inverse_affine_param(self.Ab)
         # affine_param = self.Ab.detach().cpu().numpy().reshape((4, 3))
         # affine_param = np.transpose(affine_param)
         # print(" the affine param is {}".format(affine_param))
         self.map = self.si_.opt.optimizer.ssOpt.get_map().detach()
 
-        self.map = apply_affine_transform_to_map_multiNC(
-            self.Ab, torch.from_numpy(pyreg_utils.identity_map_multiN(self.moving_image_np.shape,
-                                                                          self.moving_spacing_normalized)).cuda())
+        # self.map = apply_affine_transform_to_map_multiNC(
+        #     self.Ab, torch.from_numpy(pyreg_utils.identity_map_multiN(self.moving_image_np.shape,
+        #                                                                   self.moving_spacing_normalized)).cuda())
 
         self.inverse_map = apply_affine_transform_to_map_multiNC(
             self.inv_Ab, torch.from_numpy(pyreg_utils.identity_map_multiN(self.moving_image_np.shape,
@@ -135,13 +136,6 @@ class TestRegister:
         self.map = self.si_.opt.optimizer.ssOpt.get_map().detach()
         self.inverse_map = inversed_map_svf
 
-    def get_warped_moving_image(self):
-        return self.si_.get_warped_image().cpu().data.numpy().squeeze()
-
-    def save_warped_moving_image(self, path):
-        warped_image_np = self.get_warped_moving_image()
-        self.im_io.write(path, warped_image_np, self.hdrc_target)
-
     def save_map(self, map_path, inverse_map_path=None):
         np.save(map_path, self.map.cpu().data)
         if inverse_map_path:
@@ -160,6 +154,7 @@ class TestRegister:
 
 
     def show_maps(self, title=None):
+        """Function to draw current map/inverse_map/circular_map"""
         circular_map = self.get_circular_map()
         forward_map = self.map.cpu().numpy().squeeze()/(self.target_spacing_normalized.reshape(2,1,1))
         inverse_map = self.inverse_map.cpu().numpy().squeeze()/(self.moving_spacing_normalized.reshape(2,1,1))
@@ -203,15 +198,15 @@ class TestRegister:
 
 
 def debug_inverse_map_issue():
-    moving_img_path = '../test_data/brain_slices/wt_slice.nrrd'
-    target_img_path = '../test_data/brain_slices/wt_slice.nrrd'
+    # moving_img_path = '../test_data/brain_slices/ws_slice.nrrd'
+    # target_img_path = '../test_data/brain_slices/wt_slice.nrrd'
     moving_img_path = '../test_data/toy_2d/test1m.png'
     target_img_path = '../test_data/toy_2d/test1f.png'
 
     affine_setting_name = 'json/test_affine_settings.json'
     svf_setting_name = 'json/test_svf_settings.json'
 
-    reg = TestRegister([('affine_map', affine_setting_name),
+    reg = Test2DRegister([('affine_map', affine_setting_name),
                            ('svf_vector_momentum_map', svf_setting_name)])
     reg.set_moving_image(moving_img_path)
     reg.set_target_image(target_img_path)
