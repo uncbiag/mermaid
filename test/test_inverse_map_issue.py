@@ -7,8 +7,9 @@ Created by zhenlinx on 9/4/18
 
 import sys
 import os
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
+
+#os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+#os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 # os.environ["CUDA_CACHE_PATH"] = "/playpen/zhenlinx/.cuda_cache"
 sys.path.append(os.path.realpath(".."))
 sys.path.append(os.path.realpath("../mermaid"))
@@ -20,6 +21,9 @@ from pyreg.utils import apply_affine_transform_to_map_multiNC, get_inverse_affin
 import pyreg.simple_interface as SI
 import pyreg.fileio as FIO
 import pyreg.utils as pyreg_utils
+
+from pyreg.data_wrapper import MyTensor, AdaptVal, USE_CUDA
+device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
 
 import imageio
 
@@ -112,7 +116,7 @@ class Test2DRegister:
 
         self.inverse_map = apply_affine_transform_to_map_multiNC(
             self.inv_Ab, torch.from_numpy(pyreg_utils.identity_map_multiN(self.moving_image_np.shape,
-                                                                          self.moving_spacing_normalized)).cuda())
+                                                                          self.moving_spacing_normalized)).to(device))
 
     def register_image_pair_svf(self, config_saving_path=None):
         print("\n######### svf Registration Stage #########\n")
@@ -148,10 +152,9 @@ class Test2DRegister:
         return self.inverse_map
 
     def get_circular_map(self):
-        return pyreg_utils.compute_warped_image_multiNC(self.map.cuda(), self.inverse_map.cuda(),
-                                                 self.moving_spacing_normalized, 1, False).cpu().numpy().squeeze() / \
-        (self.moving_spacing_normalized.reshape((-1,) + (1,)*len(self.moving_spacing_normalized)))
 
+        return pyreg_utils.compute_warped_image_multiNC(self.map.to(device), self.inverse_map.to(device),
+                                                    self.moving_spacing_normalized, 1, False).cpu().numpy().squeeze() / (self.moving_spacing_normalized.reshape((-1,) + (1,) * len(self.moving_spacing_normalized)))
 
     def show_maps(self, title=None):
         """Function to draw current map/inverse_map/circular_map"""
