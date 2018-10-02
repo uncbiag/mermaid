@@ -132,6 +132,28 @@ class RHSLibrary(object):
         return rhs_ret
 
 
+    def rhs_lagrangian_evolve_map_multiNC(self, phi, v):
+        """
+        Evolves a set of N maps (for N images). Expected format here, is
+        BxCxXxYxZ, where B is the number of images/maps (batch size), C, the number of channels
+        per (here the spatial dimension for the map coordinate functions),
+        and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D).
+        This is used to evolve the map going from source to target image. Requires interpolation
+        so should if at all possible not be used as part of an optimization.
+
+        :math:`v\circ\phi`
+
+        :param phi: map batch BxCxXxYxZ
+        :param v: Velocity fields (this will be one velocity field per map) BxCxXxYxZ
+        :return: Returns the RHS of the evolution equations involved BxCxXxYxZ
+        :param phi:
+        :param v:
+        :return:
+        """
+        rhs_ret = utils.compute_warped_image_multiNC(v, phi, spacing=self.spacing, spline_order=1,zero_boundary=False)
+        return rhs_ret
+
+
     def rhs_advect_map_multiNC(self, phi, v):
         '''
         Advects a set of N maps (for N images). Expected format here, is 
@@ -187,8 +209,6 @@ class RHSLibrary(object):
             #return rhsphi
         else:
             raise ValueError('Only supported up to dimension 3')
-
-
 
 
     def rhs_epdiff_multiNC(self, m, v):
@@ -355,7 +375,7 @@ class AdvectMap(ForwardModel):
         """
 
         if self.compute_inverse_map:
-            return [self.rhs.rhs_advect_map_multiNC(x[0], u),self.rhs.rhs_advect_map_multiNC(x[1],-u)]
+            return [self.rhs.rhs_advect_map_multiNC(x[0], u),self.rhs.rhs_lagrangian_evolve_map_multiNC(x[1], u)]
         else:
             return [self.rhs.rhs_advect_map_multiNC(x[0],u)]
 
@@ -491,7 +511,7 @@ class EPDiffMap(ForwardModel):
         if self.compute_inverse_map:
             ret_val= [self.rhs.rhs_epdiff_multiNC(m,v),
                       self.rhs.rhs_advect_map_multiNC(phi,v),
-                      self.rhs.rhs_advect_map_multiNC(phi_inv, -v)]
+                      self.rhs.rhs_lagrangian_evolve_map_multiNC(phi_inv,v)]
         else:
             ret_val= [self.rhs.rhs_epdiff_multiNC(m,v),self.rhs.rhs_advect_map_multiNC(phi,v)]
         #self.debugging([m, v, phi, new_val[0], new_val[1]], t)
@@ -614,7 +634,7 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
             ret_val = [self.rhs.rhs_scalar_conservation_multiNC(lam,v),
                 self.rhs.rhs_advect_image_multiNC(I,v),
                 self.rhs.rhs_advect_map_multiNC(phi,v),
-                self.rhs.rhs_advect_map_multiNC(phi_inv, -v)]
+                self.rhs.rhs_lagrangian_evolve_map_multiNC(phi_inv,v)]
         else:
             ret_val = [self.rhs.rhs_scalar_conservation_multiNC(lam,v),
                 self.rhs.rhs_advect_image_multiNC(I,v),
