@@ -245,7 +245,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
 
     model.set_dictionary_to_pass_to_integrator(dictionary_to_pass_to_integrator)
 
-    model.set_shared_registration_parameters(shared_parameters)
+    model.load_shared_state_dict(shared_parameters)
     model_pars = individual_parameters_to_model_parameters(individual_parameters)
     model.set_individual_registration_parameters(model_pars)
 
@@ -1230,5 +1230,5 @@ if args.compute_only_pair_nr is None and not args.only_recompute_validation_meas
                     os.remove(summary_pdf_name)
 
                 print('Creating summary PDF: ')
-                cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_dir, '*.pdf'), summary_pdf_name)
+                cmd = 'pdfjam {:} --nup 1x2 --outfile {:}'.format(os.path.join(print_output_dir, '0*.pdf'), summary_pdf_name)
                 os.system(cmd)

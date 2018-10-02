@@ -15,13 +15,13 @@ nframes = 1
 width = 1000 #233333
 ratio =1
 grid_width= int(width/ratio)
-channels = 5
+channels = 100
 device = torch.cuda.current_device()
 
 inputImage = torch.randn(nframes, channels, width)
-inputGrids = (torch.rand(nframes, 1,  grid_width)*2 -1)
+inputGrids = (torch.rand(nframes, 1,  grid_width)*1.2 -1)
 output = torch.rand(nframes, channels, grid_width)
-using_zero_boundary = True
+using_zero_boundary = False
 
 
 inputImage_cuda = inputImage.cuda(device)

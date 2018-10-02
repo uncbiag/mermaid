@@ -64,7 +64,8 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
         self.nrOfChannels = int(sz[1])
         """the number of image channels, i.e., C"""
 
-        self._shared_parameters = set()
+        self._shared_states = set()
+        """shared states"""
 
         self._default_dictionary_to_pass_to_integrator = dict()
 
@@ -160,7 +161,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
         individual_params = collections.OrderedDict()
 
         for key_value in cs:
-            if not self._shared_parameters.issuperset({key_value[0]}):
+            if not self._shared_states.issuperset({key_value[0]}):
                 individual_params[key_value[0]] = key_value[1]
         return individual_params
 
@@ -175,7 +176,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
         shared_params_and_buffers = collections.OrderedDict()
 
         for key_value in cs:
-            if self._shared_parameters.issuperset({key_value}):
+            if self._shared_states.issuperset({key_value}):
                 shared_params_and_buffers[key_value] = cs[key_value]
 
         return shared_params_and_buffers
@@ -189,10 +190,59 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
         shared_params = collections.OrderedDict()
 
         for key_value in cs:
-            if self._shared_parameters.issuperset({key_value[0]}):
+            if self._shared_states.issuperset({key_value[0]}):
+                #todo: implement this properly
                 shared_params[key_value[0]] = key_value[1]
 
         return shared_params
+
+    def _load_state_dict_individual_or_shared(self,pars,is_individual=False,is_shared=False):
+        """
+        Method to load shared or individual states or parameters into the state dictionary
+        :param pars: parameters/states
+        :param is_individual: boolean
+        :param is_shared: boolean
+        :return: n/a
+        """
+
+        if is_individual and is_shared:
+            raise ValueError('Cannot be individual and shared at the same time')
+
+        cs = self.state_dict()
+
+        for key in pars:
+            if key in cs:
+                if not (is_individual or is_shared) \
+                    or (is_individual and not self._shared_states.issuperset({key})) \
+                    or (is_shared and self._shared_states.issuperset({key})):
+
+                    if torch.is_tensor(pars[key]):
+                        cs[key].copy_(pars[key])
+                    else: # is a parameter
+                        cs[key].copy_(pars[key].data)
+
+    def _state_dict_individual_or_shared(self, is_individual=False, is_shared=False):
+        """
+        Method to return shared or individual states or parameters as a state ordered dictionary
+        :param is_individual: boolean
+        :param is_shared: boolean
+        :return: ordered state dictionary
+        """
+
+        if is_individual and is_shared:
+            raise ValueError('Cannot be individual and shared at the same time')
+
+        current_state_dict = collections.OrderedDict()
+        cs = self.state_dict()
+
+        for key in cs:
+            if not (is_individual or is_shared) \
+                    or (is_individual and not self._shared_states.issuperset({key})) \
+                    or (is_shared and self._shared_states.issuperset({key})):
+
+                current_state_dict[key] = cs[key]
+
+        return current_state_dict
 
     def set_registration_parameters(self, pars, sz, spacing):
         """
@@ -203,14 +253,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
         :param spacing: spacing of the image the parameter corresponds to 
         """
 
-        cs = self.state_dict()
-
-        for key in pars:
-            if key in cs:
-                if torch.is_tensor(pars[key]):
-                    cs[key].copy_(pars[key])
-                else: #is a parameter
-                    cs[key].copy_(pars[key].data)
+        self._load_state_dict_individual_or_shared(pars)
 
         self.sz = sz
         self.spacing = spacing
@@ -224,14 +267,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
         :return: n/a
         """
 
-        cs = self.state_dict()
-
-        for key in pars:
-            if key in cs and not self._shared_parameters.issuperset({key}):
-                if torch.is_tensor(pars[key]):
-                    cs[key].copy_(pars[key])
-                else: # is a parameter
-                    cs[key].copy_(pars[key].data)
+        self._load_state_dict_individual_or_shared(pars,is_individual=True)
 
     def set_shared_registration_parameters(self, pars):
         """
@@ -241,14 +277,32 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
         :return: n/a
         """
 
-        cs = self.state_dict()
+        self._load_state_dict_individual_or_shared(pars, is_shared=True)
 
-        for key in pars:
-            if key in cs and self._shared_parameters.issuperset({key}):
-                if torch.is_tensor(pars[key]):
-                    cs[key].copy_(pars[key])
-                else: # is a parameter
-                    cs[key].copy_(pars[key].data)
+    def load_shared_state_dict(self,sd):
+        """
+        Loads the shared part of a state dictionary
+        :param sd: shared state dictionary
+        :return: n/a
+        """
+
+        self._load_state_dict_individual_or_shared(sd, is_shared=True)
+
+    def shared_state_dict(self):
+        """
+        Returns the shared part of the state dictionary
+        :return:
+        """
+
+        return self._state_dict_individual_or_shared(is_shared=True)
+
+    def individual_state_dict(self):
+        """
+        Returns the individual part of the state dictionary
+        :return:
+        """
+
+        return self._state_dict_individual_or_shared(is_individual=True)
 
     def downsample_registration_parameters(self, desiredSz):
         """
@@ -535,7 +589,7 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother to go from momentum to velocity"""
-        self._shared_parameters = self._shared_parameters.union(self.smoother.associate_parameters_with_module(self))
+        self._shared_states = self._shared_states.union(self.smoother.associate_parameters_with_module(self))
         """registers the smoother parameters so that they are optimized over if applicable"""
         self.v = torch.zeros_like(self.m)
         """corresponding velocity field"""
@@ -869,8 +923,7 @@ class SVFImageLoss(RegistrationImageLoss):
         :return: returns the regularization energy
         """
 
-        batch_size = self.v.size()[0]
-        return self.regularizer.compute_regularizer_multiN(self.v)/batch_size
+        return self.regularizer.compute_regularizer_multiN(self.v)
 
 
 class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
@@ -919,8 +972,7 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
         m = self.m
         pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
         v = self.smoother.smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
-        batch_size = self.m.size()[0]
-        return self.regularizer.compute_regularizer_multiN(v)/batch_size + self.smoother.get_penalty()
+        return self.regularizer.compute_regularizer_multiN(v) + self.smoother.get_penalty()
 
 class SVFMapNet(SVFNet):
     """
@@ -991,8 +1043,7 @@ class SVFMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
 
-        batch_size = self.v.size()[0]
-        return self.regularizer.compute_regularizer_multiN(self.v)/batch_size
+        return self.regularizer.compute_regularizer_multiN(self.v)
 
 class DiffusionMapLoss(RegistrationMapLoss):
     """
@@ -1020,8 +1071,7 @@ class DiffusionMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
 
-        batch_size = self.d.size()[0]
-        return self.regularizer.compute_regularizer_multiN(self.d)/batch_size
+        return self.regularizer.compute_regularizer_multiN(self.d)
 
 class TotalVariationMapLoss(RegistrationMapLoss):
     """
@@ -1049,8 +1099,7 @@ class TotalVariationMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
 
-        batch_size = self.d.size()[0]
-        return self.regularizer.compute_regularizer_multiN(self.d)/batch_size
+        return self.regularizer.compute_regularizer_multiN(self.d)
 
 class CurvatureMapLoss(RegistrationMapLoss):
     """
@@ -1078,8 +1127,7 @@ class CurvatureMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
 
-        batch_size = self.d.size()[0]
-        return self.regularizer.compute_regularizer_multiN(self.d)/batch_size
+        return self.regularizer.compute_regularizer_multiN(self.d)
 
 class AffineMapNet(RegistrationNet):
     """
@@ -1181,7 +1229,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother"""
-        self._shared_parameters = self._shared_parameters.union(self.smoother.associate_parameters_with_module(self))
+        self._shared_states = self._shared_states.union(self.smoother.associate_parameters_with_module(self))
         """registers the smoother parameters so that they are optimized over if applicable"""
 
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':
@@ -1316,8 +1364,7 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = self.m.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
@@ -1388,8 +1435,7 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = self.m.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
 
         return reg
 
@@ -1474,8 +1520,7 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = self.m.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
@@ -1560,8 +1605,7 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = self.m.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
@@ -1576,7 +1620,7 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
         cparams = params[('forward_model', {}, 'settings for the forward model')]
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother"""
-        self._shared_parameters = self._shared_parameters.union(self.smoother.associate_parameters_with_module(self))
+        self._shared_states = self._shared_states.union(self.smoother.associate_parameters_with_module(self))
         """registers the smoother parameters so that they are optimized over if applicable"""
 
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':
@@ -1725,8 +1769,7 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer,smooth_to_compute_regularizer_energy=True)
 
-        batch_size = v.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 
@@ -1791,8 +1834,7 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = v.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 
@@ -1872,8 +1914,7 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = v.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
@@ -1956,6 +1997,5 @@ class SVFScalarMomentumMapLoss(RegistrationMapLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        batch_size = v.size()[0]
-        reg = (v * m).sum() * self.spacing_model.prod()/batch_size + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg

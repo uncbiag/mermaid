@@ -2,8 +2,8 @@
 #include <omp.h>
 #endif
 
-#include <TH/TH.h>
-#include <THTensor.h>
+//#include <TH/TH.h>
+#include <TH/THTensor.h>
 #include <stdbool.h>
 #include <stdio.h>
 

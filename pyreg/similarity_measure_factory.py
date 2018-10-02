@@ -13,6 +13,7 @@ from .data_wrapper import MyTensor
 from . import utils
 from math import floor
 from .similarity_helper_omt import *
+import torch.nn.functional as F
 
 import numpy as np
 from future.utils import with_metaclass
@@ -65,7 +66,7 @@ class SimilarityMeasure(with_metaclass(ABCMeta, object)):
             for nrI in range(sz[0]):  # loop over all the images
                 sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], I0Source[nrI,...], phi[nrI,...])
 
-        return sim/sz[0] # needs to be normalized based on batch size
+        return sim
 
 
     def compute_similarity_multiC(self, I0, I1, I0Source=None, phi=None):
@@ -239,6 +240,102 @@ class NCCSimilarity(SimilarityMeasure):
         #ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
         # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
         #return AdaptVal((1.0-ncc**2) / (self.sigma ** 2))
+
+
+
+class LNCCSimilarity(SimilarityMeasure):
+    """
+    Computes a localized normalized-cross correlation based similarity measure between two images.
+    :math:`ncc = (1-ncc^2)/(\\sigma^2)`
+    """
+    def __init__(self, spacing, params):
+        super(LNCCSimilarity,self).__init__(spacing,params)
+        self.dim = len(spacing)
+
+
+    def __stepup(self,img_sz):
+        max_scale  = min(img_sz)
+        if max_scale>128:
+            self.scale = [int(max_scale/16), int(max_scale/8), int(max_scale/4)]
+            self.scale_weight = [0.5, 0.3, 0.2]
+        elif max_scale>64:
+            self.scale = [int(max_scale / 8), int(max_scale / 4)]
+            self.scale_weight = [0.6,0.4]
+        elif max_scale>32:
+            self.scale = [int(max_scale / 4)]
+            self.scale_weight = [1.0]
+        else :
+            self.scale = [int(max_scale / 2)]
+            self.scale_weight = [1.0]
+        self.num_scale = len(self.scale)
+        self.kernel_sz = [[scale for _ in range(self.dim)] for scale in self.scale]
+        self.step = [[max(int((ksz + 1) / 2),1) for ksz in self.kernel_sz[scale_id]] for scale_id in range(self.num_scale)]
+        self.dilation = [2 for _ in range(self.num_scale)]
+        self.filter = [torch.ones([1, 1] + self.kernel_sz[scale_id]).cuda() for scale_id in range(self.num_scale)]
+        if self.dim==1:
+            self.conv= F.conv1d
+        elif self.dim ==2:
+            self.conv= F.conv2d
+        elif self.dim ==3:
+            self.conv = F.conv3d
+        else:
+            raise ValueError(" Only 1-3d support")
+
+    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
+        """
+       Computes the NCC-based image similarity measure between two images
+
+       :param I0: first image
+       :param I1: second image
+       :param I0Source: not used
+       :param phi: not used
+       :return: (1-NCC^2)/sigma^2
+
+       """
+        input = I0.view([1,1]+ list(I0.shape))
+        target =I1.view([1,1]+ list(I1.shape))
+        self.__stepup(img_sz=list(I0.shape))
+
+
+
+        input_2 = input ** 2
+        target_2 = target ** 2
+        input_target = input * target
+        lncc_total = 0.
+        for scale_id in range(self.num_scale):
+
+
+            input_local_sum = self.conv(input, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id], stride=self.step[scale_id]).view(input.shape[0], -1)
+            target_local_sum = self.conv(target, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id], stride=self.step[scale_id]).view(input.shape[0],
+                                                                                                           -1)
+            input_2_local_sum = self.conv(input_2, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id], stride=self.step[scale_id]).view(input.shape[0],
+                                                                                                             -1)
+            target_2_local_sum = self.conv(target_2, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id], stride=self.step[scale_id]).view(
+                input.shape[0], -1)
+            input_target_local_sum = self.conv(input_target, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id], stride=self.step[scale_id]).view(
+                input.shape[0], -1)
+
+            input_local_sum = input_local_sum.contiguous()
+            target_local_sum = target_local_sum.contiguous()
+            input_2_local_sum = input_2_local_sum.contiguous()
+            target_2_local_sum = target_2_local_sum.contiguous()
+            input_target_local_sum = input_target_local_sum.contiguous()
+
+            numel = float(np.array(self.kernel_sz[scale_id]).prod())
+
+            input_local_mean = input_local_sum / numel
+            target_local_mean = target_local_sum /numel
+
+            cross = input_target_local_sum - target_local_mean * input_local_sum - \
+                    input_local_mean * target_local_sum + target_local_mean * input_local_mean * numel
+            input_local_var = input_2_local_sum - 2 * input_local_mean * input_local_sum + input_local_mean ** 2 * numel
+            target_local_var = target_2_local_sum - 2 * target_local_mean * target_local_sum + target_local_mean ** 2 * numel
+
+            lncc = cross * cross / (input_local_var * target_local_var + 1e-5)
+            lncc = 1 - lncc.mean()
+            lncc_total += lncc*self.scale_weight[scale_id]
+
+        return lncc_total
 
 
 
@@ -476,7 +573,7 @@ class SimilarityMeasureFactory(object):
         self.simMeasures = {
             'ssd': SSDSimilarity,
             'ncc': NCCSimilarity,
-            'lncc': LocalizedNCCSimilarity,
+            'lncc': LNCCSimilarity,#LocalizedNCCSimilarity,
             'omt': OptimalMassTransportSimilarity
         }
         """currently implemented similiarity measures"""

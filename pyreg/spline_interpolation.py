@@ -12,6 +12,9 @@ from torch.nn.modules.module import Module
 
 from .data_wrapper import MyTensor
 from .data_wrapper import MyLongTensor
+from .data_wrapper import AdaptVal, USE_CUDA
+
+device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
 
 class SplineInterpolation_ND_BCXYZ(Module):
     """
@@ -49,27 +52,27 @@ class SplineInterpolation_ND_BCXYZ(Module):
 
         # Poles for the different spline orders
         self.poles = dict()
-        self.poles[2] = torch.from_numpy(np.array([np.sqrt(8.) - 3.]).astype('float32'))
-        self.poles[3] = torch.from_numpy(np.array([np.sqrt(3.) - 2.]).astype('float32'))
-        self.poles[4] = torch.from_numpy(np.array([np.sqrt(664.0 - np.sqrt(438976.0)) + np.sqrt(304.0) - 19.0,
-                                                   np.sqrt(664.0 + np.sqrt(438976.0)) - np.sqrt(304.0) - 19.0]).astype('float32'))
-        self.poles[5] = torch.from_numpy(
+        self.poles[2] = AdaptVal(torch.from_numpy(np.array([np.sqrt(8.) - 3.]).astype('float32')))
+        self.poles[3] = AdaptVal(torch.from_numpy(np.array([np.sqrt(3.) - 2.]).astype('float32')))
+        self.poles[4] = AdaptVal(torch.from_numpy(np.array([np.sqrt(664.0 - np.sqrt(438976.0)) + np.sqrt(304.0) - 19.0,
+                                                   np.sqrt(664.0 + np.sqrt(438976.0)) - np.sqrt(304.0) - 19.0]).astype('float32')))
+        self.poles[5] = AdaptVal(torch.from_numpy(
             np.array([np.sqrt(135.0 / 2.0 - np.sqrt(17745.0 / 4.0)) + np.sqrt(105.0 / 4.0) - 13.0 / 2.0,
-                      np.sqrt(135.0 / 2.0 + np.sqrt(17745.0 / 4.0)) - np.sqrt(105.0 / 4.0) - 13.0 / 2.0]).astype('float32'))
-        self.poles[6] = torch.from_numpy(np.array([-0.48829458930304475513011803888378906211227916123938,
+                      np.sqrt(135.0 / 2.0 + np.sqrt(17745.0 / 4.0)) - np.sqrt(105.0 / 4.0) - 13.0 / 2.0]).astype('float32')))
+        self.poles[6] = AdaptVal(torch.from_numpy(np.array([-0.48829458930304475513011803888378906211227916123938,
                                                    -0.081679271076237512597937765737059080653379610398148,
-                                                   -0.0014141518083258177510872439765585925278641690553467]).astype('float32'))
-        self.poles[7] = torch.from_numpy(np.array([-0.53528043079643816554240378168164607183392315234269,
+                                                   -0.0014141518083258177510872439765585925278641690553467]).astype('float32')))
+        self.poles[7] = AdaptVal(torch.from_numpy(np.array([-0.53528043079643816554240378168164607183392315234269,
                                                    -0.12255461519232669051527226435935734360548654942730,
-                                                   -0.0091486948096082769285930216516478534156925639545994]).astype('float32'))
-        self.poles[8] = torch.from_numpy(np.array([-0.57468690924876543053013930412874542429066157804125,
+                                                   -0.0091486948096082769285930216516478534156925639545994]).astype('float32')))
+        self.poles[8] = AdaptVal(torch.from_numpy(np.array([-0.57468690924876543053013930412874542429066157804125,
                                                    -0.16303526929728093524055189686073705223476814550830,
                                                    -0.023632294694844850023403919296361320612665920854629,
-                                                   -0.00015382131064169091173935253018402160762964054070043]).astype('float32'))
-        self.poles[9] = torch.from_numpy(np.array([-0.60799738916862577900772082395428976943963471853991,
+                                                   -0.00015382131064169091173935253018402160762964054070043]).astype('float32')))
+        self.poles[9] = AdaptVal(torch.from_numpy(np.array([-0.60799738916862577900772082395428976943963471853991,
                                                    -0.20175052019315323879606468505597043468089886575747,
                                                    -0.043222608540481752133321142979429688265852380231497,
-                                                   -0.0021213069031808184203048965578486234220548560988624]).astype('float32'))
+                                                   -0.0021213069031808184203048965578486234220548560988624]).astype('float32')))
 
     def _scale_map_to_ijk(self, phi, spacing, sz_image):
         """
@@ -814,8 +817,8 @@ def test_me(test_dim=1):
 
         spacing = spacingOrig*0.1
 
-        s_torch_orig = torch.from_numpy(s.astype('float32'))
-        xi_torch_orig = torch.from_numpy(xi.astype('float32'))
+        s_torch_orig = AdaptVal(torch.from_numpy(s.astype('float32')))
+        xi_torch_orig = AdaptVal(torch.from_numpy(xi.astype('float32')))
 
         s_torch = s_torch_orig.view(torch.Size([1, 1] + list(s_torch_orig.size())))
         # s_torch = torch.cat((s_torch,s_torch),0)
@@ -842,9 +845,9 @@ def test_me(test_dim=1):
 
         spacing = np.array([0.5,0.5]).astype('float32')
 
-        s_torch_orig = torch.from_numpy(s.astype('float32'))
+        s_torch_orig = AdaptVal(torch.from_numpy(s.astype('float32')))
         s_torch = s_torch_orig.view(torch.Size([1, 1] + list(s_torch_orig.size())))
-        xi_torch = torch.from_numpy(xi.astype('float32'))
+        xi_torch = AdaptVal(torch.from_numpy(xi.astype('float32')))
 
     else:
         raise ValueError('unsupported test dimension')

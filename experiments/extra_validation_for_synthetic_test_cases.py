@@ -11,6 +11,7 @@ import torch
 import pyreg.fileio as FIO
 import pyreg.image_sampling as IS
 import pyreg.module_parameters as pars
+from pyreg.data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
 import experiment_utils as eu
 
@@ -47,8 +48,8 @@ def compare_det_of_jac_from_map(map,gt_map,label_image,visualize=False,print_out
     # synthetic spacing
     spacing = np.array(1./(sz-1))
 
-    map_torch =    torch.from_numpy(map)
-    gt_map_torch = torch.from_numpy(gt_map)
+    map_torch =    AdaptVal(torch.from_numpy(map).float())
+    gt_map_torch = AdaptVal(torch.from_numpy(gt_map).float())
 
     det_est = eu.compute_determinant_of_jacobian(map_torch, spacing)
     det_gt = eu.compute_determinant_of_jacobian(gt_map_torch, spacing)
@@ -181,7 +182,7 @@ def downsample_to_compatible_size_single_image(gt_weight,weight,interpolation_or
         sampler = IS.ResampleImage()
 
         gt_weight_sz = gt_weight.shape
-        gt_weight_reshaped = torch.from_numpy(gt_weight.view().reshape([1, 1] + list(gt_weight_sz)))
+        gt_weight_reshaped = AdaptVal(torch.from_numpy(gt_weight.view().reshape([1, 1] + list(gt_weight_sz))).float())
         spacing = np.array([1., 1.])
         desired_size = weight.shape
 
@@ -200,7 +201,7 @@ def downsample_to_compatible_size(gt_weights_orig,weights):
 
     return gt_weights
 
-def upsample_to_compatible_size_single_image(gt_weight,weight,interpolation_order=3):
+def upsample_to_compatible_size_single_image(gt_weight,weight,interpolation_order=1):
     # upsample the weights if needed
     if gt_weight.shape==weight.shape:
         return weight
@@ -208,7 +209,7 @@ def upsample_to_compatible_size_single_image(gt_weight,weight,interpolation_orde
         sampler = IS.ResampleImage()
 
         weight_sz = weight.shape
-        weight_reshaped = torch.from_numpy(weight.view().reshape([1, 1] + list(weight_sz)))
+        weight_reshaped = AdaptVal(torch.from_numpy(weight.view().reshape([1, 1] + list(weight_sz))).float())
         spacing = np.array([1., 1.])
         desired_size = gt_weight.shape
 
