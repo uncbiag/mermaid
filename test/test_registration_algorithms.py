@@ -169,23 +169,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
     def test_lddmm_shooting_scalar_momentum_map_multi_scale(self):
 
-        self.params = pars.ParameterDict()
-        self.params.load_JSON('./json/test_lddmm_shooting_scalar_momentum_map_multi_scale_config.json')
-
-        self.createImage()
-
-        mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
-        mo.get_optimizer().set_visualization(False)
-        mo.set_light_analysis_on(True)
-        mo.register()
-
-        # E = [0.08930502], simE = [0.08034889], regE = [0.00895613], optParE = [0.], relF = [0.03883468]
-        energy = mo.get_energy()
-
-        npt.assert_almost_equal(energy[0], 0.04333755, decimal=4 )
-        npt.assert_almost_equal(energy[1], 0.03237363, decimal=4 )
-        npt.assert_almost_equal(energy[2], 0.010963925, decimal=4 )
-
+88
 
     def test_lddmm_shooting_map_multi_scale(self):
 
