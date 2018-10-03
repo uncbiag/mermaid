@@ -980,7 +980,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         :return:
         """
-        return self.rec_opt_par_loss_energy.detach().cpu().numpy()
+        return self.rec_opt_par_loss_energy.cpu().item()
 
     def get_custom_output_values(self):
         """
@@ -995,7 +995,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         Returns the current energy
         :return: Returns a tuple (energy, similarity energy, regularization energy)
         """
-        return self.rec_energy.detach().cpu().numpy(), self.rec_similarityEnergy.detach().cpu().numpy(), self.rec_regEnergy.cpu().data.numpy()
+        return self.rec_energy.cpu().item(), self.rec_similarityEnergy.cpu().item(), self.rec_regEnergy.cpu().item()
 
     def get_warped_image(self):
         """
@@ -2599,10 +2599,10 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.verbose_output:
                 print('Computing epoch ' + str(iter_epoch + 1) + ' of ' + str(iter_offset+self.nr_of_epochs))
 
-            cur_running_energy = np.array([0.0])
-            cur_running_sim_energy = np.array([0.0])
-            cur_running_reg_energy = np.array([0.0])
-            cur_running_opt_energy = np.array([0.0])
+            cur_running_energy = 0.0
+            cur_running_sim_energy = 0.0
+            cur_running_reg_energy = 0.0
+            cur_running_opt_energy = 0.0
 
             cur_min_energy = None
             cur_max_energy = None
@@ -2747,9 +2747,9 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.show_sample_optimizer_output:
                 if (last_energy is not None) and (last_sim_energy is not None) and (last_reg_energy is not None):
                     print('\n\nEpoch {:05d}: Last energies   : E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}], optE=[{:2.5f}]'\
-                          .format(iter_epoch-1,last_energy[0],last_sim_energy[0],last_reg_energy[0],last_opt_energy[0]))
+                          .format(iter_epoch-1,last_energy,last_sim_energy,last_reg_energy,last_opt_energy))
                     print('    / image: Last energies   : E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}]' \
-                        .format(last_energy[0]/batch_size[0], last_sim_energy[0]/batch_size[0], last_reg_energy[0]/batch_size[0]))
+                        .format(last_energy/batch_size[0], last_sim_energy/batch_size[0], last_reg_energy/batch_size[0]))
                 else:
                     print('\n\n')
 
@@ -2760,19 +2760,19 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
             if self.show_sample_optimizer_output:
                 print('Epoch {:05d}: Current energies: E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}], optE=[{:2.5f}]'\
-                  .format(iter_epoch,last_energy[0], last_sim_energy[0],last_reg_energy[0],last_opt_energy[0]))
+                  .format(iter_epoch,last_energy, last_sim_energy,last_reg_energy,last_opt_energy))
                 print('    / image: Current energies: E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}]' \
-                      .format(last_energy[0]/batch_size[0], last_sim_energy[0]/batch_size[0], last_reg_energy[0]/batch_size[0]))
+                      .format(last_energy/batch_size[0], last_sim_energy/batch_size[0], last_reg_energy/batch_size[0]))
             else:
                 print('Epoch {:05d}: Current energies: E={:2.5f}:[{:1.2f},{:1.2f}], simE={:2.5f}:[{:1.2f},{:1.2f}], regE={:2.5f}:[{:1.2f},{:1.2f}], optE={:1.2f}:[{:1.2f},{:1.2f}]'\
-                      .format(iter_epoch, last_energy[0], cur_min_energy[0], cur_max_energy[0],
-                              last_sim_energy[0], cur_min_sim_energy[0], cur_max_sim_energy[0],
-                              last_reg_energy[0], cur_min_reg_energy[0], cur_max_reg_energy[0],
-                              last_opt_energy[0], cur_min_opt_energy[0], cur_max_opt_energy[0]))
+                      .format(iter_epoch, last_energy, cur_min_energy, cur_max_energy,
+                              last_sim_energy, cur_min_sim_energy, cur_max_sim_energy,
+                              last_reg_energy, cur_min_reg_energy, cur_max_reg_energy,
+                              last_opt_energy, cur_min_opt_energy, cur_max_opt_energy))
                 print('    / image: Current energies: E={:2.5f}:[{:1.2f},{:1.2f}], simE={:2.5f}:[{:1.2f},{:1.2f}], regE={:2.5f}:[{:1.2f},{:1.2f}]' \
-                    .format(last_energy[0]/batch_size[0], cur_min_energy[0]/batch_size[0], cur_max_energy[0]/batch_size[0],
-                            last_sim_energy[0]/batch_size[0], cur_min_sim_energy[0]/batch_size[0], cur_max_sim_energy[0]/batch_size[0],
-                            last_reg_energy[0]/batch_size[0], cur_min_reg_energy[0]/batch_size[0], cur_max_reg_energy[0]/batch_size[0]))
+                    .format(last_energy/batch_size[0], cur_min_energy/batch_size[0], cur_max_energy/batch_size[0],
+                            last_sim_energy/batch_size[0], cur_min_sim_energy/batch_size[0], cur_max_sim_energy/batch_size[0],
+                            last_reg_energy/batch_size[0], cur_min_reg_energy/batch_size[0], cur_max_reg_energy/batch_size[0]))
 
             if self.show_sample_optimizer_output:
                 print('\n\n')
