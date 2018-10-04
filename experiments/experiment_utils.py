@@ -62,7 +62,7 @@ def plot_boxplot(compound_results_orig,compound_names_orig,semilogy=False, showf
                                                               suppress_pattern_keep_first_as=suppress_pattern_keep_first_as)
         compound_results = [compound_results_orig[i] for i in idx_to_keep]
     else:
-        compound_results = compound_names_orig
+        compound_results = compound_results_orig
         compound_names = compound_names_orig
 
     # create a figure instance
