@@ -908,6 +908,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.weight_clipping_value = c_params[('weight_clipping_value', 1.0, 'Value to which the norm is being clipped')]
             """Desired norm after clipping"""
 
+        extent = self.spacing * self.sz[2:]
+        max_extent = max(extent)
+
+        clip_params = c_params[('gradient_clipping',{},'clipping settings for the gradient for optimization')]
+        self.clip_display = clip_params[('clip_display',True,'If set to True displays if clipping occurred')]
+        self.clip_individual_gradient = clip_params[('clip_individual_gradient',True,'If set to True, the gradient for the individual parameters will be clipped')]
+        self.clip_individual_gradient_value = clip_params[('clip_individual_gradient_value',max_extent,'Value to which the gradient for the individual parameters is clipped')]
+        self.clip_shared_gradient = clip_params[('clip_shared_gradient', False, 'If set to True, the gradient for the shared parameters will be clipped')]
+        self.clip_shared_gradient_value = clip_params[('clip_shared_gradient_value', 1.0, 'Value to which the gradient for the shared parameters is clipped')]
+
         self.scheduler = None # for the step size scheduler
         self.patience = None # for the step size scheduler
         self._use_external_scheduler = False
@@ -1344,6 +1354,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         return self.model.get_individual_registration_parameters()
 
+    def _collect_individual_or_shared_parameters_in_list(self,pars):
+        pl = []
+        for p_key in pars:
+            pl.append(pars[p_key])
+        return pl
+
     def load_shared_state_dict(self,sd):
         """
         Loads the shared part of a state dictionary
@@ -1485,11 +1501,24 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         loss_overall_energy.backward()
 
         # do gradient clipping
-        #clip_to_grad_norm = 1.0
-        #current_grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(),clip_to_grad_norm)
-        #print('DEBUG: gradient clipping {} -> {}'.format(current_grad_norm,clip_to_grad_norm))
+        if self.clip_individual_gradient:
+            current_individual_grad_norm = torch.nn.utils.clip_grad_norm_(
+                self._collect_individual_or_shared_parameters_in_list(self.get_individual_model_parameters()),
+                self.clip_individual_gradient_value)
 
-        #torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
+            if self.clip_display:
+                if current_individual_grad_norm>self.clip_individual_gradient_value:
+                    print('INFO: Individual gradient was clipped: {} -> {}'.format(current_individual_grad_norm,self.clip_individual_gradient_value))
+
+        if self.clip_shared_gradient:
+            current_shared_grad_norm = torch.nn.utils.clip_grad_norm_(
+                self._collect_individual_or_shared_parameters_in_list(self.get_shared_model_parameters()),
+                self.clip_shared_gradient_value)
+
+            if self.clip_display:
+                if current_shared_grad_norm > self.clip_shared_gradient_value:
+                    print('INFO: Shared gradient was clipped: {} -> {}'.format(current_shared_grad_norm,
+                                                                                   self.clip_shared_gradient_value))
 
         self.rec_custom_optimizer_output_string = self.model.get_custom_optimizer_output_string()
         self.rec_custom_optimizer_output_values = self.model.get_custom_optimizer_output_values()
