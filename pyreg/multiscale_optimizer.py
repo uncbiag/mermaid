@@ -570,6 +570,8 @@ class ImageRegistrationOptimizer(Optimizer):
         """  initial map"""
         self.initialInverseMap = None
         """ initial inverse map"""
+        self.multi_scale_info_dic = None
+        """ dicts containing full resolution image and label"""
         self.optimizer_name = None #''lbfgs_ls'
         """name of the optimizer to use"""
         self.optimizer_params = {}
@@ -760,28 +762,42 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         self.ISource = I
 
-    def _compute_low_res_image(self,I,params):
+    def set_multi_scale_info(self, ISource, ITarget, spacing, LSource=None, LTarget=None):
+        """provide full resolution of Image and Label"""
+        self.multi_scale_info_dic = {'ISource': ISource, 'ITarget': ITarget, 'spacing': spacing, 'LSource': LSource,
+                                     'LTarget': LTarget}
+
+    def _compute_low_res_image(self,I,params,spacing=None):
         low_res_image = None
         if self.mapLowResFactor is not None:
-            low_res_image,_ = self.sampler.downsample_image_to_size(I,self.spacing,self.lowResSize[2::],self.spline_order)
+            low_res_image,_ = self.sampler.downsample_image_to_size(I,spacing,self.lowResSize[2::],self.spline_order)
         return low_res_image
 
-    def _compute_low_res_label_map(self,label_map,params):
+    def _compute_low_res_label_map(self,label_map,params, spacing=None):
         low_res_label_map = None
         if self.mapLowResFactor is not None:
-            low_res_image, _ = self.sampler.downsample_image_to_size(label_map, self.spacing, self.lowResSize[2::],
+            low_res_image, _ = self.sampler.downsample_image_to_size(label_map, spacing, self.lowResSize[2::],
                                                                      0)
         return low_res_label_map
 
     def compute_low_res_image_if_needed(self):
         """To be called before the optimization starts"""
+        if self.multi_scale_info_dic is None:
+            ISource = self.ISource
+            ITarget = self.ITarget
+            LSource = self.LSource
+            LTarget = self.LTarget
+            spacing = self.spacing
+        else:
+            ISource, ITarget, LSource, LTarget, spacing = self.multi_scale_info_dic['ISource'], self.multi_scale_info_dic['ITarget'],\
+                                                          self.multi_scale_info_dic['LSource'],self.multi_scale_info_dic['LTarget'],self.multi_scale_info_dic['spacing']
         if self.mapLowResFactor is not None:
-            self.lowResISource = self._compute_low_res_image(self.ISource,self.params)
+            self.lowResISource = self._compute_low_res_image(ISource,self.params,spacing)
             # todo: can be removed to save memory; is more experimental at this point
-            self.lowResITarget = self._compute_low_res_image(self.ITarget,self.params)
+            self.lowResITarget = self._compute_low_res_image(ITarget,self.params,spacing)
             if self.LSource is not None and self.LTarget is not None:
-                self.lowResLSource = self._compute_low_res_label_map(self.LSource,self.params)
-                self.lowResLTarget = self._compute_low_res_label_map(self.LTarget, self.params)
+                self.lowResLSource = self._compute_low_res_label_map(LSource,self.params,spacing)
+                self.lowResLTarget = self._compute_low_res_label_map(LTarget, self.params,spacing)
 
     def set_source_label(self, LSource):
         """
@@ -798,6 +814,7 @@ class ImageRegistrationOptimizer(Optimizer):
         :return:
         """
         self.LTarget = LTarget
+
 
     def get_source_label(self):
         return self.LSource
@@ -1468,7 +1485,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                         self.rec_phiInverseWarped = None
             else:
                 ret = self.model(self.initialMap, self.ISource,
-                                 phi_inv=self.lowResInitialInverseMap, variables_from_optimizer=opt_variables)
+                                 phi_inv=self.initialInverseMap, variables_from_optimizer=opt_variables)
                 if self.compute_inverse_map:
                     if type(ret)==tuple:
                         self.rec_phiWarped = ret[0]
@@ -3633,8 +3650,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.initialInverseMap is not None:
                 initialInverseMap,_ = self.sampler.downsample_image_to_size(self.initialInverseMap,self.spacing, currentDesiredSz[2::],1,zero_boundary=False)
             szC = np.array(ISourceC.size())  # this assumes the BxCxXxYxZ format
-
-            self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)
+            mapLowResFactor = None if currentScaleNumber==0 else self.mapLowResFactor
+            self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)
             print('Setting learning rate to ' + str( lastSuccessfulStepSizeTaken ))
             self.ssOpt.set_last_successful_step_size_taken( lastSuccessfulStepSizeTaken )
             self.ssOpt.set_initial_map(initialMap,initialInverseMap)
@@ -3679,6 +3696,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             self.ssOpt.set_source_image(ISourceC)
             self.ssOpt.set_target_image(ITargetC)
+            self.ssOpt.set_multi_scale_info(self.ISource,self.ITarget,self.spacing,self.LSource,self.LTarget)
             if self.LSource is not None and self.LTarget is not None:
                 self.ssOpt.set_source_label(LSourceC)
                 self.ssOpt.set_target_label(LTargetC)
@@ -3687,7 +3705,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 # check that the upsampled parameters are consistent with the downsampled images
                 spacingError = False
                 expectedSpacing = None
-                if self.mapLowResFactor is not None:
+                if mapLowResFactor is not None:
                     expectedSpacing = self._get_low_res_spacing_from_spacing(spacingC, szC, upsampledSz)
                     # the spacing of the upsampled parameters will be different
                     if not (abs(expectedSpacing - upsampledParameterSpacing) < 0.000001).all():

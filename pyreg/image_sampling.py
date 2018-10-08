@@ -114,10 +114,10 @@ class ResampleImage(object):
 
         desiredSizeNC = np.array([nrOfI,nrOfC]+list(desiredSize))
 
-        if (sz>desiredSizeNC).any():
-            print(sz)
-            print(desiredSizeNC)
-            raise('For upsampling sizes need to increase')
+        # if (sz>desiredSizeNC).any():
+        #     print(sz)
+        #     print(desiredSizeNC)
+        #     raise('For upsampling sizes need to increase')
 
         newspacing = spacing*((sz[2::].astype('float')-1)/(desiredSizeNC[2::].astype('float')-1))##################################
         idDes = AdaptVal(torch.from_numpy(utils.identity_map_multiN(desiredSizeNC,newspacing)))
