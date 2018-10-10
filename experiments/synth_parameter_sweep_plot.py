@@ -167,8 +167,8 @@ def plot_results(all_stats,all_names,nr_of_measures,showfliers,normalize_by_spac
 #datapath = '/Users/mn/sim_results/pf_out_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_300_wo_noise_sc'
 #datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc-skip-stage-1'
 #datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc_only_0.1_and_0.25'
-#datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc'
-datapath = '/Users/mn/sim_results/pf_low_lr_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc'
+datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc'
+
 stages = [0,1,2]
 #stages = [0,2]
 nr_of_measures = len(stages)

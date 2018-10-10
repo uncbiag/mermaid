@@ -931,8 +931,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.optimize_over_smoother_weights = params[('optimize_over_smoother_weights', False, 'if set to true the smoother will optimize over the *global* weights')]
         """determines if we should optimize over the smoother global weights"""
 
-        self.scale_global_parameters = params[('scale_global_parameters',True,'If set to True the global parameters are scaled based on the size of the image, to make sure energies decay similarly as for the deep-network weight estimation')]
-        """If set to True the global parameters are scaled based on the size of the image, to make sure energies decay similarly as for the deep-network weight estimation'"""
+        self.scale_global_parameters = params[('scale_global_parameters',False,'If set to True the global parameters are scaled for the global parameters, to make sure energies decay similarly as for the deep-network weight estimation')]
+        """If set to True the global parameters are scaled for the global parameters, to make sure energies decay similarly as for the deep-network weight estimation'"""
 
         self.optimize_over_deep_network = params[('optimize_over_deep_network', False, 'if set to true the smoother will optimize over the deep network parameters; otherwise will ignore the deep network')]
         """determines if we should optimize over the smoother global weights"""
@@ -973,7 +973,9 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         last_kernel_size = self.ws.get_last_kernel_size()
         if self.scale_global_parameters:
-            self.global_parameter_scaling_factor = float(np.sqrt(float(last_kernel_size**self.dim) / self.sz.prod()))
+            self.global_parameter_scaling_factor = params[('scale_global_parameters_scaling_factor',0.05,'value that is used to scale the global parameters, to make sure energies decay similarly as for the deep-network weight estimation')]
+            """If set to True the global parameters are scaled, to make sure energies decay similarly as for the deep-network weight estimation'"""
+            #self.global_parameter_scaling_factor = float(np.sqrt(float(last_kernel_size**self.dim) / self.sz.prod()))
         else:
             self.global_parameter_scaling_factor = 1.0
 

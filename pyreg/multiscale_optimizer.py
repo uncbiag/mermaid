@@ -915,7 +915,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.clip_display = clip_params[('clip_display',True,'If set to True displays if clipping occurred')]
         self.clip_individual_gradient = clip_params[('clip_individual_gradient',True,'If set to True, the gradient for the individual parameters will be clipped')]
         self.clip_individual_gradient_value = clip_params[('clip_individual_gradient_value',max_extent,'Value to which the gradient for the individual parameters is clipped')]
-        self.clip_shared_gradient = clip_params[('clip_shared_gradient', False, 'If set to True, the gradient for the shared parameters will be clipped')]
+        self.clip_shared_gradient = clip_params[('clip_shared_gradient', True, 'If set to True, the gradient for the shared parameters will be clipped')]
         self.clip_shared_gradient_value = clip_params[('clip_shared_gradient_value', 1.0, 'Value to which the gradient for the shared parameters is clipped')]
 
         self.scheduler = None # for the step size scheduler

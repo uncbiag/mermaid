@@ -694,6 +694,8 @@ def compute_and_visualize_results(json_file,output_dir,
             clean_publication_dir = os.path.join(print_output_dir,'clean_publication_prints')
             # In this case we only create the publication prints, any other output is suppressed
             visualize = True
+    else:
+        do_not_recompute_solutions = False
 
     if write_out_warped_image or write_out_map or compute_det_of_jacobian:
         if not os.path.exists(image_and_map_output_dir):
