@@ -594,6 +594,20 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
             plt.axis('off')
             plt.savefig(os.path.join(clean_print_path, 'weight_image_g{:d}_{:0>3d}.pdf'.format(g,print_figure_id)),bbox_inches='tight',pad_inches=0)
 
+            # now with colorbar
+            plt.clf()
+            clw = local_weights[0, g, ...].detach().cpu().numpy()
+            cmin = clw[lowRes_source_mask == 1].min()
+            cmax = clw[lowRes_source_mask == 1].max()
+            plt.imshow(cond_flip((local_weights[0, g, ...]).detach().cpu().numpy() * lowRes_source_mask, flip_axes),
+                       vmin=cmin,
+                       vmax=cmax)
+            plt.colorbar()
+            plt.axis('image')
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_print_path, 'weight_image_with_colorbar_g{:d}_{:0>3d}.pdf'.format(g, print_figure_id)),
+                        bbox_inches='tight', pad_inches=0)
+
         osw = compute_overall_std(local_weights[0, ...].cpu(), stds.data.cpu())
 
         cmin = osw.detach().cpu().numpy()[lowRes_source_mask == 1].min()
@@ -630,6 +644,19 @@ def visualize_weights(I0,I1,Iw,phi,norm_m,local_weights,stds,local_pre_weights,s
             plt.axis('image')
             plt.axis('off')
             plt.savefig(os.path.join(clean_print_path, 'weight_pre_image_g{:d}_{:0>3d}.pdf'.format(g,print_figure_id)),bbox_inches='tight',pad_inches=0)
+
+            # now with colorbar
+            plt.clf()
+            cmin = clw[lowRes_source_mask == 1].min()
+            cmax = clw[lowRes_source_mask == 1].max()
+            plt.imshow(cond_flip((local_pre_weights[0, g, ...]).detach().cpu().numpy() * lowRes_source_mask, flip_axes),
+                       vmin=cmin,
+                       vmax=cmax)
+            plt.colorbar()
+            plt.axis('image')
+            plt.axis('off')
+            plt.savefig(os.path.join(clean_print_path, 'weight_pre_image_with_colorbar_g{:d}_{:0>3d}.pdf'.format(g, print_figure_id)),
+                        bbox_inches='tight', pad_inches=0)
 
         osw = compute_overall_std(local_pre_weights[0, ...].cpu(), stds.data.cpu())
 

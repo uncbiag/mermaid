@@ -35,6 +35,7 @@ A basic installation requires the installation of a few python packages. Most of
   * conda install openpyxl
   * conda install -c anaconda cython
   * conda install -c anaconda scikit-image
+  * conda install -c conda-forge tabulate
   * pip install pytorch-fft
   * pip install pynrrd
 
