@@ -22,24 +22,6 @@ def get_values_and_names(current_stats,name_prefix='',desired_stat='mean'):
 
     return compound_results,compound_names
 
-def get_abbrv_case_descriptor(dir_name,split_keys,abbrv_keys):
-
-    val_strs = []
-    cur_dir_name = dir_name
-    for k in split_keys:
-        cur_dir_name = cur_dir_name.split(k+'_')[1]
-        if cur_dir_name.find('_')!=-1:
-            val_str = cur_dir_name.split('_')[0]
-        else:
-            val_str = cur_dir_name
-        val_strs.append(val_str)
-
-    abbrv = ''
-    for va in zip(val_strs,abbrv_keys):
-        abbrv += '{:s}={:.2f};'.format(va[1],float(va[0]))
-    abbrv = abbrv[0:-1]
-    return abbrv
-
 def reorder_values(cr,cn,nr_of_measures):
     cr_s = []
     cn_s = []
@@ -257,7 +239,7 @@ for d in desired_directories:
         # get the current name
         dir_name = os.path.split(d)[1] # path name that contains the keys
 
-        name_prefix_abbr = get_abbrv_case_descriptor(dir_name=dir_name,split_keys=split_keys,abbrv_keys=abbrv_keys)
+        name_prefix_abbr,_ = eu.get_abbrv_case_descriptor(dir_name=dir_name,split_keys=split_keys,abbrv_keys=abbrv_keys)
         name_prefix = '{:s}_s{:d}'.format(name_prefix_abbr,s)
 
         # first deal with the extra statistics; the values for the map

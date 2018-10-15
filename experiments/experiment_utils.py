@@ -3,6 +3,27 @@ import matplotlib
 
 import pyreg.finite_differences as FD
 
+def get_abbrv_case_descriptor(dir_name,split_keys,abbrv_keys):
+
+    val_strs = []
+    cur_dir_name = dir_name
+    for k in split_keys:
+        cur_dir_name = cur_dir_name.split(k+'_')[1]
+        if cur_dir_name.find('_')!=-1:
+            val_str = cur_dir_name.split('_')[0]
+        else:
+            val_str = cur_dir_name
+        val_strs.append(val_str)
+
+    abbrv = ''
+
+    vals = []
+
+    for va in zip(val_strs,abbrv_keys):
+        vals.append(float(va[0]))
+        abbrv += '{:s}={:.2f};'.format(va[1],float(va[0]))
+    abbrv = abbrv[0:-1]
+    return abbrv,vals
 
 def compute_determinant_of_jacobian(phi,spacing):
     fdt = FD.FD_torch(spacing)
