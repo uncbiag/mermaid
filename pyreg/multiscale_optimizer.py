@@ -908,6 +908,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.weight_clipping_value = c_params[('weight_clipping_value', 1.0, 'Value to which the norm is being clipped')]
             """Desired norm after clipping"""
 
+        extent = self.spacing * self.sz[2:]
+        max_extent = max(extent)
+
+        clip_params = c_params[('gradient_clipping',{},'clipping settings for the gradient for optimization')]
+        self.clip_display = clip_params[('clip_display',True,'If set to True displays if clipping occurred')]
+        self.clip_individual_gradient = clip_params[('clip_individual_gradient',True,'If set to True, the gradient for the individual parameters will be clipped')]
+        self.clip_individual_gradient_value = clip_params[('clip_individual_gradient_value',max_extent,'Value to which the gradient for the individual parameters is clipped')]
+        self.clip_shared_gradient = clip_params[('clip_shared_gradient', True, 'If set to True, the gradient for the shared parameters will be clipped')]
+        self.clip_shared_gradient_value = clip_params[('clip_shared_gradient_value', 1.0, 'Value to which the gradient for the shared parameters is clipped')]
+
         self.scheduler = None # for the step size scheduler
         self.patience = None # for the step size scheduler
         self._use_external_scheduler = False
@@ -980,7 +990,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         :return:
         """
-        return self.rec_opt_par_loss_energy.detach().cpu().numpy()
+        return self.rec_opt_par_loss_energy.cpu().item()
 
     def get_custom_output_values(self):
         """
@@ -995,7 +1005,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         Returns the current energy
         :return: Returns a tuple (energy, similarity energy, regularization energy)
         """
-        return self.rec_energy.detach().cpu().numpy(), self.rec_similarityEnergy.detach().cpu().numpy(), self.rec_regEnergy.cpu().data.numpy()
+        return self.rec_energy.cpu().item(), self.rec_similarityEnergy.cpu().item(), self.rec_regEnergy.cpu().item()
 
     def get_warped_image(self):
         """
@@ -1344,6 +1354,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         return self.model.get_individual_registration_parameters()
 
+    def _collect_individual_or_shared_parameters_in_list(self,pars):
+        pl = []
+        for p_key in pars:
+            pl.append(pars[p_key])
+        return pl
+
     def load_shared_state_dict(self,sd):
         """
         Loads the shared part of a state dictionary
@@ -1485,11 +1501,24 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         loss_overall_energy.backward()
 
         # do gradient clipping
-        #clip_to_grad_norm = 1.0
-        #current_grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(),clip_to_grad_norm)
-        #print('DEBUG: gradient clipping {} -> {}'.format(current_grad_norm,clip_to_grad_norm))
+        if self.clip_individual_gradient:
+            current_individual_grad_norm = torch.nn.utils.clip_grad_norm_(
+                self._collect_individual_or_shared_parameters_in_list(self.get_individual_model_parameters()),
+                self.clip_individual_gradient_value)
 
-        #torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
+            if self.clip_display:
+                if current_individual_grad_norm>self.clip_individual_gradient_value:
+                    print('INFO: Individual gradient was clipped: {} -> {}'.format(current_individual_grad_norm,self.clip_individual_gradient_value))
+
+        if self.clip_shared_gradient:
+            current_shared_grad_norm = torch.nn.utils.clip_grad_norm_(
+                self._collect_individual_or_shared_parameters_in_list(self.get_shared_model_parameters()),
+                self.clip_shared_gradient_value)
+
+            if self.clip_display:
+                if current_shared_grad_norm > self.clip_shared_gradient_value:
+                    print('INFO: Shared gradient was clipped: {} -> {}'.format(current_shared_grad_norm,
+                                                                                   self.clip_shared_gradient_value))
 
         self.rec_custom_optimizer_output_string = self.model.get_custom_optimizer_output_string()
         self.rec_custom_optimizer_output_values = self.model.get_custom_optimizer_output_values()
@@ -2599,10 +2628,10 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.verbose_output:
                 print('Computing epoch ' + str(iter_epoch + 1) + ' of ' + str(iter_offset+self.nr_of_epochs))
 
-            cur_running_energy = np.array([0.0])
-            cur_running_sim_energy = np.array([0.0])
-            cur_running_reg_energy = np.array([0.0])
-            cur_running_opt_energy = np.array([0.0])
+            cur_running_energy = 0.0
+            cur_running_sim_energy = 0.0
+            cur_running_reg_energy = 0.0
+            cur_running_opt_energy = 0.0
 
             cur_min_energy = None
             cur_max_energy = None
@@ -2747,9 +2776,9 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.show_sample_optimizer_output:
                 if (last_energy is not None) and (last_sim_energy is not None) and (last_reg_energy is not None):
                     print('\n\nEpoch {:05d}: Last energies   : E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}], optE=[{:2.5f}]'\
-                          .format(iter_epoch-1,last_energy[0],last_sim_energy[0],last_reg_energy[0],last_opt_energy[0]))
+                          .format(iter_epoch-1,last_energy,last_sim_energy,last_reg_energy,last_opt_energy))
                     print('    / image: Last energies   : E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}]' \
-                        .format(last_energy[0]/batch_size[0], last_sim_energy[0]/batch_size[0], last_reg_energy[0]/batch_size[0]))
+                        .format(last_energy/batch_size[0], last_sim_energy/batch_size[0], last_reg_energy/batch_size[0]))
                 else:
                     print('\n\n')
 
@@ -2760,19 +2789,19 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
             if self.show_sample_optimizer_output:
                 print('Epoch {:05d}: Current energies: E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}], optE=[{:2.5f}]'\
-                  .format(iter_epoch,last_energy[0], last_sim_energy[0],last_reg_energy[0],last_opt_energy[0]))
+                  .format(iter_epoch,last_energy, last_sim_energy,last_reg_energy,last_opt_energy))
                 print('    / image: Current energies: E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}]' \
-                      .format(last_energy[0]/batch_size[0], last_sim_energy[0]/batch_size[0], last_reg_energy[0]/batch_size[0]))
+                      .format(last_energy/batch_size[0], last_sim_energy/batch_size[0], last_reg_energy/batch_size[0]))
             else:
                 print('Epoch {:05d}: Current energies: E={:2.5f}:[{:1.2f},{:1.2f}], simE={:2.5f}:[{:1.2f},{:1.2f}], regE={:2.5f}:[{:1.2f},{:1.2f}], optE={:1.2f}:[{:1.2f},{:1.2f}]'\
-                      .format(iter_epoch, last_energy[0], cur_min_energy[0], cur_max_energy[0],
-                              last_sim_energy[0], cur_min_sim_energy[0], cur_max_sim_energy[0],
-                              last_reg_energy[0], cur_min_reg_energy[0], cur_max_reg_energy[0],
-                              last_opt_energy[0], cur_min_opt_energy[0], cur_max_opt_energy[0]))
+                      .format(iter_epoch, last_energy, cur_min_energy, cur_max_energy,
+                              last_sim_energy, cur_min_sim_energy, cur_max_sim_energy,
+                              last_reg_energy, cur_min_reg_energy, cur_max_reg_energy,
+                              last_opt_energy, cur_min_opt_energy, cur_max_opt_energy))
                 print('    / image: Current energies: E={:2.5f}:[{:1.2f},{:1.2f}], simE={:2.5f}:[{:1.2f},{:1.2f}], regE={:2.5f}:[{:1.2f},{:1.2f}]' \
-                    .format(last_energy[0]/batch_size[0], cur_min_energy[0]/batch_size[0], cur_max_energy[0]/batch_size[0],
-                            last_sim_energy[0]/batch_size[0], cur_min_sim_energy[0]/batch_size[0], cur_max_sim_energy[0]/batch_size[0],
-                            last_reg_energy[0]/batch_size[0], cur_min_reg_energy[0]/batch_size[0], cur_max_reg_energy[0]/batch_size[0]))
+                    .format(last_energy/batch_size[0], cur_min_energy/batch_size[0], cur_max_energy/batch_size[0],
+                            last_sim_energy/batch_size[0], cur_min_sim_energy/batch_size[0], cur_max_sim_energy/batch_size[0],
+                            last_reg_energy/batch_size[0], cur_min_reg_energy/batch_size[0], cur_max_reg_energy/batch_size[0]))
 
             if self.show_sample_optimizer_output:
                 print('\n\n')
@@ -3603,7 +3632,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 initialMap,_ = self.sampler.downsample_image_to_size(self.initialMap,self.spacing, currentDesiredSz[2::],1,zero_boundary=False)
             if self.initialInverseMap is not None:
                 initialInverseMap,_ = self.sampler.downsample_image_to_size(self.initialInverseMap,self.spacing, currentDesiredSz[2::],1,zero_boundary=False)
-            szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
+            szC = np.array(ISourceC.size())  # this assumes the BxCxXxYxZ format
 
             self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)
             print('Setting learning rate to ' + str( lastSuccessfulStepSizeTaken ))

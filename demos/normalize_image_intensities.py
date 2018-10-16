@@ -101,7 +101,7 @@ def histogram_match(imsrc,target_cdf,target_bins,remove_background=True,backgrou
     cdfsrc = imhist.cumsum()  # cumulative distribution function
     cdfsrc = cdfsrc / cdfsrc[-1]  # normalize
 
-    cdftgt = target_cdf  # cumulative distribution function
+    cdftgt = np.array(target_cdf)  # cumulative distribution function
     cdftgt = cdftgt / cdftgt[-1]  # normalize
 
     im2 = np.interp(imsrc[indx_keep], source_bins[:-1], cdfsrc)

@@ -1,0 +1,64 @@
+{
+    "model": {
+        "deformation": {
+            "compute_similarity_measure_at_low_res": false,
+            "map_low_res_factor": 1,
+            "use_map": true
+        },
+        "registration_model": {
+            "loss": {
+                "display_max_displacement": false,
+                "limit_displacement": false,
+                "max_displacement":0.1
+            },
+            "similarity_measure": {
+                "sigma": 1,
+                "type": "ncc"
+            },
+            "spline_order": 1,
+            "type": "affine_map"
+        }
+    },
+    "optimizer": {
+        "multi_scale": {
+            "scale_factors": [
+                1.0,
+                0.5,
+                0.25
+            ],
+            "scale_iterations": [
+                20,
+                20,
+                20
+            ]
+        },
+        "name": "sgd",
+        "scheduler": {
+            "factor": 0.5,
+            "patience": 50,
+            "verbose": true
+        },
+        "sgd": {
+            "individual": {
+                "dampening": 0.0,
+                "lr": 0.001,
+                "momentum": 0.9,
+                "nesterov": true,
+                "weight_decay": 0.0
+            },
+            "shared": {
+                "dampening": 0.0,
+                "lr": 5e-07,
+                "momentum": 0.9,
+                "nesterov": true,
+                "weight_decay": 0.0
+            }
+        },
+        "single_scale": {
+            "rel_ftol": 1e-07
+        },
+        "use_step_size_scheduler": true,
+        "weight_clipping_type": "None",
+        "weight_clipping_value": 1.0
+    }
+}

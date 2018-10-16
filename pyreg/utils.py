@@ -253,9 +253,6 @@ def update_affine_param(Ab,Cd):
         updated_param = updated_param.transpose(1,2).contiguous().view(Ab.shape[0],-1)
     return updated_param
 
-
-
-
 def apply_affine_transform_to_map(Ab,phi):
     """
     Applies an affine transform to a map

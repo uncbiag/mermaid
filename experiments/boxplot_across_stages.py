@@ -135,10 +135,12 @@ def overlapping_plot(old_results_filename, new_results, new_results_names, boxpl
     if visualize:
         plt.show()
 
-validation_data_dir = '/Users/mn/cumc3d_short_boxplots'
+#validation_data_dir = '/Users/mn/cumc3d_short_boxplots'
+validation_data_dir = '/Users/mn/sim_results/cumc3d_val'
 
 #dataset_directory = args.dataset_directory
-dataset_directory = '/Users/mn/PycharmProjects/mermaid/experiments/CUMC12_2d'
+#dataset_directory = '/Users/mn/PycharmProjects/mermaid/experiments/CUMC12_2d'
+dataset_directory = ''
 validation_dataset_name = 'CUMC'
 boxplot_filename = 'cumc3d_short_boxplot.pdf'
 

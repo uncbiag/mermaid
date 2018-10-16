@@ -931,8 +931,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.optimize_over_smoother_weights = params[('optimize_over_smoother_weights', False, 'if set to true the smoother will optimize over the *global* weights')]
         """determines if we should optimize over the smoother global weights"""
 
-        self.scale_global_parameters = params[('scale_global_parameters',True,'If set to True the global parameters are scaled based on the size of the image, to make sure energies decay similarly as for the deep-network weight estimation')]
-        """If set to True the global parameters are scaled based on the size of the image, to make sure energies decay similarly as for the deep-network weight estimation'"""
+        self.scale_global_parameters = params[('scale_global_parameters',False,'If set to True the global parameters are scaled for the global parameters, to make sure energies decay similarly as for the deep-network weight estimation')]
+        """If set to True the global parameters are scaled for the global parameters, to make sure energies decay similarly as for the deep-network weight estimation'"""
 
         self.optimize_over_deep_network = params[('optimize_over_deep_network', False, 'if set to true the smoother will optimize over the deep network parameters; otherwise will ignore the deep network')]
         """determines if we should optimize over the smoother global weights"""
@@ -968,16 +968,19 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, nr_of_slots=self.nr_of_gaussians)
         """creates the smoothed vector fields"""
 
+        self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,dim=self.dim,spacing=self.spacing,im_sz=self.sz).create_deep_smoother(params)
+        """learned mini-network to predict multi-Gaussian smoothing weights"""
+
+        last_kernel_size = self.ws.get_last_kernel_size()
         if self.scale_global_parameters:
-            self.global_parameter_scaling_factor = float(np.sqrt(1./self.sz.prod()))
+            self.global_parameter_scaling_factor = params[('scale_global_parameters_scaling_factor',0.05,'value that is used to scale the global parameters, to make sure energies decay similarly as for the deep-network weight estimation')]
+            """If set to True the global parameters are scaled, to make sure energies decay similarly as for the deep-network weight estimation'"""
+            #self.global_parameter_scaling_factor = float(np.sqrt(float(last_kernel_size**self.dim) / self.sz.prod()))
         else:
             self.global_parameter_scaling_factor = 1.0
 
         self.pre_multi_gaussian_stds_optimizer_params = self._create_pre_multi_gaussian_stds_optimization_vector_parameters()
         self.pre_multi_gaussian_weights_optimizer_params = self._create_pre_multi_gaussian_weights_optimization_vector_parameters()
-
-        self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,dim=self.dim,spacing=self.spacing,im_sz=self.sz).create_deep_smoother(params)
-        """learned mini-network to predict multi-Gaussian smoothing weights"""
 
         self.weighting_type = self.ws.get_weighting_type() # 'w_K','w_K_w','sqrt_w_K_sqrt_w'
 
@@ -1000,6 +1003,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         """To allow pre-initializing a network"""
         if self.load_dnn_parameters_from_this_file!='' and self.load_dnn_parameters_from_this_file is not None:
             print('INFO: Loading network configuration from {:s}'.format(self.load_dnn_parameters_from_this_file))
+            print('WARNING: If start_from_previously_saved_parameters is set to True then this setting may get ignored; current HACK: overwrites shared parameters in the current results directory')
             self.set_state_dict(torch.load(self.load_dnn_parameters_from_this_file))
 
         self.omt_weight_penalty = self.ws.get_omt_weight_penalty()
@@ -1096,6 +1100,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             module.register_parameter('pre_multi_gaussian_weights', self.pre_multi_gaussian_weights_optimizer_params)
             s.add('pre_multi_gaussian_weights')
 
+        # todo: is it possible that the following code not properly disable parameter updates
         for child in self.ws.children():
             for cur_param in child.parameters():
                 cur_param.requires_grad = not freeze_shared_parameters
@@ -1104,6 +1109,10 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         sd = self.ws.state_dict()
         for key in sd:
             s.add('weighted_smoothing_net.' + str(key))
+
+        if self.evaluate_but_do_not_optimize_over_shared_registration_parameters:
+             print('INFO: Setting network to evaluation mode')
+             self.ws.network.eval()
 
         return s
 

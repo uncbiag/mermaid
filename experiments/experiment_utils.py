@@ -3,6 +3,27 @@ import matplotlib
 
 import pyreg.finite_differences as FD
 
+def get_abbrv_case_descriptor(dir_name,split_keys,abbrv_keys):
+
+    val_strs = []
+    cur_dir_name = dir_name
+    for k in split_keys:
+        cur_dir_name = cur_dir_name.split(k+'_')[1]
+        if cur_dir_name.find('_')!=-1:
+            val_str = cur_dir_name.split('_')[0]
+        else:
+            val_str = cur_dir_name
+        val_strs.append(val_str)
+
+    abbrv = ''
+
+    vals = []
+
+    for va in zip(val_strs,abbrv_keys):
+        vals.append(float(va[0]))
+        abbrv += '{:s}={:.2f};'.format(va[1],float(va[0]))
+    abbrv = abbrv[0:-1]
+    return abbrv,vals
 
 def compute_determinant_of_jacobian(phi,spacing):
     fdt = FD.FD_torch(spacing)
@@ -37,7 +58,34 @@ def compute_determinant_of_jacobian(phi,spacing):
     det = det.data[0, ...].detach().cpu().numpy()
     return det
 
-def plot_boxplot(compound_results,compound_names,semilogy=False, showfliers=True):
+def filter_names_for_boxplot(names,suppress_pattern,suppress_pattern_keep_first_as):
+    idx = []
+    eff_names = []
+    found_first = False
+    for i,n in enumerate(names):
+        if n.endswith(suppress_pattern):
+            if not found_first:
+                found_first = True
+                idx.append(i)
+                eff_names.append(suppress_pattern_keep_first_as)
+        else:
+            idx.append(i)
+            eff_names.append(n)
+
+    return idx,eff_names
+
+
+def plot_boxplot(compound_results_orig,compound_names_orig,semilogy=False, showfliers=True, suppress_pattern=None,suppress_pattern_keep_first_as=None):
+
+    if suppress_pattern is not None:
+        idx_to_keep,compound_names = filter_names_for_boxplot(names=compound_names_orig,
+                                                              suppress_pattern=suppress_pattern,
+                                                              suppress_pattern_keep_first_as=suppress_pattern_keep_first_as)
+        compound_results = [compound_results_orig[i] for i in idx_to_keep]
+    else:
+        compound_results = compound_results_orig
+        compound_names = compound_names_orig
+
     # create a figure instance
     fig = plt.figure(1, figsize=(8, 6))
 

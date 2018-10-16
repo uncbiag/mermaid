@@ -259,6 +259,8 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
         gt_weights = downsample_to_compatible_size(gt_weights_orig,weights_orig)
         weights = weights_orig
 
+    max_std = max( max(multi_gaussian_stds), max(multi_gaussian_stds_synth))
+
     stds_synth = _compute_overall_stds(gt_weights,multi_gaussian_stds_synth)
     stds_computed = _compute_overall_stds(weights,multi_gaussian_stds)
 
@@ -300,7 +302,7 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
             if clean_publication_directory is not None:
                 for n in range(nr_of_weights):
                     plt.clf()
-                    plt.imshow(gt_weights[0, n, ...])
+                    plt.imshow(gt_weights[0, n, ...],clim=(0.0,1.0))
                     plt.colorbar()
                     plt.axis('image')
                     plt.axis('off')
@@ -308,7 +310,7 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
 
                 for n in range(nr_of_weights):
                     plt.clf()
-                    plt.imshow(weights[0, n, ...])
+                    plt.imshow(weights[0, n, ...],clim=(0.0,1.0))
                     plt.colorbar()
                     plt.axis('image')
                     plt.axis('off')
@@ -316,7 +318,7 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
 
                 for n in range(nr_of_weights):
                     plt.clf()
-                    plt.imshow(weights[0, n, ...] - gt_weights[0, n, ...])
+                    plt.imshow(weights[0, n, ...] - gt_weights[0, n, ...],clim=(-1.0,1.0))
                     plt.colorbar()
                     plt.axis('image')
                     plt.axis('off')
@@ -349,21 +351,21 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
 
         if clean_publication_directory is not None:
             plt.clf()
-            plt.imshow(stds_synth)
+            plt.imshow(stds_synth,clim=(0.0,max_std))
             plt.colorbar()
             plt.axis('image')
             plt.axis('off')
             plt.savefig(os.path.join(clean_publication_directory, 'std_synth_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
-            plt.imshow(stds_computed)
+            plt.imshow(stds_computed,clim=(0.0,max_std))
             plt.colorbar()
             plt.axis('image')
             plt.axis('off')
             plt.savefig(os.path.join(clean_publication_directory, 'std_estimated_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
-            plt.imshow(stds_computed - stds_synth)
+            plt.imshow(stds_computed - stds_synth,clim=(-max_std,max_std))
             plt.colorbar()
             plt.axis('image')
             plt.axis('off')
