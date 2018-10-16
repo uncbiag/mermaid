@@ -42,7 +42,27 @@ def do_registration(source_images,target_images,model_name,output_directory,
         print('Loading settings from file: ' + json_in)
         params_in.load_JSON(json_in)
 
+    # we need to check if  nr_of_iterations or map_low_res_factor is overwritten in the key-value arguments
+    has_iterations_before = params_in.has_key(['optimizer','single_scale','nr_of_iterations'])
+    has_map_low_res_factor_before = params_in.has_key(['model','deformation','map_low_res_factor'])
+
     add_key_value_pairs_to_params(params_in, args_kvs)
+
+    has_iterations_after = params_in.has_key(['optimizer', 'single_scale', 'nr_of_iterations'])
+    has_map_low_res_factor_after = params_in.has_key(['model', 'deformation', 'map_low_res_factor'])
+
+    kv_set_iterations = not has_iterations_before and has_iterations_after
+    kv_set_map_low_res_factor = not has_map_low_res_factor_before and has_map_low_res_factor_after
+
+    if kv_set_iterations:
+        kv_nr_of_iterations = params_in['optimizer']['single_scale']['nr_of_iterations']
+        print('INFO: nr_of_iterations was overwritten by key-value pair: {} -> {}'.format(nr_of_iterations,kv_nr_of_iterations))
+        nr_of_iterations = kv_nr_of_iterations
+
+    if kv_set_map_low_res_factor:
+        kv_map_low_res_factor = params_in['model']['deformation']['map_low_res_factor']
+        print('INFO: map_low_res_factor was overwritten by key-value pair: {} -> {}'.format(map_low_res_factor,kv_map_low_res_factor))
+        map_low_res_factor = kv_map_low_res_factor
 
     if map_low_res_factor is None:
         map_low_res_factor = params_in['model']['deformation'][('map_low_res_factor',1.0,'low res factor for the map')]
