@@ -219,6 +219,23 @@ class ParameterDict(object):
             if len(comment)>0:
                 self.com[key] = comment
 
+    def _recursive_has_key(self,current_key_list,current_dict):
+        if len(current_key_list)==1:
+            if current_key_list[0] in current_dict:
+                return True
+            else:
+                return False
+        else:
+            if current_key_list[0] in current_dict:
+                return self._recursive_has_key(current_key_list[1:],current_dict[current_key_list[0]])
+            else:
+                return False
+
+    def has_key(self,key_list):
+        if len(key_list) < 1:
+            raise ValueError('At least one key expected in key list')
+        else:
+            return self._recursive_has_key(key_list,self.int)
 
     def _get_current_key(self, key, defaultValue=None, comment=None):
 
@@ -303,12 +320,13 @@ def test_parameter_dict():
     p[('new_category',{},'this is a new category')]
     p[('registration_model',{},'this category already existed')]
 
+    # check if a key exists
+    print(p.has_key(['registration_model']))
+    print(p.has_key(['registration_model','bla']))
+
     # and we can print everything of course
     print(p)
 
     # lastly we can write it all out as json
     p.write_JSON('test_pars.json')
     p.write_JSON_comments('test_pars_comments.json')
-
-
-
