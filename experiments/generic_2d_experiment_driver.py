@@ -413,7 +413,7 @@ def get_sweep_values(sweep_value_name_a, sweep_values_a,
         for va in kv_values_a:
             for vb in kv_values_b:
                 for vc in kv_values_c:
-                    ret.append({'label': kv_label_a + '_{:f}_'.format(va) + kv_label_b + '_{:f}'.format(vb),
+                    ret.append({'label': kv_label_a + '_{:f}_'.format(va) + kv_label_b + '_{:f}_'.format(vb) + kv_label_c + '_{:f}'.format(vc),
                                 'kvs': {sweep_value_name_a:va, sweep_value_name_b:vb, sweep_value_name_c:vc}})
 
     else:
