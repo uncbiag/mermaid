@@ -64,20 +64,18 @@ def create_latex_table(table,table_stds=None,row_names=None,column_names=None,ad
 
 # conda install -c conda-forge tabulate
 
-#datapath = '/Users/mn/PycharmProjects/mermaid/experiments/testing_out_debug'
-datapath = '/Users/mn/sim_results/pf_out_paper_experiment_lpba40_2d_sqrt_w_K_sqrt'
+datapath = '/Users/mn/sim_results/pf-out_testing_train_cumc12_test_cumc12_3d_sqrt_w_K_sqrt'
+#datapath = '/Users/mn/sim_results/pf_out_paper_experiment_lpba40_2d_sqrt_w_K_sqrt'
 stages = [0,1,2]
 #stages = [2,2]
 nr_of_measures = len(stages)
 #data_from_generic_sweep_run = False
 data_from_generic_sweep_run = True
-use_all_directories = False
-
+use_all_directories = True
+prefix = 'out_testing'
+#prefix = 'out_training'
 
 if data_from_generic_sweep_run:
-
-    #prefix = 'out_testing'
-    prefix = 'out_training'
 
     if not use_all_directories:
         desired_tv = [0.1] # [0.01,0.1,0.25]
@@ -104,14 +102,6 @@ else:  # data not from sweep, directory is directly specified
 
 split_keys = ['total_variation_weight_penalty','omt_weight_penalty']
 abbrv_keys = ['t','o']
-
-
-#model_results_stage
-#torch.load('all_stat_det_of_jacobian.pt')
-
-
-# table = [["Sun",696000,1989100000],["Earth",6371,5973.6],
-# ... ["Moon",1737,73.5],["Mars",3390,641.85]]
 
 for idx,d in enumerate(desired_directories):
 

@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io as sio
 from scipy import stats
+from statsmodels.sandbox.stats.multicomp import multipletests
 import matplotlib
 
 def _get_p_as_text(p,max_text_frac=3,min_text_frac=10):
@@ -23,11 +24,10 @@ def _get_p_as_text(p,max_text_frac=3,min_text_frac=10):
     return txt
 
 
-def print_results_as_text(results,p_significance):
+def print_results_as_text(results):
 
     print('Results:\n')
-    print('Significance level alpha={:.5f}'.format(p_significance))
-    print('mean, std, perc1, perc5, median, perc95, perc99, p, type, significant\n')
+    print('mean, std, perc1, perc5, median, perc95, perc99, p, mw_statistic, significant\n')
 
     for k in results:
         c_mean = results[k]['mean']
@@ -38,11 +38,9 @@ def print_results_as_text(results,p_significance):
         c_perc_95 = results[k]['perc_95']
         c_perc_99 = results[k]['perc_99']
 
-        ttest = results[k]['ttest_wrt_stage2']
         mann_whitney = results[k]['mw_wrt_stage2']
-        anderson_darling = results[k]['anderson_darling_wrt_stage2']
 
-        if ttest is None or mann_whitney is None or anderson_darling is None:
+        if mann_whitney is None:
 
             print('{:s}: {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {}({}), {}' \
                   .format(k, c_mean, c_std, c_perc_1, c_perc_5, c_perc_50, c_perc_95, c_perc_99,
@@ -50,27 +48,20 @@ def print_results_as_text(results,p_significance):
 
         else:
 
-            assert(anderson_darling.significance_level[2]==5.)
-            if anderson_darling.statistic>anderson_darling.critical_values[2]:
-                stat_res_p = ttest.pvalue/2 # because of one-sided test
-                stat_is_greater = ttest.statistic>0 # one-sided test
-                stat_res_type = 'T'
-            else:
-                stat_res_p = mann_whitney.pvalue # is already one-sided test no division by two necessary
-                stat_res_type = 'MW'
-                stat_is_greater = True
+            is_significant = results[k]['is_significant']
+            mw_statistic = results[k]['mw_statistic']
 
-            is_significant = (stat_res_p < p_significance) and stat_is_greater
             if is_significant:
                 is_significant_text = 'Y'
             else:
                 is_significant_text = 'N'
 
-            stat_res_p_as_text = _get_p_as_text(p=stat_res_p)
+            corr_p = results[k]['p_corrected']
+            stat_res_p_as_text = _get_p_as_text(p=corr_p)
 
             print('{:s}: {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {}({}), {}' \
                       .format(k, c_mean, c_std, c_perc_1, c_perc_5, c_perc_50, c_perc_95, c_perc_99,
-                              stat_res_p_as_text, stat_res_type, is_significant_text))
+                              stat_res_p_as_text, mw_statistic, is_significant_text))
 
 def _make_bold_latex_text(val,make_bold=False):
 
@@ -105,15 +96,15 @@ def _find_smallest(results, name):
 
     return current_smallest
 
-def print_results_as_latex(results,p_significance, training_data=None, testing_data=None):
+def print_results_as_latex(results, testing_data=None):
 
     if testing_data is None:
         testing_data = ''
-    if training_data is None:
-        training_data = ''
+
+    desired_train_test_identifier = testing_data[0] + '/' + testing_data[0]
+    desired_name = '{} stage 2'.format(desired_train_test_identifier)
 
     print('Results:\n')
-    print('Significance level alpha={:.5f}\n'.format(p_significance))
 
 #     \renewcommand{\tabcolsep}{3pt}
 #     \begin{table}
@@ -155,7 +146,7 @@ def print_results_as_latex(results,p_significance, training_data=None, testing_d
 
     print('\t\t\\begin{tabular}{| l | c | c | c | c | c | c | c | c | c | c |}')
     print('\t\t\t\\hline')
-    print('\t\t\t~\\textbf{Method}~ & ~\\textbf{mean}~ & ~\\textbf{std}~ & ~\\textbf{1\%}~ & ~\\textbf{5\%}~ & ~\\textbf{50\%}~ & ~\\textbf{95\%}~ & ~\\textbf{99\%}~ & ~p~ & ~type~ & sig?~ \\\\')
+    print('\t\t\t~\\textbf{Method}~ & ~\\textbf{mean}~ & ~\\textbf{std}~ & ~\\textbf{1\%}~ & ~\\textbf{5\%}~ & ~\\textbf{50\%}~ & ~\\textbf{95\%}~ & ~\\textbf{99\%}~ & ~p~ & ~MW-stat~ & sig?~ \\\\')
     print('\t\t\t\\hline')
 
     # here comes the actual data
@@ -182,9 +173,7 @@ def print_results_as_latex(results,p_significance, training_data=None, testing_d
         c_perc_95 = results[k]['perc_95']
         c_perc_99 = results[k]['perc_99']
 
-        ttest = results[k]['ttest_wrt_stage2']
         mann_whitney = results[k]['mw_wrt_stage2']
-        anderson_darling = results[k]['anderson_darling_wrt_stage2']
 
         c_mean_txt = _make_bold_latex_text(c_mean, c_mean >= c_mean_largest)
         c_std_txt = _make_bold_latex_text(c_std, c_std <= c_std_smallest)
@@ -194,41 +183,38 @@ def print_results_as_latex(results,p_significance, training_data=None, testing_d
         c_perc_95_txt = _make_bold_latex_text(c_perc_95, c_perc_95 >= c_perc_95_largest)
         c_perc_99_txt = _make_bold_latex_text(c_perc_99, c_perc_99 >= c_perc_99_largest)
 
-        if ttest is None or mann_whitney is None or anderson_darling is None:
+        if mann_whitney is None:
 
-            print('\t\t\t {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {} & ({}) & {} \\\\' \
+            print('\t\t\t {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {} & {} & {} \\\\' \
                   .format(k, c_mean_txt, c_std_txt, c_perc_1_txt, c_perc_5_txt, c_perc_50_txt, c_perc_95_txt, c_perc_99_txt,
                           '-', '-', '-'))
 
         else:
 
-            assert (anderson_darling.significance_level[2] == 5.)
-            if anderson_darling.statistic > anderson_darling.critical_values[2]:
-                stat_res_p = ttest.pvalue / 2  # because of one-sided test
-                stat_is_greater = ttest.statistic > 0  # one-sided test
-                stat_res_type = 'T'
-            else:
-                stat_res_p = mann_whitney.pvalue  # is already one-sided test no division by two necessary
-                stat_res_type = 'MW'
-                stat_is_greater = True
+            is_significant = results[k]['is_significant']
+            mw_statistic = results[k]['mw_statistic']
 
-            is_significant = (stat_res_p < p_significance) and stat_is_greater
             if is_significant:
                 is_significant_text = '\\cmark'
             else:
                 is_significant_text = '\\xmark'
 
-            stat_res_p_as_text = '$' + _get_p_as_text(p=stat_res_p) + '$'
+            corr_p = results[k]['p_corrected']
+            stat_res_p_as_text = '$' + _get_p_as_text(p=corr_p) + '$'
 
-            print('\t\t\t {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {} & ({}) & {} \\\\' \
+            print('\t\t\t {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {} & {} & {} \\\\' \
                   .format(k, c_mean_txt, c_std_txt, c_perc_1_txt, c_perc_5_txt, c_perc_50_txt, c_perc_95_txt, c_perc_99_txt,
-                          stat_res_p_as_text, stat_res_type, is_significant_text))
+                          stat_res_p_as_text, mw_statistic, is_significant_text))
 
     print('\t\t\t\\hline')
     print('\t\t\\end{tabular}')
 
     print('\t\\end{center}')
-    print('\t\caption{{Statistics for mean(over all labeled brain structures while disregarding the background) target overlap measures across the {} registration pairs for different methods from ~\cite{{klein2009}}. The method was trained on the {} dataset. Fig.~\\ref{{fig:boxplot_overlap_train_{}_test_{}}} shows this data presented in the form of a boxplot.}}'.format(testing_data,training_data,training_data,testing_data))
+
+    print('\t\caption{{Statistics for mean (over all labeled brain structures while disregarding the background) target overlap measures across the {} registration pairs for different methods from ~\cite{{klein2009}}. Fig.~\\ref{{fig:boxplot_overlap_3d_test_{}}} shows this data presented in the form of a boxplot.'
+          'Best values are shown in bold. Statistical significance is tested with respect to the null hypothesis that the mean target overlap values are smaller for the stage 2 method that was trained on this specific dataset, i.e., {}, than for the competing methods. A rejection of this null hypothesis (i.e., that our stage 2 results are in fact better) is indicated with a check-mark, if signficiance was not reached this is indicated by a cross.'
+          'Significance is declared at a significance level of $0.05$. All p-values shown have been corrected for multiple comparisons using the Benjamini-Hochberg procedure with a family-wise error rate of $0.05$. P-values are computed using a paired one-sided Mann Whitney rank test.'
+          ' MW-stat indicates the value of the Mann-Whitney U statistic. Prefixes for the stage 0, 1, and 2 results indicate the training/testing combinations identified by the first initial of the MGH10, IBSR18, and the CUMC12 datasets. For example m/c means trained on MGH10 and tested in CUMC12.}}'.format(testing_data,testing_data,desired_name))
 
     print('\end{table}')
     print('\n')
@@ -236,17 +222,33 @@ def print_results_as_latex(results,p_significance, training_data=None, testing_d
 
 def print_results_and_compute_statistics(compound_names,compound_results, training_data=None, testing_data=None):
 
+    # todo: do equivalence tests as two one-sided tests (and also add each additional test to number of multiple comparisons)
+
     # do statistical comparisons with respect to the stage 2 results
-    if compound_names[-1]!='stage 2':
-        raise ValueError('Assuming that the last stage is stage 2 for comparisons')
+    desired_train_test_identifier = testing_data[0] + '/' + testing_data[0]
+    desired_name = '{} stage 2'.format(desired_train_test_identifier)
+
+    # find indx to compare to
+    compare_idx = None
+    for n in range(len(compound_names)):
+        if compound_names[n]==desired_name:
+            compare_idx = n
+            break
+
+    if compare_idx is None:
+        raise ValueError('Could not find the desired comparison')
 
     results = dict()
 
-    stage2_vals = compound_results[:,-1]
+    stage2_vals = compound_results[:,compare_idx]
 
-    nr_of_comparisons = len(compound_names)-1
-    last_n = nr_of_comparisons
-    p_significance_bonferroni = 0.05/nr_of_comparisons
+    p_significance = 0.05
+    family_wise_error_rate = 0.05
+
+    print('Significance level alpha={:.5f}'.format(p_significance))
+    print('Family-wise error rate={:.5f}'.format(family_wise_error_rate))
+
+    # p_significance_bonferroni = 0.05/nr_of_comparisons
 
     for n in range(len(compound_names)):
         current_vals = compound_results[:,n]
@@ -259,21 +261,59 @@ def print_results_and_compute_statistics(compound_names,compound_results, traini
         current_results['perc_95'] = np.percentile(compound_results[:, n], 95)
         current_results['perc_99'] = np.percentile(compound_results[:, n], 99)
 
-        if n!=last_n:
-            current_results['ttest_wrt_stage2'] = stats.ttest_rel(a=stage2_vals,b=current_vals)
+        if n!=compare_idx:
+            # testing for differences
             current_results['mw_wrt_stage2'] = stats.mannwhitneyu(x=stage2_vals, y=current_vals, use_continuity=True, alternative='greater')
-            current_results['anderson_darling_wrt_stage2'] = stats.anderson(stage2_vals-current_vals)
         else: # is stage 2
-            current_results['ttest_wrt_stage2'] = None
+            # testing for differences
             current_results['mw_wrt_stage2'] = None
-            current_results['anderson_darling_wrt_stage2'] = None
 
         results[compound_names[n]]=current_results
 
-    print_results_as_text(results=results,p_significance=p_significance_bonferroni)
-    print_results_as_latex(results=results,p_significance=p_significance_bonferroni, training_data=training_data, testing_data=testing_data)
+    # now compute all the p-values
 
-def overlapping_plot(old_results_filename, new_results, new_results_names, boxplot_filename, visualize=True, training_data=None, testing_data=None):
+    all_valid_raw_p = []
+    all_valid_raw_p_names = []
+
+    for k in results:
+
+        mann_whitney = results[k]['mw_wrt_stage2']
+
+        if mann_whitney is None:
+            if k!=desired_name:
+                raise ValueError('This should only have happened for stage 2')
+            results[k]['p_raw'] = None
+            results[k]['mw_statistic'] = None
+        else:
+
+            # first do it for the differences
+            stat_res_p = mann_whitney.pvalue # is already one-sided test no division by two necessary
+            stat_is_greater = True
+
+            results[k]['p_raw'] = stat_res_p
+            results[k]['mw_statistic'] = mann_whitney.statistic
+
+            all_valid_raw_p.append(stat_res_p)
+            all_valid_raw_p_names.append(k)
+
+    # now do the correction for multiple comparisons
+    can_be_rejected, corrected_pvalues, _, _ = multipletests(all_valid_raw_p, alpha=family_wise_error_rate, method='fdr_bh', is_sorted=False, returnsorted=False)
+
+    # now record this in the results structure
+    k = desired_name
+    results[k]['p_corrected'] = None
+    results[k]['is_significant'] = None
+
+    # now determine statistical significance
+    for n, corr_p in zip(all_valid_raw_p_names, corrected_pvalues):
+        is_significant = (corr_p < p_significance)
+        results[n]['is_significant'] = is_significant
+        results[n]['p_corrected'] = corr_p
+
+    print_results_as_text(results=results)
+    print_results_as_latex(results=results, testing_data=testing_data)
+
+def overlapping_plot(old_results_filename, new_results, new_results_names, boxplot_filename, visualize=True, testing_data=None):
     """
     Plot the overlaping results of 14 old appraoch and the proposed appraoch
     :param old_results_filename: Old results stored in .mat format file
@@ -324,7 +364,7 @@ def overlapping_plot(old_results_filename, new_results, new_results_names, boxpl
             compound_results = np.concatenate((compound_results, np.array(current_new_result['mean_target_overlap']).reshape(-1, 1)), axis=1)
 
     # print out the results
-    print_results_and_compute_statistics(compound_names=compound_names,compound_results=compound_results, training_data=training_data, testing_data=testing_data)
+    print_results_and_compute_statistics(compound_names=compound_names,compound_results=compound_results, testing_data=testing_data)
 
     # create a figure instance
     fig = plt.figure(1, figsize=(8, 6))
@@ -359,7 +399,7 @@ def overlapping_plot(old_results_filename, new_results, new_results_names, boxpl
     # matplotlib.rcParams['xtick.direction'] = 'inout'
 
     # setup font
-    font = {'family': 'normal', 'weight': 'semibold', 'size': 10}
+    font = {'family': 'sans-serif', 'weight': 'semibold', 'size': 10}
     matplotlib.rc('font', **font)
 
     # set the line width of the figure
@@ -460,21 +500,25 @@ def get_validation_datasets():
 validation_datasets = get_validation_datasets()
 
 datasets_to_test = ['mgh10','cumc12','ibsr18']
-corresponding_validation_datasets = ['MGH','CUMC','IBSR18']
+corresponding_validation_datasets = ['MGH','CUMC','IBSR']
 
 tv_penalty = 0.1
 omt_penalty = 50.0
 
-for train_dataset in datasets_to_test:
-    for test_dataset,validation_dataset_name in zip(datasets_to_test,corresponding_validation_datasets):
+for test_dataset, validation_dataset_name in zip(datasets_to_test, corresponding_validation_datasets):
+
+    validation_results_names = []
+    validation_results = []
+
+    boxplot_filename = 'boxplot_overlap_3d_test_{}.pdf'.format(test_dataset)
+
+    for train_dataset in datasets_to_test:
         validation_data_dir = '/Users/mn/sim_results/pf-out_testing_train_{}_test_{}_3d_sqrt_w_K_sqrt'.format(train_dataset,test_dataset)
         if os.path.exists(validation_data_dir):
             print('\nPlotting for train={}/test={}'.format(train_dataset,test_dataset))
         else:
             print('\n\nData for train={}/test={} not found. IGNORING\n\n'.format(train_dataset,test_dataset))
             continue
-
-        boxplot_filename = 'train_{}_test_{}_3d_boxplot.pdf'.format(train_dataset,test_dataset)
 
         base_directory = os.path.join(validation_data_dir,'out_testing_total_variation_weight_penalty_{:.6f}_omt_weight_penalty_{:.6f}'.format(tv_penalty,omt_penalty))
         validation_results_filenames = get_validation_results_filenames_from_base_directory(base_directory=base_directory)
@@ -483,14 +527,21 @@ for train_dataset in datasets_to_test:
         #                                 'validation_results_stage_1.pt',
         #                                 'validation_results_stage_2.pt']
 
-        validation_results_names = ['stage 0', 'stage 1', 'stage 2']
-        validation_results = []
+        train_test_identifier = train_dataset[0] + '/' + test_dataset[0]
+
+        validation_results_names.append('{} stage 0'.format(train_test_identifier))
+        validation_results_names.append('{} stage 1'.format(train_test_identifier))
+        validation_results_names.append('{} stage 2'.format(train_test_identifier))
+
         validation_results.append(torch.load(os.path.join(validation_data_dir,validation_results_filenames[0])))
         validation_results.append(torch.load(os.path.join(validation_data_dir,validation_results_filenames[1])))
         validation_results.append(torch.load(os.path.join(validation_data_dir,validation_results_filenames[2])))
 
-        # now do the boxplot
+    # now do the boxplot
+
+    if len(validation_results)>0:
+
         old_klein_results_filename = validation_datasets[validation_dataset_name]['old_klein_results_filename']
 
         overlapping_plot(old_klein_results_filename, validation_results, validation_results_names, boxplot_filename,
-                         visualize=True,testing_data=test_dataset,training_data=train_dataset)
+                         visualize=True,testing_data=test_dataset)

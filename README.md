@@ -38,6 +38,7 @@ A basic installation requires the installation of a few python packages. Most of
   * conda install -c conda-forge tabulate
   * pip install pytorch-fft
   * pip install pynrrd
+  * pip install scikit-posthocs
 
 IMPORTANT: pytorch 0.4.0 is required. The code will no longer run on 0.2.0 or 0.3.0
 
