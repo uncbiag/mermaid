@@ -82,6 +82,8 @@ def plot_results(all_stats,all_names,nr_of_measures,showfliers,normalize_by_spac
                  custom_ranges_raw=None,
                  custom_ranges_norm=None,
                  print_title=True,
+                 show_labels = True,
+                 fix_aspect = None,
                  print_output_directory=None):
 
     print('Results for prefix {:s}'.format(output_prefix))
@@ -91,7 +93,8 @@ def plot_results(all_stats,all_names,nr_of_measures,showfliers,normalize_by_spac
         plt.clf()
         rs, rn = reorder_values(all_stats[k], all_names[k], nr_of_measures=nr_of_measures)
         eu.plot_boxplot(rs, rn, semilogy=False, showfliers=showfliers,
-                        suppress_pattern=suppress_pattern,suppress_pattern_keep_first_as=suppress_pattern_keep_first_as)
+                        suppress_pattern=suppress_pattern,suppress_pattern_keep_first_as=suppress_pattern_keep_first_as,
+                        show_labels=show_labels,fix_aspect=fix_aspect)
         if print_title:
             plt.title(outliers_suppressed('Raw: ' + title_prefix + ' ' + str(k), showfliers=showfliers))
         if normalize_by_spacing:
@@ -122,7 +125,10 @@ def plot_results(all_stats,all_names,nr_of_measures,showfliers,normalize_by_spac
         rs, rn = reorder_values(all_stats_mn[k], all_names[k], nr_of_measures=nr_of_measures)
         eu.plot_boxplot(rs, rn, semilogy=False, showfliers=showfliers,
                         suppress_pattern=suppress_pattern,
-                        suppress_pattern_keep_first_as=suppress_pattern_keep_first_as)
+                        suppress_pattern_keep_first_as=suppress_pattern_keep_first_as,
+                        show_labels = show_labels,
+                        fix_aspect = fix_aspect)
+
         if print_title:
             plt.title(outliers_suppressed('Median normalized: ' + title_prefix + ' ' + str(k), showfliers=showfliers))
 
@@ -152,6 +158,7 @@ def plot_results(all_stats,all_names,nr_of_measures,showfliers,normalize_by_spac
 datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc'
 
 stages = [0,1,2]
+squeezed_aspect_ratio = 0.35
 #stages = [0,2]
 nr_of_measures = len(stages)
 
@@ -179,6 +186,9 @@ normalize_by_spacing = True
 spacing = 1./(128.-1.)
 print_output_directory = 'pdf_sweep-' + os.path.split(datapath)[1]
 print_output_directory_no_title = 'pdf_sweep-no-title-' + os.path.split(datapath)[1]
+print_output_directory_no_title_squeezed = 'pdf_sweep-squeezed-no-title-' + os.path.split(datapath)[1]
+print_output_directory_no_title_no_label = 'pdf_sweep-no-title-no-label-' + os.path.split(datapath)[1]
+print_output_directory_no_title_no_label_squeezed = 'pdf_sweep-squeezed-no-title-no-label-' + os.path.split(datapath)[1]
 
 if print_output_directory is not None:
     print('Saving figure output in directory: {:s}'.format(print_output_directory))
@@ -189,6 +199,21 @@ if print_output_directory_no_title is not None:
     print('Saving figure output WITHOUT titles in directory: {:s}'.format(print_output_directory_no_title))
     if not os.path.exists(print_output_directory_no_title):
         os.mkdir(print_output_directory_no_title)
+
+if print_output_directory_no_title_squeezed is not None:
+    print('Saving squeezed figure output WITHOUT titles in directory: {:s}'.format(print_output_directory_no_title_squeezed))
+    if not os.path.exists(print_output_directory_no_title_squeezed):
+        os.mkdir(print_output_directory_no_title_squeezed)
+
+if print_output_directory_no_title_no_label is not None:
+    print('Saving figure output WITHOUT titles and labels in directory: {:s}'.format(print_output_directory_no_title_no_label))
+    if not os.path.exists(print_output_directory_no_title_no_label):
+        os.mkdir(print_output_directory_no_title_no_label)
+
+if print_output_directory_no_title_no_label_squeezed is not None:
+    print('Saving squeezed figure output WITHOUT titles and labels in directory: {:s}'.format(print_output_directory_no_title_no_label_squeezed))
+    if not os.path.exists(print_output_directory_no_title_no_label_squeezed):
+        os.mkdir(print_output_directory_no_title_no_label_squeezed)
 
 if use_all_directories:
     desired_directories = glob.glob(os.path.join(datapath,'{:s}*'.format(prefix)))
@@ -343,6 +368,81 @@ if print_output_directory_no_title is not None:
                  custom_ranges_norm=custom_ranges_det_jac_norm,
                  print_title=False,
                  print_output_directory=print_output_directory_no_title)
+
+# now print it without title and label
+if print_output_directory_no_title_no_label is not None:
+    plot_results(all_stats=all_stats_map, all_names=all_names_map, nr_of_measures=nr_of_measures,
+                 showfliers=showfliers,
+                 normalize_by_spacing=normalize_by_spacing, ylabel='disp error (est-GT)', output_prefix='map',
+                 title_prefix='map (est-GT)',
+                 suppress_pattern='_s0', suppress_pattern_keep_first_as='s0',
+                 custom_ranges_raw=custom_ranges_map_raw,
+                 custom_ranges_norm=custom_ranges_map_norm,
+                 print_title=False,
+                 show_labels=False,
+                 print_output_directory=print_output_directory_no_title_no_label)
+
+    plot_results(all_stats=all_stats_dj, all_names=all_names_dj, nr_of_measures=nr_of_measures,
+                 showfliers=showfliers,
+                 normalize_by_spacing=False, ylabel='det(jac) error (est-GT)', output_prefix='det_jac',
+                 title_prefix='det_jac (est-GT)',
+                 suppress_pattern='_s0', suppress_pattern_keep_first_as='s0',
+                 custom_ranges_raw=custom_ranges_det_jac_raw,
+                 custom_ranges_norm=custom_ranges_det_jac_norm,
+                 print_title=False,
+                 show_labels=False,
+                 print_output_directory=print_output_directory_no_title_no_label)
+
+# now do the squeezed plots
+
+# now print it without title
+if print_output_directory_no_title_squeezed is not None:
+
+    plot_results(all_stats=all_stats_map, all_names=all_names_map, nr_of_measures=nr_of_measures, showfliers=showfliers,
+                 normalize_by_spacing=normalize_by_spacing, ylabel='disp error (est-GT)', output_prefix='map',
+                 title_prefix = 'map (est-GT)',
+                 suppress_pattern = '_s0', suppress_pattern_keep_first_as = 's0',
+                 custom_ranges_raw=custom_ranges_map_raw,
+                 custom_ranges_norm=custom_ranges_map_norm,
+                 print_title=False,
+                 fix_aspect=squeezed_aspect_ratio,
+                 print_output_directory=print_output_directory_no_title_squeezed)
+
+    plot_results(all_stats=all_stats_dj, all_names=all_names_dj, nr_of_measures=nr_of_measures, showfliers=showfliers,
+                 normalize_by_spacing=False, ylabel='det(jac) error (est-GT)', output_prefix='det_jac',
+                 title_prefix='det_jac (est-GT)',
+                 suppress_pattern = '_s0', suppress_pattern_keep_first_as = 's0',
+                 custom_ranges_raw=custom_ranges_det_jac_raw,
+                 custom_ranges_norm=custom_ranges_det_jac_norm,
+                 print_title=False,
+                 fix_aspect=squeezed_aspect_ratio,
+                 print_output_directory=print_output_directory_no_title_squeezed)
+
+# now print it without title and label
+if print_output_directory_no_title_no_label_squeezed is not None:
+    plot_results(all_stats=all_stats_map, all_names=all_names_map, nr_of_measures=nr_of_measures,
+                 showfliers=showfliers,
+                 normalize_by_spacing=normalize_by_spacing, ylabel='disp error (est-GT)', output_prefix='map',
+                 title_prefix='map (est-GT)',
+                 suppress_pattern='_s0', suppress_pattern_keep_first_as='s0',
+                 custom_ranges_raw=custom_ranges_map_raw,
+                 custom_ranges_norm=custom_ranges_map_norm,
+                 print_title=False,
+                 show_labels=False,
+                 fix_aspect=squeezed_aspect_ratio,
+                 print_output_directory=print_output_directory_no_title_no_label_squeezed)
+
+    plot_results(all_stats=all_stats_dj, all_names=all_names_dj, nr_of_measures=nr_of_measures,
+                 showfliers=showfliers,
+                 normalize_by_spacing=False, ylabel='det(jac) error (est-GT)', output_prefix='det_jac',
+                 title_prefix='det_jac (est-GT)',
+                 suppress_pattern='_s0', suppress_pattern_keep_first_as='s0',
+                 custom_ranges_raw=custom_ranges_det_jac_raw,
+                 custom_ranges_norm=custom_ranges_det_jac_norm,
+                 print_title=False,
+                 show_labels=False,
+                 fix_aspect=squeezed_aspect_ratio,
+                 print_output_directory=print_output_directory_no_title_no_label_squeezed)
 
 
 if print_output_directory is not None:

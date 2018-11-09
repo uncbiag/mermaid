@@ -21,7 +21,10 @@ def get_abbrv_case_descriptor(dir_name,split_keys,abbrv_keys):
 
     for va in zip(val_strs,abbrv_keys):
         vals.append(float(va[0]))
-        abbrv += '{:s}={:.2f};'.format(va[1],float(va[0]))
+        if va[1]=='o':
+            abbrv += '{:s}={:.0f};'.format(va[1],float(va[0]))
+        else:
+            abbrv += '{:s}={:.2f};'.format(va[1],float(va[0]))
     abbrv = abbrv[0:-1]
     return abbrv,vals
 
@@ -75,7 +78,8 @@ def filter_names_for_boxplot(names,suppress_pattern,suppress_pattern_keep_first_
     return idx,eff_names
 
 
-def plot_boxplot(compound_results_orig,compound_names_orig,semilogy=False, showfliers=True, suppress_pattern=None,suppress_pattern_keep_first_as=None):
+def plot_boxplot(compound_results_orig,compound_names_orig,semilogy=False, showfliers=True,
+                 suppress_pattern=None,suppress_pattern_keep_first_as=None,show_labels=True,fix_aspect=None):
 
     if suppress_pattern is not None:
         idx_to_keep,compound_names = filter_names_for_boxplot(names=compound_names_orig,
@@ -103,12 +107,17 @@ def plot_boxplot(compound_results_orig,compound_names_orig,semilogy=False, showf
     ax.xaxis.set_tick_params(bottom=False, direction='in', width=1)
 
     # create the boxplot
-    bp = plt.boxplot(compound_results, vert=True, whis=1.5, meanline=True, widths=0.16, showfliers=showfliers,
-                     showcaps=False, patch_artist=True, labels=compound_names)
+    if show_labels:
+        bp = plt.boxplot(compound_results, vert=True, whis=1.5, meanline=True, widths=0.16, showfliers=showfliers,
+                         showcaps=False, patch_artist=True, labels=compound_names)
 
-    # rotate x labels
-    for tick in ax.get_xticklabels():
-        tick.set_rotation(90)
+        # rotate x labels
+        for tick in ax.get_xticklabels():
+            tick.set_rotation(90)
+    else:
+        empty_compound_names = ['']*len(compound_names)
+        bp = plt.boxplot(compound_results, vert=True, whis=1.5, meanline=True, widths=0.16, showfliers=showfliers,
+                         showcaps=False, patch_artist=True, labels=empty_compound_names)
 
     # set properties of boxes, medians, whiskers, fliers
     plt.setp(bp['medians'], color='orange')
@@ -121,12 +130,21 @@ def plot_boxplot(compound_results_orig,compound_names_orig,semilogy=False, showf
     # matplotlib.rcParams['xtick.direction'] = 'inout'
 
     # setup font
-    font = {'family': 'normal', 'weight': 'semibold', 'size': 10}
+    #font = {'family': 'normal', 'weight': 'semibold', 'size': 10}
+    font = {'family': 'sans-serif', 'size': 10}
     matplotlib.rc('font', **font)
 
     # set the line width of the figure
     for axis in ['top', 'bottom', 'left', 'right']:
         ax.spines[axis].set_linewidth(2)
+
+    if fix_aspect is not None:
+
+        yrange = ax.get_ylim()
+        yext = yrange[1]-yrange[0]
+        xext = float(len(compound_names))
+
+        ax.set_aspect(fix_aspect*xext/yext)
 
     # set the range of the overlapping rate
     #plt.ylim([0, 1.0])

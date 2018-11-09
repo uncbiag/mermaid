@@ -200,7 +200,11 @@ def print_results_as_latex(results, testing_data=None):
                 is_significant_text = '\\xmark'
 
             corr_p = results[k]['p_corrected']
-            stat_res_p_as_text = '$' + _get_p_as_text(p=corr_p) + '$'
+            p_txt = _get_p_as_text(p=corr_p)
+            if p_txt[0]=='<':
+                stat_res_p_as_text = '\\textless\\num{' + p_txt[1:] + '}'
+            else:
+                stat_res_p_as_text = p_txt
 
             print('\t\t\t {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {:s} & {} & {} & {} \\\\' \
                   .format(k, c_mean_txt, c_std_txt, c_perc_1_txt, c_perc_5_txt, c_perc_50_txt, c_perc_95_txt, c_perc_99_txt,
@@ -313,7 +317,8 @@ def print_results_and_compute_statistics(compound_names,compound_results, traini
     print_results_as_text(results=results)
     print_results_as_latex(results=results, testing_data=testing_data)
 
-def overlapping_plot(old_results_filename, new_results, new_results_names, boxplot_filename, visualize=True, testing_data=None):
+def overlapping_plot(old_results_filename, new_results, new_results_names, boxplot_filename,
+                     visualize=True, testing_data=None,fix_aspect=None):
     """
     Plot the overlaping results of 14 old appraoch and the proposed appraoch
     :param old_results_filename: Old results stored in .mat format file
@@ -399,7 +404,7 @@ def overlapping_plot(old_results_filename, new_results, new_results_names, boxpl
     # matplotlib.rcParams['xtick.direction'] = 'inout'
 
     # setup font
-    font = {'family': 'sans-serif', 'weight': 'semibold', 'size': 10}
+    font = {'family': 'sans-serif', 'size': 10}
     matplotlib.rc('font', **font)
 
     # set the line width of the figure
@@ -407,16 +412,31 @@ def overlapping_plot(old_results_filename, new_results, new_results_names, boxpl
         ax.spines[axis].set_linewidth(2)
 
     # set the range of the overlapping rate
-    plt.ylim([0.2, 0.6])
+    #plt.ylim([0.2, 0.65])
+    lb = compound_results.min()
+    ub = compound_results.max()
+    plt.ylim([0.98*lb,1.02*ub])
+
+    # add information for the dataset-specific method
+    # but do this for the method that was trained and tested on the same dataset (i.e., identifier needs to be c/c, m/m, i/i, or l/l
+
+    desired_result_idx = -1
+    for i,cn in enumerate(compound_names):
+        if len(cn)>=10:
+            is_stage_2 = cn.endswith('stage 2')
+            if is_stage_2:
+                if (cn[0:3]=='c/c') or (cn[0:3]=='i/i') or (cn[0:3]=='m/m') or (cn[0:3]=='l/l'):
+                    desired_result_idx = i
+                    break
 
     # add two lines to represent the lower quartile and upper quartile
-    lower_quartile = np.percentile(compound_results[:, -1], 25)
-    upper_quartile = np.percentile(compound_results[:, -1], 75)
+    lower_quartile = np.percentile(compound_results[:, desired_result_idx], 25)
+    upper_quartile = np.percentile(compound_results[:, desired_result_idx], 75)
     ax.axhline(lower_quartile, ls='-', color='r', linewidth=1)
     ax.axhline(upper_quartile, ls='-', color='r', linewidth=1)
 
     # add a dashed line representing the median
-    med_quartile = np.percentile(compound_results[:, -1], 50)
+    med_quartile = np.percentile(compound_results[:, desired_result_idx], 50)
     ax.axhline(med_quartile, ls=':', color='r', linewidth=1)
 
     # set the target box to red color
@@ -429,6 +449,15 @@ def overlapping_plot(old_results_filename, new_results, new_results_names, boxpl
         bp['whiskers'][-(1+2*n)].set(color='red')
         bp['whiskers'][-(2+2*n)].set(color='red')
         bp['fliers'][-(1+n)].set(color='red', markeredgecolor='red')
+
+    # fix aspect if desired
+    if fix_aspect is not None:
+
+        yrange = ax.get_ylim()
+        yext = yrange[1]-yrange[0]
+        xext = float(len(compound_names))
+
+        ax.set_aspect(fix_aspect*xext/yext)
 
     # save figure
     if boxplot_filename is not None:
@@ -511,6 +540,7 @@ for test_dataset, validation_dataset_name in zip(datasets_to_test, corresponding
     validation_results = []
 
     boxplot_filename = 'boxplot_overlap_3d_test_{}.pdf'.format(test_dataset)
+    boxplot_filename_squeezed = 'squeezed_boxplot_overlap_3d_test_{}.pdf'.format(test_dataset)
 
     for train_dataset in datasets_to_test:
         validation_data_dir = '/Users/mn/sim_results/pf-out_testing_train_{}_test_{}_3d_sqrt_w_K_sqrt'.format(train_dataset,test_dataset)
@@ -545,3 +575,7 @@ for test_dataset, validation_dataset_name in zip(datasets_to_test, corresponding
 
         overlapping_plot(old_klein_results_filename, validation_results, validation_results_names, boxplot_filename,
                          visualize=True,testing_data=test_dataset)
+
+        overlapping_plot(old_klein_results_filename, validation_results, validation_results_names, boxplot_filename_squeezed,
+                         visualize=True,testing_data=test_dataset,fix_aspect=0.5)
+
