@@ -799,7 +799,7 @@ def compute_and_visualize_results(json_file,output_dir,
             compute_or_recompute_det_jac = False
             compute_or_recompute_map = False
         else:
-            if os.path.exist(map_output_filename_pt):
+            if os.path.exists(map_output_filename_pt):
                 compute_or_recompute_map = False
             else:
                 compute_or_recompute_map = True
