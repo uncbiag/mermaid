@@ -836,6 +836,11 @@ def compute_and_visualize_results(json_file,output_dir,
                 displacement = phi[0,...]-model_dict['id'][0,...]
                 map_io.write(displacement_output_filename, displacement, hdr)
 
+    else:
+        # load phi
+        print('INFO: Loading map from file: {}'.format(map_output_filename_pt))
+        phi = torch.load(map_output_filename_pt)
+
     if not only_recompute_validation_measures:
 
         norm_m = ((model_dict['m']**2).sum(dim=1,keepdim=True))**0.5
