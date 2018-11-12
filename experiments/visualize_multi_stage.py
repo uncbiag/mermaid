@@ -749,9 +749,15 @@ def compute_and_visualize_results(json_file,output_dir,
     momentum_output_filename_pt = os.path.join(image_and_map_output_dir,'momentum_{:05d}.pt'.format(pair_nr))
 
     det_jac_output_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05d}.nrrd'.format(pair_nr))
+    det_jac_output_filename_fd = os.path.join(image_and_map_output_dir,'det_of_jacobian_fd_{:05d}.nrrd'.format(pair_nr))
+
     displacement_output_filename = os.path.join(image_and_map_output_dir,'displacement_{:05d}.nrrd'.format(pair_nr))
+
     det_of_jacobian_txt_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05d}.txt'.format(pair_nr))
     det_of_jacobian_pt_filename = os.path.join(image_and_map_output_dir,'det_of_jacobian_{:05d}.pt'.format(pair_nr))
+
+    det_of_jacobian_txt_filename_fd = os.path.join(image_and_map_output_dir, 'det_of_jacobian_fd_{:05d}.txt'.format(pair_nr))
+    det_of_jacobian_pt_filename_fd = os.path.join(image_and_map_output_dir, 'det_of_jacobian_fd_{:05d}.pt'.format(pair_nr))
 
     source_image_output_filename = os.path.join(image_and_map_output_dir,'source_image_{:05d}.nrrd'.format(pair_nr))
     target_image_output_filename = os.path.join(image_and_map_output_dir,'target_image_{:05d}.nrrd'.format(pair_nr))
@@ -789,7 +795,7 @@ def compute_and_visualize_results(json_file,output_dir,
     if only_recompute_validation_measures:
         compute_det_of_jacobian = True
         # check if we have the map image required to compute the determinant of the Jacobian
-        if os.path.exists(det_jac_output_filename):
+        if os.path.exists(det_jac_output_filename) and os.path.exists(det_jac_output_filename_fd):
             compute_or_recompute_det_jac = False
             compute_or_recompute_map = False
         else:
@@ -976,10 +982,13 @@ def compute_and_visualize_results(json_file,output_dir,
 
         if compute_or_recompute_det_jac:
             det = eu.compute_determinant_of_jacobian(phi,spacing)
+            det_fd = eu.compute_determinant_of_jacobian_forward_differences(phi,spacing)
             im_io.write(det_jac_output_filename, det, hdr)
+            im_io.write(det_jac_output_filename_fd,det_fd,hdr)
         else:
             # since we did not recompute it we should load it
             det,det_hdr,det_spacing,det_squeezed_spacing = im_io.read(det_jac_output_filename,squeeze_image=True)
+            det_fd,det_hdr_fd,det_spacing_fd,det_squeezed_spacing_fd = im_io.read(det_jac_output_filename_fd,squeeze_image=True)
 
         # first, let's compute the global measure
 
@@ -994,6 +1003,18 @@ def compute_and_visualize_results(json_file,output_dir,
         all_dj['det_95_perc'] = np.percentile(det,95)
         all_dj['det_99_perc'] = np.percentile(det,99)
 
+        all_dj_fd = dict()
+
+        all_dj_fd['det_min'] = np.min(det_fd)
+        all_dj_fd['det_max'] = np.max(det_fd)
+        all_dj_fd['det_mean'] = np.mean(det_fd)
+        all_dj_fd['det_median'] = np.median(det_fd)
+        all_dj_fd['det_1_perc'] = np.percentile(det_fd,1)
+        all_dj_fd['det_5_perc'] = np.percentile(det_fd,5)
+        all_dj_fd['det_95_perc'] = np.percentile(det_fd,95)
+        all_dj_fd['det_99_perc'] = np.percentile(det_fd,99)
+
+
         # now just in the area where the values are not zero
         indx = (ISource[0,0,...].detach().cpu().numpy()!=0)
 
@@ -1007,6 +1028,17 @@ def compute_and_visualize_results(json_file,output_dir,
         nz_dj['det_5_perc'] = np.percentile(det[indx], 5)
         nz_dj['det_95_perc'] = np.percentile(det[indx], 95)
         nz_dj['det_99_perc'] = np.percentile(det[indx], 99)
+
+        nz_dj_fd = dict()
+
+        nz_dj_fd['det_min'] = np.min(det_fd[indx])
+        nz_dj_fd['det_max'] = np.max(det_fd[indx])
+        nz_dj_fd['det_mean'] = np.mean(det_fd[indx])
+        nz_dj_fd['det_median'] = np.median(det_fd[indx])
+        nz_dj_fd['det_1_perc'] = np.percentile(det_fd[indx], 1)
+        nz_dj_fd['det_5_perc'] = np.percentile(det_fd[indx], 5)
+        nz_dj_fd['det_95_perc'] = np.percentile(det_fd[indx], 95)
+        nz_dj_fd['det_99_perc'] = np.percentile(det_fd[indx], 99)
 
         # and write out the result files
 
@@ -1043,11 +1075,119 @@ def compute_and_visualize_results(json_file,output_dir,
 
         torch.save(d_save,det_of_jacobian_pt_filename)
 
-        return all_dj,nz_dj
+        # and write out the result files for the forward differences
+
+        f = open(det_of_jacobian_txt_filename_fd, 'w')
+        f.write('Over the entire image:\n')
+        f.write('min, max, mean, median, 1p, 5p, 95p, 99p\n')
+        out_str = str(all_dj_fd['det_min']) + ', '
+        out_str += str(all_dj_fd['det_max']) + ', '
+        out_str += str(all_dj_fd['det_mean']) + ', '
+        out_str += str(all_dj_fd['det_median']) + ', '
+        out_str += str(all_dj_fd['det_1_perc']) + ', '
+        out_str += str(all_dj_fd['det_5_perc']) + ', '
+        out_str += str(all_dj_fd['det_95_perc']) + ', '
+        out_str += str(all_dj_fd['det_99_perc']) + '\n'
+        f.write(out_str)
+
+        f.write('Over non-zero-regions of the image:\n')
+        f.write('min, max, mean, median, 1p, 5p, 95p, 99p\n')
+        out_str = str(nz_dj_fd['det_min']) + ', '
+        out_str += str(nz_dj_fd['det_max']) + ', '
+        out_str += str(nz_dj_fd['det_mean']) + ', '
+        out_str += str(nz_dj_fd['det_median']) + ', '
+        out_str += str(nz_dj_fd['det_1_perc']) + ', '
+        out_str += str(nz_dj_fd['det_5_perc']) + ', '
+        out_str += str(nz_dj_fd['det_95_perc']) + ', '
+        out_str += str(nz_dj_fd['det_99_perc']) + '\n'
+        f.write(out_str)
+
+        f.close()
+
+        d_save = dict()
+        d_save['all_det_jac'] = all_dj_fd
+        d_save['nz_det_jac'] = nz_dj_fd
+
+        torch.save(d_save, det_of_jacobian_pt_filename_fd)
+
+        return all_dj,nz_dj,all_dj_fd,nz_dj_fd
 
     else:
         # not computed
-        return None,None
+        return None,None,None,None
+
+def save_det_jac_summaries(all_det_jac_stat_mean,all_det_jac_stat_median,all_det_jac_stat_1_perc,all_det_jac_stat_5_perc,all_det_jac_stat_95_perc,all_det_jac_stat_99_perc,
+                           nz_det_jac_stat_mean,nz_det_jac_stat_median,nz_det_jac_stat_1_perc,nz_det_jac_stat_5_perc,nz_det_jac_stat_95_perc,nz_det_jac_stat_99_perc,
+                           output_dir,stage_nr,file_name_modifier=''):
+
+    all_det_jac_stat_mean = np.array(all_det_jac_stat_mean)
+    all_det_jac_stat_median = np.array(all_det_jac_stat_median)
+    all_det_jac_stat_1_perc = np.array(all_det_jac_stat_1_perc)
+    all_det_jac_stat_5_perc = np.array(all_det_jac_stat_5_perc)
+    all_det_jac_stat_95_perc = np.array(all_det_jac_stat_95_perc)
+    all_det_jac_stat_99_perc = np.array(all_det_jac_stat_99_perc)
+
+    nz_det_jac_stat_mean = np.array(nz_det_jac_stat_mean)
+    nz_det_jac_stat_median = np.array(nz_det_jac_stat_median)
+    nz_det_jac_stat_1_perc = np.array(nz_det_jac_stat_1_perc)
+    nz_det_jac_stat_5_perc = np.array(nz_det_jac_stat_5_perc)
+    nz_det_jac_stat_95_perc = np.array(nz_det_jac_stat_95_perc)
+    nz_det_jac_stat_99_perc = np.array(nz_det_jac_stat_99_perc)
+
+    if len(all_det_jac_stat_mean)>0 and len(nz_det_jac_stat_mean)>0:
+
+        if args.compute_from_frozen:
+            image_and_map_output_dir = os.path.join(os.path.normpath(output_dir),'model_results_frozen_stage_{:d}'.format(stage_nr))
+        else:
+            image_and_map_output_dir = os.path.join(os.path.normpath(output_dir),'model_results_stage_{:d}'.format(stage_nr))
+
+        all_det_of_jacobian_txt_filename = os.path.join(image_and_map_output_dir, 'all_stat_det_of_jacobian{}.txt'.format(file_name_modifier))
+        all_det_of_jacobian_pt_filename = os.path.join(image_and_map_output_dir, 'all_stat_det_of_jacobian{}.pt'.format(file_name_modifier))
+
+        d_save = dict()
+        d_save['all_det_jac'] = dict()
+        d_save['all_det_jac']['mean'] = all_det_jac_stat_mean
+        d_save['all_det_jac']['median'] = all_det_jac_stat_median
+        d_save['all_det_jac']['1_perc'] = all_det_jac_stat_1_perc
+        d_save['all_det_jac']['5_perc'] = all_det_jac_stat_5_perc
+        d_save['all_det_jac']['95_perc'] = all_det_jac_stat_95_perc
+        d_save['all_det_jac']['99_perc'] = all_det_jac_stat_99_perc
+
+        d_save['nz_det_jac'] = dict()
+        d_save['nz_det_jac']['mean'] = nz_det_jac_stat_mean
+        d_save['nz_det_jac']['median'] = nz_det_jac_stat_median
+        d_save['nz_det_jac']['1_perc'] = nz_det_jac_stat_1_perc
+        d_save['nz_det_jac']['5_perc'] = nz_det_jac_stat_5_perc
+        d_save['nz_det_jac']['95_perc'] = nz_det_jac_stat_95_perc
+        d_save['nz_det_jac']['99_perc'] = nz_det_jac_stat_99_perc
+
+        torch.save(d_save, all_det_of_jacobian_pt_filename)
+
+        print('INFO: Writing {:s}'.format(all_det_of_jacobian_txt_filename))
+        f = open(all_det_of_jacobian_txt_filename, 'w')
+
+        f.write('Over all the means of the entire images:\n')
+        f.write('----------------------------------------\n\n')
+        current_d = d_save['all_det_jac']
+        for k in current_d:
+            cvals = current_d[k]
+            f.write('Stat = {:s}\n'.format(k))
+            f.write('mean, median, std\n')
+            out_str = str(np.mean(cvals)) + ', ' + str(np.median(cvals)) + ', ' + str(np.std(cvals)) +'\n'
+            f.write(out_str)
+
+        f.write('Over all the means of the non-zero image regions:\n')
+        f.write('-------------------------------------------------\n\n')
+        current_d = d_save['nz_det_jac']
+        for k in current_d:
+            cvals = current_d[k]
+            f.write('Stat = {:s}\n'.format(k))
+            f.write('mean, median, std\n')
+            out_str = str(np.mean(cvals)) + ', ' + str(np.median(cvals)) + ', ' + str(np.std(cvals)) + '\n'
+            f.write(out_str)
+
+        f.close()
+
 
 if __name__ == "__main__":
 
@@ -1137,6 +1277,13 @@ if __name__ == "__main__":
     nz_det_jac_stat_95_perc = []
     nz_det_jac_stat_99_perc = []
 
+    nz_det_jac_fd_stat_mean = []
+    nz_det_jac_fd_stat_median = []
+    nz_det_jac_fd_stat_1_perc = []
+    nz_det_jac_fd_stat_5_perc = []
+    nz_det_jac_fd_stat_95_perc = []
+    nz_det_jac_fd_stat_99_perc = []
+
     all_det_jac_stat_mean = []
     all_det_jac_stat_median = []
     all_det_jac_stat_1_perc = []
@@ -1144,10 +1291,17 @@ if __name__ == "__main__":
     all_det_jac_stat_95_perc = []
     all_det_jac_stat_99_perc = []
 
+    all_det_jac_fd_stat_mean = []
+    all_det_jac_fd_stat_median = []
+    all_det_jac_fd_stat_1_perc = []
+    all_det_jac_fd_stat_5_perc = []
+    all_det_jac_fd_stat_95_perc = []
+    all_det_jac_fd_stat_99_perc = []
+
 
     for pair_nr in pair_nrs:
         print('Computing pair number: ' + str(pair_nr))
-        det_of_jac,det_of_jac_non_zero = compute_and_visualize_results(json_file=args.config,output_dir=output_dir,
+        det_of_jac,det_of_jac_non_zero,det_of_jac_fd,det_of_jac_non_zero_fd = compute_and_visualize_results(json_file=args.config,output_dir=output_dir,
                                           stage=args.stage_nr,
                                           compute_from_frozen=args.compute_from_frozen,
                                           pair_nr=pair_nr,
@@ -1182,73 +1336,35 @@ if __name__ == "__main__":
             nz_det_jac_stat_95_perc.append(det_of_jac_non_zero['det_95_perc'])
             nz_det_jac_stat_99_perc.append(det_of_jac_non_zero['det_99_perc'])
 
-    all_det_jac_stat_mean = np.array(all_det_jac_stat_mean)
-    all_det_jac_stat_median = np.array(all_det_jac_stat_median)
-    all_det_jac_stat_1_perc = np.array(all_det_jac_stat_1_perc)
-    all_det_jac_stat_5_perc = np.array(all_det_jac_stat_5_perc)
-    all_det_jac_stat_95_perc = np.array(all_det_jac_stat_95_perc)
-    all_det_jac_stat_99_perc = np.array(all_det_jac_stat_99_perc)
+        if det_of_jac_fd is not None:
+            all_det_jac_fd_stat_mean.append(det_of_jac_fd['det_mean'])
+            all_det_jac_fd_stat_median.append(det_of_jac_fd['det_median'])
+            all_det_jac_fd_stat_1_perc.append(det_of_jac_fd['det_1_perc'])
+            all_det_jac_fd_stat_5_perc.append(det_of_jac_fd['det_5_perc'])
+            all_det_jac_fd_stat_95_perc.append(det_of_jac_fd['det_95_perc'])
+            all_det_jac_fd_stat_99_perc.append(det_of_jac_fd['det_99_perc'])
 
-    nz_det_jac_stat_mean = np.array(nz_det_jac_stat_mean)
-    nz_det_jac_stat_median = np.array(nz_det_jac_stat_median)
-    nz_det_jac_stat_1_perc = np.array(nz_det_jac_stat_1_perc)
-    nz_det_jac_stat_5_perc = np.array(nz_det_jac_stat_5_perc)
-    nz_det_jac_stat_95_perc = np.array(nz_det_jac_stat_95_perc)
-    nz_det_jac_stat_99_perc = np.array(nz_det_jac_stat_99_perc)
+        if det_of_jac_non_zero_fd is not None:
+            nz_det_jac_fd_stat_mean.append(det_of_jac_non_zero_fd['det_mean'])
+            nz_det_jac_fd_stat_median.append(det_of_jac_non_zero_fd['det_median'])
+            nz_det_jac_fd_stat_1_perc.append(det_of_jac_non_zero_fd['det_1_perc'])
+            nz_det_jac_fd_stat_5_perc.append(det_of_jac_non_zero_fd['det_5_perc'])
+            nz_det_jac_fd_stat_95_perc.append(det_of_jac_non_zero_fd['det_95_perc'])
+            nz_det_jac_fd_stat_99_perc.append(det_of_jac_non_zero_fd['det_99_perc'])
 
-    if len(all_det_jac_stat_mean)>0 and len(nz_det_jac_stat_mean)>0:
+    # summaries for the central difference jacobian
+    save_det_jac_summaries(all_det_jac_stat_mean, all_det_jac_stat_median, all_det_jac_stat_1_perc,
+                           all_det_jac_stat_5_perc, all_det_jac_stat_95_perc, all_det_jac_stat_99_perc,
+                           nz_det_jac_stat_mean, nz_det_jac_stat_median, nz_det_jac_stat_1_perc, nz_det_jac_stat_5_perc,
+                           nz_det_jac_stat_95_perc, nz_det_jac_stat_99_perc,
+                           output_dir, stage_nr=args.stage_nr, file_name_modifier='')
 
-        if args.compute_from_frozen:
-            image_and_map_output_dir = os.path.join(os.path.normpath(output_dir),'model_results_frozen_stage_{:d}'.format(args.stage_nr))
-        else:
-            image_and_map_output_dir = os.path.join(os.path.normpath(output_dir),'model_results_stage_{:d}'.format(args.stage_nr))
-
-        all_det_of_jacobian_txt_filename = os.path.join(image_and_map_output_dir, 'all_stat_det_of_jacobian.txt')
-        all_det_of_jacobian_pt_filename = os.path.join(image_and_map_output_dir, 'all_stat_det_of_jacobian.pt')
-
-        d_save = dict()
-        d_save['all_det_jac'] = dict()
-        d_save['all_det_jac']['mean'] = all_det_jac_stat_mean
-        d_save['all_det_jac']['median'] = all_det_jac_stat_median
-        d_save['all_det_jac']['1_perc'] = all_det_jac_stat_1_perc
-        d_save['all_det_jac']['5_perc'] = all_det_jac_stat_5_perc
-        d_save['all_det_jac']['95_perc'] = all_det_jac_stat_95_perc
-        d_save['all_det_jac']['99_perc'] = all_det_jac_stat_99_perc
-
-        d_save['nz_det_jac'] = dict()
-        d_save['nz_det_jac']['mean'] = nz_det_jac_stat_mean
-        d_save['nz_det_jac']['median'] = nz_det_jac_stat_median
-        d_save['nz_det_jac']['1_perc'] = nz_det_jac_stat_1_perc
-        d_save['nz_det_jac']['5_perc'] = nz_det_jac_stat_5_perc
-        d_save['nz_det_jac']['95_perc'] = nz_det_jac_stat_95_perc
-        d_save['nz_det_jac']['99_perc'] = nz_det_jac_stat_99_perc
-
-        torch.save(d_save, all_det_of_jacobian_pt_filename)
-
-        print('INFO: Writing {:s}'.format(all_det_of_jacobian_txt_filename))
-        f = open(all_det_of_jacobian_txt_filename, 'w')
-
-        f.write('Over all the means of the entire images:\n')
-        f.write('----------------------------------------\n\n')
-        current_d = d_save['all_det_jac']
-        for k in current_d:
-            cvals = current_d[k]
-            f.write('Stat = {:s}\n'.format(k))
-            f.write('mean, median, std\n')
-            out_str = str(np.mean(cvals)) + ', ' + str(np.median(cvals)) + ', ' + str(np.std(cvals)) +'\n'
-            f.write(out_str)
-
-        f.write('Over all the means of the non-zero image regions:\n')
-        f.write('-------------------------------------------------\n\n')
-        current_d = d_save['nz_det_jac']
-        for k in current_d:
-            cvals = current_d[k]
-            f.write('Stat = {:s}\n'.format(k))
-            f.write('mean, median, std\n')
-            out_str = str(np.mean(cvals)) + ', ' + str(np.median(cvals)) + ', ' + str(np.std(cvals)) + '\n'
-            f.write(out_str)
-
-        f.close()
+    # summaries for the forward difference jacobian
+    save_det_jac_summaries(all_det_jac_fd_stat_mean, all_det_jac_fd_stat_median, all_det_jac_fd_stat_1_perc,
+                           all_det_jac_fd_stat_5_perc, all_det_jac_fd_stat_95_perc, all_det_jac_fd_stat_99_perc,
+                           nz_det_jac_fd_stat_mean, nz_det_jac_fd_stat_median, nz_det_jac_fd_stat_1_perc, nz_det_jac_fd_stat_5_perc,
+                           nz_det_jac_fd_stat_95_perc, nz_det_jac_fd_stat_99_perc,
+                           output_dir, stage_nr=args.stage_nr, file_name_modifier='_fd')
 
 if args.compute_only_pair_nr is None and not args.only_recompute_validation_measures:
         if not args.do_not_print_images:

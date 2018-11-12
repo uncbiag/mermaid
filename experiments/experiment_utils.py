@@ -61,6 +61,39 @@ def compute_determinant_of_jacobian(phi,spacing):
     det = det.data[0, ...].detach().cpu().numpy()
     return det
 
+def compute_determinant_of_jacobian_forward_differences(phi,spacing):
+    fdt = FD.FD_torch(spacing)
+    dim = len(spacing)
+
+    if dim==1:
+        p0x = fdt.dXf(phi[0:1,0,...])
+        det = p0x
+
+    elif dim==2:
+        p0x = fdt.dXf(phi[0:1, 0, ...])
+        p0y = fdt.dYf(phi[0:1, 0, ...])
+        p1x = fdt.dXf(phi[0:1, 1, ...])
+        p1y = fdt.dYf(phi[0:1, 1, ...])
+
+        det = p0x * p1y - p0y * p1x
+    elif dim==3:
+        p0x = fdt.dXf(phi[0:1, 0, ...])
+        p0y = fdt.dYf(phi[0:1, 0, ...])
+        p0z = fdt.dZf(phi[0:1, 0, ...])
+        p1x = fdt.dXf(phi[0:1, 1, ...])
+        p1y = fdt.dYf(phi[0:1, 1, ...])
+        p1z = fdt.dZf(phi[0:1, 1, ...])
+        p2x = fdt.dXf(phi[0:1, 2, ...])
+        p2y = fdt.dYf(phi[0:1, 2, ...])
+        p2z = fdt.dZf(phi[0:1, 2, ...])
+
+        det = p0x*p1y*p2z + p0y*p1z*p2x + p0z*p1x*p2y -p0z*p1y*p2x -p0y*p1x*p2z -p0x*p1z*p2y
+    else:
+        raise ValueError('Can only compute the determinant of Jacobian for dimensions 1, 2 and 3')
+
+    det = det.data[0, ...].detach().cpu().numpy()
+    return det
+
 def filter_names_for_boxplot(names,suppress_pattern,suppress_pattern_keep_first_as):
     idx = []
     eff_names = []
