@@ -43,7 +43,7 @@ params = pars.ParameterDict()
 source_images_path='../test_data/label_slices/'
 source_images_pattern='*LEFT*label1.Sliced.nii.gz'
 target_image_path='./fast_reg/results/Central_Segmentation.nii.gz'
-mode = 'test'
+mode = 'train'#'test'#
 predicted_momentum_train_path ='./fast_reg/results/predMom_trainset.h5'
 predicted_momentum_test_path ='./fast_reg/results/predMom_testset.h5'
 corrected_momentum_train_path='./fast_reg/results/correction_predMom_trainset.h5'
@@ -54,7 +54,7 @@ nr_of_train_images = 78
 nr_of_test_images  = 8
 plot_deformation_maps = False
 ###
-algorithm='marc' #'stephanie'
+algorithm='stephanie'#'marc' #
 ###
 
 # set saving paths
@@ -102,6 +102,7 @@ shared_parameters = dict()
 
 maps_from_mom=[]
 ITarget_warped = []
+corrected_Images = []
 
 for i, im_name in enumerate(images):
     momDict = dict()
@@ -110,8 +111,8 @@ for i, im_name in enumerate(images):
     Ic, hdrc, spacing, _ = im_io.read_to_nc_format(filename=im_name, silent_mode=True)
 
     ##COMPUTE MAP AND WARPED IMAGE OF CORRECTED PREDICTED MOMENTUM
-    Iwarped, map_from_mom, _ = FRT.evaluate_model(AdaptVal(Variable(torch.from_numpy(Ic), requires_grad=False)),
-                          AdaptVal(Variable(torch.from_numpy(Iavg), requires_grad=False)),
+    Iwarped, map_from_mom, _ = FRT.evaluate_model(AdaptVal(torch.from_numpy(Ic)),
+                          AdaptVal(torch.from_numpy(Iavg)),
                           size,
                           spacing,
                           momDict,
@@ -120,26 +121,29 @@ for i, im_name in enumerate(images):
                           visualize=False,
                           compute_inverse_map=False)
 
-    maps_from_mom.append(map_from_mom.cpu().data.numpy())
+    maps_from_mom.append(map_from_mom.detach().cpu().numpy())
+    corrected_Images.append(Iwarped.detach().cpu().numpy().squeeze())
 
     if algorithm=='stephanie':
         warped_IS_filename = correction_results_path+mode+"_correction_predMom_warped_image" + str(i+1) + ".nii.gz"
-        FIO.ImageIO().write(warped_IS_filename,Iwarped.cpu().data.numpy()[0,0,:],hdrc)
+        FIO.ImageIO().write(warped_IS_filename,Iwarped.detach().cpu().numpy()[0,0,:],hdrc)
     elif algorithm=='marc':
         warped_IS_filename = correction_results_path + mode + "_sub_predMom_warped_image" + str(
             i + 1) + ".nii.gz"
-        FIO.ImageIO().write(warped_IS_filename, Iwarped.cpu().data.numpy()[0, 0, :], hdrc)
+        FIO.ImageIO().write(warped_IS_filename, Iwarped.detach().cpu().numpy()[0, 0, :], hdrc)
 
     if plot_deformation_maps:
         plt.clf()
         plt.imshow(Iwarped[0,0,125:225, :], cmap='gray')  # just for background purpose
-        plt.contour(map_from_mom.cpu().data.numpy()[0,0,:][125:225, :], np.linspace(-1, 1, 200), colors='r', linestyles='solid')
-        plt.contour(map_from_mom.cpu().data.numpy()[0,1,:][125:225, :], np.linspace(-1, 1, 200), colors='r', linestyles='solid')
+        plt.contour(map_from_mom.detach().cpu().numpy()[0,0,:][125:225, :], np.linspace(-1, 1, 200), colors='r', linestyles='solid')
+        plt.contour(map_from_mom.detach().cpu().numpy()[0,1,:][125:225, :], np.linspace(-1, 1, 200), colors='r', linestyles='solid')
         plt.title('predicted deformation field img %i' % (i + 1), fontsize=8)
         plt.show()
 
 ##SAVE MAPS
 if algorithm == 'stephanie':
     FRT.write_h5file(results_path+mode+"_corrected_predicted_DeformationMaps.h5", maps_from_mom[0:])
+    FRT.write_h5file(results_path + mode + "_corrected_predicted_Images.h5", corrected_Images)
 elif algorithm=='marc':
     FRT.write_h5file(results_path+mode+"_sub_predicted_DeformationMaps.h5", maps_from_mom[0:])
+    FRT.write_h5file(results_path + mode + "_sub_predicted_Images.h5", corrected_Images)

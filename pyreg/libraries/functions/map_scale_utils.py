@@ -35,5 +35,4 @@ def scale_map_grad(grad_map,spacing):
     ndim = len(spacing)
     for d in range(ndim):
         #grad_map[:, d, ...] *= spacing[d] * (sz[d + 2] - 1) / 2.
-        #grad_map[:, d, ...] *= (sz[d + 2] - 1)/2.
-        grad_map[:, d, ...] *= (2. / (sz[d + 2] - 1.) / spacing[d])
+        grad_map[:, d, ...] *= (sz[d + 2] - 1)/2.

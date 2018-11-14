@@ -18,13 +18,13 @@ start = time.time()
 # keep track of general parameters
 params = pars.ParameterDict()
 
-use_synthetic_test_case = False
+use_synthetic_test_case = True
 dim = 2
 try_all_models = False
 smooth_before_reg = False
 
 if use_synthetic_test_case:
-    len = 64
+    len = 8
     szEx = np.tile( len, dim )         # size of the desired images: (sz)^dim
     I0,I1,spacing= EG.CreateSquares(dim).create_image_pair(szEx,params) # create a default image size with two sample squares
 else:
@@ -78,12 +78,12 @@ si = SI.RegisterImagePair()
 si.print_available_models()
 all_models = si.get_available_models()
 
-I0_filename = './findTheBug_I0_readIn_testSI.nrrd'
-print("Writing I0")
-FIO.ImageIO().write(I0_filename, I0[0,0, :])
-I1_filename = './findTheBug_I1_readIn_testSI.nrrd'
-print("Writing I1")
-FIO.ImageIO().write(I1_filename, I1[0,0, :])
+# I0_filename = './findTheBug_I0_readIn_testSI.nrrd'
+# print("Writing I0")
+# FIO.ImageIO().write(I0_filename, I0[0,0, :])
+# I1_filename = './findTheBug_I1_readIn_testSI.nrrd'
+# print("Writing I1")
+# FIO.ImageIO().write(I1_filename, I1[0,0, :])
 
 if try_all_models:
     # try all the models
@@ -95,28 +95,27 @@ else:
     #si.register_images(I0, I1, spacing, model_name='total_variation_map')
     #si.register_images(I0, I1, spacing, model_name='svf_vector_momentum_map',nr_of_iterations=30,optimizer_name='sgd',compute_inverse_map=True)
 
-    si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
-                       nr_of_iterations=50,
-                       optimizer_name='lbfgs_ls',
-                       json_config_out_filename = 'test2d_tst.json',
-                       params = 'test2d_tst.json')
+    si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_image',
+                       nr_of_iterations=30,
+                       params = 'fast_registration_params_1.json'#'test2d_tst.json'
+                       )
 
     #si.register_images(I0, I1, spacing, model_name='svf_vector_momentum_image')
     # si.register_images(I0, I1, spacing, model_name='affine_map', nr_of_iterations=10,
     #                    visualize_step=1, rel_ftol=1e-4,similarity_measure_sigma=0.1,
     #                            similarity_measure_type="ssd"
     #                    ,json_config_out_filename='affine.json', params='affine.json')
-    si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
-                                          #optimize_over_smoother_parameters=True,
-                                           smoother_type='multiGaussian',
-                                           compute_similarity_measure_at_low_res=False,
-                                           map_low_res_factor=1.0,
-                                           visualize_step=15,
-                                           nr_of_iterations=15,
-                                           rel_ftol=1e-8,
-                                           similarity_measure_type="ssd",
-                                           params='aaa.json',
-                                           similarity_measure_sigma=0.1)
+    # si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
+    #                                       #optimize_over_smoother_parameters=True,
+    #                                        smoother_type='multiGaussian',
+    #                                        compute_similarity_measure_at_low_res=False,
+    #                                        map_low_res_factor=1.0,
+    #                                        visualize_step=15,
+    #                                        nr_of_iterations=15,
+    #                                        rel_ftol=1e-8,
+    #                                        similarity_measure_type="ssd",
+    #                                        params='aaa.json',
+    #                                        similarity_measure_sigma=0.1)
                                           #json_config_out_filename='aaa.json')
                                           #,params='aaa.json')
     #si.register_images(I0, I1, spacing, model_name='curvature_map',rel_ftol=1e-12, similarity_measure_sigma=0.005,nr_of_iterations=100)

@@ -89,7 +89,7 @@ def predict_momentum(moving, target, input_batch, batch_size, patch_size, net, s
             input_batch[slices, 0] = moving[patch_pos[1]:patch_pos[1]+patch_size, patch_pos[2]:patch_pos[2]+patch_size]
             input_batch[slices, 1] = target[patch_pos[1]:patch_pos[1]+patch_size, patch_pos[2]:patch_pos[2]+patch_size]
 
-        input_batch_variable = Variable(input_batch, volatile=True)
+        input_batch_variable = input_batch
         recon_batch_variable = net(input_batch_variable)
         for slices in range(0, cur_batch_size):
             patch_pos = idx2pos_4D(flat_idx[batch_idx+slices], data_size)

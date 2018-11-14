@@ -330,7 +330,7 @@ class LBFGS_LS(Optimizer):
         # 0 < rho < 0.5 and 0 < w < 1
         rho = 1e-4
         w = 0.5
-        max_backtracking = 30
+        max_backtracking = 20
 
         original_param_data_list = self._copy_param()
         phi_0 = closure().data[0]
@@ -347,7 +347,7 @@ class LBFGS_LS(Optimizer):
                 break
             else:
                 alpha_k *= w
-                print('attempt ' +str(nr_of_backtracking_attempts+1) +': Found UNACCEPTABLE step: new alpha_k = ' + str(alpha_k))
+                print('Found UNACCEPTABLE step: new alpha_k = ' + str(alpha_k))
                 nr_of_backtracking_attempts += 1
         if nr_of_backtracking_attempts==max_backtracking:
             return 0.0 # could not find a proper step

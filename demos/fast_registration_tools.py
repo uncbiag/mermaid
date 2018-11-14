@@ -205,8 +205,8 @@ def single_registration(images, target_image_path, do_smoothing, registration_re
 
     if do_smoothing:
         # create the target image as pyTorch variable
-        Iavg_pt = AdaptVal(Variable(torch.from_numpy(Iavg), requires_grad=False))
-        Iavg_beforeSmoothing = AdaptVal(Variable(torch.from_numpy(Iavg), requires_grad=False)).cpu().data.numpy()
+        Iavg_pt = AdaptVal(torch.from_numpy(Iavg))
+        Iavg_beforeSmoothing = AdaptVal(torch.from_numpy(Iavg)).detach().cpu().numpy()
 
         # smooth a little bit
         params[('image_smoothing', {}, 'image smoothing settings')]
@@ -221,7 +221,7 @@ def single_registration(images, target_image_path, do_smoothing, registration_re
         cparams = params['image_smoothing']
         s = SF.SmootherFactory(sz[2::], spacing).create_smoother(cparams)
         Iavg_pt = s.smooth(Iavg_pt)
-        Iavg = Iavg_pt.cpu().data.numpy()
+        Iavg = Iavg_pt.detach().cpu().numpy()
 
 
     # initialize lists to save maps and momentums of last cycle
@@ -236,12 +236,12 @@ def single_registration(images, target_image_path, do_smoothing, registration_re
 
         if do_smoothing:
             # create the source image as pyTorch variable
-            Ic_pt = AdaptVal(Variable(torch.from_numpy(Ic), requires_grad=False))
-            Ic_beforeSmoothing = AdaptVal(Variable(torch.from_numpy(Ic), requires_grad=False))
+            Ic_pt = AdaptVal(torch.from_numpy(Ic))
+            Ic_beforeSmoothing = AdaptVal(torch.from_numpy(Ic))
 
             # smoth a little bit
             Ic_pt = s.smooth(Ic_pt)
-            Ic = Ic_pt.cpu().data.numpy()
+            Ic = Ic_pt.detach().cpu().numpy()
 
             # register smoothed current image to smoothed target image
             si1 = SI.RegisterImagePair()
@@ -260,19 +260,19 @@ def single_registration(images, target_image_path, do_smoothing, registration_re
 
             # save momentum for second registration
             model_pars = si1.get_model_parameters()
-            first_mom=(model_pars['m'].cpu().data.numpy().squeeze())
+            first_mom=(model_pars['m'].detach().cpu().numpy().squeeze())
 
-            if False:
+            if True:
                 # visualize warped image and deformation field of first registration
                 wp1 = si1.get_map()
                 wi1 = utils.compute_warped_image_multiNC(Ic_beforeSmoothing, wp1, si1.spacing, 1)
-                Iw = wi1.cpu().data.numpy()[0,0,125:225, :]
-                deff_data = wp1.cpu().data.numpy()
+                Iw = wi1.detach().cpu().numpy()[0,0,125:225, :]
+                deff_data = wp1.detach().cpu().numpy()
                 plt.clf()
                 plt.imshow(Iw, cmap='gray')
                 plt.contour(deff_data[0, 0, :][125:225, :], np.linspace(-1, 1, 300), colors='r', linestyles='solid')
                 plt.contour(deff_data[0, 1, :][125:225, :], np.linspace(-1, 1, 300), colors='r', linestyles='solid')
-                plt.title('deformation field %i' % (i+1))
+                plt.title('deformation field 1 %i' % (i+1))
                 plt.show()
                 plt.clf()
 
@@ -284,7 +284,7 @@ def single_registration(images, target_image_path, do_smoothing, registration_re
         if do_smoothing:
             # initialize model with momentum from first registration
             si.set_model_parameters({'m': torch.from_numpy(first_mom)})
-            si.register_images(Ic_beforeSmoothing.cpu().data.numpy(), Iavg_beforeSmoothing, spacing, model_name='svf_vector_momentum_map',
+            si.register_images(Ic_beforeSmoothing.detach().cpu().numpy(), Iavg_beforeSmoothing, spacing, model_name='svf_vector_momentum_map',
                                smoother_type='multiGaussian',
                                compute_similarity_measure_at_low_res=False,
                                map_low_res_factor=1.0,
@@ -313,38 +313,40 @@ def single_registration(images, target_image_path, do_smoothing, registration_re
         wi = si.get_warped_image()
         wp = si.get_map()
         model_pars = si.get_model_parameters()
-        mom = (model_pars['m'].cpu().data.numpy().squeeze())
+        mom = (model_pars['m'].detach().cpu().numpy().squeeze())
 
         mom_list.append(mom)
-        wp_list.append(wp.cpu().data.numpy())
+        wp_list.append(wp.detach().cpu().numpy())
 
 
         current_filename = registration_results_images_path+'regImage' + str(i+1).zfill(4) + '.nii.gz'
-        wi_data = wi.data
+        # current_filename = './fast_reg/test.nii.gz'
+
+        wi_data = wi.detach()
         im_io.write(current_filename, wi_data[0,0,:])
 
 
         if plot_and_save_def_grids:
             # visualize and save warped image and deformation field of the registration
-            Iw = wi.cpu().data.numpy()[0,0,125:225, :]
-            deff_data = wp.cpu().data.numpy()
+            Iw = wi.detach().cpu().numpy()[0,0,125:225, :]
+            deff_data = wp.detach().cpu().numpy()
             plt.clf()
             plt.imshow(Iw, cmap='gray')
             plt.contour(deff_data[0, 0, :][125:225, :], np.linspace(-1, 1, 300), colors='r', linestyles='solid')
             plt.contour(deff_data[0, 1, :][125:225, :], np.linspace(-1, 1, 300), colors='r', linestyles='solid')
-            plt.title('deformation field %i' % (i+1))
+            plt.title('deformation field 2 %i' % (i+1))
             plt.savefig(registration_results_deformations_path+'reg_deformation_field_grid_300_' + str(i + 1).zfill(4) + '.png')
             plt.show()
 
         # update new average image
         if i == 0:
-            newAvg = wi.data.cpu().numpy()
+            newAvg = wi.detach().cpu().numpy()
         else:
-            newAvg += wi.data.cpu().numpy()
+            newAvg += wi.detach().cpu().numpy()
 
     # udate, save and visualize new average image
     Iavg = newAvg / len(images)
-    Iavg = AdaptVal(Variable(torch.from_numpy(Iavg), requires_grad=False)).data.cpu().numpy()
+    Iavg = AdaptVal(torch.from_numpy(Iavg)).detach().cpu().numpy()
 
     filename = registration_results_images_path+'Average_Image_firstReg.nii.gz'
     FIO.ImageIO().write(filename, Iavg[0,0, :])
@@ -395,20 +397,20 @@ def multi_registration(images, target_images, do_smoothing, registration_results
             s = SF.SmootherFactory(sz[2::], spacing).create_smoother(cparams)
 
             # create the source image as pyTorch variable
-            Ic_pt = AdaptVal(Variable(torch.from_numpy(Ic), requires_grad=False))
-            Ic_beforeSmoothing = AdaptVal(Variable(torch.from_numpy(Ic), requires_grad=False)).cpu().data.numpy()
+            Ic_pt = AdaptVal(torch.from_numpy(Ic))
+            Ic_beforeSmoothing = AdaptVal(torch.from_numpy(Ic)).detach().cpu().numpy()
 
             # smoth a little bit
             Ic_pt = s.smooth(Ic_pt)
-            Ic = Ic_pt.cpu().data.numpy()
+            Ic = Ic_pt.detach().cpu().numpy()
 
             # create the target image as pyTorch variable
-            Iavg_pt = AdaptVal(Variable(torch.from_numpy(Iavg), requires_grad=False))
-            Iavg_beforeSmoothing = AdaptVal(Variable(torch.from_numpy(Iavg), requires_grad=False)).cpu().data.numpy()
+            Iavg_pt = AdaptVal(torch.from_numpy(Iavg))
+            Iavg_beforeSmoothing = AdaptVal(torch.from_numpy(Iavg)).detach().cpu().numpy()
 
             # smoth a little bit
             Iavg_pt = s.smooth(Iavg_pt)
-            Iavg = Iavg_pt.cpu().data.numpy()
+            Iavg = Iavg_pt.detach().cpu().numpy()
 
             # register smoothed current image to smoothed target image
             si1 = SI.RegisterImagePair()
@@ -427,14 +429,14 @@ def multi_registration(images, target_images, do_smoothing, registration_results
 
             # save momentum for second registration
             model_pars = si1.get_model_parameters()
-            first_mom = (model_pars['m'].cpu().data.numpy().squeeze())
+            first_mom = (model_pars['m'].detach().cpu().numpy().squeeze())
 
             if False:
                 # visualize warped image and deformation field of first registration
                 wp1 = si1.get_map()
                 wi1 = utils.compute_warped_image_multiNC(Ic_beforeSmoothing, wp1, si1.spacing, 1)
-                Iw = wi1.cpu().data.numpy()[0, 0, 125:225, :]
-                deff_data = wp1.cpu().data.numpy()
+                Iw = wi1.detach().cpu().numpy()[0, 0, 125:225, :]
+                deff_data = wp1.detach().cpu().numpy()
                 plt.clf()
                 plt.imshow(Iw, cmap='gray')
                 plt.contour(deff_data[0, 0, :][125:225, :], np.linspace(-1, 1, 300), colors='r', linestyles='solid')
@@ -460,8 +462,8 @@ def multi_registration(images, target_images, do_smoothing, registration_results
                                rel_ftol=1e-8,
                                similarity_measure_type="ncc",
                                similarity_measure_sigma=0.1,
-                               params='findTheBug_GaussianWeights_2.json',
-                               json_config_out_filename='findTheBug_GaussianWeights_2.json'
+                               params='fast_registration_params_2.json',
+                               json_config_out_filename='fast_registration_params_2.json'
                                )
         else:
             si.register_images(Ic, Iavg, spacing, model_name='svf_vector_momentum_map',
@@ -473,26 +475,26 @@ def multi_registration(images, target_images, do_smoothing, registration_results
                                rel_ftol=1e-8,
                                similarity_measure_type="ncc",
                                similarity_measure_sigma=0.1,
-                               params='findTheBug_GaussianWeights_2.json',
-                               json_config_out_filename='findTheBug_GaussianWeights_2.json'
+                               params='fast_registration_params_2.json',
+                               json_config_out_filename='fast_registration_params_2.json'
                                )
 
         wi = si.get_warped_image()
         wp = si.get_map()
         model_pars = si.get_model_parameters()
-        mom = (model_pars['m'].cpu().data.numpy().squeeze())
+        mom = (model_pars['m'].detach().cpu().numpy().squeeze())
 
         mom_list.append(mom)
-        wp_list.append(wp.cpu().data.numpy())
+        wp_list.append(wp.detach().cpu().numpy())
 
         current_filename = registration_results_path + mode+ '_regImage' + str(i + 1).zfill(4) + '.nii.gz'
-        wi_data = wi.data
+        wi_data = wi.detach()
         im_io.write(current_filename, wi_data[0, 0, :])
 
         if plot_and_save_def_grids:
             # visualize and save warped image and deformation field of the registration
-            Iw = wi.cpu().data.numpy()[0, 0, 125:225, :]
-            deff_data = wp.cpu().data.numpy()
+            Iw = wi.detach().cpu().numpy()[0, 0, 125:225, :]
+            deff_data = wp.detach().cpu().numpy()
             plt.clf()
             plt.imshow(Iw, cmap='gray')
             plt.contour(deff_data[0, 0, :][125:225, :], np.linspace(-1, 1, 300), colors='r', linestyles='solid')
@@ -521,8 +523,8 @@ def read_image_and_map_and_apply_map(image_filename,map_filename):
 
     if (im is not None) and (map is not None):
         # make pytorch arrays for subsequent processing
-        im_t = AdaptVal(Variable(torch.from_numpy(im), requires_grad=False))
-        map_t = AdaptVal(Variable(torch.from_numpy(map[0,:]), requires_grad=False))
+        im_t = AdaptVal(torch.from_numpy(im))
+        map_t = AdaptVal(torch.from_numpy(map[0,:]))
         im_warped = utils.t2np( utils.compute_warped_image_multiNC(im_t,map_t,spacing[-2:],1) )
 
         return im_warped,hdr
@@ -632,11 +634,11 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     if use_map:
         # create the identity map [-1,1]^d, since we will use a map-based implementation
         id = utils.identity_map_multiN(sz, spacing)
-        identityMap = AdaptVal(Variable(torch.from_numpy(id), requires_grad=False))
+        identityMap = AdaptVal(torch.from_numpy(id))
         if map_low_res_factor is not None:
             # create a lower resolution map for the computations
             lowres_id = utils.identity_map_multiN(lowResSize, lowResSpacing)
-            lowResIdentityMap = AdaptVal(Variable(torch.from_numpy(lowres_id), requires_grad=False))
+            lowResIdentityMap = AdaptVal(torch.from_numpy(lowres_id))
 
     if False:
         model = model.cuda()
@@ -715,13 +717,13 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared
     if use_map:
         if compute_similarity_measure_at_low_res:
             I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing,1)
-            vizReg.show_current_images(iter, lowResISource, lowResITarget, I1Warped, vizImage, vizName,
+            vizReg.show_current_images(iter, lowResISource, lowResITarget, I1Warped, None, None, None, vizImage, vizName,
                                        phi_or_warped_image, visual_param)
         else:
             I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing,1)
-            vizReg.show_current_images(iter, ISource, ITarget, I1Warped, vizImage, vizName,
+            vizReg.show_current_images(iter, ISource, ITarget, I1Warped, None, None, None, vizImage, vizName,
                                        phi_or_warped_image, visual_param)
     else:
-        vizReg.show_current_images(iter, ISource, ITarget, phi_or_warped_image, vizImage, vizName, None, visual_param)
+        vizReg.show_current_images(iter, ISource, ITarget, phi_or_warped_image, None, None, None, vizImage, vizName, None, visual_param)
 
     return rec_IWarped,rec_phiWarped, rec_phiWarped_inverse

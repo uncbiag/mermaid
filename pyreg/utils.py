@@ -499,7 +499,7 @@ def identity_map_multiN(sz,spacing,dtype='float32'):
     :return: returns the identity map
     """
     dim = len(sz)-2
-    nrOfI = int(sz[0])
+    nrOfI = sz[0]
 
     if dim == 1:
         id = np.zeros([nrOfI,1,sz[2]],dtype=dtype)

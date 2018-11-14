@@ -51,30 +51,34 @@ images_list = FRT.find(reg_images_pattern, reg_images_path)
 nr_of_images = len(images_list)
 images = images_list[0:nr_of_images]
 print(nr_of_images,len(images))
+images_list_train = images[0:nr_of_train_images]
+images_list_test = images[nr_of_train_images:]
+reg_images = images_list_test#images_list_train+images_list_test#
+print(len(reg_images))
 
 ##LOAD WARPED IMAGES FROM PREDICTED MOMENTUM
 pred_images_list_train = FRT.find('train*', Iwarped_predicted_momentum_path)
 pred_images_list_test = FRT.find('test*', Iwarped_predicted_momentum_path)
-pred_images = pred_images_list_train+pred_images_list_test
+pred_images = pred_images_list_test#pred_images_list_train+pred_images_list_test#
 print(len(pred_images))
 
 ##LOAD WARPED IMAGES FROM CORRECTED PREDICTED MOMENTUM
 cor_pred_images_list_train = FRT.find('train_correction_pred*', Iwarped_corrected_predicted_momentum_path)
 cor_pred_images_list_test = FRT.find('test_correction_pred*', Iwarped_corrected_predicted_momentum_path)
-cor_pred_images = cor_pred_images_list_train+cor_pred_images_list_test
-print(len(pred_images))
+cor_pred_images = cor_pred_images_list_test#cor_pred_images_list_train+cor_pred_images_list_test#
+print(len(cor_pred_images))
 
 ##LOAD WARPED IMAGES FROM CORRECTED PREDICTED MOMENTUM
 sub_pred_images_list_train = FRT.find('train_sub_pred*', Iwarped_corrected_predicted_momentum_path)
 sub_pred_images_list_test = FRT.find('test_sub_pred*', Iwarped_corrected_predicted_momentum_path)
-sub_pred_images = sub_pred_images_list_train+sub_pred_images_list_test
-print(len(pred_images))
+sub_pred_images = sub_pred_images_list_test#sub_pred_images_list_train+sub_pred_images_list_test#
+print(len(sub_pred_images))
 
 ##COMPUTE AVERAGE IMAGES
-FRT.compute_average_image(images, './fast_reg/results/Average_Reg.nii.gz', visualize=True)
-FRT.compute_average_image(pred_images, './fast_reg/results/Average_pred_Mom.nii.gz', visualize=True)
-FRT.compute_average_image(cor_pred_images, './fast_reg/results/Average_cor_pred_Mom.nii.gz', visualize=True)
-FRT.compute_average_image(sub_pred_images, './fast_reg/results/Average_sub_pred_Mom.nii.gz', visualize=True)
+FRT.compute_average_image(reg_images, './fast_reg/results/test_Average_Reg.nii.gz', visualize=True)
+FRT.compute_average_image(pred_images, './fast_reg/results/test_Average_pred_Mom.nii.gz', visualize=True)
+FRT.compute_average_image(cor_pred_images, './fast_reg/results/test_Average_cor_pred_Mom.nii.gz', visualize=True)
+FRT.compute_average_image(sub_pred_images, './fast_reg/results/test_Average_sub_pred_Mom.nii.gz', visualize=True)
 
 ##PLOT WARPED IMAGES AND DEFORMATION GRIDS FOR TEST IMAGES
 deff = FRT.read_h5file('./fast_reg/results/test_Maps.h5')

@@ -100,57 +100,10 @@ class CreateRealExampleImages(CreateExample):
         """
 
         # create small and large squares
-        if self.dim == 2:
-            if False:
-                I0, _, _, squeezed_spacing = fileio.ImageIO().read_to_nc_format(
-                    filename='../test_data/brain_slices/ws_slice.nrrd', intensity_normalize=True, squeeze_image=True)
-                I1, _, _, squeezed_spacing = fileio.ImageIO().read_to_nc_format(
-                    filename='../test_data/brain_slices/wt_slice.nrrd', intensity_normalize=True, squeeze_image=True)
-            if False:
-                I0, _, _, squeezed_spacing = fileio.ImageIO().read_to_nc_format(
-                    filename='/playpen/shaeger/slicedImages/9003406_20041118_SAG_3D_DESS_LEFT_016610296205_label_all.alignedCOM.Label1.sliced.nii.gz',
-                    intensity_normalize=True, squeeze_image=True)
-                print(I0.shape)
-                I1, _, _, squeezed_spacing = fileio.ImageIO().read_to_nc_format(
-                    filename='/playpen/shaeger/slicedImages/9003406_20060322_SAG_3D_DESS_LEFT_016610899303_label_all.alignedCOM.Label1.sliced.nii.gz',
-                    intensity_normalize=True, squeeze_image=True)
-                print(I1.shape)
-            if True:
-                I0, _, _, squeezed_spacing = fileio.ImageIO().read_to_nc_format(
-                    filename='../demos/findTheBug_Ic_image7.nrrd',
-                    intensity_normalize=True, squeeze_image=False)
-                print(I0.shape)
-                I1, _, _, squeezed_spacing = fileio.ImageIO().read_to_nc_format(
-                    filename='../demos/findTheBug_averageImage.nrrd',
-                    intensity_normalize=False, squeeze_image=False)
-                print(I1.shape)
-            if False:
-                I0, _, _, squeezed_spacing = fileio.ImageIO().read_to_nc_format(
-                    filename='/playpen/shaeger/slicedImages/9264046_20050622_SAG_3D_DESS_RIGHT_016610935130_label_all.alignedCOM.Label1.sliced.nii.gz',
-                    intensity_normalize=True, squeeze_image=True)
-                print(I0.shape)
-                I1, _, _, squeezed_spacing = fileio.ImageIO().read_to_nc_format(
-                    filename='/playpen/shaeger/slicedImages/9264046_20050622_SAG_3D_DESS_RIGHT_016610935130_label_all.alignedCOM.Label1.sliced.translated.nii.gz',
-                    intensity_normalize=True, squeeze_image=True)
-            if False:
-                I0, _, _, squeezed_spacing = fileio.ImageIO().read_to_nc_format(
-                    filename='/playpen/shaeger/data/9003406_20041118_SAG_3D_DESS_LEFT_016610296205_label_all.alignedCOM.Label1.sliced.nii.gz',
-                    intensity_normalize=True, squeeze_image=True)
-                print(I0.shape)
-                I1, _, _, squeezed_spacing = fileio.ImageIO().read_to_nc_format(
-                    filename='/playpen/shaeger/data/9003406_20060322_SAG_3D_DESS_LEFT_016610899303_label_all.alignedCOM.Label1.sliced.nii.gz',
-                    intensity_normalize=True, squeeze_image=True)
-                print(I1.shape)
-        elif self.dim ==3:
-            #raise ValueError('Real examples only supported in dimension 2 at the moment.')
-            if True:
-                I0, _, _, squeezed_spacing = fileio.ImageIO().read_to_nc_format(
-                    filename='/playpen/shaeger/data/9003406_20041118_SAG_3D_DESS_LEFT_016610296205_label_all.alignedCOM.Label1.nii.gz',
-                    intensity_normalize=True, squeeze_image=True)
-                print(I0.shape)
-                I1, _, _, squeezed_spacing = fileio.ImageIO().read_to_nc_format(
-                    filename='/playpen/shaeger/data/9003406_20060322_SAG_3D_DESS_LEFT_016610899303_label_all.alignedCOM.Label1.nii.gz',
-                    intensity_normalize=True, squeeze_image=True)
-                print(I1.shape)
+        if self.dim==2:
+            I0,_,_,squeezed_spacing = fileio.ImageIO().read_to_nc_format(filename='../test_data/brain_slices/ws_slice.nrrd',intensity_normalize=True,squeeze_image=True)
+            I1,_,_,squeezed_spacing = fileio.ImageIO().read_to_nc_format(filename='../test_data/brain_slices/wt_slice.nrrd',intensity_normalize=True,squeeze_image=True)
+        else:
+            raise ValueError('Real examples only supported in dimension 2 at the moment.')
+
         return I0,I1,squeezed_spacing
-#['../test_data/label_slices/9264046_20050622_SAG_3D_DESS_RIGHT_016610935130_label_all.alignedCOM.Label1.sliced.nii.gz', '../test_data/label_slices/9382271_20040421_SAG_3D_DESS_RIGHT_016610024909_label_all.alignedCOM.Label1.sliced.nii.gz', '../test_data/label_slices/9884303_20051101_SAG_3D_DESS_LEFT_016610160806_label_all.alignedCOM.Label1.sliced.nii.gz', '../test_data/label_slices/9444401_20040611_SAG_3D_DESS_RIGHT_016610054311_label_all.alignedCOM.Label1.sliced.nii.gz', '../test_data/label_slices/9146462_20060213_SAG_3D_DESS_RIGHT_016610859809_label_all.alignedCOM.Label1.sliced.nii.gz', '../test_data/label_slices/9368622_20060408_SAG_3D_DESS_RIGHT_016611081409_label_all.alignedCOM.Label1.sliced.nii.gz']

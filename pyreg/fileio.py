@@ -688,7 +688,6 @@ class ImageIO(FileIO):
                         print('Scaling the vector image to conform to the scaled spacing')
                     # we also need to normalize the vector components in this case
                     vector_scaling = np.array(hdr['spacing']) / np.array(hdr['original_spacing'])
-                    dim = im.shape[0]
                     for d in range(dim):
                         im[d, ...] *= vector_scaling[d]
 

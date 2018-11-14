@@ -30,18 +30,17 @@ def invert_map(map,spacing):
     id_t = AdaptVal(torch.from_numpy(id))
 
     # parameter to store the inverse map
-    invmap_t = Parameter(AdaptVal(torch.from_numpy(id.copy())))
+    invmap_t = AdaptVal(Parameter(torch.from_numpy(id.copy())))
 
     # some optimizer settings, probably too strict
-    nr_of_iterations = 200
-    rel_ftol = 1e-8
-    optimizer = CO.LBFGS_LS([invmap_t],lr=1, max_iter=1, tolerance_grad=rel_ftol * 10, tolerance_change=rel_ftol, max_eval=10,history_size=30, line_search_fn='backtracking')
-    # optimizer = torch.optim.SGD([invmap_t], lr=0.0001, momentum=0.9, dampening=0, weight_decay=0,nesterov=True)
-    # optimizer = torch.optim.Adam([invmap_t], lr=0.00001, betas=(0.9, 0.999), eps=rel_ftol, weight_decay=0)
+    nr_of_iterations = 1000
+    rel_ftol = 1e-6
+    optimizer = CO.LBFGS_LS([invmap_t],lr=1.0, max_iter=1, tolerance_grad=rel_ftol * 10, tolerance_change=rel_ftol, max_eval=5,history_size=5, line_search_fn='backtracking')
+    #optimizer = torch.optim.SGD([invmap_t], lr=0.001, momentum=0.9, dampening=0, weight_decay=0,nesterov=True)
 
     def compute_loss():
         # warps map_t with inv_map, if it is the inverse should result in the identity map
-        wmap = utils.compute_warped_image_multiNC(map_t, invmap_t, spacing,3)
+        wmap = utils.compute_warped_image_multiNC(map_t, invmap_t, spacing)
         current_loss = ((wmap-id_t)**2).sum()
         return current_loss
 

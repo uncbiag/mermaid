@@ -66,7 +66,7 @@ plot_inv_warped_IT      = False
 do_smoothing            = True
 plot_and_save_def_grids = True
 ###
-algorithm = 'marc' #'stephanie'
+algorithm = 'stephanie'#'marc' #
 ###
 
 # set saving paths
@@ -119,6 +119,7 @@ shared_parameters = dict()
 maps_from_mom = []
 inv_maps_from_mom = []
 ITarget_warped = []
+predicted_Images = []
 
 for i, im_name in enumerate(images):
     momDict = dict()
@@ -128,8 +129,8 @@ for i, im_name in enumerate(images):
 
     ##COMPUTE MAP AND INVERSE MAP OF PREDICTED MOMENTUM
     Iwarped, map_from_mom, inv_map_from_mom = FRT.evaluate_model(
-        AdaptVal(Variable(torch.from_numpy(Ic), requires_grad=False)),
-        AdaptVal(Variable(torch.from_numpy(Iavg), requires_grad=False)),
+        AdaptVal(torch.from_numpy(Ic)),
+        AdaptVal(torch.from_numpy(Iavg)),
         size,
         spacing,
         momDict,
@@ -138,11 +139,12 @@ for i, im_name in enumerate(images):
         visualize=False,
         compute_inverse_map=True)
 
-    maps_from_mom.append(map_from_mom.cpu().data.numpy())
-    inv_maps_from_mom.append(inv_map_from_mom.cpu().data.numpy())
+    maps_from_mom.append(map_from_mom.detach().cpu().numpy())
+    inv_maps_from_mom.append(inv_map_from_mom.detach().cpu().numpy())
+    predicted_Images.append(Iwarped.detach().cpu().numpy().squeeze())
 
     warped_IS_filename = warped_Isource_path + mode + "_predMom_warped_image" + str(i + 1) + ".nii.gz"
-    FIO.ImageIO().write(warped_IS_filename, Iwarped.cpu().data.numpy()[0, 0, :], hdrc)
+    FIO.ImageIO().write(warped_IS_filename, Iwarped.detach().cpu().numpy()[0, 0, :], hdrc)
 
     inverse_defMap_path = inverse_deformation_maps_path + mode + "_invMap_" + str(i + 1).zfill(3) + ".nii.gz"
     FIO.ImageIO().write(inverse_defMap_path, inv_map_from_mom[0, :])
@@ -152,24 +154,24 @@ for i, im_name in enumerate(images):
         plt.clf()
         plt.subplot(1, 2, 1)
         plt.imshow(np.zeros([100, 160]), cmap='gray')  # just for background purpose
-        plt.contour(map_from_mom.cpu().data.numpy()[0, 0, :][125:225, :], np.linspace(-1, 1, 200), colors='r',
+        plt.contour(map_from_mom.detach().cpu().numpy()[0, 0, :][125:225, :], np.linspace(-1, 1, 200), colors='r',
                     linestyles='solid')
-        plt.contour(map_from_mom.cpu().data.numpy()[0, 1, :][125:225, :], np.linspace(-1, 1, 200), colors='r',
+        plt.contour(map_from_mom.detach().cpu().numpy()[0, 1, :][125:225, :], np.linspace(-1, 1, 200), colors='r',
                     linestyles='solid')
         plt.title('predicted deformation field img %i' % (i + 1), fontsize=8)
         plt.subplot(1, 2, 2)
         plt.imshow(np.zeros([100, 160]), cmap='gray')  # just for background purpose
-        plt.contour(inv_map_from_mom.cpu().data.numpy()[0, 0, :][125:225, :], np.linspace(-1, 1, 200), colors='r',
+        plt.contour(inv_map_from_mom.detach().cpu().numpy()[0, 0, :][125:225, :], np.linspace(-1, 1, 200), colors='r',
                     linestyles='solid')
-        plt.contour(inv_map_from_mom.cpu().data.numpy()[0, 1, :][125:225, :], np.linspace(-1, 1, 200), colors='r',
+        plt.contour(inv_map_from_mom.detach().cpu().numpy()[0, 1, :][125:225, :], np.linspace(-1, 1, 200), colors='r',
                     linestyles='solid')
         plt.title('inverted predicted deformation field iter %i' % (i + 1), fontsize=10)
         plt.show()
         plt.clf()
         plt.imshow(np.zeros([100, 160]), cmap='gray')  # just for background purpose
-        plt.contour(wmap.cpu().data.numpy()[0, 0, :][125:225, :], np.linspace(-1, 1, 400), colors='r',
+        plt.contour(wmap.detach().cpu().numpy()[0, 0, :][125:225, :], np.linspace(-1, 1, 400), colors='r',
                     linestyles='solid')
-        plt.contour(wmap.cpu().data.numpy()[0, 1, :][125:225, :], np.linspace(-1, 1, 400), colors='r',
+        plt.contour(wmap.detach().cpu().numpy()[0, 1, :][125:225, :], np.linspace(-1, 1, 400), colors='r',
                     linestyles='solid')
         plt.title('warped (map & inv_map) %i' % (i + 1), fontsize=10)
         plt.show()
@@ -200,6 +202,9 @@ FRT.write_h5file(results_path + mode + "_inv_predicted_DeformationMaps.h5", inv_
 
 ##SAVE INVERSE WARPED ITARGET IMAGES
 FRT.write_h5file(results_path + mode + "_Itarget_warped.h5", ITarget_warped)
+
+##SAVE WARPED ISOURCE IMAGES
+FRT.write_h5file(results_path + mode + "_predicted_Images.h5", predicted_Images)
 
 if mode == 'train' and algorithm== 'stephanie':
     ##LOAD TARGET IMAGES

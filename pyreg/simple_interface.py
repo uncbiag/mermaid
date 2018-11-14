@@ -230,7 +230,7 @@ class RegisterImagePair(object):
         p = self.get_model_parameters()
         if p is not None:
             for key in p:
-                val = p[key]
+                val = p[key].detach()
                 if torch.is_tensor(val):
                     val.zero_()
                 elif type(val)==torch.nn.parameter.Parameter or type(val)==torch.Tensor:

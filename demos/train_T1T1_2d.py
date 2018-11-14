@@ -73,8 +73,8 @@ def train_cur_data(cur_epoch, datapart, net, criterion, optimizer):
     #read in
     # TO DO: h5py
 	image_appear_trainset = util_2d.readHDF5("./fast_reg/results/train_Isource.h5").float()
-	image_appear_trainset_target = util_2d.readHDF5("./fast_reg/results/train_Itarget.h5").float()
-	train_m0 = util_2d.readHDF5("./fast_reg/results/train_Momentums.h5").float()
+	image_appear_trainset_target = util_2d.readHDF5("./fast_reg/results/train_Itarget_warped.h5").float()
+	train_m0 = util_2d.readHDF5("./fast_reg/results/train_sub_Mom.h5").float()
 	print(image_appear_trainset.size(),image_appear_trainset_target.size(),train_m0.size())
 	print(image_appear_trainset.size()[0])
 	flat_idx = util_2d.calculatePatchIdx3D(image_appear_trainset.size()[0], patch_size*torch.ones(2), dataset_size[1:], 1*torch.ones(2));
@@ -93,7 +93,7 @@ def train_cur_data(cur_epoch, datapart, net, criterion, optimizer):
 
 	flat_idx = torch.masked_select(flat_idx, flat_idx_select);
 	print(flat_idx.size())
-	N = flat_idx.size()[0] / batch_size; #nr of iterations N
+	N = flat_idx.size()[0] // batch_size; #nr of iterations N
 	#put data into batch
 	for iters in range(0, N):
 		train_idx = (torch.rand(batch_size).double() * flat_idx.size()[0])
@@ -120,7 +120,7 @@ def train_cur_data(cur_epoch, datapart, net, criterion, optimizer):
 				cur_state_dict = net.module.state_dict();
 			else:
 				cur_state_dict = net.state_dict()			
-			modal_name =  "./fast_reg/checkpoints/checkpoint_{}.pth.tar".format(cur_epoch)
+			modal_name =  "./fast_reg/checkpoints/sub_checkpoint_{}.pth.tar".format(cur_epoch)
 			torch.save({
             	'learning_rate': learning_rate,
             	'batch_size': batch_size,
