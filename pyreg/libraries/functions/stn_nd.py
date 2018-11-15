@@ -10,6 +10,7 @@ import sys
 
 import torch
 from torch.autograd import Function
+from torch.nn import Module
 from cffi import FFI
 from pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
 
@@ -27,12 +28,16 @@ from . import map_scale_utils
 ffi = FFI()
 
 
-class STNFunction_ND_BCXYZ(Function):
+
+
+
+
+class STNFunction_ND_BCXYZ(Module):
     """
    Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox).
    """
 
-    def __init__(self, spacing):
+    def __init__(self, spacing, zero_boundary = False):
         """
         Constructor
 
@@ -41,32 +46,101 @@ class STNFunction_ND_BCXYZ(Function):
         super(STNFunction_ND_BCXYZ, self).__init__()
         self.spacing = spacing
         self.ndim = len(spacing)
+        #zero_boundary = False
+        self.zero_boundary = 'zeros' if zero_boundary else 'border'
 
-    def forward_stn(self, input1, input2, output, ndim, device_c, use_cuda=USE_CUDA):
+    def forward_stn(self, input1, input2, ndim):
+        if ndim==1:
+            raise ValueError("Not implemented")
+        if ndim==2:
+            input2_ordered = torch.zeros_like(input2)
+            input2_ordered[:,0,...] = input2[:,1,...]
+            input2_ordered[:,1,...] = input2[:,0,...]
+            output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 1]), mode='bilinear',
+                                          padding_mode=self.zero_boundary)
+        if ndim==3:
+            input2_ordered = torch.zeros_like(input2)
+            input2_ordered[:, 0, ...] = input2[:, 2, ...]
+            input2_ordered[:, 1, ...] = input2[:, 1, ...]
+            input2_ordered[:, 2, ...] = input2[:, 0, ...]
+            output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 4, 1]), mode='bilinear', padding_mode=self.zero_boundary)
+        return output
+
+    def forward(self, input1, input2):
+        """
+        Perform the actual spatial transform
+
+        :param input1: image in BCXYZ format
+        :param input2: spatial transform in BdimXYZ format
+        :return: spatially transformed image in BCXYZ format
+        """
+
+        assert(len(self.spacing)+2==len(input2.size()))
+
+        output = self.forward_stn(input1, map_scale_utils.scale_map(input2,self.spacing), self.ndim)
+        # print(STNVal(output, ini=-1).sum())
+        return output
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class STNFunction_ND_BCXYZ_Compile(Function):
+    """
+   Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox).
+     TODO, the boundary issue is still there and would be triggered at 1, so it would cause the boundary a little bit shrink,
+     this can be solved by adding more strick judgement when boundary is 1, it would inflence a lot at low-resolution case, and
+     will influence the high resolution case by upsampling the map
+     currently we put it aside
+     """
+
+    def __init__(self, spacing,zero_boundary=True):
+        """
+        Constructor
+
+        :param ndim: (int) spatial transformation of the transform
+        """
+        super(STNFunction_ND_BCXYZ_Compile, self).__init__()
+        self.spacing = spacing
+        self.ndim = len(spacing)
+        #zero_boundary = False
+        self.zero_boundary = zero_boundary
+
+    def forward_stn(self, input1, input2, output, ndim, device_c, use_cuda=USE_CUDA,zero_boundary=True):
         if use_cuda:
             if ndim == 1:
-                my_lib_1D.BilinearSamplerBCW_updateOutput_cuda_1D(input1, input2, output, device_c)
+                my_lib_1D.BilinearSamplerBCW_updateOutput_cuda_1D(input1, input2, output, device_c, int(zero_boundary))
             elif ndim == 2:
-                my_lib_2D.BilinearSamplerBCWH_updateOutput_cuda_2D(input1, input2, output, device_c)
+                my_lib_2D.BilinearSamplerBCWH_updateOutput_cuda_2D(input1, input2, output, device_c, int(zero_boundary))
             elif ndim == 3:
-                my_lib_3D.BilinearSamplerBCWHD_updateOutput_cuda_3D(input1, input2, output, device_c)
+                my_lib_3D.BilinearSamplerBCWHD_updateOutput_cuda_3D(input1, input2, output, device_c, int(zero_boundary))
         else:
-            my_lib_nd.BilinearSamplerBCXYZ_updateOutput_ND(input1, input2, output, ndim)
+            my_lib_nd.BilinearSamplerBCXYZ_updateOutput_ND(input1, input2, output, ndim, int(zero_boundary))
 
-    def backward_stn(self, input1, input2, grad_input1, grad_input2, grad_output, ndim, device_c, use_cuda=USE_CUDA):
+    def backward_stn(self, input1, input2, grad_input1, grad_input2, grad_output, ndim, device_c, use_cuda=USE_CUDA,zero_boundary=True):
         if use_cuda:
             if ndim == 1:
                 my_lib_1D.BilinearSamplerBCW_updateGradInput_cuda_1D(input1, input2, grad_input1, grad_input2,
-                                                                     grad_output, device_c)
+                                                                     grad_output, device_c, int(zero_boundary))
             elif ndim == 2:
                 my_lib_2D.BilinearSamplerBCWH_updateGradInput_cuda_2D(input1, input2, grad_input1, grad_input2,
-                                                                      grad_output, device_c)
+                                                                      grad_output, device_c, int(zero_boundary))
             elif ndim == 3:
                 my_lib_3D.BilinearSamplerBCWHD_updateGradInput_cuda_3D(input1, input2, grad_input1, grad_input2,
-                                                                       grad_output, device_c)
+                                                                       grad_output, device_c, int(zero_boundary))
         else:
             my_lib_nd.BilinearSamplerBCXYZ_updateGradInput_ND(input1, input2, grad_input1, grad_input2, grad_output,
-                                                              ndim)
+                                                              ndim, int(zero_boundary))
 
     def forward(self, input1, input2):
         """
@@ -101,7 +175,7 @@ class STNFunction_ND_BCXYZ(Function):
         # the spatial transformer code expects maps in the range of [-1,1]^d
         # So first rescale the map (i.e., input2) and then account for this rescaling in the gradient
 
-        self.forward_stn(input1, map_scale_utils.scale_map(input2,self.spacing), output, self.ndim, self.device_c)
+        self.forward_stn(input1, map_scale_utils.scale_map(input2,self.spacing), output, self.ndim, self.device_c, zero_boundary= self.zero_boundary)
         # print(STNVal(output, ini=-1).sum())
         return STNVal(output, ini=-1)
 
@@ -119,7 +193,7 @@ class STNFunction_ND_BCXYZ(Function):
         # print('backward decice %d' % self.device)
 
         # also needs to scale the input map first
-        self.backward_stn(self.input1, map_scale_utils.scale_map(self.input2,self.spacing), grad_input1, grad_input2, grad_output, self.ndim, self.device_c)
+        self.backward_stn(self.input1, map_scale_utils.scale_map(self.input2,self.spacing), grad_input1, grad_input2, grad_output, self.ndim, self.device_c, zero_boundary=  self.zero_boundary)
         # print( STNVal(grad_input1, ini=-1).sum(), STNVal(grad_input2, ini=-1).sum())
 
         map_scale_utils.scale_map_grad(grad_input2,self.spacing)
@@ -127,71 +201,5 @@ class STNFunction_ND_BCXYZ(Function):
         return STNVal(grad_input1, ini=-1), STNVal(grad_input2, ini=-1)
 
 
-###################################################################################################################
-
-class STNFunction_ND(Function):
-    """
-    Spatial transform function for 1D, 2D, and 3D. In BXYZC format (NOT the format used in the current toolbox).
-    """
-
-    def __init__(self, ndim):
-        """
-        Constructor
-
-        :param ndim: (int) spatial transformation of the transform
-        """
-        super(STNFunction_ND, self).__init__()
-        self.ndim = ndim
-        """spatial dimension"""
-
-    def forward(self, input1, input2):
-        """
-        Perform the actual spatial transform
-
-        :param input1: image in BXYZC format
-        :param input2: spatial transform in BXYZdim format
-        :return: spatially transformed image in BXYZC format
-        """
-        self.input1 = input1
-        self.input2 = input2
-        self.device_c = ffi.new("int *")
-        if self.ndim == 1:
-            output = torch.zeros(input1.size()[0], input2.size()[1], input1.size()[2])
-        elif self.ndim == 2:
-            output = torch.zeros(input1.size()[0], input2.size()[1], input2.size()[2], input1.size()[3])
-        elif self.ndim == 3:
-            output = torch.zeros(input1.size()[0], input2.size()[1], input2.size()[2], input2.size()[3],
-                                 input1.size()[4])
-        else:
-            raise ValueError('Can only process dimensions 1-3')
-        # print('decice %d' % torch.cuda.current_device())
-        if input1.is_cuda:
-            self.device = torch.cuda.current_device()
-        else:
-            self.device = -1
-        self.device_c[0] = self.device
-        if not input1.is_cuda:
-            my_lib_nd.BilinearSamplerBXYZC_updateOutput_ND(input1, input2, output, self.ndim)
-        else:
-            output = output.cuda(self.device)
-            my_lib_nd.BilinearSamplerBXYZC_updateOutput_ND_cuda(input1, input2, output, self.device_c)
-        return output
-
-    def backward(self, grad_output):
-        """
-        Computes the gradient
-
-        :param grad_output: grad output from previous "layer"
-        :return: gradient
-        """
-        grad_input1 = STNTensor(self.input1.size()).zero_()
-        grad_input2 = STNTensor(self.input2.size()).zero_()
-        # print('backward decice %d' % self.device)
-        if not USE_CUDA:
-            my_lib_nd.BilinearSamplerBXYZC_updateGradInput_ND(self.input1, self.input2, grad_input1, grad_input2,
-                                                              grad_output, self.ndim)
-        else:
-            my_lib_nd.BilinearSamplerBXYZC_updateGradInput_ND_cuda(self.input1, self.input2, grad_input1, grad_input2,
-                                                                   grad_output, self.device_c)
-        return grad_input1, grad_input2
+#################################################################################################################
 

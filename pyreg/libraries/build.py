@@ -32,7 +32,7 @@ else:
     
 this_file = os.path.dirname(os.path.realpath(__file__))
 print(this_file)
-
+extra_compile_args +=["-std=c99"]
 
 extra_objects = []
 

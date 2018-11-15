@@ -37,7 +37,34 @@ def compute_determinant_of_jacobian(phi,spacing):
     det = det.data[0, ...].detach().cpu().numpy()
     return det
 
-def plot_boxplot(compound_results,compound_names,semilogy=False, showfliers=True):
+def filter_names_for_boxplot(names,suppress_pattern,suppress_pattern_keep_first_as):
+    idx = []
+    eff_names = []
+    found_first = False
+    for i,n in enumerate(names):
+        if n.endswith(suppress_pattern):
+            if not found_first:
+                found_first = True
+                idx.append(i)
+                eff_names.append(suppress_pattern_keep_first_as)
+        else:
+            idx.append(i)
+            eff_names.append(n)
+
+    return idx,eff_names
+
+
+def plot_boxplot(compound_results_orig,compound_names_orig,semilogy=False, showfliers=True, suppress_pattern=None,suppress_pattern_keep_first_as=None):
+
+    if suppress_pattern is not None:
+        idx_to_keep,compound_names = filter_names_for_boxplot(names=compound_names_orig,
+                                                              suppress_pattern=suppress_pattern,
+                                                              suppress_pattern_keep_first_as=suppress_pattern_keep_first_as)
+        compound_results = [compound_results_orig[i] for i in idx_to_keep]
+    else:
+        compound_results = compound_results_orig
+        compound_names = compound_names_orig
+
     # create a figure instance
     fig = plt.figure(1, figsize=(8, 6))
 

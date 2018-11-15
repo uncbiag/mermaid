@@ -184,21 +184,24 @@ class RegisterImagePair(object):
         else:
             return None
 
-    def set_initial_map(self,map0):
+    def set_initial_map(self,map0,initial_inverse_map=None):
         """
         Sets the map that will be used as initial condition. By default this is the identity, but this can be
         overwritten with this method to for example allow concatenating multiple transforms.
 
         :param map0: initial map
+        :param initial_inverse_map: inverse initial map; if this is not set, the inverse map cannot be computed on the fly
         :return:  n/a
         """
 
         if self.opt is not None:
-            self.opt.set_initial_map(map0)
+            self.opt.set_initial_map(map0, initial_inverse_map)
+            # self.opt.set_initial_inverse_map(initial_inverse_map)
             self.delayed_initial_map_still_to_be_set = False
         else:
             self.delayed_initial_map_still_to_be_set = True
             self.delayed_initial_map = map0
+            self.delayed_initial_inverse_map = initial_inverse_map
 
     def get_initial_map(self):
         """
@@ -208,6 +211,17 @@ class RegisterImagePair(object):
         """
         if self.opt is not None:
             return self.opt.get_initial_map()
+        else:
+            return None
+
+    def get_initial_inverse_map(self):
+        """
+        Returns the inverse map that is used as initial condition (is typically identity)
+
+        :return: returns the initial map
+        """
+        if self.opt is not None:
+            return self.opt.get_initial_inverse_map()
         else:
             return None
 
@@ -533,7 +547,7 @@ class RegisterImagePair(object):
                 self.set_model_parameters(self.delayed_model_parameters)
 
             if self.delayed_initial_map_still_to_be_set:
-                self.set_initial_map(self.delayed_initial_map)
+                self.set_initial_map(self.delayed_initial_map,initial_inverse_map=self.delayed_initial_inverse_map)
 
             if not self.light_analysis_on and use_multi_scale:
                 self.opt.optimizer.set_source_label( AdaptVal(torch.from_numpy(LSource)))

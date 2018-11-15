@@ -2,6 +2,7 @@ import experiment_utils as eu
 import os
 import glob
 import torch
+import copy
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 rcParams.update({'figure.autolayout': True})
@@ -94,21 +95,30 @@ def outliers_suppressed(text,showfliers=True):
     else:
         return text
 
-def plot_results(all_stats,all_names,showfliers,normalize_by_spacing,ylabel,output_prefix):
+def plot_results(all_stats,all_names,nr_of_measures,showfliers,normalize_by_spacing,ylabel,output_prefix,title_prefix,
+                 suppress_pattern=None,suppress_pattern_keep_first_as=None,
+                 custom_ranges_raw=None,
+                 custom_ranges_norm=None,
+                 print_title=True,
+                 print_output_directory=None):
 
     print('Results for prefix {:s}'.format(output_prefix))
 
     # direct visualization
     for k in all_stats:
         plt.clf()
-        rs, rn = reorder_values(all_stats[k], all_names[k], 3)
-        eu.plot_boxplot(rs, rn, semilogy=False, showfliers=showfliers)
+        rs, rn = reorder_values(all_stats[k], all_names[k], nr_of_measures=nr_of_measures)
+        eu.plot_boxplot(rs, rn, semilogy=False, showfliers=showfliers,
+                        suppress_pattern=suppress_pattern,suppress_pattern_keep_first_as=suppress_pattern_keep_first_as)
         if print_title:
-            plt.title(outliers_suppressed('Raw: ' + output_prefix + ' ' + str(k), showfliers=showfliers))
+            plt.title(outliers_suppressed('Raw: ' + title_prefix + ' ' + str(k), showfliers=showfliers))
         if normalize_by_spacing:
             plt.ylabel(ylabel + ' [pixel]')
         else:
             plt.ylabel(ylabel)
+
+        if custom_ranges_raw is not None:
+            plt.ylim(custom_ranges_raw[k])
 
         if print_output_directory is not None:
             plt.savefig(os.path.join(print_output_directory, 'raw_stat_{:s}_{:s}.pdf'.format(output_prefix,str(k))))
@@ -116,7 +126,7 @@ def plot_results(all_stats,all_names,showfliers,normalize_by_spacing,ylabel,outp
             plt.show()
 
     # median normalized (with respect to stage 0 -- first entry, check this; this should be more or less constant as it does not depend on the OMT or TV penalty
-    all_stats_mn = all_stats.copy()
+    all_stats_mn = copy.deepcopy(all_stats)
     for k in all_stats_mn:
         c_stats = all_stats_mn[k]
         print('Normalizing based on {:s}'.format(all_names[k][0]))
@@ -127,12 +137,17 @@ def plot_results(all_stats,all_names,showfliers,normalize_by_spacing,ylabel,outp
     # now plot it
     for k in all_stats:
         plt.clf()
-        rs, rn = reorder_values(all_stats_mn[k], all_names[k], 3)
-        eu.plot_boxplot(rs, rn, semilogy=False, showfliers=showfliers)
+        rs, rn = reorder_values(all_stats_mn[k], all_names[k], nr_of_measures=nr_of_measures)
+        eu.plot_boxplot(rs, rn, semilogy=False, showfliers=showfliers,
+                        suppress_pattern=suppress_pattern,
+                        suppress_pattern_keep_first_as=suppress_pattern_keep_first_as)
         if print_title:
-            plt.title(outliers_suppressed('Median normalized: ' + output_prefix + ' ' + str(k), showfliers=showfliers))
+            plt.title(outliers_suppressed('Median normalized: ' + title_prefix + ' ' + str(k), showfliers=showfliers))
 
         plt.ylabel(ylabel + ' [unitless; normalized]')
+
+        if custom_ranges_norm is not None:
+            plt.ylim(custom_ranges_norm[k])
 
         if print_output_directory is not None:
             plt.savefig(os.path.join(print_output_directory, 'median_normalized_stat_{:s}_{:s}.pdf'.format(output_prefix,str(k))))
@@ -145,40 +160,71 @@ def plot_results(all_stats,all_names,showfliers,normalize_by_spacing,ylabel,outp
             current_median_value = np.percentile(s, 50)
             print('{:s}: median={:f}'.format(n, current_median_value))
 
-datapath = '/Users/mn/data/stat_results'
-prefix = 'out_test'
+#datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc'
+#stages = [0,1,2]
+
+#datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc-skip-stage-1'
+#datapath = '/Users/mn/sim_results/pf_out_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_300_wo_noise_sc'
+#datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc-skip-stage-1'
+#datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc_only_0.1_and_0.25'
+#datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc'
+datapath = '/Users/mn/sim_results/pf_low_lr_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc'
+stages = [0,1,2]
+#stages = [0,2]
+nr_of_measures = len(stages)
+
+prefix = 'out_testing'
+#prefix = 'out_training'
+
 use_all_directories = False
+
+if not use_all_directories:
+    desired_tv = [0.01,0.1,0.25]
+    desired_omt = [5,15,25,50,75,100]
+else:
+    desired_tv = None
+    desired_omt = None
 
 #datapath = './experimental_results_synth_2d'
 #prefix = 'out_test'
 #use_all_directories = True
 
-stages = [0,1,2]
 #desired_stat = 'mean'
 desired_stat = 'median'
+use_custom_boxplot_ranges = False
 showfliers = False
 normalize_by_spacing = True
 spacing = 1./(128.-1.)
-print_output_directory = 'pdf_sweep'
-print_title = True
-#print_output_directory = 'pdf_sweep_no_title'
-#print_title = False
+print_output_directory = 'pdf_sweep-' + os.path.split(datapath)[1]
+print_output_directory_no_title = 'pdf_sweep-no-title-' + os.path.split(datapath)[1]
 
 if print_output_directory is not None:
     print('Saving figure output in directory: {:s}'.format(print_output_directory))
     if not os.path.exists(print_output_directory):
         os.mkdir(print_output_directory)
 
+if print_output_directory_no_title is not None:
+    print('Saving figure output WITHOUT titles in directory: {:s}'.format(print_output_directory_no_title))
+    if not os.path.exists(print_output_directory_no_title):
+        os.mkdir(print_output_directory_no_title)
+
 if use_all_directories:
     desired_directories = glob.glob(os.path.join(datapath,'{:s}*'.format(prefix)))
 else:
-    desired_directories = ['/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.010000_omt_weight_penalty_1.000000',
-                           '/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.010000_omt_weight_penalty_10.000000',
-                           #'/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.010000_omt_weight_penalty_100.000000',
-                           '/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_1.000000',
-                           '/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_10.000000',
-                           #'/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_100.000000'
-                           ]
+    desired_directories = []
+    for c_tv in desired_tv:
+        for c_omt in desired_omt:
+            current_dir_name = os.path.join(datapath,'{}_total_variation_weight_penalty_{:f}_omt_weight_penalty_{:f}'.format(prefix,c_tv,c_omt))
+            print('Adding directory: {}'.format(current_dir_name))
+            desired_directories.append(current_dir_name)
+
+    # desired_directories = ['/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.010000_omt_weight_penalty_1.000000',
+    #                        '/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.010000_omt_weight_penalty_10.000000',
+    #                        #'/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.010000_omt_weight_penalty_100.000000',
+    #                        '/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_1.000000',
+    #                        '/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_10.000000',
+    #                        #'/Users/mn/data/stat_results/out_test_total_variation_weight_penalty_0.100000_omt_weight_penalty_100.000000'
+    #                        ]
 
 split_keys = ['total_variation_weight_penalty','omt_weight_penalty']
 abbrv_keys = ['t','o']
@@ -237,23 +283,84 @@ for d in desired_directories:
 
 # visualization of overlaps
 plt.clf()
-rs,rn = reorder_values(all_overlaps,all_overlap_names,3)
-eu.plot_boxplot(rs,rn,semilogy=False,showfliers=showfliers)
-if print_title:
-    plt.title('Dice overlap')
+rs,rn = reorder_values(all_overlaps,all_overlap_names,nr_of_measures=nr_of_measures)
+eu.plot_boxplot(rs,rn,semilogy=False,showfliers=showfliers,suppress_pattern='_s0',suppress_pattern_keep_first_as='s0')
+plt.ylabel('Dice')
+plt.title('Dice overlap')
 
 if print_output_directory is not None:
     plt.savefig(os.path.join(print_output_directory, 'dice.pdf'))
+
+    plt.clf()
+    eu.plot_boxplot(rs, rn, semilogy=False, showfliers=showfliers, suppress_pattern='_s0',suppress_pattern_keep_first_as='s0')
+    plt.ylabel('Dice')
+    plt.savefig(os.path.join(print_output_directory_no_title, 'dice.pdf'))
+
 else:
     plt.show()
 
 # first the visualization for the map results
 
-plot_results(all_stats=all_stats_map, all_names=all_names_map, showfliers=showfliers,
-             normalize_by_spacing=normalize_by_spacing, ylabel='disp error', output_prefix='map')
+# custom ranges for the boxplots
+if use_custom_boxplot_ranges:
+    # only stage 0,2
+    # custom_ranges_map_raw = {0.0:[0,6.5], 1.0:[0,6.5], 2.0:[0,6.5], 'global':[0,6.5]}
+    # custom_ranges_map_norm = {0.0:[0,2.5], 1.0:[0,2.5], 2.0:[0,2.5], 'global':[0,2.5]}
+    #
+    # custom_ranges_det_jac_raw = {0.0:[-0.15,0.05], 1.0:[-0.4,0.4], 2.0:[-0.05,0.7], 'global':[-0.1,0.1]}
+    # custom_ranges_det_jac_norm = {0.0:[-1.5,6.0], 1.0:[-10.0,10.0], 2.0:[-0.25,3.0], 'global':[-10.0,15.0]}
 
-plot_results(all_stats=all_stats_dj, all_names=all_names_dj, showfliers=showfliers,
-             normalize_by_spacing=False, ylabel='det_jac', output_prefix='det_jac')
+    # stages 0,1,2
+    custom_ranges_map_raw = {0.0: [0, 6.0], 1.0: [0, 6.0], 2.0: [0, 6.0], 'global': [0, 6.0]}
+    custom_ranges_map_norm = {0.0: [0, 2.5], 1.0: [0, 2.5], 2.0: [0, 2.5], 'global': [0, 2.5]}
+
+    custom_ranges_det_jac_raw = {0.0: [-0.125, 0.05], 1.0: [-0.6, 0.4], 2.0: [-0.08, 0.65], 'global': [-0.08, 0.055]}
+    custom_ranges_det_jac_norm = {0.0: [-2.5, 6.5], 1.0: [-17.5, 11.0], 2.0: [-0.25, 2.75], 'global': [-20.0, 27.5]}
+else:
+    custom_ranges_map_raw = None
+    custom_ranges_map_norm = None
+    custom_ranges_det_jac_raw = None
+    custom_ranges_det_jac_norm = None
+
+
+plot_results(all_stats=all_stats_map, all_names=all_names_map, nr_of_measures=nr_of_measures, showfliers=showfliers,
+             normalize_by_spacing=normalize_by_spacing, ylabel='disp error (est-GT)', output_prefix='map',
+             title_prefix = 'map (est-GT)',
+             suppress_pattern = '_s0', suppress_pattern_keep_first_as = 's0',
+             custom_ranges_raw=custom_ranges_map_raw,
+             custom_ranges_norm=custom_ranges_map_norm,
+             print_title=True,
+             print_output_directory=print_output_directory)
+
+plot_results(all_stats=all_stats_dj, all_names=all_names_dj, nr_of_measures=nr_of_measures, showfliers=showfliers,
+             normalize_by_spacing=False, ylabel='det(jac) error (est-GT)', output_prefix='det_jac',
+             title_prefix='det_jac (est-GT)',
+             suppress_pattern = '_s0', suppress_pattern_keep_first_as = 's0',
+             custom_ranges_raw=custom_ranges_det_jac_raw,
+             custom_ranges_norm=custom_ranges_det_jac_norm,
+             print_title=True,
+             print_output_directory=print_output_directory)
+
+# now print it without title
+if print_output_directory_no_title is not None:
+
+    plot_results(all_stats=all_stats_map, all_names=all_names_map, nr_of_measures=nr_of_measures, showfliers=showfliers,
+                 normalize_by_spacing=normalize_by_spacing, ylabel='disp error (est-GT)', output_prefix='map',
+                 title_prefix = 'map (est-GT)',
+                 suppress_pattern = '_s0', suppress_pattern_keep_first_as = 's0',
+                 custom_ranges_raw=custom_ranges_map_raw,
+                 custom_ranges_norm=custom_ranges_map_norm,
+                 print_title=False,
+                 print_output_directory=print_output_directory_no_title)
+
+    plot_results(all_stats=all_stats_dj, all_names=all_names_dj, nr_of_measures=nr_of_measures, showfliers=showfliers,
+                 normalize_by_spacing=False, ylabel='det(jac) error (est-GT)', output_prefix='det_jac',
+                 title_prefix='det_jac (est-GT)',
+                 suppress_pattern = '_s0', suppress_pattern_keep_first_as = 's0',
+                 custom_ranges_raw=custom_ranges_det_jac_raw,
+                 custom_ranges_norm=custom_ranges_det_jac_norm,
+                 print_title=False,
+                 print_output_directory=print_output_directory_no_title)
 
 
 if print_output_directory is not None:

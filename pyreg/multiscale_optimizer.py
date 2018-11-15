@@ -120,7 +120,7 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
         else:
             return None
 
-    def set_initial_map(self,map0):
+    def set_initial_map(self,map0,initial_inverse_map=None):
         """
         Sets the initial map for the registrations; by default (w/o setting anything) this will be the identity
         map, but by setting it to a different initial condition one can concatenate transformations.
@@ -129,7 +129,8 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
         :return: n/a
         """
         if self.optimizer is not None:
-            self.optimizer.set_initial_map(map0)
+            self.optimizer.set_initial_map(map0, initial_inverse_map)
+            # self.optimizer.set_initial_inverse_map(initial_inverse_map)
 
     def get_initial_map(self):
         """
@@ -144,6 +145,18 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
         else:
             return None
 
+    def get_initial_inverse_map(self):
+        """
+        Returns the initial inverse map; this will typically be the identity map, but can be set to a different initial
+        condition using set_initial_map
+
+        :return: returns the initial map (if applicable)
+        """
+
+        if self.optimizer is not None:
+            return self.optimizer.get_initial_inverse_map()
+        else:
+            return None
 
     def get_map(self):
         """
@@ -558,6 +571,12 @@ class ImageRegistrationOptimizer(Optimizer):
         self.lowResLTarget = None
         """if mapLowResFactor <1, a lowres target label image needs to be created to parameterize some of the registration algorithms"""
 
+        self.initialMap = None
+        """  initial map"""
+        self.initialInverseMap = None
+        """ initial inverse map"""
+        self.multi_scale_info_dic = None
+        """ dicts containing full resolution image and label"""
         self.optimizer_name = None #''lbfgs_ls'
         """name of the optimizer to use"""
         self.optimizer_params = {}
@@ -570,6 +589,8 @@ class ImageRegistrationOptimizer(Optimizer):
         """how often the figures are updated; each self.visualize_step-th iteration"""
         self.nrOfIterations = None
         """the maximum number of iterations for the optimizer"""
+        self.current_epoch = None
+        """Can be set externally, so the optimizer knowns in which epoch we are"""
 
         self.save_fig_path=None
         self.save_fig=None
@@ -581,6 +602,12 @@ class ImageRegistrationOptimizer(Optimizer):
         self.light_analysis_on = None
         self.limit_max_batch = -1
 
+
+    def set_current_epoch(self,current_epoch):
+        self.current_epoch = current_epoch
+
+    def get_current_epoch(self):
+        return self.current_epoch
 
     def set_light_analysis_on(self, light_analysis_on):
         self.light_analysis_on = light_analysis_on
@@ -740,28 +767,42 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         self.ISource = I
 
-    def _compute_low_res_image(self,I,params):
+    def set_multi_scale_info(self, ISource, ITarget, spacing, LSource=None, LTarget=None):
+        """provide full resolution of Image and Label"""
+        self.multi_scale_info_dic = {'ISource': ISource, 'ITarget': ITarget, 'spacing': spacing, 'LSource': LSource,
+                                     'LTarget': LTarget}
+
+    def _compute_low_res_image(self,I,params,spacing=None):
         low_res_image = None
         if self.mapLowResFactor is not None:
-            low_res_image,_ = self.sampler.downsample_image_to_size(I,self.spacing,self.lowResSize[2::],self.spline_order)
+            low_res_image,_ = self.sampler.downsample_image_to_size(I,spacing,self.lowResSize[2::],self.spline_order)
         return low_res_image
 
-    def _compute_low_res_label_map(self,label_map,params):
+    def _compute_low_res_label_map(self,label_map,params, spacing=None):
         low_res_label_map = None
         if self.mapLowResFactor is not None:
-            low_res_image, _ = self.sampler.downsample_image_to_size(label_map, self.spacing, self.lowResSize[2::],
+            low_res_image, _ = self.sampler.downsample_image_to_size(label_map, spacing, self.lowResSize[2::],
                                                                      0)
         return low_res_label_map
 
     def compute_low_res_image_if_needed(self):
         """To be called before the optimization starts"""
+        if self.multi_scale_info_dic is None:
+            ISource = self.ISource
+            ITarget = self.ITarget
+            LSource = self.LSource
+            LTarget = self.LTarget
+            spacing = self.spacing
+        else:
+            ISource, ITarget, LSource, LTarget, spacing = self.multi_scale_info_dic['ISource'], self.multi_scale_info_dic['ITarget'],\
+                                                          self.multi_scale_info_dic['LSource'],self.multi_scale_info_dic['LTarget'],self.multi_scale_info_dic['spacing']
         if self.mapLowResFactor is not None:
-            self.lowResISource = self._compute_low_res_image(self.ISource,self.params)
+            self.lowResISource = self._compute_low_res_image(ISource,self.params,spacing)
             # todo: can be removed to save memory; is more experimental at this point
-            self.lowResITarget = self._compute_low_res_image(self.ITarget,self.params)
+            self.lowResITarget = self._compute_low_res_image(ITarget,self.params,spacing)
             if self.LSource is not None and self.LTarget is not None:
-                self.lowResLSource = self._compute_low_res_label_map(self.LSource,self.params)
-                self.lowResLTarget = self._compute_low_res_label_map(self.LTarget, self.params)
+                self.lowResLSource = self._compute_low_res_label_map(LSource,self.params,spacing)
+                self.lowResLTarget = self._compute_low_res_label_map(LTarget, self.params,spacing)
 
     def set_source_label(self, LSource):
         """
@@ -778,6 +819,7 @@ class ImageRegistrationOptimizer(Optimizer):
         :return:
         """
         self.LTarget = LTarget
+
 
     def get_source_label(self):
         return self.LSource
@@ -865,21 +907,38 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self.initialMap = None
         """initial map, will be needed for map-based solutions; by default this will be the identity map, but can be set to something different externally"""
+        self.initialInverseMap = None
+        """initial inverse map; will be the same as the initial map, unless it was set externally"""
+        self.map0_inverse_external = None
+        """initial inverse map, set externally, will be needed for map-based solutions; by default this will be the identity map, but can be set to something different externally"""
         self.map0_external = None
         """intial map, set externally"""
         self.lowResInitialMap = None
-        """low res initila map, by default the identity map, will be needed for map-based solutions which are computed at lower resolution"""
+        """low res initial map, by default the identity map, will be needed for map-based solutions which are computed at lower resolution"""
+        self.lowResInitialInverseMap = None
+        """low res initial inverse map, by default the identity map, will be needed for map-based solutions which are computed at lower resolution"""
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
         c_params = self.params[('optimizer', {}, 'optimizer settings')]
-        self.weight_clipping_type = c_params[('weight_clipping_type','None','Type of weight clipping that should be used [l1|l2|l1_individual|l2_individual|l1_shared|l2_shared|None]')]
+        self.weight_clipping_type = c_params[('weight_clipping_type','none','Type of weight clipping that should be used [l1|l2|l1_individual|l2_individual|l1_shared|l2_shared|None]')]
+        self.weight_clipping_type = self.weight_clipping_type.lower()
         """Type of weight clipping; applied to weights and bias indepdenendtly; norm restricted to weight_clipping_value"""
-        if self.weight_clipping_type=='None':
+        if self.weight_clipping_type=='none':
             self.weight_clipping_type = None
         if self.weight_clipping_type!='pre_lsm_weights':
             self.weight_clipping_value = c_params[('weight_clipping_value', 1.0, 'Value to which the norm is being clipped')]
             """Desired norm after clipping"""
+
+        extent = self.spacing * self.sz[2:]
+        max_extent = max(extent)
+
+        clip_params = c_params[('gradient_clipping',{},'clipping settings for the gradient for optimization')]
+        self.clip_display = clip_params[('clip_display',True,'If set to True displays if clipping occurred')]
+        self.clip_individual_gradient = clip_params[('clip_individual_gradient',False,'If set to True, the gradient for the individual parameters will be clipped')]
+        self.clip_individual_gradient_value = clip_params[('clip_individual_gradient_value',max_extent,'Value to which the gradient for the individual parameters is clipped')]
+        self.clip_shared_gradient = clip_params[('clip_shared_gradient', False, 'If set to True, the gradient for the shared parameters will be clipped')]
+        self.clip_shared_gradient_value = clip_params[('clip_shared_gradient_value', 1.0, 'Value to which the gradient for the shared parameters is clipped')]
 
         self.scheduler = None # for the step size scheduler
         self.patience = None # for the step size scheduler
@@ -953,7 +1012,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         :return:
         """
-        return self.rec_opt_par_loss_energy.detach().cpu().numpy()
+        return self.rec_opt_par_loss_energy.cpu().item()
 
     def get_custom_output_values(self):
         """
@@ -968,7 +1027,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         Returns the current energy
         :return: Returns a tuple (energy, similarity energy, regularization energy)
         """
-        return self.rec_energy.detach().cpu().numpy(), self.rec_similarityEnergy.detach().cpu().numpy(), self.rec_regEnergy.cpu().data.numpy()
+        return self.rec_energy.cpu().item(), self.rec_similarityEnergy.cpu().item(), self.rec_regEnergy.cpu().item()
 
     def get_warped_image(self):
         """
@@ -992,7 +1051,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             return utils.get_warped_label_map(self.LSource, cmap, self.spacing)
         else:
             return None
-
 
     def get_map(self):
         """
@@ -1026,10 +1084,32 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 id = utils.identity_map_multiN(self.sz, self.spacing)
                 self.initialMap = AdaptVal(torch.from_numpy(id))
 
+            if self.map0_inverse_external is not None:
+                self.initialInverseMap = self.map0_inverse_external
+            else:
+                id =utils.identity_map_multiN(self.sz, self.spacing)
+                self.initialInverseMap =  AdaptVal(torch.from_numpy(id))
+
             if self.mapLowResFactor is not None:
                 # create a lower resolution map for the computations
-                lowres_id = utils.identity_map_multiN(self.lowResSize, self.lowResSpacing)
-                self.lowResInitialMap = AdaptVal(torch.from_numpy(lowres_id))
+
+                if self.map0_external is None:
+                    lowres_id = utils.identity_map_multiN(self.lowResSize, self.lowResSpacing)
+                    self.lowResInitialMap = AdaptVal(torch.from_numpy(lowres_id))
+                else:
+                    sampler = IS.ResampleImage()
+                    lowres_id, _ = sampler.downsample_image_to_size(self.initialMap , self.spacing,self.lowResSize[2::] , 1,zero_boundary=False)
+                    self.lowResInitialMap = AdaptVal(lowres_id)
+
+                if self.map0_inverse_external is None:
+                    lowres_id = utils.identity_map_multiN(self.lowResSize, self.lowResSpacing)
+                    self.lowResInitialInverseMap = AdaptVal(torch.from_numpy(lowres_id))
+                else:
+                    sampler = IS.ResampleImage()
+                    lowres_inverse_id, _ = sampler.downsample_image_to_size(self.initialInverseMap, self.spacing, self.lowResSize[2::],
+                                                                    1, zero_boundary=False)
+                    self.lowResInitialInverseMap = AdaptVal(lowres_inverse_id)
+
 
     def set_model(self, modelName):
         """
@@ -1046,14 +1126,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self._create_initial_maps()
 
 
-    def set_initial_map(self,map0):
+    def set_initial_map(self,map0,map0_inverse=None):
         """
         Sets the initial map (overwrites the default identity map)
         :param map0: intial map
+        :param map0_inverse: initial inverse map
         :return: n/a
         """
 
         self.map0_external = map0
+        self.map0_inverse_external = map0_inverse
 
         if self.initialMap is not None:
             # was already set, so let's modify it
@@ -1073,6 +1155,19 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             return None
 
+    def get_initial_inverse_map(self):
+        """
+        Returns the initial inverse map
+
+        :return: initial inverse map
+        """
+
+        if self.initialInverseMap is not None:
+            return self.initialInverseMap
+        elif self.map0_inverse_external is not None:
+            return self.map0_inverse_external
+        else:
+            return None
 
     def add_similarity_measure(self, simName, simMeasure):
         """
@@ -1226,7 +1321,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 elif self.weight_clipping_type=='pre_lsm_weights':
                     self._do_shared_weight_clipping_pre_lsm()
                 else:
-                    raise ValueError('Illegal weighgt clipping type: {}'.format(self.weight_clipping_type))
+                    raise ValueError('Illegal weight clipping type: {}'.format(self.weight_clipping_type))
             else:
                 raise ValueError('Weight clipping needs to be: [None|l1|l2|l1_individual|l2_individual|l1_shared|l2_shared]')
 
@@ -1282,6 +1377,33 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         return self.model.get_individual_registration_parameters()
 
+    def _collect_individual_or_shared_parameters_in_list(self,pars):
+        pl = []
+        for p_key in pars:
+            pl.append(pars[p_key])
+        return pl
+
+    def load_shared_state_dict(self,sd):
+        """
+        Loads the shared part of a state dictionary
+        :param sd: shared state dictionary
+        :return: n/a
+        """
+        self.model.load_shared_state_dict(sd)
+
+    def shared_state_dict(self):
+        """
+        Returns the shared part of a state dictionary
+        :return:
+        """
+        return self.model.shared_state_dict()
+
+    def load_individual_state_dict(self):
+        raise ValueError('Not yet implemented')
+
+    def individual_state_dict(self):
+        raise ValueError('Not yet implemented')
+
     def upsample_model_parameters(self, desiredSize):
         """
         Upsamples the model parameters
@@ -1333,12 +1455,13 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # 2) Compute loss
 
         # first define variables that will be passed to the model and the criterion (for further use)
-        opt_variables = {'iter': self.iter_count}
+        opt_variables = {'iter': self.iter_count,'epoch': self.current_epoch}
 
         if self.useMap:
             if self.mapLowResFactor is not None:
                 if self.compute_similarity_measure_at_low_res:
-                    ret = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
+                    ret = self.model(self.lowResInitialMap, self.lowResISource,
+                                     phi_inv=self.lowResInitialInverseMap, variables_from_optimizer=opt_variables)
                     if self.compute_inverse_map:
                         if type(ret)==tuple: # if it is a tuple it is returning the inverse
                             self.rec_phiWarped = ret[0]
@@ -1348,7 +1471,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     else:
                         self.rec_phiWarped = ret
                 else:
-                    ret = self.model(self.lowResInitialMap, self.lowResISource, opt_variables)
+                    ret = self.model(self.lowResInitialMap, self.lowResISource,
+                                     phi_inv=self.lowResInitialInverseMap, variables_from_optimizer=opt_variables)
                     if self.compute_inverse_map:
                         if type(ret)==tuple:
                             rec_tmp = ret[0]
@@ -1360,11 +1484,16 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                         rec_tmp = ret
                     # now upsample to correct resolution
                     desiredSz = self.initialMap.size()[2::]
-                    self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.spacing, desiredSz, self.spline_order)
+
+                    self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.lowResSpacing, desiredSz, self.spline_order,zero_boundary=False)
+
                     if self.compute_inverse_map and rec_inv_tmp is not None:
-                        self.rec_phiInverseWarped, _ = self.sampler.upsample_image_to_size(rec_inv_tmp, self.spacing, desiredSz,self.spline_order)
+                        self.rec_phiInverseWarped, _ = self.sampler.upsample_image_to_size(rec_inv_tmp, self.lowResSpacing, desiredSz,self.spline_order,zero_boundary=False)
+                    else:
+                        self.rec_phiInverseWarped = None
             else:
-                ret = self.model(self.initialMap, self.ISource, opt_variables)
+                ret = self.model(self.initialMap, self.ISource,
+                                 phi_inv=self.initialInverseMap, variables_from_optimizer=opt_variables)
                 if self.compute_inverse_map:
                     if type(ret)==tuple:
                         self.rec_phiWarped = ret[0]
@@ -1395,7 +1524,26 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         opt_par_loss_energy = self.compute_optimizer_parameter_loss(self.model.get_shared_registration_parameters())
         loss_overall_energy = loss_overall_energy + opt_par_loss_energy
         loss_overall_energy.backward()
-        #torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.5)
+
+        # do gradient clipping
+        if self.clip_individual_gradient:
+            current_individual_grad_norm = torch.nn.utils.clip_grad_norm_(
+                self._collect_individual_or_shared_parameters_in_list(self.get_individual_model_parameters()),
+                self.clip_individual_gradient_value)
+
+            if self.clip_display:
+                if current_individual_grad_norm>self.clip_individual_gradient_value:
+                    print('INFO: Individual gradient was clipped: {} -> {}'.format(current_individual_grad_norm,self.clip_individual_gradient_value))
+
+        if self.clip_shared_gradient:
+            current_shared_grad_norm = torch.nn.utils.clip_grad_norm_(
+                self._collect_individual_or_shared_parameters_in_list(self.get_shared_model_parameters()),
+                self.clip_shared_gradient_value)
+
+            if self.clip_display:
+                if current_shared_grad_norm > self.clip_shared_gradient_value:
+                    print('INFO: Shared gradient was clipped: {} -> {}'.format(current_shared_grad_norm,
+                                                                                   self.clip_shared_gradient_value))
 
         self.rec_custom_optimizer_output_string = self.model.get_custom_optimizer_output_string()
         self.rec_custom_optimizer_output_values = self.model.get_custom_optimizer_output_values()
@@ -1428,6 +1576,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :return: returns tuple: first entry True if termination tolerance was reached, otherwise returns False; second entry if the image was visualized
         """
 
+        current_batch_size = phi_or_warped_image.size()[0]
+
         was_visualized = False
         reached_tolerance = False
 
@@ -1451,7 +1601,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self._add_to_history('relF',self.rel_f[0])
 
             if self.show_iteration_output:
-                print('Iter {iter}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF={relF} {cos}'
+                print('Iter {iter:5d}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF={relF} {cos}'
                       .format(iter=self.iter_count,
                               energy=cur_energy,
                               similarityE=utils.t2np(similarityEnergy.float()),
@@ -1459,6 +1609,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                               optParE=utils.t2np(opt_par_energy.float()),
                               relF=self.rel_f,
                               cos=custom_optimizer_output_string))
+                print('   / image: E={energy}, simE={similarityE}, regE={regE}'
+                      .format(energy=cur_energy/current_batch_size,
+                              similarityE=utils.t2np(similarityEnergy.float())/current_batch_size,
+                              regE=utils.t2np(regEnergy.float())/current_batch_size))
 
             # check if relative convergence tolerance is reached
             if self.rel_f < self.rel_ftol:
@@ -1469,13 +1623,18 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             self._add_to_history('relF',None)
             if self.show_iteration_output:
-                print('Iter {iter}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF=n/a {cos}'
+                print('Iter {iter:5d}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF=n/a {cos}'
                       .format(iter=self.iter_count,
                               energy=cur_energy,
                               similarityE=utils.t2np(similarityEnergy.float()),
                               regE=utils.t2np(regEnergy.float()),
                               optParE=utils.t2np(opt_par_energy.float()),
                               cos=custom_optimizer_output_string))
+                print('   / image: E={energy}, simE={similarityE}, regE={regE}'
+                      .format(energy=cur_energy/current_batch_size,
+                              similarityE=utils.t2np(similarityEnergy.float())/current_batch_size,
+                              regE=utils.t2np(regEnergy.float())/current_batch_size))
+
 
         self.last_energy = cur_energy
         iter = self.iter_count
@@ -1523,14 +1682,14 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                     vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.ISource)
                 if self.useMap:
                     if self.compute_similarity_measure_at_low_res:
-                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing, self.spline_order)
+                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing, self.spline_order,zero_boundary=False)
                         lowResLWarped = utils.get_warped_label_map(self.lowResLSource, phi_or_warped_image,
                                                                     self.spacing)
                         vizReg.show_current_images(iter=iter, iS=self.lowResISource, iT=self.lowResITarget, iW=I1Warped,
                                                    iSL=self.lowResLSource,iTL=self.lowResLTarget,iWL=lowResLWarped,
                                                    vizImages=vizImage, vizName=vizName, phiWarped=phi_or_warped_image, visual_param=visual_param)
                     else:
-                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.spline_order)
+                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.spline_order, zero_boundary=False)
                         vizImage = vizImage if len(vizImage)>2 else None
                         LWarped = None
                         if self.LSource is not None  and self.LTarget is not None:
@@ -2107,6 +2266,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             # take a step of the optimizer
             # for p in self.optimizer_instance._params:
             #     p.data = p.data.float()
+
             current_loss = self.optimizer_instance.step(self._closure)
 
             # do weight clipping if it is desired
@@ -2421,6 +2581,8 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
         :return: n/a
         """
 
+        #todo: maybe switch loading and writing individual parameters to individual states; this would assure that all states (such as running averages, etc.) are included and not only parameters
+
         if self.optimizer is not None:
             raise ValueError('Custom optimizers are currently not supported for batch optimization.\
                                   Set the optimizer by name (e.g., in the json configuration) instead. Should be some form of stochastic gradient descent.')
@@ -2491,10 +2653,10 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.verbose_output:
                 print('Computing epoch ' + str(iter_epoch + 1) + ' of ' + str(iter_offset+self.nr_of_epochs))
 
-            cur_running_energy = np.array([0.0])
-            cur_running_sim_energy = np.array([0.0])
-            cur_running_reg_energy = np.array([0.0])
-            cur_running_opt_energy = np.array([0.0])
+            cur_running_energy = 0.0
+            cur_running_sim_energy = 0.0
+            cur_running_reg_energy = 0.0
+            cur_running_opt_energy = 0.0
 
             cur_min_energy = None
             cur_max_energy = None
@@ -2525,6 +2687,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                 # images need to be set before calling _set_all_still_missing_parameters
                 self.ssOpt.set_source_image(current_source_batch)
                 self.ssOpt.set_target_image(current_target_batch)
+                self.ssOpt.set_current_epoch(iter_epoch)
 
                 if initialize_optimizer:
                     # to make sure we have the model initialized, force parameter installation
@@ -2544,8 +2707,8 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
                                                                                     patience=self.scheduler_patience)
 
                     if load_shared_parameters_before_first_epoch:
-                        print('Loading the shared parameters.')
-                        self.ssOpt.set_sgd_shared_model_parameters_and_optimizer_states(torch.load(shared_parameter_filename))
+                        print('Loading the shared parameters/state.')
+                        self.ssOpt.load_shared_state_dict(torch.load(shared_parameter_filename))
 
                 last_batch_size = batch_size
 
@@ -2638,7 +2801,9 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.show_sample_optimizer_output:
                 if (last_energy is not None) and (last_sim_energy is not None) and (last_reg_energy is not None):
                     print('\n\nEpoch {:05d}: Last energies   : E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}], optE=[{:2.5f}]'\
-                          .format(iter_epoch-1,last_energy[0],last_sim_energy[0],last_reg_energy[0],last_opt_energy[0]))
+                          .format(iter_epoch-1,last_energy,last_sim_energy,last_reg_energy,last_opt_energy))
+                    print('    / image: Last energies   : E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}]' \
+                        .format(last_energy/batch_size[0], last_sim_energy/batch_size[0], last_reg_energy/batch_size[0]))
                 else:
                     print('\n\n')
 
@@ -2649,13 +2814,19 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
             if self.show_sample_optimizer_output:
                 print('Epoch {:05d}: Current energies: E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}], optE=[{:2.5f}]'\
-                  .format(iter_epoch,last_energy[0], last_sim_energy[0],last_reg_energy[0],last_opt_energy[0]))
+                  .format(iter_epoch,last_energy, last_sim_energy,last_reg_energy,last_opt_energy))
+                print('    / image: Current energies: E=[{:2.5f}], simE=[{:2.5f}], regE=[{:2.5f}]' \
+                      .format(last_energy/batch_size[0], last_sim_energy/batch_size[0], last_reg_energy/batch_size[0]))
             else:
                 print('Epoch {:05d}: Current energies: E={:2.5f}:[{:1.2f},{:1.2f}], simE={:2.5f}:[{:1.2f},{:1.2f}], regE={:2.5f}:[{:1.2f},{:1.2f}], optE={:1.2f}:[{:1.2f},{:1.2f}]'\
-                      .format(iter_epoch, last_energy[0], cur_min_energy[0], cur_max_energy[0],
-                              last_sim_energy[0], cur_min_sim_energy[0], cur_max_sim_energy[0],
-                              last_reg_energy[0], cur_min_reg_energy[0], cur_max_reg_energy[0],
-                              last_opt_energy[0], cur_min_opt_energy[0], cur_max_opt_energy[0]))
+                      .format(iter_epoch, last_energy, cur_min_energy, cur_max_energy,
+                              last_sim_energy, cur_min_sim_energy, cur_max_sim_energy,
+                              last_reg_energy, cur_min_reg_energy, cur_max_reg_energy,
+                              last_opt_energy, cur_min_opt_energy, cur_max_opt_energy))
+                print('    / image: Current energies: E={:2.5f}:[{:1.2f},{:1.2f}], simE={:2.5f}:[{:1.2f},{:1.2f}], regE={:2.5f}:[{:1.2f},{:1.2f}]' \
+                    .format(last_energy/batch_size[0], cur_min_energy/batch_size[0], cur_max_energy/batch_size[0],
+                            last_sim_energy/batch_size[0], cur_min_sim_energy/batch_size[0], cur_max_sim_energy/batch_size[0],
+                            last_reg_energy/batch_size[0], cur_min_reg_energy/batch_size[0], cur_max_reg_energy/batch_size[0]))
 
             if self.show_sample_optimizer_output:
                 print('\n\n')
@@ -2663,8 +2834,8 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
             if self.use_step_size_scheduler:
                 self.scheduler.step(last_energy)
 
-        print('Writing out shared parameter file to ' + shared_parameter_filename )
-        torch.save(self.ssOpt.get_shared_model_parameters(),shared_parameter_filename)
+        print('Writing out shared parameter/state file to ' + shared_parameter_filename )
+        torch.save(self.ssOpt.shared_state_dict(),shared_parameter_filename)
 
 
 class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
@@ -3269,6 +3440,18 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         self.model_name = modelName
 
+
+    def set_initial_map(self, map0, map0_inverse=None):
+        """
+        Sets the initial map (overwrites the default identity map)
+        :param map0: intial map
+        :return: n/a
+        """
+        if self.ssOpt is None:
+            self.initialMap = map0
+            self.initialInverseMap = map0_inverse
+
+
     def set_pair_path(self,pair_paths):
         # f = lambda name: os.path.split(name)
         # get_in = lambda x: os.path.splitext(f(x)[1])[0]
@@ -3470,11 +3653,19 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 LSourceC, spacingC = self.sampler.downsample_image_to_size(self.LSource, self.spacing, currentDesiredSz[2::],0)
                 LTargetC, spacingC = self.sampler.downsample_image_to_size(self.LTarget, self.spacing, currentDesiredSz[2::],0)
 
-            szC = ISourceC.size()  # this assumes the BxCxXxYxZ format
-
-            self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, self.mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)
+            initialMap = None
+            initialInverseMap = None
+            if self.initialMap is not None:
+                initialMap,_ = self.sampler.downsample_image_to_size(self.initialMap,self.spacing, currentDesiredSz[2::],1,zero_boundary=False)
+            if self.initialInverseMap is not None:
+                initialInverseMap,_ = self.sampler.downsample_image_to_size(self.initialInverseMap,self.spacing, currentDesiredSz[2::],1,zero_boundary=False)
+            szC = np.array(ISourceC.size())  # this assumes the BxCxXxYxZ format
+            mapLowResFactor = None if currentScaleNumber==0 else self.mapLowResFactor
+            self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)
             print('Setting learning rate to ' + str( lastSuccessfulStepSizeTaken ))
             self.ssOpt.set_last_successful_step_size_taken( lastSuccessfulStepSizeTaken )
+            self.ssOpt.set_initial_map(initialMap,initialInverseMap)
+
 
             if ((self.add_model_name is not None) and
                     (self.add_model_networkClass is not None) and
@@ -3516,6 +3707,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             self.ssOpt.set_source_image(ISourceC)
             self.ssOpt.set_target_image(ITargetC)
+            self.ssOpt.set_multi_scale_info(self.ISource,self.ITarget,self.spacing,self.LSource,self.LTarget)
             if self.LSource is not None and self.LTarget is not None:
                 self.ssOpt.set_source_label(LSourceC)
                 self.ssOpt.set_target_label(LTargetC)
@@ -3524,7 +3716,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 # check that the upsampled parameters are consistent with the downsampled images
                 spacingError = False
                 expectedSpacing = None
-                if self.mapLowResFactor is not None:
+                if mapLowResFactor is not None:
                     expectedSpacing = self._get_low_res_spacing_from_spacing(spacingC, szC, upsampledSz)
                     # the spacing of the upsampled parameters will be different
                     if not (abs(expectedSpacing - upsampledParameterSpacing) < 0.000001).all():

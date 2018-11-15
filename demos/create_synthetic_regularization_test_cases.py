@@ -7,9 +7,10 @@ from builtins import range
 import set_pyreg_paths
 
 import matplotlib as matplt
-#from pyreg.config_parser import MATPLOTLIB_AGG
-#if MATPLOTLIB_AGG:
-#    matplt.use('Agg')
+
+from pyreg.config_parser import MATPLOTLIB_AGG
+if MATPLOTLIB_AGG:
+    matplt.use('Agg')
 
 import matplotlib.pyplot as plt
 import scipy.ndimage as ndimage
@@ -209,7 +210,7 @@ def create_momentum(input_im,centered_map,
 
     return m
 
-def compute_overall_std(weights,multi_gaussian_stds):
+def compute_overall_std(weights,multi_gaussian_stds,kernel_weighting_type):
 
     # standard deviation image (only for visualization; this is the desired ground truth)
     sh_std_im = weights.shape[2:]
@@ -218,7 +219,10 @@ def compute_overall_std(weights,multi_gaussian_stds):
 
     # now compute the resulting standard deviation image (based on the computed weights)
     for g in range(nr_of_mg_weights):
-        std_im += weights[0,g,...]*multi_gaussian_stds[g]**2
+        if kernel_weighting_type=='w_K_w':
+            std_im += (weights[0,g,...]**2)*multi_gaussian_stds[g]**2
+        else:
+            std_im += weights[0,g,...]*multi_gaussian_stds[g]**2
 
     std_im = std_im**0.5
 
@@ -226,7 +230,7 @@ def compute_overall_std(weights,multi_gaussian_stds):
 
 
 def create_rings(levels_in,multi_gaussian_weights,default_multi_gaussian_weights,
-                 multi_gaussian_stds,put_weights_between_circles,
+                 multi_gaussian_stds,put_weights_between_circles,kernel_weighting_type,
                  sz,spacing,visualize=False):
 
     if len(multi_gaussian_weights)+1!=len(levels_in):
@@ -278,7 +282,7 @@ def create_rings(levels_in,multi_gaussian_weights,default_multi_gaussian_weights
             current_weights = weights[0,g,...]
             current_weights[indices_weight] = current_desired_weights[g]
 
-    std_im = compute_overall_std(weights,multi_gaussian_stds)
+    std_im = compute_overall_std(weights,multi_gaussian_stds,kernel_weighting_type=kernel_weighting_type)
     ring_im = ring_im.view().reshape([1,1] + sh_ring_im)
 
     if visualize:
@@ -497,6 +501,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
                     default_multi_gaussian_weights=weights_neutral,
                     multi_gaussian_stds=multi_gaussian_stds,
                     put_weights_between_circles=put_weights_between_circles,
+                    kernel_weighting_type=kernel_weighting_type,
                     sz=sz,spacing=spacing,
                     visualize=visualize)
 
@@ -659,7 +664,7 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
         phi1 = phi1_orig
         weights = weights_orig
 
-    std_im = compute_overall_std(weights,multi_gaussian_stds)
+    std_im = compute_overall_std(weights,multi_gaussian_stds,kernel_weighting_type=kernel_weighting_type)
 
     if visualize_warped:
         plt.clf()
@@ -682,7 +687,10 @@ def create_random_image_pair(weights_not_fluid,weights_fluid,weights_neutral,wei
         nr_of_weights = weights.shape[1]
         for cw in range(nr_of_weights):
             plt.subplot(3,4,5+cw)
-            plt.imshow(weights[0, cw, ...], vmin=0.0, vmax=1.0)
+            if kernel_weighting_type=='w_K_w':
+                plt.imshow(weights[0, cw, ...]**2, vmin=0.0, vmax=1.0)
+            else:
+                plt.imshow(weights[0, cw, ...], vmin=0.0, vmax=1.0)
             plt.title('w: std' + str(multi_gaussian_stds[cw]))
             plt.colorbar()
 
@@ -804,13 +812,14 @@ if __name__ == "__main__":
     if args.seed is not None:
         print('Setting the random seed to {:}'.format(args.seed))
         random.seed(args.seed)
+        torch.manual_seed(args.seed)
 
     params = pars.ParameterDict()
     if args.config is not None:
         # load the configuration
         params.load_JSON(args.config)
 
-    visualize = False
+    visualize = True
     visualize_warped = True
     print_images = True
 
@@ -848,7 +857,7 @@ if __name__ == "__main__":
                                                       default_val=0.02, params_description='How much smoothing is used to create the texture image')
 
     kernel_weighting_type = get_parameter_value(args.kernel_weighting_type, params=params, params_name='kernel_weighting_type',
-                                                default_val='w_K', params_description='Which kernel weighting to use for integration. Specify as [w_K|w_K_w|sqrt_w_K_sqrt_w]; w_K is the default')
+                                                default_val='sqrt_w_K_sqrt_w', params_description='Which kernel weighting to use for integration. Specify as [w_K|w_K_w|sqrt_w_K_sqrt_w]; w_K is the default')
 
     if use_random_source==True and use_fixed_source==True:
         raise ValueError('The source image cannot simultaneously be random and fixed. Aborting')
@@ -899,6 +908,13 @@ if __name__ == "__main__":
 
     weights_neutral = get_parameter_value(weights_neutral_p, params, 'weights_neutral', list(np.array([0,0,0,1.0])), 'weights in the neutral/background region')
     weights_neutral = np.array(weights_neutral).astype('float32')
+
+    if kernel_weighting_type=='w_K_w':
+        print('INFO: converting weights to w_K_w format, i.e., taking their square root')
+        # square of weights needs to sum up to one, so simply take the square root of the specified weights here
+        weights_fluid = np.sqrt(weights_fluid)
+        weights_neutral = np.sqrt(weights_neutral)
+        weights_not_fluid = np.sqrt(weights_not_fluid)
 
     if len(weights_neutral)!=len(multi_gaussian_stds):
         raise ValueError('Need as many weights as there are standard deviations')

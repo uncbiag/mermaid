@@ -4,9 +4,9 @@ extern "C" {
 
 
 
-int nearestNeighBCW_updateOutput_cuda_kernel_1D(/*output->size[2]*/int szw,
-                                                 /*output->size[1]*/int szc,
-                                                 /*output->size[0]*/int sz3,
+int nearestNeighBCW_updateOutput_cuda_kernel_1D(/*THCudaTensor_size(state,output,2)*/int szw,
+                                                 /*THCudaTensor_size(state,output,1)*/int szc,
+                                                 /*THCudaTensor_size(state,output,0)*/int sz3,
                                                  /*THCudaTensor_size(state, inputImages, 3)*/int ic,
                                                  /*THCudaTensor_size(state, inputImages, 1)*/int iw,
                                                  /*THCudaTensor_size(state, output, 2)*/int ow,
@@ -16,9 +16,9 @@ int nearestNeighBCW_updateOutput_cuda_kernel_1D(/*output->size[2]*/int szw,
                                                  /*THCState_getCurrentStream(state)*/cudaStream_t stream);
                                                  
                                                  
-int nearestNeighBCWH_updateOutput_cuda_kernel_2D(/*output->size[2]*/int szw,
-                                                 /*output->size[1]*/int szc,
-                                                 /*output->size[0]*/int sz3,
+int nearestNeighBCWH_updateOutput_cuda_kernel_2D(/*THCudaTensor_size(state,output,2)*/int szw,
+                                                 /*THCudaTensor_size(state,output,1)*/int szc,
+                                                 /*THCudaTensor_size(state,output,0)*/int sz3,
                                                  /*THCudaTensor_size(state, inputImages, 3)*/int ic,
                                                  /*THCudaTensor_size(state, inputImages, 1)*/int iw,
                                                  /*THCudaTensor_size(state, inputImages, 2)*/int ih,
@@ -30,9 +30,9 @@ int nearestNeighBCWH_updateOutput_cuda_kernel_2D(/*output->size[2]*/int szw,
                                                  /*THCState_getCurrentStream(state)*/cudaStream_t stream);
 
 
-int nearestNeighBCWHD_updateOutput_cuda_kernel_3D(/*output->size[2]*/int szw,
-                                                 /*output->size[1]*/int szc,
-                                                 /*output->size[0]*/int szb,
+int nearestNeighBCWHD_updateOutput_cuda_kernel_3D(/*THCudaTensor_size(state,output,2)*/int szw,
+                                                 /*THCudaTensor_size(state,output,1)*/int szc,
+                                                 /*THCudaTensor_size(state,output,0)*/int szb,
                                                  /*THCudaTensor_size(state, inputImages, 1)*/int ic,
                                                  /*THCudaTensor_size(state, inputImages, 2)*/int iw,
                                                  /*THCudaTensor_size(state, inputImages, 3)*/int ih,

@@ -391,9 +391,9 @@ class ImageIO(FileIO):
             im = itk.GetImageFromArray(np_im.view().reshape(list(hdr['sizes'])))
 
             if 'original_spacing' in hdr:
-                im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['original_spacing']))
+                im.SetSpacing(self._convert_numpy_vector_to_itk(np.flipud(hdr['original_spacing'])))
             else:
-                im.SetSpacing(self._convert_numpy_vector_to_itk(hdr['spacing']))
+                im.SetSpacing(self._convert_numpy_vector_to_itk(np.flipud(hdr['spacing'])))
             im.SetOrigin(self._convert_numpy_vector_to_itk(hdr['space origin']))
             im.SetDirection(self._convert_numpy_matrix_to_itk(hdr['space directions']))
         else:

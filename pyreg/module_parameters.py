@@ -102,6 +102,14 @@ class ParameterDict(object):
         """
         return self.printSettings
 
+    def set_print_settings(self,val):
+        """
+        Sets Current print settings
+        :param val: value to set the print settings to, needs to be boolean
+        :return: n/a
+        """
+        self.printSettings = val
+
     def _set_value_of_instance(self, ext, int, com, currentCategoryName):
         self.ext = ext
         self.int = int

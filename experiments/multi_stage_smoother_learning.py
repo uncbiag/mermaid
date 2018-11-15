@@ -24,11 +24,21 @@ def do_registration(source_images,target_images,model_name,output_directory,
                     nr_of_epochs,nr_of_iterations,map_low_res_factor,
                     visualize_step,json_in,json_out,
                     optimize_over_deep_network=False,
+                    evaluate_but_do_not_optimize_over_shared_parameters=False,
+                    load_shared_parameters_from_file=None,
                     optimize_over_weights=False,
                     freeze_parameters=False,
                     start_from_previously_saved_parameters=True,
                     args_kvs=None,
                     only_run_stage0_with_unchanged_config=False):
+
+    if load_shared_parameters_from_file is not None:
+        shared_target_dir = os.path.join(output_directory,'shared')
+        if not os.path.exists(shared_target_dir):
+            print('INFO: creating current shared directory {}'.format(shared_target_dir))
+            os.makedirs(shared_target_dir)
+        print('INFO: copying the shared parameter file {} to the current shared parameter directory {}'.format(load_shared_parameters_from_file,shared_target_dir))
+        shutil.copy(load_shared_parameters_from_file,shared_target_dir)
 
     reg = si.RegisterImagePair()
 
@@ -56,8 +66,13 @@ def do_registration(source_images,target_images,model_name,output_directory,
     if not only_run_stage0_with_unchanged_config:
         # we use the setting of the stage
         params_in['model']['registration_model']['forward_model']['smoother']['optimize_over_deep_network'] = optimize_over_deep_network
+        params_in['model']['registration_model']['forward_model']['smoother']['evaluate_but_do_not_optimize_over_shared_registration_parameters'] = evaluate_but_do_not_optimize_over_shared_parameters
         params_in['model']['registration_model']['forward_model']['smoother']['optimize_over_smoother_stds'] = False
         params_in['model']['registration_model']['forward_model']['smoother']['optimize_over_smoother_weights'] = optimize_over_weights
+
+        if load_shared_parameters_from_file is not None:
+            params_in['model']['registration_model']['forward_model']['smoother']['load_dnn_parameters_from_this_file'] = load_shared_parameters_from_file
+
     else:
         print('\n\n')
         print('-------------------------------------')
@@ -96,7 +111,7 @@ def get_n_pairwise_image_combinations(input_directory,n=10,no_random_shuffle=Fal
             if i!=j:
                 c_target = all_files[j]
                 if no_random_shuffle:
-                    print(str(current_n) + ': Source: ' + c_source + ' -> target: ' + c_target)
+                    print(str(current_n) + ': Source: ' +  c_source + ' -> target: ' + c_target)
                 source_files.append(c_source)
                 target_files.append(c_target)
                 source_ids.append(i)
@@ -204,6 +219,10 @@ if __name__ == "__main__":
 
     parser.add_argument('--previous_stage_input_directory', required=False, default=None, help='Allows specifying a directory from which the previous state is read')
 
+    parser.add_argument('--load_shared_parameters_for_stages_from_directory', required=False, default=None, help='Specifies the directory from which the shared parameters for the respective stages should be loaded from  (this allows for example to load a pre-computed state of a deep smoother or weights for a multi-Gaussian)')
+    parser.add_argument('--load_shared_parameters_from_frozen', action='store_true', help='If specified then results are read from the frozen directories and not from the standard output directories')
+    parser.add_argument('--only_optimize_over_registration_parameters_for_stage_nr', required=False, type=str, default=None, help='If set, only the registration parameters (e.g., momentum) are optimized for the given stages (as a comma separated list; e.g., 0,1,2), but not the smoother. Default is None (i.e., optimization happens in all stages). Best used in conjunction with --load_shared_parameters_from_file; similar in effect to freezing iterations, but will be stored in default directories; so good for validation ')
+
     parser.add_argument('--nr_of_epochs', required=False,type=str, default=None, help='number of epochs for the three stages as a comma separated list')
     parser.add_argument('--nr_of_iterations_per_batch', required=False,type=int, default=5, help='number of iterations per mini-batch')
 
@@ -277,6 +296,48 @@ if __name__ == "__main__":
     else:
         visualize_step = None
 
+    if args.only_optimize_over_registration_parameters_for_stage_nr is None:
+        only_optimize_over_registration_parameters_for_stage_nr = [False,False,False]
+    else:
+        only_optimize_over_registration_parameters_for_stage_nr = [False]*3
+        specified_stage_nrs = [int(item) for item in args.only_optimize_over_registration_parameters_for_stage_nr.split(',')]
+
+        for s in specified_stage_nrs:
+            if s>=0 and s<=2:
+                only_optimize_over_registration_parameters_for_stage_nr[s] = True
+            else:
+                raise ValueError('Stage nr needs to be in {0,1,2}')
+
+    evaluate_but_do_not_optimize_over_shared_parameters = [False]*3
+    for i,opt_only_over_reg_params in enumerate(only_optimize_over_registration_parameters_for_stage_nr):
+        if opt_only_over_reg_params:
+            evaluate_but_do_not_optimize_over_shared_parameters[i] = True
+
+    load_shared_parameters_for_stages_from_directory = args.load_shared_parameters_for_stages_from_directory
+    # now point to the different files for the different stages
+    load_shared_parameters_from_file = [None]*3
+    if load_shared_parameters_for_stages_from_directory is not None:
+        for s in [0, 1, 2]:
+
+            if args.load_shared_parameters_from_frozen:
+                    current_shared_parameter_file = os.path.join(load_shared_parameters_for_stages_from_directory,
+                                                                  'results_frozen_after_stage_{}'.format(s),
+                                                                  'shared',
+                                                                  'shared_parameters.pt')
+            else:
+                current_shared_parameter_file = os.path.join(load_shared_parameters_for_stages_from_directory,
+                                                              'results_after_stage_{}'.format(s),
+                                                              'shared',
+                                                              'shared_parameters.pt')
+
+            if os.path.isfile(current_shared_parameter_file):
+                load_shared_parameters_from_file[s] = current_shared_parameter_file
+            else:
+                if s in stage_nr:
+                    if not (s==1 and args.skip_stage_1_and_start_stage_2_from_stage_0):
+                        raise ValueError('Shared parameter file {} did not exist'.format(current_shared_parameter_file))
+
+
     if args.nr_of_image_pairs==0:
         nr_of_image_pairs = None
     else:
@@ -315,7 +376,7 @@ if __name__ == "__main__":
             if not os.path.isfile(backup_out_json_stage_0):
                 raise ValueError('json configuration file does not exist: ' + backup_out_json_stage_0)
 
-            shutil.copy(backup_out_json_stage_0)
+            shutil.copy(backup_out_json_stage_0,target_dir)
 
             if not os.path.exists(backup_source_dir):
                 raise ValueError('Source directory does not exist: ' + backup_source_dir)
@@ -334,7 +395,7 @@ if __name__ == "__main__":
             if not os.path.isfile(backup_out_json_stage_1):
                 raise ValueError('json configuration file does not exist: ' + backup_out_json_stage_1)
 
-            shutil.copy(backup_out_json_stage_1)
+            shutil.copy(backup_out_json_stage_1,target_dir)
 
             if not os.path.exists(backup_source_dir):
                 raise ValueError('Source directory does not exist: ' + backup_source_dir)
@@ -437,6 +498,8 @@ if __name__ == "__main__":
                 json_in=in_json,
                 json_out=out_json_stage_0,
                 optimize_over_deep_network=False,
+                evaluate_but_do_not_optimize_over_shared_parameters=evaluate_but_do_not_optimize_over_shared_parameters[0],
+                load_shared_parameters_from_file=load_shared_parameters_from_file[0],
                 optimize_over_weights=False,
                 freeze_parameters=False,
                 start_from_previously_saved_parameters=False,
@@ -484,6 +547,8 @@ if __name__ == "__main__":
                 json_in=in_json,
                 json_out=frozen_out_json_stage_0,
                 optimize_over_deep_network=False,
+                evaluate_but_do_not_optimize_over_shared_parameters=evaluate_but_do_not_optimize_over_shared_parameters[0],
+                load_shared_parameters_from_file=load_shared_parameters_from_file[0],
                 optimize_over_weights=False,
                 freeze_parameters=True,
                 start_from_previously_saved_parameters=True,
@@ -535,6 +600,8 @@ if __name__ == "__main__":
                     json_in=in_json,
                     json_out=out_json_stage_1,
                     optimize_over_deep_network=False,
+                    evaluate_but_do_not_optimize_over_shared_parameters=evaluate_but_do_not_optimize_over_shared_parameters[1],
+                    load_shared_parameters_from_file=load_shared_parameters_from_file[1],
                     optimize_over_weights=True,
                     freeze_parameters=False,
                     start_from_previously_saved_parameters=True,
@@ -579,6 +646,8 @@ if __name__ == "__main__":
                     json_in=in_json,
                     json_out=frozen_out_json_stage_1,
                     optimize_over_deep_network=False,
+                    evaluate_but_do_not_optimize_over_shared_parameters=evaluate_but_do_not_optimize_over_shared_parameters[1],
+                    load_shared_parameters_from_file=load_shared_parameters_from_file[1],
                     optimize_over_weights=True,
                     freeze_parameters=True,
                     start_from_previously_saved_parameters=True,
@@ -631,6 +700,8 @@ if __name__ == "__main__":
                     json_in=in_json,
                     json_out=out_json_stage_2,
                     optimize_over_deep_network=True,
+                    evaluate_but_do_not_optimize_over_shared_parameters=evaluate_but_do_not_optimize_over_shared_parameters[2],
+                    load_shared_parameters_from_file=load_shared_parameters_from_file[2],
                     optimize_over_weights=False,
                     freeze_parameters=False,
                     start_from_previously_saved_parameters=True,
@@ -675,6 +746,8 @@ if __name__ == "__main__":
                     json_in=in_json,
                     json_out=frozen_out_json_stage_2,
                     optimize_over_deep_network=True,
+                    evaluate_but_do_not_optimize_over_shared_parameters=evaluate_but_do_not_optimize_over_shared_parameters[2],
+                    load_shared_parameters_from_file=load_shared_parameters_from_file[2],
                     optimize_over_weights=False,
                     freeze_parameters=True,
                     start_from_previously_saved_parameters=True,

@@ -11,6 +11,7 @@ import torch
 import pyreg.fileio as FIO
 import pyreg.image_sampling as IS
 import pyreg.module_parameters as pars
+from pyreg.data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
 import experiment_utils as eu
 
@@ -47,8 +48,8 @@ def compare_det_of_jac_from_map(map,gt_map,label_image,visualize=False,print_out
     # synthetic spacing
     spacing = np.array(1./(sz-1))
 
-    map_torch =    torch.from_numpy(map)
-    gt_map_torch = torch.from_numpy(gt_map)
+    map_torch =    AdaptVal(torch.from_numpy(map).float())
+    gt_map_torch = AdaptVal(torch.from_numpy(gt_map).float())
 
     det_est = eu.compute_determinant_of_jacobian(map_torch, spacing)
     det_gt = eu.compute_determinant_of_jacobian(gt_map_torch, spacing)
@@ -181,7 +182,7 @@ def downsample_to_compatible_size_single_image(gt_weight,weight,interpolation_or
         sampler = IS.ResampleImage()
 
         gt_weight_sz = gt_weight.shape
-        gt_weight_reshaped = torch.from_numpy(gt_weight.view().reshape([1, 1] + list(gt_weight_sz)))
+        gt_weight_reshaped = AdaptVal(torch.from_numpy(gt_weight.view().reshape([1, 1] + list(gt_weight_sz))).float())
         spacing = np.array([1., 1.])
         desired_size = weight.shape
 
@@ -200,7 +201,7 @@ def downsample_to_compatible_size(gt_weights_orig,weights):
 
     return gt_weights
 
-def upsample_to_compatible_size_single_image(gt_weight,weight,interpolation_order=3):
+def upsample_to_compatible_size_single_image(gt_weight,weight,interpolation_order=1):
     # upsample the weights if needed
     if gt_weight.shape==weight.shape:
         return weight
@@ -208,7 +209,7 @@ def upsample_to_compatible_size_single_image(gt_weight,weight,interpolation_orde
         sampler = IS.ResampleImage()
 
         weight_sz = weight.shape
-        weight_reshaped = torch.from_numpy(weight.view().reshape([1, 1] + list(weight_sz)))
+        weight_reshaped = AdaptVal(torch.from_numpy(weight.view().reshape([1, 1] + list(weight_sz))).float())
         spacing = np.array([1., 1.])
         desired_size = gt_weight.shape
 
@@ -258,6 +259,8 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
         gt_weights = downsample_to_compatible_size(gt_weights_orig,weights_orig)
         weights = weights_orig
 
+    max_std = max( max(multi_gaussian_stds), max(multi_gaussian_stds_synth))
+
     stds_synth = _compute_overall_stds(gt_weights,multi_gaussian_stds_synth)
     stds_computed = _compute_overall_stds(weights,multi_gaussian_stds)
 
@@ -299,7 +302,7 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
             if clean_publication_directory is not None:
                 for n in range(nr_of_weights):
                     plt.clf()
-                    plt.imshow(gt_weights[0, n, ...])
+                    plt.imshow(gt_weights[0, n, ...],clim=(0.0,1.0))
                     plt.colorbar()
                     plt.axis('image')
                     plt.axis('off')
@@ -307,7 +310,7 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
 
                 for n in range(nr_of_weights):
                     plt.clf()
-                    plt.imshow(weights[0, n, ...])
+                    plt.imshow(weights[0, n, ...],clim=(0.0,1.0))
                     plt.colorbar()
                     plt.axis('image')
                     plt.axis('off')
@@ -315,7 +318,7 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
 
                 for n in range(nr_of_weights):
                     plt.clf()
-                    plt.imshow(weights[0, n, ...] - gt_weights[0, n, ...])
+                    plt.imshow(weights[0, n, ...] - gt_weights[0, n, ...],clim=(-1.0,1.0))
                     plt.colorbar()
                     plt.axis('image')
                     plt.axis('off')
@@ -348,21 +351,21 @@ def compare_weights(weights_orig,gt_weights_orig,multi_gaussian_stds_synth,multi
 
         if clean_publication_directory is not None:
             plt.clf()
-            plt.imshow(stds_synth)
+            plt.imshow(stds_synth,clim=(0.0,max_std))
             plt.colorbar()
             plt.axis('image')
             plt.axis('off')
             plt.savefig(os.path.join(clean_publication_directory, 'std_synth_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
-            plt.imshow(stds_computed)
+            plt.imshow(stds_computed,clim=(0.0,max_std))
             plt.colorbar()
             plt.axis('image')
             plt.axis('off')
             plt.savefig(os.path.join(clean_publication_directory, 'std_estimated_{:0>3d}'.format(pair_nr) + '_stds_validation.pdf'),bbox_inches='tight',pad_inches=0)
 
             plt.clf()
-            plt.imshow(stds_computed - stds_synth)
+            plt.imshow(stds_computed - stds_synth,clim=(-max_std,max_std))
             plt.colorbar()
             plt.axis('image')
             plt.axis('off')
@@ -509,7 +512,7 @@ def compute_and_visualize_validation_result(multi_gaussian_stds_synth,
     else:
         print_output_directory_eff = None
 
-    if printing_single_pair:
+    if printing_single_pair or pair_nr==0:
         clean_publication_dir_eff = clean_publication_dir
         visualize = True
     else:

@@ -13,6 +13,7 @@ from .data_wrapper import MyTensor
 from . import utils
 from math import floor
 from .similarity_helper_omt import *
+import torch.nn.functional as F
 
 import numpy as np
 from future.utils import with_metaclass
@@ -65,7 +66,7 @@ class SimilarityMeasure(with_metaclass(ABCMeta, object)):
             for nrI in range(sz[0]):  # loop over all the images
                 sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], I0Source[nrI,...], phi[nrI,...])
 
-        return sim/sz[0] # needs to be normalized based on batch size
+        return sim
 
 
     def compute_similarity_multiC(self, I0, I1, I0Source=None, phi=None):
@@ -239,6 +240,167 @@ class NCCSimilarity(SimilarityMeasure):
         #ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
         # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
         #return AdaptVal((1.0-ncc**2) / (self.sigma ** 2))
+
+
+
+class LNCCSimilarity(SimilarityMeasure):
+    """
+    This is an generalized lncc, we implement multi-scale ( means resolution) multi kernel( means size of neighborhood) LNCC
+
+    :param: resol_bound : type list,  resol_bound[0]> resol_bound[1] >... resol_bound[end]
+    :param: kernel_size_ratio: type list,  the ratio of the current input size
+    :param: kernel_weight_ratio: type list,  the weight ratio of each kernel size, should sum to 1
+    :param: stride: type_list, the stride between each pixel that would compute its lncc
+    :param: dilation: type_list
+
+    settings in json:
+
+
+    "similarity_measure": {
+                "develop_mod_on": false,
+                "sigma": 0.5,
+                "type": "lncc",
+                "lncc":{
+                    "resol_bound":[-1],
+                    "kernel_size_ratio":[[0.25]],
+                    "kernel_weight_ratio":[[1.0]],
+                    "stride":[0.25],
+                    "dilation":[1]
+                }
+
+
+
+
+    multi_scale_multi_kernel
+    eg.    "resol_bound":[64,32],
+           "kernel_size_ratio":[[0.0625,0.125, 0.25], [0.25,0.5], [0.5]],
+            "kernel_weight_ratio":[[0.2,0.3,0.5],[0.3,0.7],[1.0]],
+            "stride":[0.25,0.25,0.25],
+            "dilation":[2,1,1]
+
+    single_scale_single_kernel
+                    "resol_bound":[-1],
+                    "kernel_size_ratio":[[0.25]],
+                    "kernel_weight_ratio":[[1.0]],
+                    "stride":[0.25],
+                    "dilation":[1]
+
+
+    Multi-scale is controlled by "resol_bound", e.g resol_bound = [128, 64], it means if input size>128, then it would compute multi-kernel
+    lncc designed for large image size,  if 64<input_size<128, then it would compute multi-kernel lncc desiged for mid-size image, otherwise,
+    it would compute the multi-kernel lncc designed for small image.
+    Attention! we call it multi-scale just because it is designed for multi-scale registration or segmentation problem.
+    ONLY ONE scale would be activated during computing the similarity, which depends on the current input size.
+
+    At each scale, corresponding multi-kernel lncc is implemented, here multi-kernel means lncc with different window sizes
+    Loss = w1*lncc_win1 + w2*lncc_win2 ... + wn*lncc_winn, where /sum(wi) =1
+    for example. when (image size) S>128, three windows sizes can be used, namely S/16, S/8, S/4.
+    for easy notation, we use img_ratio to refer window size, the example here use the parameter [1./16,1./8,1.4]
+
+    In implementation, we compute lncc by calling convolution function, so in this case, the [S/16, S/8, S/4] refers
+      to the kernel size of convolution fucntion.  Intuitively,  we would have another two parameters,
+    stride and dilation.  For each window size (W) , we recommand using W/4 as stride. In extreme case the stride can be 1, but
+    can large increase computation.   The dilation expand the reception field, set dilation as 2 would physically twice the window size.
+
+
+
+
+
+
+    """
+    def __init__(self, spacing, params):
+        super(LNCCSimilarity,self).__init__(spacing,params)
+        self.dim = len(spacing)
+        self.resol_bound = params['similarity_measure']['lncc'][('resol_bound',[64], "resolution bound for using different strategy")]
+        self.kernel_size_ratio = params['similarity_measure']['lncc'][('kernel_size_ratio',[[1./4]], "kernel size, ratio of input size")]
+        self.kernel_weight_ratio = params['similarity_measure']['lncc'][('kernel_weight_ratio',[[1.]], "kernel size, ratio of input size")]
+        self.stride = params['similarity_measure']['lncc'][('stride',[1./4], "step size, ratio of kernel size")]
+        self.dilation = params['similarity_measure']['lncc'][('dilation',[1], "dilation param")]
+        if self.resol_bound[0] >-1:
+            assert len(self.resol_bound)+1 == len(self.kernel_size_ratio)
+            assert len(self.resol_bound)+1 == len(self.kernel_weight_ratio)
+            assert len(self.resol_bound)+1 == len(self.stride)
+            assert len(self.resol_bound)+1 == len(self.dilation)
+
+    def __stepup(self,img_sz):
+        max_scale  = min(img_sz)
+        for i, bound in enumerate(self.resol_bound):
+            if max_scale >= bound:
+                self.kernel = [int(max_scale*kz) for kz in self.kernel_size_ratio[i]]
+                self.weight = self.kernel_weight_ratio[i]
+                break
+        if max_scale < self.resol_bound[-1]:
+            self.kernel =  [int(max_scale*kz) for kz in self.kernel_size_ratio[-1]]
+            self.weight = self.kernel_weight_ratio[-1]
+
+        self.num_scale = len(self.kernel)
+        self.kernel_sz = [[k for _ in range(self.dim)] for k in self.kernel]
+        self.step = [[max(int((ksz + 1) * self.stride[scale_id]),1) for ksz in self.kernel_sz[scale_id]] for scale_id in range(self.num_scale)]
+        self.filter = [torch.ones([1, 1] + self.kernel_sz[scale_id]).cuda() for scale_id in range(self.num_scale)]
+        if self.dim==1:
+            self.conv= F.conv1d
+        elif self.dim ==2:
+            self.conv= F.conv2d
+        elif self.dim ==3:
+            self.conv = F.conv3d
+        else:
+            raise ValueError(" Only 1-3d support")
+
+    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
+        """
+       Computes the NCC-based image similarity measure between two images
+
+       :param I0: first image
+       :param I1: second image
+       :param I0Source: not used
+       :param phi: not used
+       :return: (1-NCC^2)/sigma^2
+
+       """
+        input = I0.view([1,1]+ list(I0.shape))
+        target =I1.view([1,1]+ list(I1.shape))
+        self.__stepup(img_sz=list(I0.shape))
+
+
+
+        input_2 = input ** 2
+        target_2 = target ** 2
+        input_target = input * target
+        lncc_total = 0.
+        for scale_id in range(self.num_scale):
+
+
+            input_local_sum = self.conv(input, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id], stride=self.step[scale_id]).view(input.shape[0], -1)
+            target_local_sum = self.conv(target, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id], stride=self.step[scale_id]).view(input.shape[0],
+                                                                                                           -1)
+            input_2_local_sum = self.conv(input_2, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id], stride=self.step[scale_id]).view(input.shape[0],
+                                                                                                             -1)
+            target_2_local_sum = self.conv(target_2, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id], stride=self.step[scale_id]).view(
+                input.shape[0], -1)
+            input_target_local_sum = self.conv(input_target, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id], stride=self.step[scale_id]).view(
+                input.shape[0], -1)
+
+            input_local_sum = input_local_sum.contiguous()
+            target_local_sum = target_local_sum.contiguous()
+            input_2_local_sum = input_2_local_sum.contiguous()
+            target_2_local_sum = target_2_local_sum.contiguous()
+            input_target_local_sum = input_target_local_sum.contiguous()
+
+            numel = float(np.array(self.kernel_sz[scale_id]).prod())
+
+            input_local_mean = input_local_sum / numel
+            target_local_mean = target_local_sum /numel
+
+            cross = input_target_local_sum - target_local_mean * input_local_sum - \
+                    input_local_mean * target_local_sum + target_local_mean * input_local_mean * numel
+            input_local_var = input_2_local_sum - 2 * input_local_mean * input_local_sum + input_local_mean ** 2 * numel
+            target_local_var = target_2_local_sum - 2 * target_local_mean * target_local_sum + target_local_mean ** 2 * numel
+
+            lncc = cross * cross / (input_local_var * target_local_var + 1e-5)
+            lncc = 1 - lncc.mean()
+            lncc_total += lncc*self.weight[scale_id]
+
+        return lncc_total
 
 
 
@@ -476,7 +638,7 @@ class SimilarityMeasureFactory(object):
         self.simMeasures = {
             'ssd': SSDSimilarity,
             'ncc': NCCSimilarity,
-            'lncc': LocalizedNCCSimilarity,
+            'lncc': LNCCSimilarity,#LocalizedNCCSimilarity,
             'omt': OptimalMassTransportSimilarity
         }
         """currently implemented similiarity measures"""
