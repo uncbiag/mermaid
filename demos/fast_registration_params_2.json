@@ -34,7 +34,7 @@
             },
             "spline_order": 1,
             "type": "svf_vector_momentum_map",
-            "use_CFL_clamping": true
+            "use_CFL_clamping": false
         }
     },
     "optimizer": {

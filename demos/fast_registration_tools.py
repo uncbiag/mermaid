@@ -246,10 +246,10 @@ def single_registration(images, target_image_path, do_smoothing, registration_re
             # register smoothed current image to smoothed target image
             si1 = SI.RegisterImagePair()
             si1.register_images(Ic, Iavg, spacing, model_name='svf_vector_momentum_map',
-                               smoother_type='multiGaussian',
+                               #smoother_type='multiGaussian',
                                compute_similarity_measure_at_low_res=False,
                                map_low_res_factor=1.0,
-                               visualize_step=None,
+                               visualize_step=10,
                                nr_of_iterations=300,
                                rel_ftol=1e-8,
                                similarity_measure_type="ncc",
@@ -288,7 +288,7 @@ def single_registration(images, target_image_path, do_smoothing, registration_re
                                smoother_type='multiGaussian',
                                compute_similarity_measure_at_low_res=False,
                                map_low_res_factor=1.0,
-                               visualize_step=None,
+                               visualize_step=50,
                                nr_of_iterations=100,
                                rel_ftol=1e-8,
                                similarity_measure_type="ncc",

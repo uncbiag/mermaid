@@ -283,7 +283,7 @@ def _show_current_images_2d(iS, iT, iW,iSL, iTL,iWL, iter, vizImage, vizName, ph
 
 
 def _show_current_images_3d(iS, iT, iW,iSL, iTL,iWL, iter, vizImage, vizName, phiWarped, visual_param=None, i=0):
-    vizImage = None
+    #vizImage = None
     if iSL is not None and iTL is not None:
         phiw_a = 3
         if vizImage is None:

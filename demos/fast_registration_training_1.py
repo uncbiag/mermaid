@@ -109,26 +109,25 @@ FRT.write_h5file(results_path + "train_Itarget.h5", train_target_images)
 FRT.write_h5file(results_path + "test_Isource.h5", test_source_images)
 FRT.write_h5file(results_path + "test_Itarget.h5", test_target_images)
 
-# ##SAVE TARGET AND SOURCE IMAGES IN TRAIN & TEST SETS
-# train_reg_images = []
-# test_reg_images = []
-#
-# im_io = FIO.ImageIO()
-#
-# ##LOAD IMAGES
-# reg_images_path='./fast_reg/results/RegImages/'
-# reg_images_pattern='*regImage*.nii.gz'
-# images_list = FRT.find(reg_images_pattern, reg_images_path)
-# nr_of_images = len(images_list)
-# images = images_list[0:nr_of_images]
-# print(nr_of_images,len(images))
-#
-#
-# for nr, im_name in enumerate(images):
-#     Ic, _, _, _ = im_io.read_to_nc_format(filename=im_name, silent_mode=True)
-#     if nr<=(nr_of_train_images-1):
-#         train_reg_images.append(Ic.squeeze())
-#     else:
-#         test_reg_images.append(Ic.squeeze())
-# FRT.write_h5file(results_path + "train_reg_images.h5", train_reg_images)
-# FRT.write_h5file(results_path + "test_reg_images.h5", test_reg_images)
+##SAVE TARGET AND SOURCE IMAGES IN TRAIN & TEST SETS
+train_reg_images = []
+test_reg_images = []
+
+
+##LOAD IMAGES
+reg_images_path='./fast_reg/results/RegImages/'
+reg_images_pattern='*regImage*.nii.gz'
+images_list = FRT.find(reg_images_pattern, reg_images_path)
+nr_of_images = len(images_list)
+images = images_list[0:nr_of_images]
+print(nr_of_images,len(images))
+
+
+for nr, im_name in enumerate(images):
+    Ic, _, _, _ = im_io.read_to_nc_format(filename=im_name, silent_mode=True)
+    if nr<=(nr_of_train_images-1):
+        train_reg_images.append(Ic.squeeze())
+    else:
+        test_reg_images.append(Ic.squeeze())
+FRT.write_h5file(results_path + "train_reg_images.h5", train_reg_images)
+FRT.write_h5file(results_path + "test_reg_images.h5", test_reg_images)

@@ -22,9 +22,9 @@ use_synthetic_test_case = True
 dim = 2
 try_all_models = False
 
-smooth_before_reg = False
+smooth_before_reg = True
 
-add_noise_to_bg = True
+add_noise_to_bg = False
 
 if use_synthetic_test_case:
     len = 8
@@ -37,20 +37,32 @@ else:
 
 if smooth_before_reg:
     print('---------------------smoothing image pair before registration-------------------')
-    sz = list(np.array(list(I0.shape[-dim:])))
-    I0smooth = I0.copy()
-    I0smooth = AdaptVal(Variable(MyTensor(I0smooth), requires_grad=False))
-    I1smooth = I1.copy()
-    I1smooth = AdaptVal(Variable(MyTensor(I1smooth), requires_grad=False))
-    sf = SF.AdaptiveSingleGaussianFourierSmoother(sz,spacing,params)
-    sf.set_gaussian_std(0.01)
-    print (params)
-    I0smooth=sf.smooth(I0smooth)
-    I1smooth = sf.smooth(I1smooth)
-    I0smooth = I0smooth.data.numpy()
-    I0 = I0 + I0smooth*(I0==0)
-    I1smooth = I1smooth.data.numpy()
-    I1 = I1 + I1smooth * (I1 == 0)
+    # create the target image as pyTorch variable
+    I0_pt = AdaptVal(torch.from_numpy(I0))
+    I0_beforeSmoothing = AdaptVal(torch.from_numpy(I0)).cpu().detach().numpy()
+
+    # smooth a little bit
+    params[('image_smoothing', {}, 'image smoothing settings')]
+    params['image_smoothing'][
+        ('smooth_images', True, '[True|False]; smoothes the images before registration')]
+    params['image_smoothing'][('smoother', {}, 'settings for the image smoothing')]
+    params['image_smoothing']['smoother'][('gaussian_std', 0.1, 'how much smoothing is done')]
+    params['image_smoothing']['smoother'][
+        ('type', 'gaussian', "['gaussianSpatial'|'gaussian'|'diffusion']")]
+
+    sz = I0.shape
+    cparams = params['image_smoothing']
+    s = SF.SmootherFactory(sz[2::], spacing).create_smoother(cparams)
+    I0_pt = s.smooth(I0_pt)
+    I0 = I0_pt.cpu().detach().numpy()
+
+    # create the source image as pyTorch variable
+    I1_pt = AdaptVal(torch.from_numpy(I1))
+    I1_beforeSmoothing = AdaptVal(torch.from_numpy(I1))
+
+    # smoth a little bit
+    I1_pt = s.smooth(I1_pt)
+    I1 = I1_pt.cpu().detach().numpy()
 
 
 
