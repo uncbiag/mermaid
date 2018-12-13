@@ -1353,7 +1353,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                     self._enable_force_nn_gradients_to_zero_hooks()
                 else:
                     if self.start_optimize_over_nn_smoother_parameters_at_iteration == iter_or_epoch:
-                        print('INFO: Allowing optimization over deep smoother network')
+                        print('INFO: Allowing optimization over deep smoother network (assuming we are not in evaluation-only mode)')
                     self._remove_all_nn_hooks()
 
         # distiniguish the two cases where we compute the vector field (for the deformation) versus where we compute for regularization

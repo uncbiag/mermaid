@@ -18,11 +18,11 @@ import pyreg.finite_differences as fd
 import pyreg.module_parameters as pars
 import pyreg.fileio as fio
 import pyreg.custom_pytorch_extensions as ce
-import pyreg.utils as utils
 import pyreg.deep_networks as dn
 
 import os
 import matplotlib.pyplot as plt
+import pyreg.utils as utils
 
 def _plot_edgemap_2d(image,gradient_norm,edge_map,gamma):
     plt.clf()

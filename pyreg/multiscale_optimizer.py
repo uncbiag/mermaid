@@ -332,8 +332,8 @@ class Optimizer(with_metaclass(ABCMeta, object)):
         self.external_optimizer_parameter_loss = None
 
         if (self.mapLowResFactor is not None):
-            self.lowResSize = self._get_low_res_size_from_size( sz, self.mapLowResFactor )
-            self.lowResSpacing = self._get_low_res_spacing_from_spacing(self.spacing,sz,self.lowResSize)
+            self.lowResSize = utils._get_low_res_size_from_size( sz, self.mapLowResFactor )
+            self.lowResSpacing = utils._get_low_res_spacing_from_spacing(self.spacing,sz,self.lowResSize)
         self.sampler = IS.ResampleImage()
 
         self.params[('optimizer', {}, 'optimizer settings')]
@@ -410,33 +410,6 @@ class Optimizer(with_metaclass(ABCMeta, object)):
         :return: last successful step size
         """
         return self.last_successful_step_size_taken
-
-    def _get_low_res_spacing_from_spacing(self, spacing, sz, lowResSize):
-        """
-        Computes spacing for the low-res parameterization from image spacing
-        :param spacing: image spacing
-        :param sz: size of image
-        :param lowResSize: size of low re parameterization
-        :return: returns spacing of low res parameterization
-        """
-        #todo: check that this is the correct way of doing it
-        return spacing * (np.array(sz[2::])-1) / (np.array(lowResSize[2::])-1)
-
-    def _get_low_res_size_from_size(self, sz, factor):
-        """
-        Returns the corresponding low-res size from a (high-res) sz
-        :param sz: size (high-res)
-        :param factor: low-res factor (needs to be <1)
-        :return: low res size
-        """
-        if (factor is None) or (factor>=1):
-            print('WARNING: Could not compute low_res_size as factor was ' + str( factor ))
-            return np.array(sz)
-        else:
-            lowResSize = np.array(sz)
-            lowResSize[2::] = (np.ceil((np.array(sz[2::]) * factor))).astype('int16')
-
-            return lowResSize
 
     def set_rel_ftol(self, rel_ftol):
         """
@@ -1434,50 +1407,24 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # first define variables that will be passed to the model and the criterion (for further use)
         opt_variables = {'iter': self.iter_count,'epoch': self.current_epoch}
 
-        if self.useMap:
-            if self.mapLowResFactor is not None:
-                if self.compute_similarity_measure_at_low_res:
-                    ret = self.model(self.lowResInitialMap, self.lowResISource,
-                                     phi_inv=self.lowResInitialInverseMap, variables_from_optimizer=opt_variables)
-                    if self.compute_inverse_map:
-                        if type(ret)==tuple: # if it is a tuple it is returning the inverse
-                            self.rec_phiWarped = ret[0]
-                            self.rec_phiInverseWarped = ret[1]
-                        else:
-                            self.rec_phiWarped = ret
-                    else:
-                        self.rec_phiWarped = ret
-                else:
-                    ret = self.model(self.lowResInitialMap, self.lowResISource,
-                                     phi_inv=self.lowResInitialInverseMap, variables_from_optimizer=opt_variables)
-                    if self.compute_inverse_map:
-                        if type(ret)==tuple:
-                            rec_tmp = ret[0]
-                            rec_inv_tmp = ret[1]
-                        else:
-                            rec_tmp = ret
-                            rec_inv_tmp = None
-                    else:
-                        rec_tmp = ret
-                    # now upsample to correct resolution
-                    desiredSz = self.initialMap.size()[2::]
-                    self.rec_phiWarped, _ = self.sampler.upsample_image_to_size(rec_tmp, self.lowResSpacing, desiredSz, self.spline_order,zero_boundary=False)
-                    if self.compute_inverse_map and rec_inv_tmp is not None:
-                        self.rec_phiInverseWarped, _ = self.sampler.upsample_image_to_size(rec_inv_tmp, self.lowResSpacing, desiredSz,self.spline_order,zero_boundary=False)
-                    else:
-                        self.rec_phiInverseWarped = None
-            else:
-                ret = self.model(self.initialMap, self.ISource,
-                                 phi_inv=self.lowResInitialInverseMap, variables_from_optimizer=opt_variables)
-                if self.compute_inverse_map:
-                    if type(ret)==tuple:
-                        self.rec_phiWarped = ret[0]
-                        self.rec_phiInverseWarped = ret[1]
-                    else:
-                        self.rec_phiWarped = ret
-                else:
-                    self.rec_phiWarped = ret
+        self.rec_IWarped,self.rec_phiWarped,self.rec_phiInverseWarped = utils.evaluate_model_low_level_interface(model=self.model,
+                                                                                                                 I_source=self.ISource,
+                                                                                                                 opt_variables=opt_variables,
+                                                                                                                 use_map=self.useMap,
+                                                                                                                 initial_map=self.initialMap,
+                                                                                                                 compute_inverse_map=self.compute_inverse_map,
+                                                                                                                 initial_inverse_map=self.initialInverseMap,
+                                                                                                                 map_low_res_factor=self.mapLowResFactor,
+                                                                                                                 sampler=self.sampler,
+                                                                                                                 low_res_spacing=self.lowResSpacing,
+                                                                                                                 spline_order=self.spline_order,
+                                                                                                                 low_res_I_source=self.lowResISource,
+                                                                                                                 low_res_initial_map=self.lowResInitialMap,
+                                                                                                                 low_res_initial_inverse_map=self.lowResInitialInverseMap,
+                                                                                                                 compute_similarity_measure_at_low_res=self.compute_similarity_measure_at_low_res)
 
+        # compute the respective losses
+        if self.useMap:
             if self.mapLowResFactor is not None and self.compute_similarity_measure_at_low_res:
                 loss_overall_energy, sim_energy, reg_energy = self.criterion(self.lowResInitialMap, self.rec_phiWarped,
                                                                              self.lowResISource, self.lowResITarget,
@@ -1489,7 +1436,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                                                                            self.model.get_variables_to_transfer_to_loss_function(),
                                                                            opt_variables)
         else:
-            self.rec_IWarped = self.model(self.ISource, opt_variables )
             loss_overall_energy,sim_energy,reg_energy = self.criterion(self.rec_IWarped, self.ISource, self.ITarget,
                                   self.model.get_variables_to_transfer_to_loss_function(),
                                   opt_variables )
@@ -3688,7 +3634,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 spacingError = False
                 expectedSpacing = None
                 if self.mapLowResFactor is not None:
-                    expectedSpacing = self._get_low_res_spacing_from_spacing(spacingC, szC, upsampledSz)
+                    expectedSpacing = utils._get_low_res_spacing_from_spacing(spacingC, szC, upsampledSz)
                     # the spacing of the upsampled parameters will be different
                     if not (abs(expectedSpacing - upsampledParameterSpacing) < 0.000001).all():
                         spacingError = True
@@ -3726,7 +3672,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 if self.useMap:
                     if self.mapLowResFactor is not None:
                         # parameters are upsampled differently here, because they are computed at low res
-                        upsampledSz = self._get_low_res_size_from_size(upsampledSz,self.mapLowResFactor)
+                        upsampledSz = utils._get_low_res_size_from_size(upsampledSz,self.mapLowResFactor)
                         print(self.mapLowResFactor)
                         print('After')
                         print(upsampledSz)

@@ -111,43 +111,6 @@ def compute_mask(im):
     return mask
 
 
-def _compute_low_res_image(I,spacing,low_res_size,spline_order):
-    sampler = IS.ResampleImage()
-    low_res_image, _ = sampler.downsample_image_to_size(I, spacing, low_res_size[2::],spline_order)
-    return low_res_image
-
-def _get_low_res_size_from_size(sz, factor):
-    """
-    Returns the corresponding low-res size from a (high-res) sz
-    :param sz: size (high-res)
-    :param factor: low-res factor (needs to be <1)
-    :return: low res size
-    """
-    if (factor is None) or (factor>=1):
-        print('WARNING: Could not compute low_res_size as factor was ' + str( factor ))
-        return sz
-    else:
-        lowResSize = np.array(sz)
-        lowResSize[2::] = (np.ceil((np.array(sz[2::]) * factor))).astype('int16')
-
-        #if lowResSize[-1]%2!=0:
-        #    lowResSize[-1]-=1
-        #    print('\n\nWARNING: forcing last dimension to be even: fix properly in the Fourier transform later!\n\n')
-
-        return lowResSize
-
-def _get_low_res_spacing_from_spacing(spacing, sz, lowResSize):
-    """
-    Computes spacing for the low-res parameterization from image spacing
-    :param spacing: image spacing
-    :param sz: size of image
-    :param lowResSize: size of low re parameterization
-    :return: returns spacing of low res parameterization
-    """
-    #todo: check that this is the correct way of doing it
-    return spacing * (np.array(sz[2::])-1) / (np.array(lowResSize[2::])-1)
-
-
 def _load_current_source_and_target_images_as_variables(current_source_filename,current_target_filename,params):
     # now load them
     intensity_normalize = params['data_loader'][('intensity_normalize', True, 'normalized image intensities')]
@@ -174,180 +137,6 @@ def _load_current_source_and_target_images_as_variables(current_source_filename,
 
     return ISource,ITarget,hdr,sz,normalized_spacing
 
-def individual_parameters_to_model_parameters(ind_pars):
-    model_pars = dict()
-    for par in ind_pars:
-        model_pars[par['name']] = par['model_params']
-
-    return model_pars
-
-
-def evaluate_model(ISource_in,ITarget_in,sz,spacing,individual_parameters,shared_parameters,params,visualize=True):
-
-    ISource = AdaptVal(ISource_in)
-    ITarget = AdaptVal(ITarget_in)
-
-    model_name = params['model']['registration_model']['type']
-    use_map = params['model']['deformation']['use_map']
-    map_low_res_factor = params['model']['deformation'][('map_low_res_factor', None, 'low_res_factor')]
-    compute_similarity_measure_at_low_res = params['model']['deformation'][
-        ('compute_similarity_measure_at_low_res', False, 'to compute Sim at lower resolution')]
-
-    spline_order = params['model']['registration_model'][('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
-
-    lowResSize = None
-    lowResSpacing = None
-
-    if map_low_res_factor is not None:
-        lowResSize = _get_low_res_size_from_size(sz, map_low_res_factor)
-        lowResSpacing = _get_low_res_spacing_from_spacing(spacing, sz, lowResSize)
-
-        lowResISource = _compute_low_res_image(ISource, spacing, lowResSize,spline_order)
-        # todo: can be removed to save memory; is more experimental at this point
-        lowResITarget = _compute_low_res_image(ITarget, spacing, lowResSize,spline_order)
-
-    if map_low_res_factor is not None:
-        # computes model at a lower resolution than the image similarity
-        if compute_similarity_measure_at_low_res:
-            mf = MF.ModelFactory(lowResSize, lowResSpacing, lowResSize, lowResSpacing)
-        else:
-            mf = MF.ModelFactory(sz, spacing, lowResSize, lowResSpacing)
-    else:
-        # computes model and similarity at the same resolution
-        mf = MF.ModelFactory(sz, spacing, sz, spacing)
-
-    model, criterion = mf.create_registration_model(model_name, params['model'])
-    # set it to evaluation mode
-    model.eval()
-
-    print(model)
-
-    if use_map:
-        # create the identity map [-1,1]^d, since we will use a map-based implementation
-        id = utils.identity_map_multiN(sz, spacing)
-        identityMap = AdaptVal(torch.from_numpy(id))
-        if map_low_res_factor is not None:
-            # create a lower resolution map for the computations
-            lowres_id = utils.identity_map_multiN(lowResSize, lowResSpacing)
-            lowResIdentityMap = AdaptVal(torch.from_numpy(lowres_id))
-
-    if USE_CUDA:
-        model = model.cuda()
-
-    dictionary_to_pass_to_integrator = dict()
-
-    if map_low_res_factor is not None:
-        dictionary_to_pass_to_integrator['I0'] = lowResISource
-        dictionary_to_pass_to_integrator['I1'] = lowResITarget
-    else:
-        dictionary_to_pass_to_integrator['I0'] = ISource
-        dictionary_to_pass_to_integrator['I1'] = ITarget
-
-    model.set_dictionary_to_pass_to_integrator(dictionary_to_pass_to_integrator)
-
-    model.load_shared_state_dict(shared_parameters)
-    model_pars = individual_parameters_to_model_parameters(individual_parameters)
-    model.set_individual_registration_parameters(model_pars)
-
-    # now let's run the model
-    rec_IWarped = None
-    rec_phiWarped = None
-
-    if use_map:
-        if map_low_res_factor is not None:
-            if compute_similarity_measure_at_low_res:
-                rec_phiWarped = model(lowResIdentityMap, lowResISource)
-            else:
-                rec_tmp = model(lowResIdentityMap, lowResISource)
-                # now upsample to correct resolution
-                desiredSz = identityMap.size()[2::]
-                sampler = IS.ResampleImage()
-                rec_phiWarped, _ = sampler.upsample_image_to_size(rec_tmp, spacing, desiredSz,spline_order,zero_boundary=False)
-        else:
-            rec_phiWarped = model(identityMap, ISource)
-
-    else:
-        rec_IWarped = model(ISource)
-
-    if use_map:
-        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing,spline_order)
-
-    if use_map and map_low_res_factor is not None:
-        vizImage, vizName = model.get_parameter_image_and_name_to_visualize(lowResISource)
-    else:
-        vizImage, vizName = model.get_parameter_image_and_name_to_visualize(ISource)
-
-    if use_map:
-        phi_or_warped_image = rec_phiWarped
-    else:
-        phi_or_warped_image = rec_IWarped
-
-    visual_param = {}
-    visual_param['visualize'] = visualize
-    visual_param['save_fig'] = False
-
-    if use_map:
-        if compute_similarity_measure_at_low_res:
-            I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing, spline_order)
-            vizReg.show_current_images(iter=iter, iS=lowResISource, iT=lowResITarget, iW=I1Warped, vizImages=vizImage, vizName=vizName,
-                                       phiWarped=phi_or_warped_image, visual_param=visual_param)
-        else:
-            I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing, spline_order)
-            vizReg.show_current_images(iter=iter, iS=ISource, iT=ITarget, iW=I1Warped, vizImages=vizImage, vizName=vizName,
-                                       phiWarped=phi_or_warped_image, visual_param=visual_param)
-    else:
-        vizReg.show_current_images(iter=iter, iS=ISource, iT=ITarget, iW=phi_or_warped_image, vizImages=vizImage, vizName=vizName, phiWarped=None, visual_param=visual_param)
-
-    dictionary_to_pass_to_smoother = dict()
-    if map_low_res_factor is not None:
-        dictionary_to_pass_to_smoother['I'] = lowResISource
-        dictionary_to_pass_to_smoother['I0'] = lowResISource
-        dictionary_to_pass_to_smoother['I1'] = lowResITarget
-    else:
-        dictionary_to_pass_to_smoother['I'] = ISource
-        dictionary_to_pass_to_smoother['I0'] = ISource
-        dictionary_to_pass_to_smoother['I1'] = ITarget
-
-    variables_from_forward_model = model.get_variables_to_transfer_to_loss_function()
-    smoother = variables_from_forward_model['smoother']
-    smoother.set_debug_retain_computed_local_weights(True)
-
-    model_pars = model.get_registration_parameters()
-    if 'lam' in model_pars:
-        m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(model_pars['lam'], lowResISource, lowResSize,lowResSpacing)
-    elif 'm' in model_pars:
-        m = model_pars['m']
-    else:
-        raise ValueError('Expected a scalar or a vector momentum in model (use SVF for example)')
-
-    v = smoother.smooth(m, None, dictionary_to_pass_to_smoother)
-
-    local_weights = smoother.get_debug_computed_local_weights()
-    local_pre_weights = smoother.get_debug_computed_local_pre_weights()
-    default_multi_gaussian_weights = smoother.get_default_multi_gaussian_weights()
-
-    model_dict = dict()
-    model_dict['use_map'] = use_map
-    model_dict['lowResISource'] = lowResISource
-    model_dict['lowResITarget'] = lowResITarget
-    model_dict['lowResSpacing'] = lowResSpacing
-    model_dict['lowResSize'] = lowResSize
-    model_dict['local_weights'] = local_weights
-    model_dict['local_pre_weights'] = local_pre_weights
-    model_dict['default_multi_gaussian_weights'] = default_multi_gaussian_weights
-    model_dict['stds'] = smoother.get_gaussian_stds()
-    model_dict['model'] = model
-    if 'lam' in model_pars:
-        model_dict['lam'] = model_pars['lam']
-    model_dict['m'] = m
-    model_dict['v'] = v
-    if use_map:
-        model_dict['id'] = identityMap
-    if map_low_res_factor is not None:
-        model_dict['map_low_res_factor'] = map_low_res_factor
-        model_dict['low_res_id'] = lowResIdentityMap
-
-    return rec_IWarped,rec_phiWarped, model_dict
 
 def get_json_and_output_dir_for_stages(json_file,output_dir):
 
@@ -825,7 +614,10 @@ def compute_and_visualize_results(json_file,output_dir,
             individual_parameters = torch.load(individual_parameters_filename,map_location=lambda storage, loc:storage)
 
         # apply the actual model and get the warped image and the map (if applicable)
-        IWarped,phi,model_dict = evaluate_model(ISource,ITarget,sz,spacing,individual_parameters,shared_parameters,params,visualize=False)
+        IWarped,phi,model_dict = utils.evaluate_model(ISource,ITarget,sz,spacing,
+                                                      individual_parameters=individual_parameters,
+                                                      shared_parameters=shared_parameters,
+                                                      params=params,visualize=False)
 
         if write_out_map and (not do_not_recompute_solutions):
             map_io = FIO.MapIO()
