@@ -241,7 +241,61 @@ class NCCSimilarity(SimilarityMeasure):
         # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
         #return AdaptVal((1.0-ncc**2) / (self.sigma ** 2))
 
+class NCCPositiveSimilarity(SimilarityMeasure):
+    """
+    Computes a normalized-cross correlation based similarity measure between two images. Only allows positive correlations.
+    :math:`sim = (1-ncc)/(\\sigma^2)`
+    """
+    def __init__(self, spacing, params):
+        super(NCCPositiveSimilarity,self).__init__(spacing,params)
 
+    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
+        """
+       Computes the NCC-based image similarity measure between two images
+
+       :param I0: first image
+       :param I1: second image
+       :param I0Source: not used
+       :param phi: not used
+       :return: (1-NCC)/sigma^2
+       """
+        # TODO: may require a safeguard against infinity
+
+        # this way of computing avoids the square root of the standard deviation
+        I0mean = I0.mean()
+        I1mean = I1.mean()
+        nccSqr = (((I0-I0mean.expand_as(I0))*(I1-I1mean.expand_as(I1))).mean()**2)/\
+                 (((I0-I0mean)**2).mean()*((I1-I1mean)**2).mean())
+
+        return AdaptVal((1-torch.sqrt(nccSqr))/self.sigma**2)
+
+class NCCNegativeSimilarity(SimilarityMeasure):
+    """
+    Computes a normalized-cross correlation based similarity measure between two images. Only allows negative correlations.
+    :math:`sim = (ncc)/(\\sigma^2)`
+    """
+    def __init__(self, spacing, params):
+        super(NCCNegativeSimilarity,self).__init__(spacing,params)
+
+    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
+        """
+       Computes the NCC-based image similarity measure between two images
+
+       :param I0: first image
+       :param I1: second image
+       :param I0Source: not used
+       :param phi: not used
+       :return: (NCC)/sigma^2
+       """
+        # TODO: may require a safeguard against infinity
+
+        # this way of computing avoids the square root of the standard deviation
+        I0mean = I0.mean()
+        I1mean = I1.mean()
+        nccSqr = (((I0-I0mean.expand_as(I0))*(I1-I1mean.expand_as(I1))).mean()**2)/\
+                 (((I0-I0mean)**2).mean()*((I1-I1mean)**2).mean())
+
+        return AdaptVal((torch.sqrt(nccSqr))/self.sigma**2)
 
 class LNCCSimilarity(SimilarityMeasure):
     """
@@ -573,6 +627,8 @@ class SimilarityMeasureFactory(object):
         self.simMeasures = {
             'ssd': SSDSimilarity,
             'ncc': NCCSimilarity,
+            'ncc_positive': NCCPositiveSimilarity,
+            'ncc_negative': NCCNegativeSimilarity,
             'lncc': LNCCSimilarity,#LocalizedNCCSimilarity,
             'omt': OptimalMassTransportSimilarity
         }
@@ -611,6 +667,18 @@ class SimilarityMeasureFactory(object):
         Set the default similarity measure to NCC
         """
         self.similarity_measure_default_type = 'ncc'
+
+    def set_similarity_measure_default_type_to_ncc_positive(self):
+        """
+        Set the default similarity measure to positive NCC (i.e., only positive correlations allowed)
+        """
+        self.similarity_measure_default_type = 'ncc_positive'
+
+    def set_similarity_measure_default_type_to_ncc_negative(self):
+        """
+        Set the default similarity measure to positive NCC (i.e., only negative correlations allowed)
+        """
+        self.similarity_measure_default_type = 'ncc_negative'
 
     def set_similarity_measure_default_type_to_lncc(self):
         """
