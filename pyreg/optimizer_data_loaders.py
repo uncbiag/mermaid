@@ -2,7 +2,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch
 import os
 
-import pyreg.fileio as FIO
+from . import fileio as FIO
 
 class PairwiseRegistrationDataset(Dataset):
     """keeps track of pairwise image as well as checkpoints for their parameters"""

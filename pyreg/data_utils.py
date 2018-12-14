@@ -15,9 +15,8 @@ import random
 PYTHON_VERSION = 3
 if sys.version_info[0] < 3:
     PYTHON_VERSION = 2
-import pyreg.fileio as fileio
-import pyreg.module_parameters as pars
-
+from . import fileio
+from . import module_parameters as pars
 
 def list_dic(path):
     """

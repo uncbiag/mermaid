@@ -34,7 +34,6 @@ from .data_wrapper import MyTensor
 
 from . import utils
 import collections
-import numpy as np
 
 from abc import ABCMeta, abstractmethod
 from future.utils import with_metaclass

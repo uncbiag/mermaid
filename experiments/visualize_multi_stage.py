@@ -6,7 +6,7 @@ import set_pyreg_paths
 import multiprocessing as mp
 
 # needs to be imported before matplotlib to assure proper plotting
-import pyreg.visualize_registration_results as vizReg
+from pyreg import visualize_registration_results as vizReg
 
 import torch
 

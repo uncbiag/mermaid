@@ -6,7 +6,6 @@ from __future__ import absolute_import
 from builtins import object
 from abc import ABCMeta, abstractmethod
 import numpy as np
-from . import utils
 from . import fileio
 from future.utils import with_metaclass
 

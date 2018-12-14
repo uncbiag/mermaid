@@ -8,7 +8,6 @@ from .data_loader import  *
 from .data_pool import *
 
 
-
 class DataManager(object):
     def __init__(self, task_name, dataset_name, sched=''):
         """

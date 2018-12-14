@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from torch.nn.modules.utils import _single, _pair, _triple
 
-from pyreg.data_wrapper import MyTensor, USE_CUDA
+from .data_wrapper import MyTensor, USE_CUDA
 
 device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
 

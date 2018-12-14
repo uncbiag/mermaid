@@ -9,8 +9,7 @@ from builtins import object
 from abc import ABCMeta, abstractmethod
 
 import torch
-from torch.autograd import Variable
-import pyreg.utils as utils
+from . import utils
 import numpy as np
 from future.utils import with_metaclass
 

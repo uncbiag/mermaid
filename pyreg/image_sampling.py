@@ -13,7 +13,6 @@ from builtins import range
 from builtins import object
 from scipy import ndimage as nd
 import torch
-from torch.autograd import Variable
 import numpy as np
 
 from . import smoother_factory as SF
@@ -22,6 +21,7 @@ import matplotlib.pyplot as plt
 
 from . import utils
 from .data_wrapper import AdaptVal
+
 class ResampleImage(object):
     """
     This class supports image resampling, both based on a scale factor (implemented via skimage's zoom

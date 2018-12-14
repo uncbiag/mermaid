@@ -20,6 +20,7 @@ import os
 from . import utils
 from . import viewers
 from .data_utils import make_dir
+
 dpi=500
 extension= '.png'
 def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visual_param=None, i=0):

@@ -8,9 +8,9 @@ from future.utils import with_metaclass
 import torch
 import torch.nn as nn
 
-import pyreg.finite_differences as fd
-import pyreg.module_parameters as pars
-import pyreg.noisy_convolution as nc
+from . import finite_differences as fd
+from . import module_parameters as pars
+from . import noisy_convolution as nc
 
 import numpy as np
 

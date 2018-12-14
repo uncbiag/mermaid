@@ -25,7 +25,7 @@ from .res_recorder import XlsxRecorder
 from .data_utils import make_dir
 from torch.utils.data import Dataset, DataLoader
 from . import optimizer_data_loaders as OD
-import pyreg.fileio as FIO
+from . import fileio as FIO
 
 from collections import defaultdict
 from future.utils import with_metaclass

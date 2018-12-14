@@ -1,8 +1,9 @@
 from __future__ import print_function
-import set_pyreg_paths
 
 import numpy as np
 import matplotlib.pyplot as plt
+
+import set_pyreg_paths
 
 import pyreg.simple_interface as SI
 import pyreg.example_generation as EG
@@ -60,6 +61,7 @@ else:
 
     si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
                        nr_of_iterations=50,
+                       visualize_step=10,
                        optimizer_name='lbfgs_ls',
                        json_config_out_filename = 'test2d_tst.json',
                        params = 'test2d_tst.json')

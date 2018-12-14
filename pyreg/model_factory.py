@@ -6,14 +6,12 @@ from __future__ import absolute_import
 
 from builtins import object
 from . import registration_networks as RN
-import pyreg.utils as utils
-import pyreg.image_sampling as IS
-from pyreg.data_wrapper import AdaptVal
+from . import utils
+from . import image_sampling as IS
+from .data_wrapper import AdaptVal
 
 import torch
-from torch.autograd import Variable
 import numpy as np
-
 
 def _print_models(models):
     print('\nKnown registration models are:')

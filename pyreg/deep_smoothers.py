@@ -13,16 +13,14 @@ from .data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
 device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
 
-import math
-import pyreg.finite_differences as fd
-import pyreg.module_parameters as pars
-import pyreg.fileio as fio
-import pyreg.custom_pytorch_extensions as ce
-import pyreg.deep_networks as dn
+from . import finite_differences as fd
+from . import module_parameters as pars
+from . import fileio as fio
+from . import custom_pytorch_extensions as ce
+from . import deep_networks as dn
 
 import os
 import matplotlib.pyplot as plt
-import pyreg.utils as utils
 
 def _plot_edgemap_2d(image,gradient_norm,edge_map,gamma):
     plt.clf()

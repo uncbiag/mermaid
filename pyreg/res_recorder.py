@@ -5,7 +5,7 @@ import pandas as pd
 from openpyxl import load_workbook
 import numpy as np
 import os
-from pyreg.data_utils import make_dir
+from .data_utils import make_dir
 
 class XlsxRecorder(object):
     """

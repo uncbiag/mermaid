@@ -1,0 +1,153 @@
+{
+    "data_loader": {
+        "intensity_normalize": false,
+        "normalize_spacing": true,
+        "squeeze_image": true
+    },
+    "model": {
+        "deformation": {
+            "compute_similarity_measure_at_low_res": false,
+            "map_low_res_factor": 0.5,
+            "use_map": true
+        },
+        "registration_model": {
+            "forward_model": {
+                "number_of_time_steps": 20,
+                "smoother": {
+                    "deep_smoother": {
+                        "active_unit_to_use": "leaky_relu",
+                        "deep_network_local_weight_smoothing": 0.05,
+                        "diffusion_weight_penalty": 0.0,
+                        "edge_penalty_filename": "DEBUG_edge_penalty.nrrd",
+                        "edge_penalty_gamma": 2.0,
+                        "edge_penalty_terminate_after_writing": false,
+                        "edge_penalty_write_to_file": false,
+                        "estimate_around_global_weights": true,
+                        "kernel_sizes": [
+                            5,
+                            5
+                        ],
+                        "network_penalty": 1e-05,
+                        "normalization_type": "batch",
+                        "normalize_last_layer": true,
+                        "normalize_last_layer_initial_affine_slope": 0.025,
+                        "number_of_features_per_layer": [
+                            20
+                        ],
+                        "randomly_initialize_network": true,
+                        "smooth_image_for_edge_detection": true,
+                        "smooth_image_for_edge_detection_std": 0.01,
+                        "standardize_display_standardization": true,
+                        "standardize_divide_input_images": 2.0,
+                        "standardize_divide_input_momentum": 1.0,
+                        "standardize_input_images": true,
+                        "standardize_input_momentum": true,
+                        "standardize_subtract_from_input_images": 0.5,
+                        "standardize_subtract_from_input_momentum": 0.0,
+                        "total_variation_weight_penalty": 0.1,
+                        "type": "simple_consistent",
+                        "use_dropout": false,
+                        "use_momentum_as_input": false,
+                        "use_noise_layers": false,
+                        "use_noisy_convolution": false,
+                        "use_source_image_as_input": false,
+                        "use_target_image_as_input": false,
+                        "weighting_type": "sqrt_w_K_sqrt_w"
+                    },
+                    "evaluate_but_do_not_optimize_over_shared_registration_parameters": false,
+                    "freeze_parameters": false,
+                    "gaussian_std_min": 0.01,
+                    "gaussian_weight_min": 0.0001,
+                    "load_dnn_parameters_from_this_file": "",
+                    "multi_gaussian_stds": [
+                        0.01,
+                        0.05,
+                        0.1,
+                        0.2
+                    ],
+                    "multi_gaussian_weights": [
+                        0.0,
+                        0.0,
+                        0.0,
+                        1.0
+                    ],
+                    "omt_power": 1.0,
+                    "omt_use_log_transformed_std": true,
+                    "omt_weight_penalty": 50.0,
+                    "optimize_over_deep_network": false,
+                    "optimize_over_smoother_stds": false,
+                    "optimize_over_smoother_weights": false,
+                    "preweight_input_range_weight_penalty": 1.0,
+                    "scale_global_parameters": false,
+                    "start_optimize_over_nn_smoother_parameters_at_iteration": 0,
+                    "start_optimize_over_smoother_parameters_at_iteration": 0,
+                    "type": "learned_multiGaussianCombination",
+                    "use_multi_gaussian_regularization": false
+                }
+            },
+            "loss": {
+                "display_max_displacement": false,
+                "limit_displacement": false,
+                "max_displacement": 0.25
+            },
+            "similarity_measure": {
+                "develop_mod_on": false,
+                "sigma": 0.1,
+                "type": "ncc"
+            },
+            "spline_order": 1,
+            "type": "svf_vector_momentum_map",
+            "use_CFL_clamping": true
+        }
+    },
+    "optimizer": {
+        "batch_settings": {
+            "batch_size": 100,
+            "checkpoint_interval": 0,
+            "nr_of_epochs": 5,
+            "num_workers": 0,
+            "parameter_output_dir": "experimental_results_synth_2d/out_training_total_variation_weight_penalty_0.100000_omt_weight_penalty_50.000000/results",
+            "show_sample_optimizer_output": true,
+            "shuffle": true,
+            "start_from_previously_saved_parameters": false,
+            "verbose_output": false
+        },
+        "gradient_clipping": {
+            "clip_display": true,
+            "clip_individual_gradient": true,
+            "clip_individual_gradient_value": 1.0078740157480315,
+            "clip_shared_gradient": true,
+            "clip_shared_gradient_value": 1.0
+        },
+        "name": "sgd",
+        "scheduler": {
+            "factor": 0.5,
+            "patience": 2,
+            "verbose": true
+        },
+        "sgd": {
+            "also_eliminate_shared_state_between_samples_during_first_epoch": false,
+            "individual": {
+                "dampening": 0.0,
+                "lr": 1.0,
+                "momentum": 0.9,
+                "nesterov": true,
+                "weight_decay": 0.0
+            },
+            "shared": {
+                "dampening": 0.0,
+                "lr": 0.25,
+                "momentum": 0.9,
+                "nesterov": true,
+                "weight_decay": 0.0
+            }
+        },
+        "single_scale": {
+            "nr_of_iterations": 5,
+            "rel_ftol": 1e-15
+        },
+        "use_step_size_scheduler": true,
+        "weight_clipping_type": "none",
+        "weight_clipping_value": 1.0
+    }
+}

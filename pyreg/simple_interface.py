@@ -16,7 +16,7 @@ from . import utils
 
 import torch
 
-from pyreg.data_wrapper import AdaptVal
+from .data_wrapper import AdaptVal
 
 class RegisterImagePair(object):
 

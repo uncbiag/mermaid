@@ -13,7 +13,6 @@ from builtins import range
 from builtins import object
 import torch
 from torch.autograd import Function
-from torch.autograd import Variable
 import numpy as np
 from torch.autograd import gradcheck
 from .data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor

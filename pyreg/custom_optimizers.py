@@ -17,7 +17,7 @@ import torch
 from functools import reduce
 from torch.optim import Optimizer
 from math import isinf
-from .data_wrapper import  AdaptVal
+from .data_wrapper import AdaptVal
 
 # this is taken from the torch master; should be included in the LBFGS optimizer in the newest torch versions
 

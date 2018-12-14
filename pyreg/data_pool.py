@@ -4,7 +4,7 @@ from builtins import object
 
 from torch.utils.data import Dataset
 
-from pyreg.data_utils import *
+from .data_utils import *
 
 
 class BaseDataSet(object):

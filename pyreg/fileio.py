@@ -17,13 +17,13 @@ import os
 import nrrd
 from . import utils
 import torch
-import pyreg.image_manipulations as IM
+from . import image_manipulations as IM
 import numpy as np
 import glob
 
 import copy
 
-from pyreg.config_parser import USE_FLOAT16
+from .config_parser import USE_FLOAT16
 
 from abc import ABCMeta, abstractmethod
 from future.utils import with_metaclass

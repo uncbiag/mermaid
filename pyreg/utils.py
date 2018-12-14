@@ -23,9 +23,9 @@ from . import finite_differences as fd
 import torch.nn as nn
 import torch.nn.init as init
 
-import pyreg.module_parameters as pars
+from . import module_parameters as pars
 
-from pyreg.spline_interpolation import SplineInterpolation_ND_BCXYZ
+from .spline_interpolation import SplineInterpolation_ND_BCXYZ
 
 import os
 
