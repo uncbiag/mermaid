@@ -299,32 +299,97 @@ class NCCNegativeSimilarity(SimilarityMeasure):
 
 class LNCCSimilarity(SimilarityMeasure):
     """
-    Computes a localized normalized-cross correlation based similarity measure between two images.
-    :math:`ncc = (1-ncc^2)/(\\sigma^2)`
+    This is an generalized lncc, we implement multi-scale ( means resolution) multi kernel( means size of neighborhood) LNCC
+
+    :param: resol_bound : type list,  resol_bound[0]> resol_bound[1] >... resol_bound[end]
+    :param: kernel_size_ratio: type list,  the ratio of the current input size
+    :param: kernel_weight_ratio: type list,  the weight ratio of each kernel size, should sum to 1
+    :param: stride: type_list, the stride between each pixel that would compute its lncc
+    :param: dilation: type_list
+
+    settings in json:
+
+
+    "similarity_measure": {
+                "develop_mod_on": false,
+                "sigma": 0.5,
+                "type": "lncc",
+                "lncc":{
+                    "resol_bound":[-1],
+                    "kernel_size_ratio":[[0.25]],
+                    "kernel_weight_ratio":[[1.0]],
+                    "stride":[0.25],
+                    "dilation":[1]
+                }
+
+
+
+
+    multi_scale_multi_kernel
+    eg.    "resol_bound":[64,32],
+           "kernel_size_ratio":[[0.0625,0.125, 0.25], [0.25,0.5], [0.5]],
+            "kernel_weight_ratio":[[0.2,0.3,0.5],[0.3,0.7],[1.0]],
+            "stride":[0.25,0.25,0.25],
+            "dilation":[2,1,1]
+
+    single_scale_single_kernel
+                    "resol_bound":[-1],
+                    "kernel_size_ratio":[[0.25]],
+                    "kernel_weight_ratio":[[1.0]],
+                    "stride":[0.25],
+                    "dilation":[1]
+
+
+    Multi-scale is controlled by "resol_bound", e.g resol_bound = [128, 64], it means if input size>128, then it would compute multi-kernel
+    lncc designed for large image size,  if 64<input_size<128, then it would compute multi-kernel lncc desiged for mid-size image, otherwise,
+    it would compute the multi-kernel lncc designed for small image.
+    Attention! we call it multi-scale just because it is designed for multi-scale registration or segmentation problem.
+    ONLY ONE scale would be activated during computing the similarity, which depends on the current input size.
+
+    At each scale, corresponding multi-kernel lncc is implemented, here multi-kernel means lncc with different window sizes
+    Loss = w1*lncc_win1 + w2*lncc_win2 ... + wn*lncc_winn, where /sum(wi) =1
+    for example. when (image size) S>128, three windows sizes can be used, namely S/16, S/8, S/4.
+    for easy notation, we use img_ratio to refer window size, the example here use the parameter [1./16,1./8,1.4]
+
+    In implementation, we compute lncc by calling convolution function, so in this case, the [S/16, S/8, S/4] refers
+      to the kernel size of convolution fucntion.  Intuitively,  we would have another two parameters,
+    stride and dilation.  For each window size (W) , we recommand using W/4 as stride. In extreme case the stride can be 1, but
+    can large increase computation.   The dilation expand the reception field, set dilation as 2 would physically twice the window size.
+
+
+
+
+
+
     """
     def __init__(self, spacing, params):
         super(LNCCSimilarity,self).__init__(spacing,params)
         self.dim = len(spacing)
-
+        self.resol_bound = params['similarity_measure']['lncc'][('resol_bound',[64], "resolution bound for using different strategy")]
+        self.kernel_size_ratio = params['similarity_measure']['lncc'][('kernel_size_ratio',[[1./4]], "kernel size, ratio of input size")]
+        self.kernel_weight_ratio = params['similarity_measure']['lncc'][('kernel_weight_ratio',[[1.]], "kernel size, ratio of input size")]
+        self.stride = params['similarity_measure']['lncc'][('stride',[1./4], "step size, ratio of kernel size")]
+        self.dilation = params['similarity_measure']['lncc'][('dilation',[1], "dilation param")]
+        if self.resol_bound[0] >-1:
+            assert len(self.resol_bound)+1 == len(self.kernel_size_ratio)
+            assert len(self.resol_bound)+1 == len(self.kernel_weight_ratio)
+            assert len(self.resol_bound)+1 == len(self.stride)
+            assert len(self.resol_bound)+1 == len(self.dilation)
 
     def __stepup(self,img_sz):
         max_scale  = min(img_sz)
-        if max_scale>128:
-            self.scale = [int(max_scale/16), int(max_scale/8), int(max_scale/4)]
-            self.scale_weight = [0.5, 0.3, 0.2]
-        elif max_scale>64:
-            self.scale = [int(max_scale / 8), int(max_scale / 4)]
-            self.scale_weight = [0.6,0.4]
-        elif max_scale>32:
-            self.scale = [int(max_scale / 4)]
-            self.scale_weight = [1.0]
-        else :
-            self.scale = [int(max_scale / 2)]
-            self.scale_weight = [1.0]
-        self.num_scale = len(self.scale)
-        self.kernel_sz = [[scale for _ in range(self.dim)] for scale in self.scale]
-        self.step = [[max(int((ksz + 1) / 2),1) for ksz in self.kernel_sz[scale_id]] for scale_id in range(self.num_scale)]
-        self.dilation = [2 for _ in range(self.num_scale)]
+        for i, bound in enumerate(self.resol_bound):
+            if max_scale >= bound:
+                self.kernel = [int(max_scale*kz) for kz in self.kernel_size_ratio[i]]
+                self.weight = self.kernel_weight_ratio[i]
+                break
+        if max_scale < self.resol_bound[-1]:
+            self.kernel =  [int(max_scale*kz) for kz in self.kernel_size_ratio[-1]]
+            self.weight = self.kernel_weight_ratio[-1]
+
+        self.num_scale = len(self.kernel)
+        self.kernel_sz = [[k for _ in range(self.dim)] for k in self.kernel]
+        self.step = [[max(int((ksz + 1) * self.stride[scale_id]),1) for ksz in self.kernel_sz[scale_id]] for scale_id in range(self.num_scale)]
         self.filter = [torch.ones([1, 1] + self.kernel_sz[scale_id]).cuda() for scale_id in range(self.num_scale)]
         if self.dim==1:
             self.conv= F.conv1d
@@ -387,7 +452,7 @@ class LNCCSimilarity(SimilarityMeasure):
 
             lncc = cross * cross / (input_local_var * target_local_var + 1e-5)
             lncc = 1 - lncc.mean()
-            lncc_total += lncc*self.scale_weight[scale_id]
+            lncc_total += lncc*self.weight[scale_id]
 
         return lncc_total
 
