@@ -1,8 +1,8 @@
 Smoother factory
 ==============================================
 
-.. inheritance-diagram:: smoother_factory
-.. automodule:: smoother_factory
+.. inheritance-diagram:: pyreg.smoother_factory
+.. automodule:: pyreg.smoother_factory
 	:members:
 	:undoc-members:
 	   

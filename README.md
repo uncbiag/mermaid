@@ -44,6 +44,10 @@ IMPORTANT: pytorch 0.4.0 is required. The code will no longer run on 0.2.0 or 0.
 
  The mermaid.yaml file in the install directory also contains information for all the packages that need to be installed. We will provide an anaconda installer in the (hopefully) near future.
 
+# Making the documentation
+
+To create the documentation type `make html` in the docs directory. Requires installation of graphviz (https://www.graphviz.org/).
+
 # An alternative way to install everything
 
 *WARNING: This does not work yet and has not been updated for pytorch 0.4.0

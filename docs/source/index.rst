@@ -21,6 +21,8 @@ mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
    custom_optimizers
    custom_pytorch_extensions
    data_wrapper
+   deep_networks
+   deep_smoothers
    example_generation
    fileio
    finite_differences
@@ -31,10 +33,15 @@ mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
    model_factory
    module_parameters
    multiscale_optimizer
+   noisy_convolution
+   optimizer_data_loaders
    registration_networks
    regularizer_factory
    rungekutta_integrators
+   similarity_helper_omt
    similarity_measure_factory
+   simple_interface
+   spline_interpolation
    smoother_factory
    stn
    utils

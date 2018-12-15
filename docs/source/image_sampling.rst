@@ -1,8 +1,8 @@
 Image sampling
 ==============================================
 
-.. inheritance-diagram:: image_sampling
-.. automodule:: image_sampling
+.. inheritance-diagram:: pyreg.image_sampling
+.. automodule:: pyreg.image_sampling
 	:members:
 	:undoc-members:
 	   

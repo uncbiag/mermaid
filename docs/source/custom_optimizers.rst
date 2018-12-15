@@ -1,7 +1,7 @@
 Custom optimizers
 ==============================================
 
-.. inheritance-diagram:: custom_optimizers
-.. automodule:: custom_optimizers
+.. inheritance-diagram:: pyreg.custom_optimizers
+.. automodule:: pyreg.custom_optimizers
 	:members:
 	:undoc-members:

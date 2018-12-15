@@ -1,8 +1,8 @@
 Forward models
 ==============================================
 
-.. inheritance-diagram:: forward_models
-.. automodule:: forward_models
+.. inheritance-diagram:: pyreg.forward_models
+.. automodule:: pyreg.forward_models
 	:members:
 	:undoc-members:
 	   

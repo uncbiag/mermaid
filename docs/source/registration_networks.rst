@@ -1,8 +1,8 @@
 Registration networks
 ==============================================
 
-.. inheritance-diagram:: registration_networks
-.. automodule:: registration_networks
+.. inheritance-diagram:: pyreg.registration_networks
+.. automodule:: pyreg.registration_networks
 	:members:
 	:undoc-members:
 	   

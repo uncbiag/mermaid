@@ -1,7 +1,7 @@
 Image manipulations
 ==============================================
 
-.. inheritance-diagram:: image_manipulations
-.. automodule:: image_manipulations
+.. inheritance-diagram:: pyreg.image_manipulations
+.. automodule:: pyreg.image_manipulations
 	:members:
 	:undoc-members:

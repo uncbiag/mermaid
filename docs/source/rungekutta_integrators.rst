@@ -1,8 +1,8 @@
 Runge-Kutta integrators
 ==============================================
 
-.. inheritance-diagram:: rungekutta_integrators
-.. automodule:: rungekutta_integrators
+.. inheritance-diagram:: pyreg.rungekutta_integrators
+.. automodule:: pyreg.rungekutta_integrators
 	:members:
 	:undoc-members:
 	   

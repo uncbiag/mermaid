@@ -1,8 +1,8 @@
 Finite differences
 ==============================================
 
-.. inheritance-diagram:: finite_differences
-.. automodule:: finite_differences
+.. inheritance-diagram:: pyreg.finite_differences
+.. automodule:: pyreg.finite_differences
 	:members:
 	:undoc-members:
 	   

@@ -1,7 +1,7 @@
 Data wrapper
 ==============================================
 
-.. inheritance-diagram:: data_wrapper
-.. automodule:: data_wrapper
+.. inheritance-diagram:: pyreg.data_wrapper
+.. automodule:: pyreg.data_wrapper
 	:members:
 	:undoc-members:

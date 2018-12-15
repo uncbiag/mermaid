@@ -1,7 +1,7 @@
 Custom pyTorch extensions 
 ==============================================
 
-.. inheritance-diagram:: custom_pytorch_extensions
-.. automodule:: custom_pytorch_extensions
+.. inheritance-diagram:: pyreg.custom_pytorch_extensions
+.. automodule:: pyreg.custom_pytorch_extensions
 	:members:
 	:undoc-members:
