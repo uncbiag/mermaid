@@ -30,6 +30,7 @@ mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
    image_manipulations
    image_sampling
    load_default_settings
+   model_evaluation
    model_factory
    module_parameters
    multiscale_optimizer

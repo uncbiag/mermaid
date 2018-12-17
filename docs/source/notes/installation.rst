@@ -1,3 +1,6 @@
+.. todo::
+   This documentation needs to be updated. Have a look at README.md which has a more up-to-date intruction on the installation.
+
 Installation
 ============
 

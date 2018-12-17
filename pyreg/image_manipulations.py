@@ -38,7 +38,7 @@ class IntensityNormalizeImage(object):
             I = I / percI * perc/100.
             return I
 
-    def defaultIntensityNormalization(self,I):
+    def default_intensity_normalization(self, I):
         """
         Intensity normalizes an image using the default intensity normalization method
         :param I: input image

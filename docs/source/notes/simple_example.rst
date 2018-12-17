@@ -1,3 +1,6 @@
+.. todo::
+   This documentation needs to be updated. For now have a look at testSimpleInterface.py in the demos directory for a simple example on how to compute registrations.
+
 Simple example
 ==============
 

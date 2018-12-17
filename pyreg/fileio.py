@@ -650,7 +650,7 @@ class ImageIO(FileIO):
             im = self._do_adaptive_padding(im)
 
         if self.intensity_normalize_image==True:
-            im = IM.IntensityNormalizeImage().defaultIntensityNormalization(im)
+            im = IM.IntensityNormalizeImage().default_intensity_normalization(im)
             if not silent_mode:
                 print('INFO: Image WAS intensity normalized when loading:' \
                       + ' [' + str(im.min()) + ',' + str(im.max()) + ']')

@@ -26,6 +26,7 @@ from .data_utils import make_dir
 from torch.utils.data import Dataset, DataLoader
 from . import optimizer_data_loaders as OD
 from . import fileio as FIO
+from . import model_evaluation
 
 from collections import defaultdict
 from future.utils import with_metaclass
@@ -1424,7 +1425,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # first define variables that will be passed to the model and the criterion (for further use)
         opt_variables = {'iter': self.iter_count,'epoch': self.current_epoch}
 
-        self.rec_IWarped,self.rec_phiWarped,self.rec_phiInverseWarped = utils.evaluate_model_low_level_interface(model=self.model,
+        self.rec_IWarped,self.rec_phiWarped,self.rec_phiInverseWarped = model_evaluation.evaluate_model_low_level_interface(model=self.model,
                                                                                                                  I_source=self.ISource,
                                                                                                                  opt_variables=opt_variables,
                                                                                                                  use_map=self.useMap,

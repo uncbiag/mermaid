@@ -26,11 +26,9 @@ from .data_wrapper import AdaptVal
 class LBFGS_LS(Optimizer):
     """Implements L-BFGS algorithm.
     .. warning::
-        This optimizer doesn't support per-parameter options and parameter
-        groups (there can be only one).
+        This optimizer doesn't support per-parameter options and parameter groups (there can be only one).
     .. warning::
-        Right now all parameters have to be on a single device. This will be
-        improved in the future.
+        Right now all parameters have to be on a single device. This will be improved in the future.
     .. note::
         This is a very memory intensive optimizer (it requires additional
         ``param_bytes * (history_size + 1)`` bytes). If it doesn't fit in memory

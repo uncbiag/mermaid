@@ -11,15 +11,13 @@ from pyreg import visualize_registration_results as vizReg
 import torch
 
 import pyreg.image_sampling as IS
-import pyreg.finite_differences as FD
-
-import pyreg.model_factory as MF
 
 import pyreg.module_parameters as pars
 from pyreg.data_wrapper import USE_CUDA, AdaptVal, MyTensor
 
 import pyreg.fileio as FIO
 import pyreg.utils as utils
+import pyreg.model_evaluation as model_evaluation
 
 import numpy as np
 
@@ -614,7 +612,7 @@ def compute_and_visualize_results(json_file,output_dir,
             individual_parameters = torch.load(individual_parameters_filename,map_location=lambda storage, loc:storage)
 
         # apply the actual model and get the warped image and the map (if applicable)
-        IWarped,phi,model_dict = utils.evaluate_model(ISource,ITarget,sz,spacing,
+        IWarped,phi,_,model_dict = model_evaluation.evaluate_model(ISource,ITarget,sz,spacing,
                                                       individual_parameters=individual_parameters,
                                                       shared_parameters=shared_parameters,
                                                       params=params,visualize=False)
