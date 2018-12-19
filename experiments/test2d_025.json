@@ -93,7 +93,7 @@
             "similarity_measure": {
                 "develop_mod_on": false,
                 "sigma": 0.1,
-                "type": "ncc"
+                "type": "ncc_positive"
             },
             "spline_order": 1,
             "type": "svf_vector_momentum_map",

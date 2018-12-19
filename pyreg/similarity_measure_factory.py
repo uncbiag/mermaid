@@ -264,10 +264,10 @@ class NCCPositiveSimilarity(SimilarityMeasure):
         # this way of computing avoids the square root of the standard deviation
         I0mean = I0.mean()
         I1mean = I1.mean()
-        nccSqr = (((I0-I0mean.expand_as(I0))*(I1-I1mean.expand_as(I1))).mean()**2)/\
-                 (((I0-I0mean)**2).mean()*((I1-I1mean)**2).mean())
+        ncc = (((I0-I0mean.expand_as(I0))*(I1-I1mean.expand_as(I1))).mean())/\
+                 (torch.sqrt(((I0-I0mean)**2).mean())*torch.sqrt(((I1-I1mean)**2).mean()))
 
-        return AdaptVal((1-torch.sqrt(nccSqr))/self.sigma**2)
+        return AdaptVal((1-ncc)/self.sigma**2)
 
 class NCCNegativeSimilarity(SimilarityMeasure):
     """
@@ -292,10 +292,10 @@ class NCCNegativeSimilarity(SimilarityMeasure):
         # this way of computing avoids the square root of the standard deviation
         I0mean = I0.mean()
         I1mean = I1.mean()
-        nccSqr = (((I0-I0mean.expand_as(I0))*(I1-I1mean.expand_as(I1))).mean()**2)/\
-                 (((I0-I0mean)**2).mean()*((I1-I1mean)**2).mean())
+        ncc = (((I0 - I0mean.expand_as(I0)) * (I1 - I1mean.expand_as(I1))).mean()) / \
+              (torch.sqrt(((I0 - I0mean) ** 2).mean()) * torch.sqrt(((I1 - I1mean) ** 2).mean()))
 
-        return AdaptVal((torch.sqrt(nccSqr))/self.sigma**2)
+        return AdaptVal((ncc)/self.sigma**2)
 
 class LNCCSimilarity(SimilarityMeasure):
     """
