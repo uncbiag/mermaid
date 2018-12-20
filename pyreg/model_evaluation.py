@@ -88,7 +88,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
         # computes model and similarity at the same resolution
         mf = MF.ModelFactory(sz, spacing, sz, spacing)
 
-    model, criterion = mf.create_registration_model(model_name, params['model'])
+    model, criterion = mf.create_registration_model(model_name, params['model'], compute_inverse_map=compute_inverse_map)
     # set it to evaluation mode
     model.eval()
 
