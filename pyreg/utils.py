@@ -452,8 +452,15 @@ def _compute_low_res_image(I,spacing,low_res_size,spline_order):
 
 def individual_parameters_to_model_parameters(ind_pars):
     model_pars = dict()
-    for par in ind_pars:
-        model_pars[par['name']] = par['model_params']
+
+    if type(ind_pars)==type(dict()):
+        # should already be in the right format
+        model_pars = ind_pars
+    else:
+        # if ind_pars is not a dictionary assume that they come from the optimizer
+        # (i.e., list and each list element has a dictionary with keys 'name' and 'model_params'
+        for par in ind_pars:
+            model_pars[par['name']] = par['model_params']
 
     return model_pars
 
