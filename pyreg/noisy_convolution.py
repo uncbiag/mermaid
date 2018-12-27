@@ -12,7 +12,7 @@ device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else 
 
 class NoisyLinear(nn.Module):
     """Applies a noisy linear transformation to the incoming data: :math:`y = (mu_w + sigma_w \cdot epsilon_w)x + mu_b + sigma_b \cdot epsilon_b`
-    More details can be found in the paper `Noisy Networks for Exploration` _ .
+    More details can be found in the paper `ZZ` _ .
     Args:
         in_features: size of each input sample
         out_features: size of each output sample

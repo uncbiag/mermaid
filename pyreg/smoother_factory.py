@@ -310,7 +310,7 @@ class GaussianSpatialSmoother(GaussianSmoother):
 
     def __init__(self, sz, spacing, params):
         super(GaussianSpatialSmoother,self).__init__(sz,spacing,params)
-        self.k_sz_h = None # params[('k_sz_h', None, 'size of the kernel' )]
+        self.k_sz_h = params[('k_sz_h', 5*np.ones(self.dim, dtype='int'), 'size of the kernel' )]
         """size of half the smoothing kernel"""
         self.filter = None
         """smoothing filter"""

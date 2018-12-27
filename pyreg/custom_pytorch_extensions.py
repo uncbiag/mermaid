@@ -162,10 +162,12 @@ def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True, m
 
 def create_cuda_filter(spatial_filter, sz):
     """
-    create cuda version filter, another one dimension is added for computational convenient
-    :param spatial_filter:
-    :param sz:
-    :return: cuda filter
+    create cuda version filter, another one dimension is added to the output for computational convenient
+    besides the output will not be full complex result of shape (∗,2),
+    where ∗ is the shape of input, but instead the last dimension will be halfed as of size ⌊Nd/2⌋+1.
+    :param spatial_filter: N1 x...xNd, no batch dimension, no channel dimension
+    :param sz: [N1,..., Nd]
+    :return: filter, with size [1,N1,..Nd-1,⌊Nd/2⌋+1,2⌋
     """
     fftn = torch.rfft
     spatial_filter_th = torch.from_numpy(spatial_filter).float().cuda()
@@ -253,11 +255,12 @@ class FourierConvolution(Function):
         1d 2d cpu works well because fft and fft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
 
         in gpu implementation, the rfft is used for efficiency, which means the filter should be symmetric
+        (input_real+input_img)(filter_real+filter_img) = (input_real*filter_real-input_img*filter_img) + (input_img*filter_real+input_real*filter_img)i
+        filter_img =0, then get input_real*filter_real + (input_img*filter_real)i ac + bci
+
         :param input: Image
         :return: Filtered-image
         """
-        # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
-        # filter_imag =0, then get  ac + bci
 
         if USE_CUDA:
             input = FFTVal(input,ini=1)
