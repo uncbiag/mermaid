@@ -5,11 +5,11 @@ import sys
 import matplotlib.pyplot as plt
 import torch.optim as optim
 import torch.nn as nn
-os.chdir('../')
+#os.chdir('../')
 
-sys.path.insert(0,os.path.abspath('.'))
-sys.path.insert(0,os.path.abspath('./pyreg'))
-sys.path.insert(0,os.path.abspath('./pyreg/libraries'))
+sys.path.insert(0,os.path.abspath('..'))
+sys.path.insert(0,os.path.abspath('../pyreg'))
+sys.path.insert(0,os.path.abspath('../pyreg/libraries'))
 import torch
 import time
 import pyreg.module_parameters as pars
@@ -113,13 +113,15 @@ params['square_example_images']['len_s'] = szEx.min()//6
 params['square_example_images']['len_l'] = szEx.max()//4
 
 I0,I1,spacing= eg.CreateSquares(dim).create_image_pair(szEx,params)
+#I0, I1,spacing = eg.CreateRealExampleImages(dim).create_image_pair(szEx, params)  # create a default image size with two sample squares
+
 sz = np.array(I0.shape)
 assert( len(sz)==dim+2 )
 saved_folder = '/playpen/zyshen/debugs/fft_grad_check'
 if not os.path.exists(saved_folder):
     os.makedirs(saved_folder)
 ants.image_write(ants.from_numpy(np.squeeze(I0)),saved_folder+'/non_smoothed.nii.gz')
-img_reconst = ImageReconst(I0,dim,szEx,spacing)
+img_reconst = ImageReconst(I0,dim,sz[2::],spacing)
 target = img_reconst.get_target()
 target = np.squeeze(target.cpu().numpy())
 ants.image_write( ants.from_numpy(target),saved_folder+'/target.nii.gz')
