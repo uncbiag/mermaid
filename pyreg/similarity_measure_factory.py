@@ -454,7 +454,7 @@ class LNCCSimilarity(SimilarityMeasure):
             lncc = 1 - lncc.mean()
             lncc_total += lncc*self.weight[scale_id]
 
-        return lncc_total
+        return lncc_total/ (self.sigma ** 2)
 
 
 
