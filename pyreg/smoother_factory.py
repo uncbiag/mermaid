@@ -1344,7 +1344,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         #print('Current weight l2 = {}'.format(self._compute_current_nn_weight_l2().item()))
 
-        self._is_optimizing_over_deep_network = self.optimize_over_deep_network
+        self._is_optimizing_over_deep_network = True #self.optimize_over_deep_network   TODO  Should be recovered ###########################################################3
         if self._is_optimizing_over_deep_network:
             if variables_from_optimizer is not None:
                 if self.start_optimize_over_nn_smoother_parameters_at_iteration > iter_or_epoch:

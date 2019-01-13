@@ -1212,7 +1212,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         cparams = params[('deep_smoother',{})]
         self.params = cparams
 
-        self.weighting_type = self.params[('weighting_type','w_K','Type of weighting: w_K|w_K_w|sqrt_w_K_sqrt_w')]
+        self.weighting_type = self.params[('weighting_type','sqrt_w_K_sqrt_w','Type of weighting: w_K|w_K_w|sqrt_w_K_sqrt_w')]
         admissible_weighting_types = ['w_K','w_K_w','sqrt_w_K_sqrt_w']
         if self.weighting_type not in admissible_weighting_types:
             raise ValueError('Unknown weighting_type: needs to be  w_K|w_K_w|sqrt_w_K_sqrt_w')
@@ -1412,13 +1412,13 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         """legacy; to support velocity fields as input channels"""
         return self.nr_of_image_channels
 
-    def get_number_of_input_channels(self, nr_of_image_channels, dim):
-        """
-        legacy; to support velocity fields as input channels
-        currently only returns the number of image channels, but if something else would be used as
-        the network input, would need to return the total number of inputs
-        """
-        return self.nr_of_image_channels
+    # def get_number_of_input_channels(self, nr_of_image_channels, dim):
+    #     """
+    #     legacy; to support velocity fields as input channels
+    #     currently only returns the number of image channels, but if something else would be used as
+    #     the network input, would need to return the total number of inputs
+    #     """
+    #     return self.nr_of_image_channels
 
     def get_computed_weights(self):
         return self.computed_weights

@@ -408,7 +408,6 @@ class LNCCSimilarity(SimilarityMeasure):
        :param I1: second image
        :param I0Source: not used
        :param phi: not used
-       :return: (1-NCC^2)/sigma^2
 
        """
         input = I0.view([1,1]+ list(I0.shape))

@@ -59,7 +59,10 @@ class AvailableModels(object):
                                                      'image-based shooting-based LDDMM using the scalar momentum'),
             'svf_quasi_momentum_image': (RN.SVFQuasiMomentumImageNet,
                                          RN.SVFQuasiMomentumImageLoss, False,
-                                         'EXPERIMENTAL: Image-based SVF version which estimates velcocity based on a smoothed vetor field')
+                                         'EXPERIMENTAL: Image-based SVF version which estimates velcocity based on a smoothed vetor field'),
+            'to_rename_map': (RN.ToReNameNet,
+                                         RN.ToReNameLoss, True,
+                                         'EXPERIMENTAL: test on learning smoother network')
         }
         """dictionary defining all the models"""
 

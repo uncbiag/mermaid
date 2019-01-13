@@ -1461,7 +1461,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # to support consensus optimization we have the option of adding a penalty term
         # based on shared parameters
         opt_par_loss_energy = self.compute_optimizer_parameter_loss(self.model.get_shared_registration_parameters())
-        loss_overall_energy = loss_overall_energy + opt_par_loss_energy
+        loss_overall_energy  = loss_overall_energy + opt_par_loss_energy
         loss_overall_energy.backward()
 
         # do gradient clipping

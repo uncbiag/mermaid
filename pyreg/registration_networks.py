@@ -1607,6 +1607,104 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
         reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
+
+
+
+##################################################################################################3
+
+class ToReNameNet(ShootingVectorMomentumNet):
+    """
+    Specialization of scalar-momentum LDDMM to SVF image-based matching
+    """
+
+    def __init__(self, sz, spacing, params, compute_inverse_map=False):
+        self.compute_inverse_map = compute_inverse_map
+        """If set to True the inverse map is computed on the fly"""
+        super(ToReNameNet, self).__init__(sz, spacing, params)
+
+    def create_integrator(self):
+        """
+        Creates an integrator integrating the scalar momentum conservation law and an advection equation for the image
+
+        :return: returns this integrator
+        """
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+
+        advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
+        return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+
+    def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
+        """
+        Solved the scalar momentum forward equation and returns the map at time tTo
+
+        :param phi: initial map
+        :param I0_source: not used
+        :param phi_inv: initial inverse map
+        :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
+        :return: image at time tTo
+        """
+
+        pars_to_pass_s = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_integrator())
+        v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer,
+                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
+        pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
+        self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
+
+        if self.compute_inverse_map:
+            if phi_inv is not None:
+                phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                return (phi1[0],phi1[1])
+            else:
+                phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+                return (phi1[0],None)
+        else:
+            phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+            return phi1[0]
+
+class ToReNameLoss(RegistrationMapLoss):
+    """
+    Specialization of the loss to scalar-momentum LDDMM on images
+    """
+
+    def __init__(self, m, sz_sim, spacing_sim, sz_model, spacing_model, params):
+        super(ToReNameLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
+        self.m = m
+        """vector momentum"""
+        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
+            cparams = params[('similarity_measure',{},'settings for the similarity ')]
+            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
+            """smoother to go from momentum to velocity"""
+        else:
+            self.develop_smoother = None
+
+    def compute_regularization_energy(self, I0_source,variables_from_forward_model, variables_from_optimizer=None):
+        """
+        Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
+
+        :param I0_source: source image
+        :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
+        :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
+        :return: returns the regularization energy
+        """
+        m = self.m
+
+        if self.develop_smoother is not None:
+            v = self.develop_smoother.smooth(m)
+        else:
+            pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
+            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
+
+        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
+        return reg
+
+
+###################################################################################################
+
+
+
+
+
+
 class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
     """
     Specialization of the registration network to registrations with scalar momentum. Provides an integrator
