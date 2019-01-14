@@ -1604,7 +1604,7 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
             pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
             v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
+        reg = torch.clamp((v * m),min=0.).sum() * self.spacing_model.prod()/1.   + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 

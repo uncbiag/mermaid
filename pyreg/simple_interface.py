@@ -456,7 +456,7 @@ class RegisterImagePair(object):
 
         else:
             if self.sz is None:
-                if type(ISource)==np.ndarray:
+                if type(ISource)==np.ndarray or type(ISource)==torch.Tensor:
                     self.sz = np.array(ISource.shape)
                 else:
                     raise ValueError('Input image needs to be a numpy array')
@@ -471,7 +471,7 @@ class RegisterImagePair(object):
         else:
             raise ValueError('Unknown parameter format: ' + str( type(params)))
 
-        if use_batch_optimization:
+        if use_batch_optimization or type(ISource)==torch.Tensor:
             self.ISource = ISource
             self.ITarget = ITarget
         else:
@@ -550,6 +550,8 @@ class RegisterImagePair(object):
                 self.set_initial_map(self.delayed_initial_map,initial_inverse_map=self.delayed_initial_inverse_map)
 
             if not self.light_analysis_on and use_multi_scale:
+                LSource = AdaptVal(torch.from_numpy(LSource)) if not type(LSource) == torch.Tensor else LSource
+                LTarget = AdaptVal(torch.from_numpy(LTarget)) if not type(LTarget) == torch.Tensor else LTarget
                 self.opt.optimizer.set_source_label( AdaptVal(torch.from_numpy(LSource)))
                 self.opt.optimizer.set_target_label( AdaptVal(torch.from_numpy(LTarget)))
                 self._set_analysis(self.opt.optimizer,extra_info)

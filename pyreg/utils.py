@@ -22,6 +22,7 @@ import numpy as np
 from . import finite_differences as fd
 import torch.nn as nn
 import torch.nn.init as init
+from . import external_variable as EV
 
 from . import module_parameters as pars
 
@@ -553,7 +554,12 @@ def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
-    return Parameter(MyTensor(*(csz.tolist())).zero_())
+    if EV.use_mermaid_net:
+        tmp = MyTensor(*(csz.tolist())).zero_()
+        tmp.requires_grad = True
+    else:
+        tmp = Parameter(MyTensor(*(csz.tolist())).zero_())
+    return tmp
 
 def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
     """

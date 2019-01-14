@@ -6,12 +6,7 @@ from __future__ import absolute_import
 
 from builtins import object
 from . import registration_networks as RN
-from . import utils
-from . import image_sampling as IS
-from .data_wrapper import AdaptVal
-
-import torch
-import numpy as np
+from . import external_variable as EV
 
 def _print_models(models):
     print('\nKnown registration models are:')
@@ -159,8 +154,11 @@ class ModelFactory(object):
             else:
                 print('Using ' + modelName + ' model')
                 model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams)
-
-            loss = self.models[modelName][1](list(model.parameters())[0], self.sz_sim, self.spacing_sim, self.sz_model, self.spacing_model, cparams)
+            if EV.use_mermaid_net:
+                loss = self.models[modelName][1](model.m, self.sz_sim, self.spacing_sim, self.sz_model,
+                                                 self.spacing_model, cparams)
+            else:
+                loss = self.models[modelName][1](list(model.parameters())[0], self.sz_sim, self.spacing_sim, self.sz_model, self.spacing_model, cparams)
             return model, loss
         else:
             self.print_available_models()
