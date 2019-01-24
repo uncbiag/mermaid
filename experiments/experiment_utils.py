@@ -94,7 +94,7 @@ def compute_determinant_of_jacobian_forward_differences(phi,spacing):
     det = det.data[0, ...].detach().cpu().numpy()
     return det
 
-def filter_names_for_boxplot(names,suppress_pattern,suppress_pattern_keep_first_as):
+def filter_names_for_boxplot(names,suppress_pattern,suppress_pattern_keep_first_as,replace_pattern_from=None,replace_pattern_to=None):
     idx = []
     eff_names = []
     found_first = False
@@ -105,19 +105,29 @@ def filter_names_for_boxplot(names,suppress_pattern,suppress_pattern_keep_first_
                 idx.append(i)
                 eff_names.append(suppress_pattern_keep_first_as)
         else:
+            if n.endswith(replace_pattern_from):
+                replaced_str = n[0:-len(replace_pattern_from)] + replace_pattern_to
+                eff_names.append(replaced_str)
+            else:
+                eff_names.append(n)
             idx.append(i)
-            eff_names.append(n)
 
     return idx,eff_names
 
 
 def plot_boxplot(compound_results_orig,compound_names_orig,semilogy=False, showfliers=True,
-                 suppress_pattern=None,suppress_pattern_keep_first_as=None,show_labels=True,fix_aspect=None):
+                 suppress_pattern=None,suppress_pattern_keep_first_as=None,
+                 replace_pattern_from=None,
+                 replace_pattern_to=None,
+                 show_labels=True,fix_aspect=None):
 
     if suppress_pattern is not None:
         idx_to_keep,compound_names = filter_names_for_boxplot(names=compound_names_orig,
                                                               suppress_pattern=suppress_pattern,
-                                                              suppress_pattern_keep_first_as=suppress_pattern_keep_first_as)
+                                                              suppress_pattern_keep_first_as=suppress_pattern_keep_first_as,
+                                                              replace_pattern_from=replace_pattern_from,
+                                                              replace_pattern_to=replace_pattern_to,
+                                                              )
         compound_results = [compound_results_orig[i] for i in idx_to_keep]
     else:
         compound_results = compound_results_orig
