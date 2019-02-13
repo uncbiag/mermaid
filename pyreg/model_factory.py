@@ -57,7 +57,11 @@ class AvailableModels(object):
                                          'EXPERIMENTAL: Image-based SVF version which estimates velcocity based on a smoothed vetor field'),
             'to_rename_map': (RN.ToReNameNet,
                                          RN.ToReNameLoss, True,
-                                         'EXPERIMENTAL: test on learning smoother network')
+                                         'EXPERIMENTAL: test on learning smoother network'),
+            'cvf_vector_momentum_map': (RN.CVFVectorMomentumMapNet,
+                                        RN.CVFVectorMomentumMapLoss, True,
+                                        'EXPERIMENTAL: map-based constant velocity field using the vector momentum'),
+            'one_step_map': (RN.OneStepMapNet, RN.OneStepMapLoss, True, 'EXPERIMENTAL: one-step map based velocity registration')
         }
         """dictionary defining all the models"""
 

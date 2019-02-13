@@ -1147,7 +1147,9 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
         self.nr_of_gaussians = len(self.sigmas)
 
         self.complex_fourier_filters = self.gaussian_fourier_filter_generator.get_gaussian_filters(self.sigmas)
-        self.complex_fourier_xsqr_filters = self.gaussian_fourier_filter_generator.get_gaussian_xsqr_filters(self.sigmas)
+        if self.compute_std_gradients:
+            self.complex_fourier_xsqr_filters = self.gaussian_fourier_filter_generator.get_gaussian_xsqr_filters(self.sigmas)
+        # TODO check if the xsqr should be put into an if statement here
 
         # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
         # filter_imag =0, then get  ac + bci

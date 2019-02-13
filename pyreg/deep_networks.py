@@ -507,33 +507,7 @@ class Unet(DeepNetwork):
                                               noise_layer_std=self.noise_layer_std,
                                               start_reducing_from_iter=self.start_reducing_from_iter
                                               )
-        self.down_path_16 = conv_norm_in_rel(dim, 64, 64, kernel_size=3, im_sz=im_sz_down_4, stride=2, active_unit='leaky_relu', same_padding=True, normalization_type=self.normalization_type,
-                                             use_noisy_convolution=self.use_noisy_convolution,
-                                             noisy_convolution_std=self.noisy_convolution_std,
-                                             noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
-                                             use_noise_layer=self.use_noise_layers,
-                                             noise_layer_std=self.noise_layer_std,
-                                             start_reducing_from_iter=self.start_reducing_from_iter
-                                             )
 
-
-        # output_size = strides * (input_size-1) + kernel_size - 2*padding
-        self.up_path_8_1 = conv_norm_in_rel(dim, 64, 64, kernel_size=2, im_sz=im_sz_down_3, stride=2, active_unit='leaky_relu', same_padding=False, normalization_type=self.normalization_type, reverse=True,
-                                            use_noisy_convolution=self.use_noisy_convolution,
-                                            noisy_convolution_std=self.noisy_convolution_std,
-                                            noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
-                                            use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std,
-                                            start_reducing_from_iter=self.start_reducing_from_iter
-                                            )
-        self.up_path_8_2 = conv_norm_in_rel(dim, 128, 64, kernel_size=3, im_sz=im_sz_down_3, stride=1, active_unit='leaky_relu', same_padding=True, normalization_type=self.normalization_type,
-                                            use_noisy_convolution=self.use_noisy_convolution,
-                                            noisy_convolution_std=self.noisy_convolution_std,
-                                            noisy_convolution_optimize_over_std=self.noisy_convolution_optimize_over_std,
-                                            use_noise_layer=self.use_noise_layers,
-                                            noise_layer_std=self.noise_layer_std,
-                                            start_reducing_from_iter=self.start_reducing_from_iter
-                                            )
         self.up_path_4_1 = conv_norm_in_rel(dim, 64, 64, kernel_size=2, im_sz=im_sz_down_2, stride=2, active_unit='leaky_relu', same_padding=False, normalization_type=self.normalization_type, reverse=True,
                                             use_noisy_convolution=self.use_noisy_convolution,
                                             noisy_convolution_std=self.noisy_convolution_std,
@@ -602,12 +576,8 @@ class Unet(DeepNetwork):
         d4_2 = self.down_path_4_2(d4_1, iter=iter)
         d8_1 = self.down_path_8_1(d4_2, iter=iter)
         d8_2 = self.down_path_8_2(d8_1, iter=iter)
-        d16 = self.down_path_16(d8_2, iter=iter)
 
-
-        u8_1 = self.up_path_8_1(d16, iter=iter)
-        u8_2 = self.up_path_8_2(torch.cat((d8_2,u8_1),1), iter=iter)
-        u4_1 = self.up_path_4_1(u8_2, iter=iter)
+        u4_1 = self.up_path_4_1(d8_2, iter=iter)
         u4_2 = self.up_path_4_2(torch.cat((d4_2,u4_1),1), iter=iter)
         u2_1 = self.up_path_2_1(u4_2, iter=iter)
         u2_2 = self.up_path_2_2(torch.cat((d2_2, u2_1), 1), iter=iter)

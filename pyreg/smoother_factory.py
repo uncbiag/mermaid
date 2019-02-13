@@ -934,7 +934,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self.scale_global_parameters = params[('scale_global_parameters',False,'If set to True the global parameters are scaled for the global parameters, to make sure energies decay similarly as for the deep-network weight estimation')]
         """If set to True the global parameters are scaled for the global parameters, to make sure energies decay similarly as for the deep-network weight estimation'"""
 
-        self.optimize_over_deep_network = params[('optimize_over_deep_network', False, 'if set to true the smoother will optimize over the deep network parameters; otherwise will ignore the deep network')]
+        self.optimize_over_deep_network = params[('optimize_over_deep_network', True, 'if set to true the smoother will optimize over the deep network parameters; otherwise will ignore the deep network')]
         """determines if we should optimize over the smoother global weights"""
 
         self.evaluate_but_do_not_optimize_over_shared_registration_parameters = params[('evaluate_but_do_not_optimize_over_shared_registration_parameters',False,'If set to true then shared registration parameters (e.g., the network or global weights) are evaluated (should have been loaded from a previously computed optimized state), but are not being optimized over')]
@@ -1101,14 +1101,16 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             s.add('pre_multi_gaussian_weights')
 
         # todo: is it possible that the following code not properly disable parameter updates
-        for child in self.ws.children():
-            for cur_param in child.parameters():
-                cur_param.requires_grad = not freeze_shared_parameters
+        if self.optimize_over_deep_network:
+            for child in self.ws.children():
+                for cur_param in child.parameters():
+                    cur_param.requires_grad = not freeze_shared_parameters
 
-        module.add_module('weighted_smoothing_net',self.ws)
-        sd = self.ws.state_dict()
-        for key in sd:
-            s.add('weighted_smoothing_net.' + str(key))
+        if self.optimize_over_deep_network or self.evaluate_but_do_not_optimize_over_shared_registration_parameters:
+            module.add_module('weighted_smoothing_net',self.ws)
+            sd = self.ws.state_dict()
+            for key in sd:
+                s.add('weighted_smoothing_net.' + str(key))
 
         if self.evaluate_but_do_not_optimize_over_shared_registration_parameters:
              print('INFO: Setting network to evaluation mode')
@@ -1329,6 +1331,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         # todo: make this more generic later
         additional_inputs = {'m':v,'I0':pars['I0'],'I1':pars['I1']}
+        #print(pars['I0'].shape, pars['I1'].shape)
 
         # if variables_from_optimizer is not None:
         #     if self.start_optimize_over_smoother_parameters_at_iteration > variables_from_optimizer['iter']:
@@ -1344,7 +1347,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         #print('Current weight l2 = {}'.format(self._compute_current_nn_weight_l2().item()))
 
-        self._is_optimizing_over_deep_network = True #self.optimize_over_deep_network   TODO  Should be recovered ###########################################################3
+        self._is_optimizing_over_deep_network = self.optimize_over_deep_network   #TODO  Should be recovered ###########################################################3
         if self._is_optimizing_over_deep_network:
             if variables_from_optimizer is not None:
                 if self.start_optimize_over_nn_smoother_parameters_at_iteration > iter_or_epoch:
@@ -1549,14 +1552,14 @@ class SmootherFactory(object):
         params['smoother']['type'] = smoother_name
         return self.create_smoother(params)
 
-    def create_smoother(self, params ):
+    def create_smoother(self, params, sm_setting_name='smoother'):
         """
         Create the desired smoother
         :param params: ParamterDict() object to hold paramters which should be passed on
         :return: returns the smoother
         """
 
-        cparams = params[('smoother',{})]
+        cparams = params[(sm_setting_name,{})]
         smootherType = cparams[('type', self.default_smoother_type,
                                           'type of smoother (diffusion|gaussian|adaptive_gaussian|multiGaussian|adaptive_multiGaussian|gaussianSpatial|adaptiveNet)' )]
 

@@ -21,7 +21,7 @@ params.load_JSON('../test/json/to_rename_net_base_config.json')
 #params['model']['deformation']['use_map'] = False
 #params['model']['registration_model']['type'] = 'svf_vector_momentum_image'
 params['model']['deformation']['use_map'] = True
-params['model']['registration_model']['type'] = 'to_rename_map'
+params['model']['registration_model']['type'] = 'cvf_vector_momentum_map'
 
 example_img_len = 64
 dim = 3

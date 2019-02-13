@@ -211,6 +211,124 @@ class RHSLibrary(object):
             raise ValueError('Only supported up to dimension 3')
 
 
+
+
+    def rhs_burger_map_multiNC(self, v,speed_factor=1.):
+        '''
+        based on burger equation flow a set of N velocity (for N velocity). Expected format here, is
+        BxCxXxYxZ, where B is the number of images/maps (batch size), C, the number of channels
+        per (here the spatial dimension for the map coordinate functions),
+        and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)
+
+
+        :math:`-D\\v v`
+
+        :param v: Velocity fields (this will be one velocity field per map) BxCxXxYxZ
+        :return: Returns the RHS of the burger equations involved BxCxXxYxZ
+        '''
+        sz = v.size()
+        rhs_ret = MyTensor(sz).zero_()
+        self._rhs_burger_map_call(v,rhs_ret,speed_factor=speed_factor)
+        return rhs_ret
+
+    def _rhs_burger_map_call(self,v,rhsv,speed_factor):
+        """
+
+        :param v: Velocity fields (this will be one velocity field per map)  BxCxXxYxZ
+        :return rhsv: Returns the RHS of the burger equations involved  BxCxXxYxZ
+        """
+
+        if self.use_neumann_BC_for_map:
+            fdc = self.fdt # use zero Neumann boundary conditions
+        else:
+            fdc = self.fdt_le # do linear extrapolation
+
+        if self.dim==1:
+            rhsv[:]= -fdc.dXc(v[:,0,:]) * v[:,0,:]*speed_factor
+        elif self.dim==2:
+            #rhsphi = MyTensor( phi.size() ).zero_(), requires_grad=False)
+            rhsv[:,0,:, :] = -(v[:,0,:, :] * fdc.dXc(v[:,0,:, :]) + v[:,1,:, :] * fdc.dYc(v[:,0,:, :]))*speed_factor
+            rhsv[:,1,:, :] = -(v[:,0,:, :] * fdc.dXc(v[:,1,:, :]) + v[:,1,:, :] * fdc.dYc(v[:,1,:, :]))*speed_factor
+            #return rhsphi
+        elif self.dim==3:
+            rhsv[:,0,:, :, :] = -(v[:,0,:, :, :] * fdc.dXc(v[:,0,:, :, :]) +
+                                   v[:,1,:, :, :] * fdc.dYc(v[:,0,:, :, :]) +
+                                   v[:,2,:, :, :] * fdc.dZc(v[:,0,:, :, :]))*speed_factor
+
+            rhsv[:,1,:, :, :] = -(v[:,0,:, :, :] * fdc.dXc(v[:,1,:, :, :]) +
+                                   v[:,1,:, :, :] * fdc.dYc(v[:,1,:, :, :]) +
+                                   v[:,2,:, :, :] * fdc.dZc(v[:,1,:, :, :]))*speed_factor
+
+            rhsv[:,2,:, :, :] = -(v[:,0,:, :, :] * fdc.dXc(v[:,2,:, :, :]) +
+                                   v[:,1,:, :, :] * fdc.dYc(v[:,2,:, :, :]) +
+                                   v[:,2,:, :, :] * fdc.dZc(v[:,2,:, :, :]))*speed_factor
+        else:
+            raise ValueError('Only supported up to dimension 3')
+
+    def _rhs_burger_map_conserve_call(self,v,rhsv,speed_factor):
+        """
+        ToDo, the implementation of conservation form is incorrect
+        :param v: Velocity fields (this will be one velocity field per map)  BxCxXxYxZ
+        :return rhsv: Returns the RHS of the burger equations involved  BxCxXxYxZ
+        """
+
+        f = v * v / 2
+
+        if self.use_neumann_BC_for_map:
+            fdc = self.fdt # use zero Neumann boundary conditions
+        else:
+            fdc = self.fdt_le # do linear extrapolation
+
+        if self.dim==1:
+            rhsv[:, 0, ...] = -fdc.dXc(f[:, 0, ...])
+        elif self.dim==2:
+
+            for i in range(self.dim):
+                rhsv[:,i,...]=-( fdc.dXc(f[:,i,...])+ fdc.dYc(f[:,i,...]))
+
+        elif self.dim==3:
+            for i in range(self.dim):
+                rhsv[:,i,...]=-( fdc.dXc(f[:,i,...])
+                                  + fdc.dYc(f[:,i,...])
+                                  + fdc.dZc(f[:,i,...]))
+
+        else:
+            raise ValueError('Only supported up to dimension 3')
+
+    def _rhs_burger_map_conserve_upwind_call(self,v,rhsv,speed_factor):
+        """
+        ToDo, the implementation of the conservation form is incorrect
+        :param v: Velocity fields (this will be one velocity field per map)  BxCxXxYxZ
+        :return rhsv: Returns the RHS of the burger equations involved  BxCxXxYxZ
+        """
+        f = v * v / 2
+        v_pos_logical = (v > 0).float()
+        v_neg_logical = (v <= 0).float()
+        if self.use_neumann_BC_for_map:
+            fdc = self.fdt # use zero Neumann boundary conditions
+        else:
+            fdc = self.fdt_le # do linear extrapolation
+
+        if self.dim==1:
+            rhsv[:, 0, ...]=- ( fdc.dXb(f[:,0,...])*v_pos_logical[:,0,...] + fdc.dXf(f[:,0,...])*v_neg_logical[:,0,...])
+        elif self.dim==2:
+            for i in range(self.dim):
+                rhsv[:,i,...]=-( fdc.dXb(f[:,i,...])*v_pos_logical[:,0,...] + fdc.dXf(f[:,i,...])*v_neg_logical[:,0,...]
+                                  + fdc.dYb(f[:,i,...])*v_pos_logical[:,1,...] + fdc.dYf(f[:,i,...])*v_neg_logical[:,1,...])
+
+        elif self.dim==3:
+            for i in range(self.dim):
+                rhsv[:,i,...]=-( fdc.dXb(f[:,i,...])*v_pos_logical[:,0,...] + fdc.dXf(f[:,i,...])*v_neg_logical[:,0,...]
+                                  + fdc.dYb(f[:,i,...])*v_pos_logical[:,1,...] + fdc.dYf(f[:,i,...])*v_neg_logical[:,1,...]
+                                  + fdc.dZb(f[:,i,...])*v_pos_logical[:,2,...] + fdc.dZf(f[:,i,...])*v_neg_logical[:,2,...])
+
+        else:
+            raise ValueError('Only supported up to dimension 3')
+
+
+
+
+
     def rhs_epdiff_multiNC(self, m, v):
         '''
         Computes the right hand side of the EPDiff equation for of N momenta (for N images). 
@@ -412,6 +530,96 @@ class AdvectImage(ForwardModel):
         :return: right hand side [I]
         """
         return [self.rhs.rhs_advect_image_multiNC(x[0],u)]
+
+
+
+
+class BGAdvMap(ForwardModel):
+    """
+    Forward model for the EPDiff equation. State is the momentum, m, and the transform, :math:`\\phi`
+    (mapping the source image to the target image).
+    :math:
+    u = Ku
+    \\phi_t = -u \\phi_x
+    u_t = -u u_x`
+    """
+
+    def __init__(self, sz, spacing, smoother, params=None, compute_inverse_map=False):
+        super(BGAdvMap, self).__init__(sz, spacing, params)
+        self.compute_inverse_map = compute_inverse_map
+        """If True then computes the inverse map on the fly for a map-based solution"""
+
+        self.smoother = smoother
+        self.speed_nest_factor = 1.
+        self.use_net = True if self.params['smoother']['type'] == 'adaptiveNet' else False
+
+    def debugging(self, input, t):
+        x = utils.checkNan(input)
+        if np.sum(x):
+            print("find nan at {} step".format(t))
+            print("flag m: {}, ".format(x[0]))
+            print("flag v: {},".format(x[1]))
+            print("flag phi: {},".format(x[2]))
+            print("flag new_m: {},".format(x[3]))
+            print("flag new_phi: {},".format(x[4]))
+            raise ValueError("nan error")
+    def _compute_speed_factor(self,sched,t):
+        """
+        ToDo design time related speed change ratio
+        :param sched:
+        :param t:
+        :return:
+        """
+        pass
+
+    def u(self, t, pars, variables_from_optimizer=None):
+        """
+        External input, to hold the velocity field
+
+        :param t: time (ignored; not time-dependent)
+        :param pars: assumes an n-D velocity field is passed as the only input argument
+        :param variables_from_optimizer: variables that can be passed from the optimizer
+        :return: Simply returns this velocity field
+        """
+        return pars['v']
+
+    def f(self, t, x, u, pars, variables_from_optimizer=None):
+        """
+        Function to be integrated, i.e., right hand side of the EPDiff equation:
+        :math:`-D\\v v*speed_factor`
+
+        :math:`-D\\phi v*speed_factor`
+
+        :param t: time (ignored; not time-dependent)
+        :param x: state, here the image, velocity field, v, and the map, :math:`\\phi`
+        :param u: ignored, no external input
+        :param pars: ignored (does not expect any additional inputs)
+        :param variables_from_optimizer: variables that can be passed from the optimizer
+        :return: right hand side [v,phi]
+        """
+
+        # assume x[0] is m and x[1] is phi for the state
+        v = x[0]
+        phi = x[1]
+
+        if int(t*10)%1==0 and t>0:
+            v=self.smoother.smooth(v, None, None, variables_from_optimizer)
+
+        if self.compute_inverse_map:
+            raise ValueError(" TO DO the inverse of the CVF is NotImplemented")
+
+        # print('max(|v|) = ' + str( v.abs().max() ))
+
+        if self.compute_inverse_map:
+            raise ValueError(" TO DO the inverse of the CVF is NotImplemented")
+        else:
+            ret_val = [self.rhs.rhs_burger_map_multiNC(v,self.speed_nest_factor), self.rhs.rhs_advect_map_multiNC(phi, v*self.speed_nest_factor)]
+            #ret_val = [self.rhs.rhs_advect_map_multiNC(v,v,True), self.rhs.rhs_advect_map_multiNC(phi, v*self.speed_nest_factor)]
+        return ret_val
+
+
+
+
 
 
 class EPDiffImage(ForwardModel):
