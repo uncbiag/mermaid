@@ -13,7 +13,8 @@ import pyreg.smoother_factory as SF
 
 params = pars.ParameterDict()
 #params.load_JSON('../test/json/test_svf_image_single_scale_config.json')
-params.load_JSON('../test/json/to_rename_net_base_config.json')
+#params.load_JSON('../test/json/to_rename_net_base_config.json')
+params.load_JSON('../test/json/test_svf_settings.json')
 #params['model']['deformation']['use_map'] = False
 #params['model']['registration_model']['type'] = 'svf_scalar_momentum_image'
 #params['model']['deformation']['use_map'] = True
@@ -21,7 +22,7 @@ params.load_JSON('../test/json/to_rename_net_base_config.json')
 #params['model']['deformation']['use_map'] = False
 #params['model']['registration_model']['type'] = 'svf_vector_momentum_image'
 params['model']['deformation']['use_map'] = True
-params['model']['registration_model']['type'] = 'cvf_vector_momentum_map'
+params['model']['registration_model']['type'] = 'svf_vector_momentum_map'
 
 example_img_len = 64
 dim = 3

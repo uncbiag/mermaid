@@ -30,7 +30,7 @@ from . import similarity_measure_factory as SM
 
 from . import smoother_factory as SF
 from . import image_sampling as IS
-
+from . import ode_int as ODE
 from .data_wrapper import MyTensor
 from . import external_variable as EV
 from . import utils
@@ -66,6 +66,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
 
         self._shared_states = set()
         """shared states"""
+        self. dim = len(spacing)
 
         self._default_dictionary_to_pass_to_integrator = dict()
 
@@ -559,23 +560,41 @@ class SVFImageNet(SVFNet):
         """
         Creates an integrator for the advection equation of the image
         
-        :return: returns this integrator 
+        :return: returns this integrator
         """
-        cparams = self.params[('forward_model',{},'settings for the forward model')]
-        advection = FM.AdvectImage(self.sz, self.spacing)
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         pars_to_pass = utils.combine_dict({'v': self.v}, self._get_default_dictionary_to_pass_to_integrator())
-        return RK.RK4(advection.f, advection.u, pars_to_pass, cparams)
+
+        if not EV.use_odeint:
+            advection = FM.AdvectImage(self.sz, self.spacing)
+            return RK.RK4(advection.f, advection.u, pars_to_pass, cparams)
+        else:
+            self.set_dictionary_to_pass_to_integrator(pars_to_pass)
+            self.f =  FM.AdvectImage(self.sz, self.spacing)
+            return ODE.ODEBlock
 
     def forward(self, I, variables_from_optimizer=None):
         """
         Solves the image-based advection equation
-        
+
         :param I: initial condition for the image
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the image at the final time (tTo)
         """
-        I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
-        return I1[0]
+        if not EV.use_odeint:
+            I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
+            return I1[0]
+        else:
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=False,
+                                     pars=self._get_default_dictionary_to_pass_to_integrator(),
+                                     variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            func.set_dim_info([self.dim,1])
+            input = torch.cat((self.v, I), 1)
+            output = integrator(input)
+            I1 = output[:,self.dim:self.dim+1,...]
+            return I1
 
 
 class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
@@ -613,16 +632,16 @@ class SVFQuasiMomentumNet(RegistrationNetTimeIntegration):
     def create_registration_parameters(self):
         """
         Creates the registration parameters (the momentum field) and returns them
-        
-        :return: momentum field 
+
+        :return: momentum field
         """
         return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
     def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
         Returns the momentum magnitude image and :math:`|m|` as the image caption
-        
-        :return: Returns a tuple (magnitude_m,name) 
+
+        :return: Returns a tuple (magnitude_m,name)
         """
         name = '|m|'
         par_image = ((self.m[:,...]**2).sum(1))**0.5 # assume BxCxXxYxZ format
@@ -654,24 +673,44 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
         Creates the integrator that solve the advection equation (based on the smoothed momentum)
         :return: returns this integrator
         """
-        cparams = self.params[('forward_model',{},'settings for the forward model')]
-        advection = FM.AdvectImage(self.sz, self.spacing)
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         pars_to_pass = utils.combine_dict({'v': self.v}, self._get_default_dictionary_to_pass_to_integrator())
-        return RK.RK4(advection.f, advection.u, pars_to_pass, cparams)
+
+        if not EV.use_odeint:
+            advection = FM.AdvectImage(self.sz, self.spacing)
+            return RK.RK4(advection.f, advection.u, pars_to_pass, cparams)
+        else:
+            self.set_dictionary_to_pass_to_integrator(pars_to_pass)
+            self.f = FM.AdvectImage(self.sz, self.spacing)
+            return ODE.ODEBlock
 
     def forward(self, I, variables_from_optimizer=None):
         """
         Solves the model by first smoothing the momentum field and then using it as the velocity for the advection equation
-        
+
         :param I: initial condition for the image
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the image at the final time point (tTo)
         """
-        pars_to_pass = utils.combine_dict({'I':I},self._get_default_dictionary_to_pass_to_integrator())
-        self.smoother.smooth(self.m,self.v,pars_to_pass,variables_from_optimizer,
-                             smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
-        I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
-        return I1[0]
+        pars_to_pass = utils.combine_dict({'I': I}, self._get_default_dictionary_to_pass_to_integrator())
+        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
+        self.smoother.smooth(self.m, self.v, pars_to_pass, variables_from_optimizer,
+                             smooth_to_compute_regularizer_energy=False,
+                             clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
+        if not EV.use_odeint:
+            I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
+            return I1[0]
+        else:
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=False,
+                                     pars=self._get_default_dictionary_to_pass_to_integrator(),
+                                     variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            func.set_dim_info([self.dim,1])
+            input = torch.cat((self.v, I), 1)
+            output = integrator(input)
+            I1 = output[:,self.dim:self.dim+1,...]
+            return I1
 
 class RegistrationLoss(with_metaclass(ABCMeta, nn.Module)):
     """
@@ -683,7 +722,7 @@ class RegistrationLoss(with_metaclass(ABCMeta, nn.Module)):
         Constructor. We have two different spacings to be able to allow for low-res transformation
         computations and high-res image similarity. This is only relevant for map-based approaches.
         For image-based approaches these two values should be the same.
-        
+
         :param sz_sim: image/map size to evaluate the similarity measure of the loss
         :param spacing_sim: image/map spacing to evaluate the similarity measure of the loss
         :param sz_model: sz of the model parameters (will only be different from sz_sim if computed at low res)
@@ -735,8 +774,8 @@ class RegistrationLoss(with_metaclass(ABCMeta, nn.Module)):
     def add_similarity_measure(self, simName, simMeasure):
         """
         To add a custom similarity measure to the similarity measure factory
-        
-        :param simName: desired name of the similarity measure (string) 
+
+        :param simName: desired name of the similarity measure (string)
         :param simMeasure: similarity measure itself (to instantiate an object)
         """
         self.smFactory.add_similarity_measure(simName,simMeasure)
@@ -744,8 +783,8 @@ class RegistrationLoss(with_metaclass(ABCMeta, nn.Module)):
     def compute_similarity_energy(self, I1_warped, I1_target, I0_source=None, phi=None, variables_from_forward_model=None, variables_from_optimizer=None):
         """
         Computing the image matching energy based on the selected similarity measure
-        
-        :param I1_warped: warped image at time tTo 
+
+        :param I1_warped: warped image at time tTo
         :param I1_target: target image to register to
         :param I0_source: source image at time 0 (typically not used)
         :param phi: map to warp I0_source to target space (typically not used)
@@ -762,8 +801,8 @@ class RegistrationLoss(with_metaclass(ABCMeta, nn.Module)):
     def compute_regularization_energy(self, I0_source, variables_from_forward_model=None, variables_from_optimizer=None):
         """
         Abstract method computing the regularization energy based on the registration parameters and (if desired) the initial image
-        
-        :param I0_source: Initial image 
+
+        :param I0_source: Initial image
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: should return the value for the regularization energy
@@ -782,8 +821,8 @@ class RegistrationImageLoss(RegistrationLoss):
     def get_energy(self, I1_warped, I0_source, I1_target, variables_from_forward_model=None, variables_from_optimizer=None):
         """
         Computes the overall registration energy as E = E_sim + E_reg
-        
-        :param I1_warped: warped image 
+
+        :param I1_warped: warped image
         :param I0_source: source image
         :param I1_target: target image
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
@@ -831,9 +870,9 @@ class RegistrationMapLoss(RegistrationLoss):
     def get_energy(self, phi0, phi1, I0_source, I1_target, lowres_I0, variables_from_forward_model=None, variables_from_optimizer=None ):
         """
         Compute the energy by warping the source image via the map and then comparing it to the target image
-        
-        :param phi0: map (initial map from which phi1 is computed by integration; likely the identity map) 
-        :param phi1: map (mapping the source image to the target image, defined in the space of the target image) 
+
+        :param phi0: map (initial map from which phi1 is computed by integration; likely the identity map)
+        :param phi1: map (mapping the source image to the target image, defined in the space of the target image)
         :param I0_source: source image
         :param I1_target: target image
         :param lowres_I0: for map with reduced resolution this is the downsampled source image, may be needed to compute the regularization energy
@@ -875,9 +914,9 @@ class RegistrationMapLoss(RegistrationLoss):
     def forward(self, phi0, phi1, I0_source, I1_target, lowres_I0, variables_from_forward_model=None, variables_from_optimizer=None ):
         """
         Compute the loss function value by evaluating the registration energy
-        
-        :param phi0: map (initial map from which phi1 is computed by integration; likely the identity map) 
-        :param phi1:  map (mapping the source image to the target image, defined in the space of the target image) 
+
+        :param phi0: map (initial map from which phi1 is computed by integration; likely the identity map)
+        :param phi1:  map (mapping the source image to the target image, defined in the space of the target image)
         :param I0_source: source image
         :param I1_target: target image
         :param lowres_I0: for map with reduced resolution this is the downsampled source image, may be needed to compute the regularization energy
@@ -891,12 +930,12 @@ class RegistrationMapLoss(RegistrationLoss):
 
 class SVFImageLoss(RegistrationImageLoss):
     """
-    Loss specialization for image-based SVF 
+    Loss specialization for image-based SVF
     """
     def __init__(self,v,sz_sim,spacing_sim,sz_model,spacing_model,params):
         """
         Constructor
-        
+
         :param v: velocity field parameter
         :param sz_sim: image/map size to evaluate the similarity measure of the loss
         :param spacing_sim: image/map spacing to evaluate the similarity measure of the loss
@@ -917,7 +956,7 @@ class SVFImageLoss(RegistrationImageLoss):
     def compute_regularization_energy(self, I0_source, variables_from_forward_model=None, variables_from_optimizer=False):
         """
         Computing the regularization energy
-        
+
         :param I0_source: source image (not used)
         :param variables_from_forward_model: (not used)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
@@ -935,7 +974,7 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
     def __init__(self,m,sz_sim,spacing_sim,sz_model,spacing_model,params):
         """
         Constructor
-        
+
         :param m: momentum field
         :param sz_sim: image/map size to evaluate the similarity measure of the loss
         :param spacing_sim: image/map spacing to evaluate the similarity measure of the loss
@@ -964,7 +1003,7 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
     def compute_regularization_energy(self, I0_source, variables_from_forward_model=None, variables_from_optimizer=None):
         """
         Compute the regularization energy from the momentum
-        
+
         :param I0_source: not used
         :param variables_from_forward_model: (not used)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
@@ -977,7 +1016,7 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
 
 class SVFMapNet(SVFNet):
     """
-    Network specialization to a map-based SVF 
+    Network specialization to a map-based SVF
     """
     def __init__(self,sz,spacing,params,compute_inverse_map=False):
         self.compute_inverse_map = compute_inverse_map
@@ -987,18 +1026,23 @@ class SVFMapNet(SVFNet):
     def create_integrator(self):
         """
         Creates an integrator to solve a map-based advection equation
-        
+
         :return: returns this integrator
         """
-        cparams = self.params[('forward_model',{},'settings for the forward model')]
-        advectionMap = FM.AdvectMap( self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map )
-        pars_to_pass = utils.combine_dict({'v':self.v}, self._get_default_dictionary_to_pass_to_integrator())
-        return RK.RK4(advectionMap.f, advectionMap.u, pars_to_pass, cparams)
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+        pars_to_pass = utils.combine_dict({'v': self.v}, self._get_default_dictionary_to_pass_to_integrator())
+        if not EV.use_odeint:
+            advectionMap = FM.AdvectMap( self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map )
+            return RK.RK4(advectionMap.f, advectionMap.u, pars_to_pass, cparams)
+        else:
+            self.set_dictionary_to_pass_to_integrator(pars_to_pass)
+            self.f = FM.AdvectMap( self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map )
+            return ODE.ODEBlock
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
         Solved the map-based equation forward
-        
+
         :param phi: initial condition for the map
         :param I0_source: not used
         :param phi_inv: inverse initial map
@@ -1006,16 +1050,37 @@ class SVFMapNet(SVFNet):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the map at time tTo
         """
-        if self.compute_inverse_map:
-            if phi_inv is not None:
-                phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
-                return (phi1[0],phi1[1])
+        if not EV.use_odeint:
+            if self.compute_inverse_map:
+                if phi_inv is not None:
+                    phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (phi1[0],phi1[1])
+                else:
+                    phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (phi1[0],None)
             else:
                 phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-                return (phi1[0],None)
+                return phi1[0]
         else:
-            phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-            return phi1[0]
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=False,
+                                     pars=self._get_default_dictionary_to_pass_to_integrator(),
+                                     variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            if phi_inv is not None and self.compute_inverse_map:
+                func.set_dim_info([self.dim,self.dim,self.dim])
+                input = torch.cat((self.v, phi, phi_inv),1)
+                output = integrator(input)
+                return (output[:,self.dim:self.dim*2,...], output[:,self.dim*2:self.dim*3,...])
+            else:
+                func.set_dim_info([self.dim, self.dim])
+                input = torch.cat((self.v, phi), 1)
+                output = integrator(input)
+                phi1 = output[:,self.dim:self.dim*2,...]
+                if self.compute_inverse_map:
+                    return [phi1, None]
+                else:
+                    return phi1
 
 
 class SVFMapLoss(RegistrationMapLoss):
@@ -1037,8 +1102,8 @@ class SVFMapLoss(RegistrationMapLoss):
     def compute_regularization_energy(self, I0_source, variables_from_forward_model=None, variables_from_optimizer=None):
         """
         Computes the regularizaton energy from the velocity field parameter
-        
-        :param I0_source: not used 
+
+        :param I0_source: not used
         :param variables_from_forward_model: (not used)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the regularization energy
@@ -1066,7 +1131,7 @@ class DiffusionMapLoss(RegistrationMapLoss):
         """
         Computes the regularizaton energy from the velocity field parameter
 
-        :param I0_source: not used 
+        :param I0_source: not used
         :param variables_from_forward_model: (not used)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the regularization energy
@@ -1094,7 +1159,7 @@ class TotalVariationMapLoss(RegistrationMapLoss):
         """
         Computes the regularizaton energy from the velocity field parameter
 
-        :param I0_source: not used 
+        :param I0_source: not used
         :param variables_from_forward_model: (not used)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the regularization energy
@@ -1122,7 +1187,7 @@ class CurvatureMapLoss(RegistrationMapLoss):
         """
         Computes the regularizaton energy from the velocity field parameter
 
-        :param I0_source: not used 
+        :param I0_source: not used
         :param variables_from_forward_model: (not used)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the regularization energy
@@ -1149,7 +1214,7 @@ class AffineMapNet(RegistrationNet):
         """
         Returns the velocity field parameter magnitude image and a name
 
-        :return: Returns the tuple (velocity_magnitude_image,name) 
+        :return: Returns the tuple (velocity_magnitude_image,name)
         """
         name = 'Ab'
         par_image = self.Ab
@@ -1176,7 +1241,7 @@ class AffineMapNet(RegistrationNet):
         """
         Downsamples the affine parameters to a desired size (ie., just returns them)
 
-        :param desiredSz: desired size of the downsampled image 
+        :param desiredSz: desired size of the downsampled image
         :return: returns a tuple (downsampled_state,downsampled_spacing)
         """
         dstate = self.state_dict().copy() # stays the same
@@ -1211,7 +1276,7 @@ class AffineMapLoss(RegistrationMapLoss):
         """
         Computes the regularizaton energy from the affine parameter
 
-        :param I0_source: not used 
+        :param I0_source: not used
         :param variables_from_forward_model: (not used)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the regularization energy
@@ -1267,16 +1332,16 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
     def create_registration_parameters(self):
         """
         Creates the vector momentum parameter
-        
-        :return: Returns the vector momentum parameter 
+
+        :return: Returns the vector momentum parameter
         """
         return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
     def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
         Creates a magnitude image for the momentum and returns it with name :math:`|m|`
-        
-        :return: Returns tuple (m_magnitude_image,name) 
+
+        :return: Returns tuple (m_magnitude_image,name)
         """
         name = '|m|'
         par_image = ((self.m[:,...]**2).sum(1))**0.5 # assume BxCxXxYxZ format
@@ -1285,8 +1350,8 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
     def upsample_registration_parameters(self, desiredSz):
         """
         Upsamples the vector-momentum parameter
-        
-        :param desiredSz: desired size of the upsampled momentum 
+
+        :param desiredSz: desired size of the upsampled momentum
         :return: Returns tuple (upsampled_state,upsampled_spacing)
         """
 
@@ -1301,7 +1366,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         """
         Downsamples the vector-momentum parameter
 
-        :param desiredSz: desired size of the downsampled momentum 
+        :param desiredSz: desired size of the downsampled momentum
         :return: Returns tuple (downsampled_state,downsampled_spacing)
         """
 
@@ -1321,25 +1386,40 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
     def create_integrator(self):
         """
         Creates integrator to solve EPDiff together with an advevtion equation for the image
-        
-        :return: returns this integrator 
-        """
 
-        cparams = self.params[('forward_model',{},'settings for the forward model')]
-        epdiffImage = FM.EPDiffImage( self.sz, self.spacing, self.smoother, cparams )
-        return RK.RK4(epdiffImage.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        :return: returns this integrator
+        """
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+        if not EV.use_odeint:
+            epdiffImage = FM.EPDiffImage( self.sz, self.spacing, self.smoother, cparams )
+            return RK.RK4(epdiffImage.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        else:
+            self.f = FM.EPDiffImage( self.sz, self.spacing, self.smoother, cparams )
+            return ODE.ODEBlock
 
     def forward(self, I, variables_from_optimizer=None):
         """
         Integrates EPDiff plus advection equation for image forward
-        
+
         :param I: Initial condition for image
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the image at time tTo
         """
+        if not EV.use_odeint:
+            mI1 = self.integrator.solve([self.m,I], self.tFrom, self.tTo, variables_from_optimizer)
+            return mI1[1]
+        else:
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=True,
+                                     pars=self._get_default_dictionary_to_pass_to_integrator(),
+                                     variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            func.set_dim_info([self.dim,1])
+            input = torch.cat((self.m, I), 1)
+            output = integrator(input)
+            mI1 = output[:,self.dim:self.dim+1,...]
+            return mI1
 
-        mI1 = self.integrator.solve([self.m,I], self.tFrom, self.tTo, variables_from_optimizer)
-        return mI1[1]
 
 
 class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
@@ -1391,8 +1471,13 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
 
-        advection = FM.AdvectImage(self.sz, self.spacing)
-        return RK.RK4(advection.f, advection.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        if not EV.use_odeint:
+
+            advection = FM.AdvectImage(self.sz, self.spacing)
+            return RK.RK4(advection.f, advection.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        else:
+            self.f = FM.AdvectImage(self.sz, self.spacing)
+            return ODE.ODEBlock
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -1402,13 +1487,28 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: image at time tTo
         """
-        pars_to_pass_s = utils.combine_dict({'I':I},self._get_default_dictionary_to_pass_to_integrator())
-        v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer,
-                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
-        pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
-        self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
-        I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
-        return I1[0]
+        pars_to_pass_s = utils.combine_dict({'I': I}, self._get_default_dictionary_to_pass_to_integrator())
+        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
+        v = self.smoother.smooth(self.m, None, pars_to_pass_s, variables_from_optimizer,
+                                 smooth_to_compute_regularizer_energy=False,
+                                 clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
+        pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
+        if not EV.use_odeint:
+
+            self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
+            I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
+            return I1[0]
+        else:
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=False,
+                                     pars=pars_to_pass_i,
+                                     variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            func.set_dim_info([self.dim,1])
+            input = torch.cat((v, I), 1)
+            output = integrator(input)
+            I1 = output[:,self.dim:self.dim+1,...]
+            return I1
 
 class SVFVectorMomentumImageLoss(RegistrationImageLoss):
     """
@@ -1459,18 +1559,23 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
     def create_integrator(self):
         """
         Creates an integrator for EPDiff + advection equation for the map
-        
-        :return: returns this integrator 
+
+        :return: returns this integrator
         """
-        cparams = self.params[('forward_model',{},'settings for the forward model')]
-        epdiffMap = FM.EPDiffMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
-        return RK.RK4(epdiffMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+
+        if not EV.use_odeint:
+            epdiffMap = FM.EPDiffMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
+            return RK.RK4(epdiffMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        else:
+            self.f =FM.EPDiffMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
+            return ODE.ODEBlock
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
         Solves EPDiff + advection equation forward and returns the map at time tTo
-        
-        :param phi: initial condition for the map 
+
+        :param phi: initial condition for the map
         :param I0_source: not used
         :param phi_inv: inverse initial map
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
@@ -1478,16 +1583,36 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         """
 
         self.smoother.set_source_image(I0_source)
-        if self.compute_inverse_map:
-            if phi_inv is not None:
-                mphi1 = self.integrator.solve([self.m, phi, phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
-                return (mphi1[1],mphi1[2])
+        if not EV.use_odeint:
+            if self.compute_inverse_map:
+                if phi_inv is not None:
+                    mphi1 = self.integrator.solve([self.m, phi, phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (mphi1[1],mphi1[2])
+                else:
+                    mphi1 = self.integrator.solve([self.m, phi], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (mphi1[1],None)
             else:
-                mphi1 = self.integrator.solve([self.m, phi], self.tFrom, self.tTo, variables_from_optimizer)
-                return (mphi1[1],None)
+                mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo, variables_from_optimizer)
+                return mphi1[1]
         else:
-            mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo, variables_from_optimizer)
-            return mphi1[1]
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=True, pars =self._get_default_dictionary_to_pass_to_integrator(), variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            if phi_inv is not None and self.compute_inverse_map:
+                func.set_dim_info([self.dim, self.dim, self.dim])
+                input = torch.cat((self.m, phi, phi_inv),1)
+                output = integrator(input)
+                return (output[:,self.dim:self.dim*2,...], output[:,self.dim*2:self.dim*3,...])
+            else:
+                func.set_dim_info([self.dim, self.dim])
+                input = torch.cat((self.m, phi), 1)
+                output = integrator(input)
+                mphi1 = output[:,self.dim:self.dim*2,...]
+                if self.compute_inverse_map:
+                    return [mphi1, None]
+                else:
+                    return mphi1
+
 
 
 class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
@@ -1513,8 +1638,8 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
     def compute_regularization_energy(self, I0_source, variables_from_forward_model, variables_from_optimizer=None):
         """
         Commputes the regularization energy from the initial vector momentum
-        
-        :param I0_source: not used 
+
+        :param I0_source: not used
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the regularization energy
@@ -1548,8 +1673,14 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
 
-        advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-        return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        if not EV.use_odeint:
+
+            advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
+            return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        else:
+            self.f =FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
+            return ODE.ODEBlock
+
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -1563,22 +1694,41 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         """
 
         pars_to_pass_s = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_integrator())
+        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
         v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer,
-                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
+                                smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
-        self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
-        self.first_step_velocity = v
-
-        if self.compute_inverse_map:
-            if phi_inv is not None:
-                phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
-                return (phi1[0],phi1[1])
+        if not EV.use_odeint:
+            self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
+            self.first_step_velocity = v
+            if self.compute_inverse_map:
+                if phi_inv is not None:
+                    phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (phi1[0],phi1[1])
+                else:
+                    phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (phi1[0],None)
             else:
                 phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-                return (phi1[0],None)
+                return phi1[0]
         else:
-            phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-            return phi1[0]
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=False, pars =pars_to_pass_i, variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            if phi_inv is not None and self.compute_inverse_map:
+                func.set_dim_info([self.dim, self.dim, self.dim])
+                input = torch.cat((v,phi,phi_inv),1)
+                output = integrator(input)
+                return (output[:,self.dim:self.dim*2,...],output[:,self.dim*2:self.dim*3,...])
+            else:
+                func.set_dim_info([self.dim, self.dim])
+                input = torch.cat((v,phi),1)
+                output = integrator(input)
+                phi1 = output[:,self.dim:self.dim*2,...]
+                if self.compute_inverse_map:
+                    return [phi1,None]
+                else:
+                    return phi1
 
 class SVFVectorMomentumMapLoss(RegistrationMapLoss):
     """
@@ -1642,9 +1792,15 @@ class CVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        bgadvMap = FM.BGAdvMap(self.sz, self.spacing, self.smoother_for_forward, cparams,
-                                 compute_inverse_map=self.compute_inverse_map)
-        return RK.RK4(bgadvMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+
+        if not EV.use_odeint:
+            bgadvMap = FM.BGAdvMap(self.sz, self.spacing, self.smoother_for_forward, cparams,
+                                     compute_inverse_map=self.compute_inverse_map)
+            return RK.RK4(bgadvMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        else:
+            self.f = FM.BGAdvMap(self.sz, self.spacing, self.smoother_for_forward, cparams,
+                                     compute_inverse_map=self.compute_inverse_map)
+            return ODE.ODEBlock
 
     def forward(self, phi, I0_source,  phi_inv=None, variables_from_optimizer=None):
         """
@@ -1657,17 +1813,30 @@ class CVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         """
 
         pars_to_pass_s = utils.combine_dict({'I': I0_source}, self._get_default_dictionary_to_pass_to_integrator())
+        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
         v = self.smoother.smooth(self.m, None, pars_to_pass_s, variables_from_optimizer,
                                  smooth_to_compute_regularizer_energy=False,
-                                 clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
+                                 clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
         self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
         self.first_step_velocity = v
-        if self.compute_inverse_map:
-            raise ValueError("Not implemented yet")
+        if not EV.use_odeint:
+            if self.compute_inverse_map:
+                raise ValueError("Not implemented yet")
+            else:
+                vphi1 = self.integrator.solve([v, phi], self.tFrom, self.tTo, variables_from_optimizer)
+                return vphi1[1]
         else:
-            vphi1 = self.integrator.solve([v, phi], self.tFrom, self.tTo, variables_from_optimizer)
-            return vphi1[1]
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=False, pars =pars_to_pass_i, variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            func.set_dim_info([self.dim,self.dim])
+            input = torch.cat((v, phi), 1)
+            output = integrator(input)
+            phi1 = output[:,self.dim:self.dim*2,...]
+            if self.compute_inverse_map:
+                raise ValueError("Not implemented yet")
+            return phi1
 
 
 class CVFVectorMomentumMapLoss(RegistrationMapLoss):
@@ -1819,8 +1988,13 @@ class ToReNameNet(ShootingVectorMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
 
-        advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-        return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        if not EV.use_odeint:
+
+            advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
+            return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        else:
+            self.f = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
+            return ODE.ODEBlock
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -1834,21 +2008,36 @@ class ToReNameNet(ShootingVectorMomentumNet):
         """
 
         pars_to_pass_s = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_integrator())
+        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
         v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer,
-                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
+                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
-        self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
 
-        if self.compute_inverse_map:
-            if phi_inv is not None:
-                phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
-                return (phi1[0],phi1[1])
+        if not EV.use_odeint:
+            self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
+
+            if self.compute_inverse_map:
+                if phi_inv is not None:
+                    phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (phi1[0],phi1[1])
+                else:
+                    phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (phi1[0],None)
             else:
                 phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-                return (phi1[0],None)
+                return phi1[0]
         else:
-            phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-            return phi1[0]
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=False, pars=pars_to_pass_i,
+                                     variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            func.set_dim_info([self.dim,self.dim])
+            input = torch.cat((v, phi), 1)
+            output = integrator(input)
+            phi1 = output[:,self.dim:self.dim*2,...]
+            if self.compute_inverse_map:
+                raise ValueError("Not implemented yet")
+            return phi1
 
 class ToReNameLoss(RegistrationMapLoss):
     """
@@ -1936,16 +2125,16 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
     def create_registration_parameters(self):
         """
         Creates the scalar momentum registration parameter
-        
-        :return: Returns this scalar momentum parameter 
+
+        :return: Returns this scalar momentum parameter
         """
         return utils.create_ND_scalar_field_parameter_multiNC(self.sz[2::], self.nrOfImages, self.nrOfChannels)
 
     def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
         Returns an image of the scalar momentum (magnitude over all channels) and 'lambda' as name
-        
-        :return: Returns tuple (lamda_magnitude,lambda_name) 
+
+        :return: Returns tuple (lamda_magnitude,lambda_name)
         """
         #name = 'lambda'
         #par_image = ((self.lam[:,...]**2).sum(1))**0.5 # assume BxCxXxYxZ format
@@ -1959,8 +2148,8 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
     def upsample_registration_parameters(self, desiredSz):
         """
         Upsample the scalar momentum
-        
-        :param desiredSz: desired size to be upsampled to, e.g., [100,50,40] 
+
+        :param desiredSz: desired size to be upsampled to, e.g., [100,50,40]
         :return: returns a tuple (upsampled_state,upsampled_spacing)
         """
 
@@ -1975,7 +2164,7 @@ class ShootingScalarMomentumNet(RegistrationNetTimeIntegration):
         """
         Downsample the scalar momentum
 
-        :param desiredSz: desired size to be downsampled to, e.g., [40,20,10] 
+        :param desiredSz: desired size to be downsampled to, e.g., [40,20,10]
         :return: returns a tuple (downsampled_state,downsampled_spacing)
         """
 
@@ -1998,12 +2187,17 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
         """
         Creates an integrator integrating the scalar momentum conservation law and an advection equation for the image
 
-        :return: returns this integrator 
+        :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
 
-        advection = FM.AdvectImage(self.sz, self.spacing)
-        return RK.RK4(advection.f, advection.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        if not EV.use_odeint:
+
+            advection = FM.AdvectImage(self.sz, self.spacing)
+            return RK.RK4(advection.f, advection.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        else:
+            self.f =  FM.AdvectImage(self.sz, self.spacing)
+            return ODE.ODEBlock
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -2013,14 +2207,29 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: image at time tTo
         """
+
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I, self.sz, self.spacing)
         pars_to_pass_s = utils.combine_dict({'I':I},self._get_default_dictionary_to_pass_to_integrator())
+        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
         v = self.smoother.smooth(m,None,pars_to_pass_s,variables_from_optimizer,
-                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
+                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
-        self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
-        I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
-        return I1[0]
+        if not EV.use_odeint:
+
+            self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
+            I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
+            return I1[0]
+        else:
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=False, pars=pars_to_pass_i,
+                                     variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            func.set_dim_info([self.dim,1])
+            input = torch.cat((v, I), 1)
+            output = integrator(input)
+            I1 = output[:,self.dim:self.dim+1,...]
+
+            return I1
 
 class SVFScalarMomentumImageLoss(RegistrationImageLoss):
     """
@@ -2042,7 +2251,7 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
         """
         Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
 
-        :param I0_source: source image 
+        :param I0_source: source image
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the regularization energy
@@ -2069,23 +2278,39 @@ class LDDMMShootingScalarMomentumImageNet(ShootingScalarMomentumNet):
     def create_integrator(self):
         """
         Creates an integrator integrating the scalar momentum conservation law and an advection equation for the image
-        
-        :return: returns this integrator 
+
+        :return: returns this integrator
         """
-        cparams = self.params[('forward_model',{},'settings for the forward model')]
-        epdiffScalarMomentumImage = FM.EPDiffScalarMomentumImage( self.sz, self.spacing, self.smoother, cparams )
-        return RK.RK4(epdiffScalarMomentumImage.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+
+        if not EV.use_odeint:
+            epdiffScalarMomentumImage =FM.EPDiffScalarMomentumImage( self.sz, self.spacing, self.smoother, cparams )
+            return RK.RK4(epdiffScalarMomentumImage.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        else:
+            self.f =  FM.EPDiffScalarMomentumImage( self.sz, self.spacing, self.smoother, cparams )
+            return ODE.ODEBlock
 
     def forward(self, I, variables_from_optimizer=None):
         """
         Solved the scalar momentum forward equation and returns the image at time tTo
-        
+
         :param I: initial image
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: image at time tTo
         """
-        lamI1 = self.integrator.solve([self.lam,I], self.tFrom, self.tTo, variables_from_optimizer)
-        return lamI1[1]
+        if not EV.use_odeint:
+            lamI1 = self.integrator.solve([self.lam,I], self.tFrom, self.tTo, variables_from_optimizer)
+            return lamI1[1]
+        else:
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=True, pars=self._get_default_dictionary_to_pass_to_integrator(),
+                                     variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            func.set_dim_info([1,1])
+            input = torch.cat((self.lam, I), 1)
+            output = integrator(input)
+            lamI1 = output[:,1:2,...]
+            return lamI1
 
 
 class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
@@ -2106,8 +2331,8 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
     def compute_regularization_energy(self, I0_source,variables_from_forward_model, variables_from_optimizer=None):
         """
         Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
-        
-        :param I0_source: source image 
+
+        :param I0_source: source image
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the regularization energy
@@ -2137,40 +2362,65 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
         """
         Creates an integrator integrating the scalar conservation law for the scalar momentum,
         the advection equation for the image and the advection equation for the map,
-        
-        :return: returns this integrator 
+
+        :return: returns this integrator
         """
-        cparams = self.params[('forward_model',{},'settings for the forward model')]
-        epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
-        return RK.RK4(epdiffScalarMomentumMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+        if not EV.use_odeint:
+            epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
+            return RK.RK4(epdiffScalarMomentumMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        else:
+            self.f = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
+
+            return ODE.ODEBlock
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
         Solves the scalar conservation law and the two advection equations forward in time.
-        
-        :param phi: initial condition for the map 
+
+        :param phi: initial condition for the map
         :param I0_source: initial condition for the image
         :param phi_inv: initial condition for the inverse map
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the map at time tTo
         """
         self.smoother.set_source_image(I0_source)
-        if self.compute_inverse_map:
-            if phi_inv is not None:
-                lamIphi1 = self.integrator.solve([self.lam,I0_source, phi, phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
-                return (lamIphi1[2],lamIphi1[3])
+        if not EV.use_odeint:
+            if self.compute_inverse_map:
+                if phi_inv is not None:
+                    lamIphi1 = self.integrator.solve([self.lam,I0_source, phi, phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (lamIphi1[2],lamIphi1[3])
+                else:
+                    lamIphi1 = self.integrator.solve([self.lam, I0_source, phi], self.tFrom, self.tTo,
+                                                     variables_from_optimizer)
+                    return (lamIphi1[2],None)
             else:
-                lamIphi1 = self.integrator.solve([self.lam, I0_source, phi], self.tFrom, self.tTo,
-                                                 variables_from_optimizer)
-                return (lamIphi1[2],None)
+                lamIphi1 = self.integrator.solve([self.lam,I0_source, phi], self.tFrom, self.tTo, variables_from_optimizer)
+                return lamIphi1[2]
         else:
-            lamIphi1 = self.integrator.solve([self.lam,I0_source, phi], self.tFrom, self.tTo, variables_from_optimizer)
-            return lamIphi1[2]
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=True, pars=self._get_default_dictionary_to_pass_to_integrator(),
+                                     variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            if phi_inv is not None and self.compute_inverse_map:
+                func.set_dim_info([1, 1,self.dim,self.dim])
+                input = torch.cat((self.lam,I0_source, phi, phi_inv),1)
+                output = integrator(input)
+                return (output[:,2:2+self.dim,...], output[:,2+self.dim:2+self.dim*2,...])
+            else:
+                func.set_dim_info([1, 1,self.dim])
+                input = torch.cat((self.lam,I0_source, phi), 1)
+                output = integrator(input)
+                lamIphi1 = output[:,2:2+self.dim,...]
+                if self.compute_inverse_map:
+                    return [lamIphi1, None]
+                else:
+                    return lamIphi1
 
 
 class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
     """
-    Specialization of the loss function to scalar-momentum LDDMM for maps. 
+    Specialization of the loss function to scalar-momentum LDDMM for maps.
     """
     def __init__(self,lam,sz_sim,spacing_sim,sz_model,spacing_model,params):
         super(LDDMMShootingScalarMomentumMapLoss, self).__init__(sz_sim,spacing_sim,sz_model,spacing_model,params)
@@ -2187,7 +2437,7 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
     def compute_regularization_energy(self, I0_source,variables_from_forward_model, variables_from_optimizer=None):
         """
         Computes the regularizaton energy from the initial vector momentum as computed from the scalar momentum
-        
+
         :param I0_source: initial image
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
@@ -2221,8 +2471,14 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
 
-        advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-        return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        if not EV.use_odeint:
+
+            advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
+            return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        else:
+            self.f = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
+
+            return ODE.ODEBlock
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -2234,21 +2490,42 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
         pars_to_pass_s = utils.combine_dict({'I': I0_source},self._get_default_dictionary_to_pass_to_integrator())
+        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
         v = self.smoother.smooth(m,None,pars_to_pass_s,variables_from_optimizer,
-                             smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(self.integrator.get_dt()))
+                             smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
-        self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
-
-        if self.compute_inverse_map:
-            if phi_inv is not None:
-                phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
-                return (phi1[0],phi1[1])
+        if not EV.use_odeint:
+            self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
+            if self.compute_inverse_map:
+                if phi_inv is not None:
+                    phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (phi1[0],phi1[1])
+                else:
+                    phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (phi1[0],None)
             else:
                 phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-                return (phi1[0],None)
+                return phi1[0]
         else:
-            phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-            return phi1[0]
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=False,
+                                     pars=pars_to_pass_i,
+                                     variables_from_optimizer=variables_from_optimizer)
+            integrator = self.integrator(func)
+            if phi_inv is not None and self.compute_inverse_map:
+                func.set_dim_info([self.dim, self.dim, self.dim])
+                input = torch.cat((v, phi, phi_inv),1)
+                output = integrator(input)
+                return (output[:,self.dim:self.dim*2,...], output[:,self.dim*2:self.dim*3,...])
+            else:
+                func.set_dim_info([self.dim, self.dim])
+                input = torch.cat((v, phi), 1)
+                output = integrator(input)
+                phi1 = output[:,self.dim:self.dim*2,...]
+                if self.compute_inverse_map:
+                    return [phi1, None]
+                else:
+                    return phi1
 
 class SVFScalarMomentumMapLoss(RegistrationMapLoss):
     """

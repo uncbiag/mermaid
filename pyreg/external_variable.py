@@ -7,3 +7,4 @@ except:
     pass
 print("use_mermaid_net:{}".format(use_mermaid_net))
 print("reg_factor_in_mermaid:{}".format(reg_factor_in_mermaid))
+use_odeint = True

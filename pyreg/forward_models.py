@@ -265,35 +265,39 @@ class RHSLibrary(object):
         else:
             raise ValueError('Only supported up to dimension 3')
 
-    def _rhs_burger_map_conserve_call(self,v,rhsv,speed_factor):
+
+
+    def _rhs_burger_map_upwind_call(self,v,rhsv,speed_factor):
         """
-        ToDo, the implementation of conservation form is incorrect
+        ToDo, the implementation of the conservation form is incorrect
         :param v: Velocity fields (this will be one velocity field per map)  BxCxXxYxZ
         :return rhsv: Returns the RHS of the burger equations involved  BxCxXxYxZ
         """
-
-        f = v * v / 2
-
+        v_pos_logical = (v > 0).float()
+        v_neg_logical = (v <= 0).float()
         if self.use_neumann_BC_for_map:
             fdc = self.fdt # use zero Neumann boundary conditions
         else:
             fdc = self.fdt_le # do linear extrapolation
 
         if self.dim==1:
-            rhsv[:, 0, ...] = -fdc.dXc(f[:, 0, ...])
+            rhsv[:, 0, ...]=- ( fdc.dXb(v[:,0,...])*v[:,0,...]*v_pos_logical[:,0,...] + fdc.dXf(v[:,0,...])*v[:,0,...]*v_neg_logical[:,0,...])
         elif self.dim==2:
-
             for i in range(self.dim):
-                rhsv[:,i,...]=-( fdc.dXc(f[:,i,...])+ fdc.dYc(f[:,i,...]))
+                rhsv[:,i,...]=-( fdc.dXb(v[:,i,...])*v[:,0,...]*v_pos_logical[:,0,...] + fdc.dXf(v[:,i,...])*v[:,0,...]*v_neg_logical[:,0,...]
+                                  + fdc.dYb(v[:,i,...])*v[:,1,...]*v_pos_logical[:,1,...] + fdc.dYf(v[:,i,...])*v[:,1,...]*v_neg_logical[:,1,...])
 
         elif self.dim==3:
             for i in range(self.dim):
-                rhsv[:,i,...]=-( fdc.dXc(f[:,i,...])
-                                  + fdc.dYc(f[:,i,...])
-                                  + fdc.dZc(f[:,i,...]))
+                rhsv[:,i,...]=-( fdc.dXb(v[:,i,...])*v[:,0,...]*v_pos_logical[:,0,...] + fdc.dXf(v[:,i,...])*v[:,0,...]*v_neg_logical[:,0,...]
+                                  + fdc.dYb(v[:,i,...])*v[:,1,...]*v_pos_logical[:,1,...] + fdc.dYf(v[:,i,...])*v[:,1,...]*v_neg_logical[:,1,...]
+                                  + fdc.dZb(v[:,i,...])*v[:,2,...]*v_pos_logical[:,2,...] + fdc.dZf(v[:,i,...])*v[:,2,...]*v_neg_logical[:,2,...])
 
         else:
             raise ValueError('Only supported up to dimension 3')
+
+
+
 
     def _rhs_burger_map_conserve_upwind_call(self,v,rhsv,speed_factor):
         """
@@ -478,7 +482,7 @@ class AdvectMap(ForwardModel):
         """
         return pars['v']
 
-    def f(self,t, x, u, pars, variables_from_optimizer=None):
+    def f(self,t, x, u, pars=None, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of transport equation: 
         
@@ -518,7 +522,7 @@ class AdvectImage(ForwardModel):
         """
         return pars['v']
 
-    def f(self,t, x, u, pars, variables_from_optimizer=None):
+    def f(self,t, x, u, pars=None, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of transport equation: :math:`-\\nabla I^T v`
         
@@ -583,7 +587,7 @@ class BGAdvMap(ForwardModel):
         """
         return pars['v']
 
-    def f(self, t, x, u, pars, variables_from_optimizer=None):
+    def f(self, t, x, u, pars=None, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of the EPDiff equation:
         :math:`-D\\v v*speed_factor`
@@ -635,7 +639,7 @@ class EPDiffImage(ForwardModel):
         super(EPDiffImage, self).__init__(sz, spacing,params)
         self.smoother = smoother
 
-    def f(self,t, x, u, pars, variables_from_optimizer=None):
+    def f(self,t, x, u, pars=None, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of the EPDiff equation: 
         :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
@@ -687,7 +691,7 @@ class EPDiffMap(ForwardModel):
             print("flag new_phi: {},".format(x[4]))
             raise ValueError("nan error")
 
-    def f(self,t, x, u, pars, variables_from_optimizer=None):
+    def f(self,t, x, u, pars=None, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of the EPDiff equation:
         :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm'
@@ -753,7 +757,7 @@ class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
     def __init__(self, sz, spacing, smoother, params=None):
         super(EPDiffScalarMomentumImage, self).__init__(sz, spacing, smoother, params)
 
-    def f(self, t, x, u, pars, variables_from_optimizer=None):
+    def f(self, t, x, u, pars=None, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of the EPDiff equation:
 
@@ -804,7 +808,7 @@ class EPDiffScalarMomentumMap(EPDiffScalarMomentum):
         self.compute_inverse_map = compute_inverse_map
         """If True then computes the inverse map on the fly for a map-based solution"""
 
-    def f(self,t, x, u, pars, variables_from_optimizer=None):
+    def f(self,t, x, u, pars=None, variables_from_optimizer=None):
         """
         Function to be integrated, i.e., right hand side of the EPDiff equation:
         
