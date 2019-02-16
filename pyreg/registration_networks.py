@@ -571,7 +571,7 @@ class SVFImageNet(SVFNet):
         else:
             self.set_dictionary_to_pass_to_integrator(pars_to_pass)
             self.f =  FM.AdvectImage(self.sz, self.spacing)
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -589,10 +589,10 @@ class SVFImageNet(SVFNet):
             func = FMW.ODEWarpedFunc(self.f, single_param=False,
                                      pars=self._get_default_dictionary_to_pass_to_integrator(),
                                      variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             func.set_dim_info([self.dim,1])
             input = torch.cat((self.v, I), 1)
-            output = integrator(input)
+            output = self.integrator(input)
             I1 = output[:,self.dim:self.dim+1,...]
             return I1
 
@@ -682,7 +682,7 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
         else:
             self.set_dictionary_to_pass_to_integrator(pars_to_pass)
             self.f = FM.AdvectImage(self.sz, self.spacing)
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -693,7 +693,7 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
         :return: returns the image at the final time point (tTo)
         """
         pars_to_pass = utils.combine_dict({'I': I}, self._get_default_dictionary_to_pass_to_integrator())
-        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
+        dt = self.integrator.get_dt()
         self.smoother.smooth(self.m, self.v, pars_to_pass, variables_from_optimizer,
                              smooth_to_compute_regularizer_energy=False,
                              clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
@@ -705,10 +705,10 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
             func = FMW.ODEWarpedFunc(self.f, single_param=False,
                                      pars=self._get_default_dictionary_to_pass_to_integrator(),
                                      variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             func.set_dim_info([self.dim,1])
             input = torch.cat((self.v, I), 1)
-            output = integrator(input)
+            output = self.integrator(input)
             I1 = output[:,self.dim:self.dim+1,...]
             return I1
 
@@ -1037,7 +1037,7 @@ class SVFMapNet(SVFNet):
         else:
             self.set_dictionary_to_pass_to_integrator(pars_to_pass)
             self.f = FM.AdvectMap( self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map )
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -1066,16 +1066,16 @@ class SVFMapNet(SVFNet):
             func = FMW.ODEWarpedFunc(self.f, single_param=False,
                                      pars=self._get_default_dictionary_to_pass_to_integrator(),
                                      variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             if phi_inv is not None and self.compute_inverse_map:
                 func.set_dim_info([self.dim,self.dim,self.dim])
                 input = torch.cat((self.v, phi, phi_inv),1)
-                output = integrator(input)
+                output = self.integrator(input)
                 return (output[:,self.dim:self.dim*2,...], output[:,self.dim*2:self.dim*3,...])
             else:
                 func.set_dim_info([self.dim, self.dim])
                 input = torch.cat((self.v, phi), 1)
-                output = integrator(input)
+                output = self.integrator(input)
                 phi1 = output[:,self.dim:self.dim*2,...]
                 if self.compute_inverse_map:
                     return [phi1, None]
@@ -1395,7 +1395,7 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
             return RK.RK4(epdiffImage.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
         else:
             self.f = FM.EPDiffImage( self.sz, self.spacing, self.smoother, cparams )
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -1413,10 +1413,10 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
             func = FMW.ODEWarpedFunc(self.f, single_param=True,
                                      pars=self._get_default_dictionary_to_pass_to_integrator(),
                                      variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             func.set_dim_info([self.dim,1])
             input = torch.cat((self.m, I), 1)
-            output = integrator(input)
+            output = self.integrator(input)
             mI1 = output[:,self.dim:self.dim+1,...]
             return mI1
 
@@ -1477,7 +1477,7 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
             return RK.RK4(advection.f, advection.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
         else:
             self.f = FM.AdvectImage(self.sz, self.spacing)
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -1488,7 +1488,7 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
         :return: image at time tTo
         """
         pars_to_pass_s = utils.combine_dict({'I': I}, self._get_default_dictionary_to_pass_to_integrator())
-        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
+        dt = self.integrator.get_dt()
         v = self.smoother.smooth(self.m, None, pars_to_pass_s, variables_from_optimizer,
                                  smooth_to_compute_regularizer_energy=False,
                                  clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
@@ -1503,10 +1503,10 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
             func = FMW.ODEWarpedFunc(self.f, single_param=False,
                                      pars=pars_to_pass_i,
                                      variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             func.set_dim_info([self.dim,1])
             input = torch.cat((v, I), 1)
-            output = integrator(input)
+            output = self.integrator(input)
             I1 = output[:,self.dim:self.dim+1,...]
             return I1
 
@@ -1569,7 +1569,7 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
             return RK.RK4(epdiffMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
         else:
             self.f =FM.EPDiffMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -1597,16 +1597,16 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         else:
             from . import forward_models_warped as FMW
             func = FMW.ODEWarpedFunc(self.f, single_param=True, pars =self._get_default_dictionary_to_pass_to_integrator(), variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             if phi_inv is not None and self.compute_inverse_map:
                 func.set_dim_info([self.dim, self.dim, self.dim])
                 input = torch.cat((self.m, phi, phi_inv),1)
-                output = integrator(input)
+                output = self.integrator(input)
                 return (output[:,self.dim:self.dim*2,...], output[:,self.dim*2:self.dim*3,...])
             else:
                 func.set_dim_info([self.dim, self.dim])
                 input = torch.cat((self.m, phi), 1)
-                output = integrator(input)
+                output = self.integrator(input)
                 mphi1 = output[:,self.dim:self.dim*2,...]
                 if self.compute_inverse_map:
                     return [mphi1, None]
@@ -1679,7 +1679,7 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
             return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
         else:
             self.f =FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
@@ -1694,7 +1694,7 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         """
 
         pars_to_pass_s = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_integrator())
-        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
+        dt = self.integrator.get_dt()
         v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer,
                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
@@ -1714,16 +1714,16 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         else:
             from . import forward_models_warped as FMW
             func = FMW.ODEWarpedFunc(self.f, single_param=False, pars =pars_to_pass_i, variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             if phi_inv is not None and self.compute_inverse_map:
                 func.set_dim_info([self.dim, self.dim, self.dim])
                 input = torch.cat((v,phi,phi_inv),1)
-                output = integrator(input)
+                output = self.integrator(input)
                 return (output[:,self.dim:self.dim*2,...],output[:,self.dim*2:self.dim*3,...])
             else:
                 func.set_dim_info([self.dim, self.dim])
                 input = torch.cat((v,phi),1)
-                output = integrator(input)
+                output = self.integrator(input)
                 phi1 = output[:,self.dim:self.dim*2,...]
                 if self.compute_inverse_map:
                     return [phi1,None]
@@ -1800,7 +1800,7 @@ class CVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         else:
             self.f = FM.BGAdvMap(self.sz, self.spacing, self.smoother_for_forward, cparams,
                                      compute_inverse_map=self.compute_inverse_map)
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
     def forward(self, phi, I0_source,  phi_inv=None, variables_from_optimizer=None):
         """
@@ -1813,7 +1813,7 @@ class CVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         """
 
         pars_to_pass_s = utils.combine_dict({'I': I0_source}, self._get_default_dictionary_to_pass_to_integrator())
-        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
+        dt = self.integrator.get_dt()
         v = self.smoother.smooth(self.m, None, pars_to_pass_s, variables_from_optimizer,
                                  smooth_to_compute_regularizer_energy=False,
                                  clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
@@ -1829,10 +1829,10 @@ class CVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         else:
             from . import forward_models_warped as FMW
             func = FMW.ODEWarpedFunc(self.f, single_param=False, pars =pars_to_pass_i, variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             func.set_dim_info([self.dim,self.dim])
             input = torch.cat((v, phi), 1)
-            output = integrator(input)
+            output = self.integrator(input)
             phi1 = output[:,self.dim:self.dim*2,...]
             if self.compute_inverse_map:
                 raise ValueError("Not implemented yet")
@@ -1994,7 +1994,7 @@ class ToReNameNet(ShootingVectorMomentumNet):
             return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
         else:
             self.f = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -2008,7 +2008,7 @@ class ToReNameNet(ShootingVectorMomentumNet):
         """
 
         pars_to_pass_s = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_integrator())
-        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
+        dt = self.integrator.get_dt()
         v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer,
                                  smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
@@ -2030,10 +2030,10 @@ class ToReNameNet(ShootingVectorMomentumNet):
             from . import forward_models_warped as FMW
             func = FMW.ODEWarpedFunc(self.f, single_param=False, pars=pars_to_pass_i,
                                      variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             func.set_dim_info([self.dim,self.dim])
             input = torch.cat((v, phi), 1)
-            output = integrator(input)
+            output = self.integrator(input)
             phi1 = output[:,self.dim:self.dim*2,...]
             if self.compute_inverse_map:
                 raise ValueError("Not implemented yet")
@@ -2197,7 +2197,7 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
             return RK.RK4(advection.f, advection.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
         else:
             self.f =  FM.AdvectImage(self.sz, self.spacing)
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -2210,7 +2210,7 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
 
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I, self.sz, self.spacing)
         pars_to_pass_s = utils.combine_dict({'I':I},self._get_default_dictionary_to_pass_to_integrator())
-        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
+        dt = self.integrator.get_dt()
         v = self.smoother.smooth(m,None,pars_to_pass_s,variables_from_optimizer,
                                  smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
@@ -2223,10 +2223,10 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
             from . import forward_models_warped as FMW
             func = FMW.ODEWarpedFunc(self.f, single_param=False, pars=pars_to_pass_i,
                                      variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             func.set_dim_info([self.dim,1])
             input = torch.cat((v, I), 1)
-            output = integrator(input)
+            output = self.integrator(input)
             I1 = output[:,self.dim:self.dim+1,...]
 
             return I1
@@ -2288,7 +2288,7 @@ class LDDMMShootingScalarMomentumImageNet(ShootingScalarMomentumNet):
             return RK.RK4(epdiffScalarMomentumImage.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
         else:
             self.f =  FM.EPDiffScalarMomentumImage( self.sz, self.spacing, self.smoother, cparams )
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -2305,10 +2305,10 @@ class LDDMMShootingScalarMomentumImageNet(ShootingScalarMomentumNet):
             from . import forward_models_warped as FMW
             func = FMW.ODEWarpedFunc(self.f, single_param=True, pars=self._get_default_dictionary_to_pass_to_integrator(),
                                      variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             func.set_dim_info([1,1])
             input = torch.cat((self.lam, I), 1)
-            output = integrator(input)
+            output = self.integrator(input)
             lamI1 = output[:,1:2,...]
             return lamI1
 
@@ -2372,7 +2372,7 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
         else:
             self.f = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
 
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -2401,16 +2401,16 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
             from . import forward_models_warped as FMW
             func = FMW.ODEWarpedFunc(self.f, single_param=True, pars=self._get_default_dictionary_to_pass_to_integrator(),
                                      variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             if phi_inv is not None and self.compute_inverse_map:
                 func.set_dim_info([1, 1,self.dim,self.dim])
                 input = torch.cat((self.lam,I0_source, phi, phi_inv),1)
-                output = integrator(input)
+                output = self.integrator(input)
                 return (output[:,2:2+self.dim,...], output[:,2+self.dim:2+self.dim*2,...])
             else:
                 func.set_dim_info([1, 1,self.dim])
                 input = torch.cat((self.lam,I0_source, phi), 1)
-                output = integrator(input)
+                output = self.integrator(input)
                 lamIphi1 = output[:,2:2+self.dim,...]
                 if self.compute_inverse_map:
                     return [lamIphi1, None]
@@ -2478,7 +2478,7 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         else:
             self.f = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
 
-            return ODE.ODEBlock
+            return ODE.ODEBlock(cparams)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -2490,7 +2490,7 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz, self.spacing)
         pars_to_pass_s = utils.combine_dict({'I': I0_source},self._get_default_dictionary_to_pass_to_integrator())
-        dt = self.integrator.get_dt() if not EV.use_odeint else 0.1
+        dt = self.integrator.get_dt()
         v = self.smoother.smooth(m,None,pars_to_pass_s,variables_from_optimizer,
                              smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
@@ -2511,16 +2511,16 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
             func = FMW.ODEWarpedFunc(self.f, single_param=False,
                                      pars=pars_to_pass_i,
                                      variables_from_optimizer=variables_from_optimizer)
-            integrator = self.integrator(func)
+            self.integrator.set_func(func)
             if phi_inv is not None and self.compute_inverse_map:
                 func.set_dim_info([self.dim, self.dim, self.dim])
                 input = torch.cat((v, phi, phi_inv),1)
-                output = integrator(input)
+                output = self.integrator(input)
                 return (output[:,self.dim:self.dim*2,...], output[:,self.dim*2:self.dim*3,...])
             else:
                 func.set_dim_info([self.dim, self.dim])
                 input = torch.cat((v, phi), 1)
-                output = integrator(input)
+                output = self.integrator(input)
                 phi1 = output[:,self.dim:self.dim*2,...]
                 if self.compute_inverse_map:
                     return [phi1, None]

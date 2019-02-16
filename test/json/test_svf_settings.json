@@ -7,7 +7,11 @@
         },
         "registration_model": {
             "forward_model": {
-                "number_of_time_steps": 10,
+                "number_of_time_steps": 20,
+                "solver": "rk4",
+                "adjoin_on": true,
+                "rtol": 1e-5,
+                "atol": 1e-5,
                 "smoother": {
                     "multi_gaussian_stds": [
                         0.05,
@@ -65,7 +69,7 @@
             "verbose": true
         },
         "single_scale": {
-            "rel_ftol": 1e-07
+            "rel_ftol": 1e-09
         },
         "use_step_size_scheduler": true,
         "weight_clipping_type": "None",
