@@ -1818,9 +1818,9 @@ class CVFVectorMomentumMapNet(ShootingVectorMomentumNet):
                                  smooth_to_compute_regularizer_energy=False,
                                  clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
-        self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
         self.first_step_velocity = v
         if not EV.use_odeint:
+            self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
             if self.compute_inverse_map:
                 raise ValueError("Not implemented yet")
             else:
@@ -1828,7 +1828,7 @@ class CVFVectorMomentumMapNet(ShootingVectorMomentumNet):
                 return vphi1[1]
         else:
             from . import forward_models_warped as FMW
-            func = FMW.ODEWarpedFunc(self.f, single_param=False, pars =pars_to_pass_i, variables_from_optimizer=variables_from_optimizer)
+            func = FMW.ODEWarpedFunc(self.f, single_param=True, pars =pars_to_pass_i, variables_from_optimizer=variables_from_optimizer)
             self.integrator.set_func(func)
             func.set_dim_info([self.dim,self.dim])
             input = torch.cat((v, phi), 1)
@@ -1884,6 +1884,143 @@ class CVFVectorMomentumMapLoss(RegistrationMapLoss):
         reg = torch.clamp((v * m), min=0.).sum() * self.spacing_model.prod() / 1.*EV.reg_factor_in_mermaid + variables_from_forward_model[
             'smoother'].get_penalty()
         return reg
+
+
+
+
+class LDDMMAdaptiveSmootherMomentumMapNet(ShootingVectorMomentumNet):
+    """
+    Specialization for map-based vector-momentum where the map itself is advected
+    """
+
+    def __init__(self, sz, spacing, params, compute_inverse_map=False):
+
+        self.compute_inverse_map = compute_inverse_map
+        """If set to True the inverse map is computed on the fly"""
+        self.update_sm_by_advect=False
+        super(LDDMMAdaptiveSmootherMomentumMapNet, self).__init__(sz, spacing, params)
+
+
+
+    def create_integrator(self):
+        """
+        Creates an integrator for Burger + advection equation for the map
+
+        :return: returns this integrator
+        """
+        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+        smoother = self.smoother_for_forward if self.update_sm_by_advect else self.smoother
+        if not EV.use_odeint:
+            epdiffApt = FM.EPDiffAdaptMap(self.sz, self.spacing, smoother, cparams,
+                                     compute_inverse_map=self.compute_inverse_map,update_sm_by_advect=self.update_sm_by_advect)
+            return RK.RK4(epdiffApt.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        else:
+            self.f = FM.EPDiffAdaptMap(self.sz, self.spacing, smoother, cparams,
+                                     compute_inverse_map=self.compute_inverse_map,update_sm_by_advect=self.update_sm_by_advect)
+            return ODE.ODEBlock(cparams)
+
+    def forward(self, phi, I0_source,  phi_inv=None, variables_from_optimizer=None):
+        """
+        Solves EPDiff + advection equation forward and returns the map at time tTo
+
+        :param phi: initial condition for the map
+        :param I0_source: not used
+        :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
+        :return: returns the map at time tTo
+        """
+        self.n_of_gaussians = self.smoother.nr_of_gaussians
+        pars_to_pass_s = utils.combine_dict({'I': I0_source}, self._get_default_dictionary_to_pass_to_integrator())
+        dt = self.integrator.get_dt()
+        self.smoother.reset_penalty()
+        v = self.smoother.smooth(self.m, None, pars_to_pass_s, variables_from_optimizer,
+                                 smooth_to_compute_regularizer_energy=False,
+                                 clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
+        local_adapt_weights = self.smoother.get_deep_smoother_weights()
+        pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
+        self.first_step_velocity = v
+        if not EV.use_odeint:
+            self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
+            if self.compute_inverse_map:
+                raise ValueError("Not implemented yet")
+            else:
+                vphi1 = self.integrator.solve([v, phi,local_adapt_weights], self.tFrom, self.tTo, variables_from_optimizer)
+                return vphi1[1]
+        else:
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=True, pars =pars_to_pass_s, variables_from_optimizer=None)
+            self.integrator.set_func(func)
+            if self.update_sm_by_advect:
+                func.set_dim_info([self.dim, self.dim, self.n_of_gaussians])
+                input = torch.cat((v, phi,local_adapt_weights), 1)
+            else:
+                func.set_dim_info([self.dim, self.dim])
+                input = torch.cat((v,phi),1)
+            output = self.integrator(input)
+            phi1 = output[:,self.dim:self.dim*2,...]
+            if self.compute_inverse_map:
+                raise ValueError("Not implemented yet")
+
+            self._display_stats_before_after(phi,phi1,'phi')
+            self._display_stats_before_after(self.m,v[:,:self.dim,...],'m and v')
+            self._display_stats_before_after(v,output[:,:self.dim,...],'v_in and v_out')
+            return phi1
+
+
+    def _display_stats_before_after(self, Ib, Ia, iname):
+
+        Ib_min = Ib.min().detach().cpu().numpy()
+        Ib_max = Ib.max().detach().cpu().numpy()
+        Ib_mean = Ib.mean().detach().cpu().numpy()
+        Ib_std = Ib.std().detach().cpu().numpy()
+
+        Ia_min = Ia.min().detach().cpu().numpy()
+        Ia_max = Ia.max().detach().cpu().numpy()
+        Ia_mean = Ia.mean().detach().cpu().numpy()
+        Ia_std = Ia.std().detach().cpu().numpy()
+
+        print('     {}: before: [{:.7f},{:.7f},{:.7f}]({:.7f}); after: [{:.7f},{:.7f},{:.7f}]({:.7f})'.format(iname, Ib_min,Ib_mean,Ib_max,Ib_std,Ia_min,Ia_mean,Ia_max,Ia_std))
+
+
+
+class LDDMMAdaptiveSmootherMomentumMapLoss(RegistrationMapLoss):
+    """
+    Specialization of the loss for map-based vector momumentum. Image similarity is computed based on warping the source
+    image with the advected map.
+    """
+
+    def __init__(self, m, sz_sim, spacing_sim, sz_model, spacing_model, params):
+        super(LDDMMAdaptiveSmootherMomentumMapLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
+        self.load_velocity_from_forward_model = params[('load_velocity_from_forward_model', False, 'load_velocity_from_forward_model')]
+
+        self.m = m
+        """vector momentum"""
+
+    def compute_regularization_energy(self, I0_source, variables_from_forward_model, variables_from_optimizer=None):
+        """
+        Commputes the regularization energy from the initial vector momentum
+
+        :param I0_source: not used
+        :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
+        :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
+        :return: returns the regularization energy
+        """
+        m = self.m
+        if not self.load_velocity_from_forward_model:
+            pars_to_pass = utils.combine_dict({'I': I0_source}, self._get_default_dictionary_to_pass_to_smoother())
+            v = variables_from_forward_model['smoother'].smooth(m, None, pars_to_pass, variables_from_optimizer,
+                                                                smooth_to_compute_regularizer_energy=True)
+        else:
+            v = variables_from_forward_model['first_step_velocity']
+
+        batch_size = self.m.size()[0]
+        reg = torch.clamp((v * m), min=0.).sum() * self.spacing_model.prod() / 1.*EV.reg_factor_in_mermaid # + variables_from_forward_model['smoother'].get_penalty()
+        return reg
+
+
+
+
+
+
 
 
 class OneStepMapNet(ShootingVectorMomentumNet):

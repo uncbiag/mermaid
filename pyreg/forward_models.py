@@ -729,6 +729,104 @@ class EPDiffMap(ForwardModel):
         #self.debugging([m, v, phi, new_val[0], new_val[1]], t)
         return ret_val
 
+
+class EPDiffAdaptMap(ForwardModel):
+    """
+    Forward model for the EPDiff equation. State is the momentum, m, and the transform, :math:`\\phi`
+    (mapping the source image to the target image).
+    :math:`(m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
+
+    :math:`v=Km`
+
+    :math:`\\phi_t+D\\phi v=0`
+    """
+
+    def __init__(self, sz, spacing, smoother, params=None, compute_inverse_map=False, update_sm_by_advect= True):
+        super(EPDiffAdaptMap, self).__init__(sz, spacing, params)
+        self.compute_inverse_map = compute_inverse_map
+        """If True then computes the inverse map on the fly for a map-based solution"""
+
+        self.smoother = smoother
+        self.use_net = True if self.params['smoother']['type'] == 'adaptiveNet' else False
+        self.update_sm_by_advect = update_sm_by_advect
+        self.use_the_first_step_penalty = True
+        """ if only take the first step penalty as the total penalty, otherwise accumluate the penalty"""
+    def debugging(self, input, t):
+        x = utils.checkNan(input)
+        if np.sum(x):
+            print("find nan at {} step".format(t))
+            print("flag m: {}, ".format(x[0]))
+            print("flag v: {},".format(x[1]))
+            print("flag phi: {},".format(x[2]))
+            print("flag new_m: {},".format(x[3]))
+            print("flag new_phi: {},".format(x[4]))
+            raise ValueError("nan error")
+
+    def f(self, t, x, u, pars=None, variables_from_optimizer=None):
+        """
+        Function to be integrated, i.e., right hand side of the EPDiff equation:
+        :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm'
+
+        :math:`-D\\phi v`
+
+        :param t: time (ignored; not time-dependent)
+        :param x: state, here the image, vector momentum, m, and the map, :math:`\\phi`
+        :param u: ignored, no external input
+        :param pars: ignored (does not expect any additional inputs)
+        :param variables_from_optimizer: variables that can be passed from the optimizer
+        :return: right hand side [m,phi]
+        """
+
+        # assume x[0] is m and x[1] is phi for the state
+        m = x[0]
+        phi = x[1]
+
+        if self.update_sm_by_advect:
+            sm_map = x[2]
+            if self.compute_inverse_map:
+                phi_inv = x[3]
+            if t ==0:
+                v =m
+            else:
+                v = self.smoother.smooth(m, sm_map)
+
+            if self.compute_inverse_map:
+                ret_val = [self.rhs.rhs_epdiff_multiNC(m, v),
+                           self.rhs.rhs_advect_map_multiNC(phi, v),
+                           self.rhs.rhs_advect_map_multiNC(sm_map, v),
+                           self.rhs.rhs_lagrangian_evolve_map_multiNC(phi_inv, v)]
+            else:
+                ret_val = [self.rhs.rhs_epdiff_multiNC(m, v),
+                           self.rhs.rhs_advect_map_multiNC(phi, v),
+                           self.rhs.rhs_advect_map_multiNC(sm_map, v)]
+            return ret_val
+        else:
+            if self.compute_inverse_map:
+                phi_inv = x[2]
+            if t ==0:
+                v=m
+            else:
+                if self.use_the_first_step_penalty:
+                    self.smoother.disable_penalty_computation_in_deep_smoother()
+                else:
+                    self.smoother.enable_accumulated_penalty()
+                v = self.smoother.smooth(m, None, pars, variables_from_optimizer)
+
+            if self.compute_inverse_map:
+                ret_val = [self.rhs.rhs_epdiff_multiNC(m, v),
+                           self.rhs.rhs_advect_map_multiNC(phi, v),
+                           self.rhs.rhs_lagrangian_evolve_map_multiNC(phi_inv, v)]
+            else:
+                ret_val = [self.rhs.rhs_epdiff_multiNC(m, v),
+                           self.rhs.rhs_advect_map_multiNC(phi, v)]
+            return ret_val
+
+
+
+        # print('max(|v|) = ' + str( v.abs().max() ))
+
+
+
 class EPDiffScalarMomentum(ForwardModel):
     """
     Base class for scalar momentum EPDiff solutions. Defines a smoother that can be commonly used.

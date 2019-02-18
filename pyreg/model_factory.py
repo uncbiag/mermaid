@@ -58,6 +58,8 @@ class AvailableModels(object):
             'to_rename_map': (RN.ToReNameNet,
                                          RN.ToReNameLoss, True,
                                          'EXPERIMENTAL: test on learning smoother network'),
+            'lddmm_adapt_smoother_map': (RN.LDDMMAdaptiveSmootherMomentumMapNet,RN.LDDMMAdaptiveSmootherMomentumMapLoss,True,"EXPERIMENT: test"
+                                                                                                                             "on th learning smoother lddmm"),
             'cvf_vector_momentum_map': (RN.CVFVectorMomentumMapNet,
                                         RN.CVFVectorMomentumMapLoss, True,
                                         'EXPERIMENTAL: map-based constant velocity field using the vector momentum'),
