@@ -47,7 +47,7 @@ class STN_ND_BCXYZ(Module):
             else:
                 self.f = partial(get_nn_interpolation,spacing = self.spacing)
         else:
-            self.f = STNFunction_ND_BCXYZ( self.spacing,zero_boundary= zero_boundary,use_bilinear= use_bilinear)
+            self.f = STNFunction_ND_BCXYZ( self.spacing,zero_boundary= zero_boundary,using_bilinear= use_bilinear)
 
         """spatial transform function"""
     def forward(self, input1, input2):
