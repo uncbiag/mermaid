@@ -11,7 +11,8 @@ This is needed for the map-based registrations for example.
 
 from torch.nn.modules.module import Module
 from pyreg.libraries.functions.stn_nd import  STNFunction_ND_BCXYZ, STNFunction_ND_BCXYZ_Compile
-
+from pyreg.libraries.functions.nn_interpolation import get_nn_interpolation
+from functools import partial
 # class STN_ND(Module):
 #     """
 #     Legacy code for nD spatial transforms. Ignore for now. Implements spatial transforms, but in BXYZC format.
@@ -36,14 +37,17 @@ class STN_ND_BCXYZ(Module):
     """
     Spatial transform code for nD spatial transoforms. Uses the BCXYZ image format.
     """
-    def __init__(self, spacing, zero_boundary=False,use_compile_version=False):
+    def __init__(self, spacing, zero_boundary=False,use_bilinear=True,use_compile_version=False):
         super(STN_ND_BCXYZ, self).__init__()
         self.spacing = spacing
         """spatial dimension"""
         if use_compile_version or len(self.spacing)==1:
-            self.f = STNFunction_ND_BCXYZ_Compile(self.spacing,zero_boundary)
+            if use_bilinear:
+                self.f = STNFunction_ND_BCXYZ_Compile(self.spacing,zero_boundary)
+            else:
+                self.f = partial(get_nn_interpolation,spacing = self.spacing)
         else:
-            self.f = STNFunction_ND_BCXYZ( self.spacing,zero_boundary)
+            self.f = STNFunction_ND_BCXYZ( self.spacing,zero_boundary= zero_boundary,use_bilinear= use_bilinear)
 
         """spatial transform function"""
     def forward(self, input1, input2):

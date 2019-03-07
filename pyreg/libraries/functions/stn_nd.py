@@ -37,7 +37,7 @@ class STNFunction_ND_BCXYZ(Module):
    Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox).
    """
 
-    def __init__(self, spacing, zero_boundary = False):
+    def __init__(self, spacing, zero_boundary = False,using_bilinear=True):
         """
         Constructor
 
@@ -48,6 +48,7 @@ class STNFunction_ND_BCXYZ(Module):
         self.ndim = len(spacing)
         #zero_boundary = False
         self.zero_boundary = 'zeros' if zero_boundary else 'border'
+        self.mode = 'bilinear' if using_bilinear else 'nearest'
 
     def forward_stn(self, input1, input2, ndim):
         if ndim==1:
@@ -56,14 +57,14 @@ class STNFunction_ND_BCXYZ(Module):
             input2_ordered = torch.zeros_like(input2)
             input2_ordered[:,0,...] = input2[:,1,...]
             input2_ordered[:,1,...] = input2[:,0,...]
-            output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 1]), mode='bilinear',
+            output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 1]), mode=self.mode,
                                           padding_mode=self.zero_boundary)
         if ndim==3:
             input2_ordered = torch.zeros_like(input2)
             input2_ordered[:, 0, ...] = input2[:, 2, ...]
             input2_ordered[:, 1, ...] = input2[:, 1, ...]
             input2_ordered[:, 2, ...] = input2[:, 0, ...]
-            output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 4, 1]), mode='bilinear', padding_mode=self.zero_boundary)
+            output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 4, 1]), mode=self.mode, padding_mode=self.zero_boundary)
         return output
 
     def forward(self, input1, input2):

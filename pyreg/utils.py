@@ -371,9 +371,10 @@ def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order,zero_boundar
     if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
     if spline_order==0:
-        return get_warped_label_map(I0,phi,spacing)
+        #return get_warped_label_map(I0,phi,spacing)
+        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=False)
     elif spline_order==1:
-        stn = STN_ND_BCXYZ(spacing,zero_boundary)
+        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=True)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing,spline_order)
 
