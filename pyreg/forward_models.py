@@ -30,7 +30,9 @@ from . import finite_differences as fd
 from . import utils
 from .data_wrapper import MyTensor
 from future.utils import with_metaclass
-
+import torch.nn as nn
+from . import external_variable as EV
+import torch
 class RHSLibrary(object):
     """
     Convenience class to quickly generate various right hand sides (RHSs) of popular partial differential 
@@ -140,6 +142,11 @@ class RHSLibrary(object):
         and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D).
         This is used to evolve the map going from source to target image. Requires interpolation
         so should if at all possible not be used as part of an optimization.
+        the idea of compute inverse map is due to the map is defined
+        in the source space, referring to point move to where,(compared with the target space, refers to where it comes from)
+        in this situation, we only need to capture the velocity at that place and accumulate along the time step
+        since advecton function is moves the image (or phi based image) by v step, which means v is shared by different coordinate,
+        so it is safe to compute in this way.
 
         :math:`v\circ\phi`
 
@@ -741,7 +748,7 @@ class EPDiffAdaptMap(ForwardModel):
     :math:`\\phi_t+D\\phi v=0`
     """
 
-    def __init__(self, sz, spacing, smoother, params=None, compute_inverse_map=False, update_sm_by_advect= True):
+    def __init__(self, sz, spacing, smoother, params=None, compute_inverse_map=False, update_sm_by_advect= True, update_sm_with_interpolation=True,bysingle_int=True):
         super(EPDiffAdaptMap, self).__init__(sz, spacing, params)
         self.compute_inverse_map = compute_inverse_map
         """If True then computes the inverse map on the fly for a map-based solution"""
@@ -750,17 +757,28 @@ class EPDiffAdaptMap(ForwardModel):
         self.use_net = True if self.params['smoother']['type'] == 'adaptiveNet' else False
         self.update_sm_by_advect = update_sm_by_advect
         self.use_the_first_step_penalty = True
+        self.update_sm_with_interpolation = update_sm_with_interpolation
+        self.bysingle_int=bysingle_int
+        self.update_sm_weight=None
+        self.debug_mode_on = False
         """ if only take the first step penalty as the total penalty, otherwise accumluate the penalty"""
-    def debugging(self, input, t):
-        x = utils.checkNan(input)
+    def debug_nan(self, input, t,name=''):
+        x = utils.checkNan([input])
         if np.sum(x):
-            print("find nan at {} step".format(t))
-            print("flag m: {}, ".format(x[0]))
-            print("flag v: {},".format(x[1]))
-            print("flag phi: {},".format(x[2]))
-            print("flag new_m: {},".format(x[3]))
-            print("flag new_phi: {},".format(x[4]))
+            # print(input[0])
+            print("find nan at {} step, {} with number {}".format(t,name,x[0]))
+
             raise ValueError("nan error")
+    def init_zero_sm_weight(self,sm_weight):
+        self.update_sm_weight = torch.zeros_like(sm_weight).detach()
+
+
+
+    def debug_distrib(self,var,name):
+        var = var.cpu().numpy()
+        density,_= np.histogram(var,[-100,-10,-1,0,1,10,100],density=True)
+        print("{} distri:{}".format(name,density))
+
 
     def f(self, t, x, u, pars=None, variables_from_optimizer=None):
         """
@@ -780,46 +798,67 @@ class EPDiffAdaptMap(ForwardModel):
         # assume x[0] is m and x[1] is phi for the state
         m = x[0]
         phi = x[1]
+        return_val_name = []
 
         if self.update_sm_by_advect:
-            sm_map = x[2]
-            if self.compute_inverse_map:
-                phi_inv = x[3]
-            if t ==0:
-                v =m
+            if not self.update_sm_with_interpolation:
+                sm_weight = x[2]
+                v = self.smoother.smooth(m, sm_weight)
+                new_m = self.rhs.rhs_epdiff_multiNC(m, v)
+                new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
+                new_sm_weight =  self.rhs.rhs_advect_map_multiNC(sm_weight, v)
+                ret_val = [new_m, new_phi,new_sm_weight]
+                return_val_name  =['new_m','new_phi','new_sm_weight']
             else:
-                v = self.smoother.smooth(m, sm_map)
+                if self.bysingle_int:
+                    sm_weight = x[2]
+                    sm_phi = x[3]
+                    new_sm_weight = utils.compute_warped_image_multiNC(sm_weight, sm_phi, self.spacing, 1,
+                                                                    zero_boundary=False)
+                    #print('t{},m min, mean,max {} {} {}'.format(t,m.min().item(),m.mean().item(),m.max().item()))
+                    v = self.smoother.smooth(m, new_sm_weight)
+                    new_m = self.rhs.rhs_epdiff_multiNC(m, v)
+                    new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
+                    new_sm_phi = self.rhs.rhs_advect_map_multiNC(sm_phi, v)
+                    new_sm_weight = self.update_sm_weight.detach()
+                    ret_val = [new_m, new_phi,new_sm_weight,new_sm_phi]
+                    return_val_name = ['new_m', 'new_phi', 'new_sm_weight','new_sm_phi']
+                else:
+                    sm_weight = x[2]
+                    new_sm_weight = utils.compute_warped_image_multiNC(sm_weight, phi, self.spacing, 1,
+                                                                       zero_boundary=False)
+                    # print('t{},m min, mean,max {} {} {}'.format(t,m.min().item(),m.mean().item(),m.max().item()))
+                    v = self.smoother.smooth(m, new_sm_weight)
+                    new_m = self.rhs.rhs_epdiff_multiNC(m, v)
+                    new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
+                    new_sm_weight = self.update_sm_weight.detach()
+                    ret_val = [new_m, new_phi, new_sm_weight]
+                    return_val_name = ['new_m', 'new_phi', 'new_sm_weight']
 
-            if self.compute_inverse_map:
-                ret_val = [self.rhs.rhs_epdiff_multiNC(m, v),
-                           self.rhs.rhs_advect_map_multiNC(phi, v),
-                           self.rhs.rhs_advect_map_multiNC(sm_map, v),
-                           self.rhs.rhs_lagrangian_evolve_map_multiNC(phi_inv, v)]
-            else:
-                ret_val = [self.rhs.rhs_epdiff_multiNC(m, v),
-                           self.rhs.rhs_advect_map_multiNC(phi, v),
-                           self.rhs.rhs_advect_map_multiNC(sm_map, v)]
-            return ret_val
         else:
-            if self.compute_inverse_map:
-                phi_inv = x[2]
-            if t ==0:
-                v=m
-            else:
+            if not t==0:
                 if self.use_the_first_step_penalty:
                     self.smoother.disable_penalty_computation_in_deep_smoother()
                 else:
                     self.smoother.enable_accumulated_penalty()
-                v = self.smoother.smooth(m, None, pars, variables_from_optimizer)
 
-            if self.compute_inverse_map:
-                ret_val = [self.rhs.rhs_epdiff_multiNC(m, v),
-                           self.rhs.rhs_advect_map_multiNC(phi, v),
-                           self.rhs.rhs_lagrangian_evolve_map_multiNC(phi_inv, v)]
-            else:
-                ret_val = [self.rhs.rhs_epdiff_multiNC(m, v),
-                           self.rhs.rhs_advect_map_multiNC(phi, v)]
-            return ret_val
+            I = utils.compute_warped_image_multiNC(pars['I0'], phi, self.spacing, 1,zero_boundary=True)
+            pars['I'] = I.detach()  # TODO  check whether I should be detached here
+            v = self.smoother.smooth(m, None, pars, variables_from_optimizer)
+            new_m = self.rhs.rhs_epdiff_multiNC(m, v)
+            new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
+            ret_val = [new_m, new_phi]
+            return_val_name =['new_m','new_phi']
+
+        if self.debug_mode_on:
+            toshows = [m, v]+ret_val
+            name = ['m', 'v']+return_val_name
+            for i, toshow in enumerate(toshows):
+                print('t{},{} min, mean,max {} {} {}'.format(t, name[i], toshow.min().item(), toshow.mean().item(),
+                                                             toshow.max().item()))
+                self.debug_distrib(toshow, name[i])
+                self.debug_nan(toshow,t,name[i])
+        return ret_val
 
 
 

@@ -430,7 +430,7 @@ class GaussianFourierFilterGenerator(object):
             else:
                 need_to_recompute = True
 
-            if need_to_recompute:
+            if need_to_recompute: #todo should not comment this warning
                 print('INFO: Recomputing gaussian filter for sigma={:.2f}'.format(sigma))
                 self.sigmas_complex_gaussian_fourier_filters[i] = sigma #.clone()
                 self.complex_gaussian_fourier_filters[i], self.max_indices[i] = self._compute_complex_gaussian_fourier_filter(sigma)

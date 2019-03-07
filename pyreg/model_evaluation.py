@@ -145,7 +145,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
 
 
     if use_map:
-        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing, spline_order)
+        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing, spline_order,zero_boundary=True)
 
     if use_map and map_low_res_factor is not None:
         vizImage, vizName = model.get_parameter_image_and_name_to_visualize(lowResISource)

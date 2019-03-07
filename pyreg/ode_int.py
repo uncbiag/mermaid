@@ -45,7 +45,12 @@ class ODEBlock(nn.Module):
         self.integration_time = self.integration_time.type_as(x)
         odesolver = odeint_adjoint if self.adjoin_on else odeint
         #out = odeint(self.odefunc, x, self.integration_time, rtol=self.rtol, atol=self.atol)
-        out = odesolver(self.odefunc, x, self.integration_time, rtol=self.rtol, atol=self.atol,method=self.method, options={'step_size':self.dt})
+        try:
+            out = odesolver(self.odefunc, x, self.integration_time, rtol=self.rtol, atol=self.atol,method=self.method, options={'step_size':self.dt})
+        except:
+            print("the {} solver failed,now try rk4 solver".format(self.method))
+            out = odesolver(self.odefunc, x, self.integration_time, rtol=self.rtol, atol=self.atol,method='rk4', options={'step_size':self.dt})
+
         return out[1]
 
     @property

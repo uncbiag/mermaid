@@ -328,9 +328,9 @@ class LNCCSimilarity(SimilarityMeasure):
     multi_scale_multi_kernel
     eg.    "resol_bound":[64,32],
            "kernel_size_ratio":[[0.0625,0.125, 0.25], [0.25,0.5], [0.5]],
-            "kernel_weight_ratio":[[0.2,0.3,0.5],[0.3,0.7],[1.0]],
+            "kernel_weight_ratio":[[0.1,0.3,0.6],[0.3,0.7],[1.0]],
             "stride":[0.25,0.25,0.25],
-            "dilation":[2,1,1]
+            "dilation":[1,2,2] #[2,1,1]
 
     single_scale_single_kernel
                     "resol_bound":[-1],

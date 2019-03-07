@@ -1006,7 +1006,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.useMap:
             cmap = self.get_map()
             # and now warp it
-            return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing, self.spline_order)
+            return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing, self.spline_order,zero_boundary=True)
         else:
             return self.rec_IWarped
 
