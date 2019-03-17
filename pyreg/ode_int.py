@@ -1,10 +1,6 @@
 import torch
 import torch.nn as nn
-from torchdiffeq import odeint, odeint_adjoint
-
-
-
-
+from pyreg import torchdiffeq
 
 
 class ODEBlock(nn.Module):
@@ -43,7 +39,7 @@ class ODEBlock(nn.Module):
 
     def forward(self, x):
         self.integration_time = self.integration_time.type_as(x)
-        odesolver = odeint_adjoint if self.adjoin_on else odeint
+        odesolver = torchdiffeq.odeint_adjoint if self.adjoin_on else torchdiffeq.odeint
         #out = odeint(self.odefunc, x, self.integration_time, rtol=self.rtol, atol=self.atol)
         try:
             out = odesolver(self.odefunc, x, self.integration_time, rtol=self.rtol, atol=self.atol,method=self.method, options={'step_size':self.dt})
