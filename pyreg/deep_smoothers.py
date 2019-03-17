@@ -1197,8 +1197,12 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         # check that the largest standard deviation is the largest one
         if gaussian_stds.max() > gaussian_stds[-1]:
             raise ValueError('The last standard deviation needs to be the largest')
-
-        self.omt_weight_penalty = params[('omt_weight_penalty', 0.01, 'Penalty for the optimal mass transport')] #25
+        self.use_weighted_linear_softmax = params[('use_weighted_linear_softmax', True, 'If set to ture use the use_weighted_linear_softmax to compute the pre-weights, otherwise use stable softmax')] #25
+        if self.use_weighted_linear_softmax:
+            print(" the weighted_linear_softmax is used")
+        else:
+            print(" the stable softmax is used")
+        self.omt_weight_penalty = params[('omt_weight_penalty', 25, 'Penalty for the optimal mass transport')] #25
         self.omt_use_log_transformed_std = params[('omt_use_log_transformed_std', True,
                                                         'If set to true the standard deviations are log transformed for the computation of OMT')]
         """if set to true the standard deviations are log transformed for the OMT computation"""
@@ -1209,7 +1213,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         self.gaussianWeight_min = params[('gaussian_weight_min', 0.001, 'minimal allowed weight for the Gaussians')]
         """minimal allowed weight during optimization"""
 
-        self.preweight_input_range_weight_penalty = params[('preweight_input_range_weight_penalty', 0.0,
+        self.preweight_input_range_weight_penalty = params[('preweight_input_range_weight_penalty', 1.0,
                                                                  'Penalty for the input to the preweight computation; weights should be between 0 and 1. If they are not they get quadratically penalized; use this with weighted_linear_softmax only.')]
 
         cparams = params[('deep_smoother',{})]
@@ -1221,8 +1225,8 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
             raise ValueError('Unknown weighting_type: needs to be  w_K|w_K_w|sqrt_w_K_sqrt_w')
 
         self.diffusion_weight_penalty = self.params[('diffusion_weight_penalty', 0.0, 'Penalized the squared gradient of the weights')]
-        self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 0.0, 'Penalize the total variation of the weights if desired')]
-        self.weight_range_init_weight_penalty = self.params[('weight_range_init_weight_penalty', 1., 'Penalize to the range of the weights')]
+        self.total_variation_weight_penalty = self.params[('total_variation_weight_penalty', 0.1, 'Penalize the total variation of the weights if desired')]
+        self.weight_range_init_weight_penalty = self.params[('weight_range_init_weight_penalty', 0., 'Penalize to the range of the weights')]
         self.weight_range_epoch_factor = self.params[('weight_range_factor', 6, 'the factor control the change of the penality ')]
 
         self.standardize_input_images = self.params[('standardize_input_images',True,'if true, subtracts the value specified by standardize_subtract_from_input_images followed by division by standardize_divide_input_images from all input images to the network')]
@@ -1231,7 +1235,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         self.standardize_subtract_from_input_images = self.params[('standardize_subtract_from_input_images',0.5,'Subtracts this value from all images input into a network')]
         """Subtracts this value from all images input into a network"""
 
-        self.standardize_divide_input_images = self.params[('standardize_divide_input_images',0.5,'Value to divide the input images by *AFTER* subtraction')]
+        self.standardize_divide_input_images = self.params[('standardize_divide_input_images',1.0,'Value to divide the input images by *AFTER* subtraction')]
         """Value to divide the input images by *AFTER* subtraction"""
 
         self.standardize_input_momentum = self.params[('standardize_input_momentum', True, 'if true, subtracts the value specified by standardize_subtract_from_input_momentum followed by division by standardize_divide_input_momentum from the input momentum to the network')]
@@ -1240,7 +1244,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         self.standardize_subtract_from_input_momentum = self.params[('standardize_subtract_from_input_momentum', 0.0, 'Subtracts this value from the input momentum into a network')]
         """Subtracts this value from the momentum input to a network"""
 
-        self.standardize_divide_input_momentum = self.params[('standardize_divide_input_momentum', 1.0, 'Value to divide the input momentum by *AFTER* subtraction')]
+        self.standardize_divide_input_momentum = self.params[('standardize_divide_input_momentum', 0.1, 'Value to divide the input momentum by *AFTER* subtraction')]
         """Value to divide the input momentum by *AFTER* subtraction"""
 
         self.standardize_display_standardization = self.params[('standardize_display_standardization',True,'Outputs statistical values before and after standardization')]
@@ -1275,11 +1279,11 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
 
         self.use_momentum_as_input = self.params[('use_momentum_as_input', False, 'If true, uses the image and the momentum as input')]
         if not self.use_momentum_as_input:
-            self.standardize_divide_input_images = 0.5
+            self.standardize_divide_input_images = 2
         self.estimate_around_global_weights = self.params[('estimate_around_global_weights', True,'If true, a weighted softmax is used so the default output (for input zero) are the global weights')]
         self.use_current_image_as_input = self.params[('use_current_image_as_input', True, 'If true, uses current image as input')]
         self.use_source_image_as_input = self.params[('use_source_image_as_input', False, 'If true, uses the source image as additional input')]
-        self.use_target_image_as_input = self.params[('use_target_image_as_input', True, 'If true, uses the target image as additional input')]
+        self.use_target_image_as_input = self.params[('use_target_image_as_input', False, 'If true, uses the target image as additional input')]
 
         self.network_penalty = self.params[('network_penalty', 1e-5, 'factor by which the L2 norm of network weights is penalized')]
         """penalty factor for L2 norm of network weights"""
@@ -1899,8 +1903,10 @@ class GeneralNetworkWeightedSmoothingModel(DeepSmoothingModel):
 
             # now we are ready for the weighted softmax (will be like softmax if no weights are specified)
             if self.estimate_around_global_weights:
-                pre_weights = stable_softmax(x, dim=1)
-                #pre_weights = weighted_linear_softmax(x, dim=1, weights=global_multi_gaussian_weights)
+                if not self.use_weighted_linear_softmax:
+                    pre_weights = stable_softmax(x, dim=1)
+                else:
+                    pre_weights = weighted_linear_softmax(x, dim=1, weights=global_multi_gaussian_weights)
                 ## the weighted softmax is an approximation to the Exp map (see paper by Schnoerr)
                 #pre_weights = weighted_softmax(x, dim=1, weights=global_multi_gaussian_weights)
             else:

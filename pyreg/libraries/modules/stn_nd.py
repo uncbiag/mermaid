@@ -10,8 +10,11 @@ This is needed for the map-based registrations for example.
 #TODO
 
 from torch.nn.modules.module import Module
-from pyreg.libraries.functions.stn_nd import  STNFunction_ND_BCXYZ, STNFunction_ND_BCXYZ_Compile
-from pyreg.libraries.functions.nn_interpolation import get_nn_interpolation
+###########TODO temporal comment for torch1 compatability
+# from pyreg.libraries.functions.stn_nd import  STNFunction_ND_BCXYZ, STNFunction_ND_BCXYZ_Compile
+# from pyreg.libraries.functions.nn_interpolation import get_nn_interpolationf
+################################################################3
+from pyreg.libraries.functions.stn_nd import  STNFunction_ND_BCXYZ
 from functools import partial
 # class STN_ND(Module):
 #     """
@@ -37,7 +40,7 @@ class STN_ND_BCXYZ(Module):
     """
     Spatial transform code for nD spatial transoforms. Uses the BCXYZ image format.
     """
-    def __init__(self, spacing, zero_boundary=False,use_bilinear=True,use_compile_version=False):
+    def __init__(self, spacing, zero_boundary=False,use_bilinear=True,use_01_input=True,use_compile_version=False):
         super(STN_ND_BCXYZ, self).__init__()
         self.spacing = spacing
         """spatial dimension"""
@@ -47,7 +50,7 @@ class STN_ND_BCXYZ(Module):
             else:
                 self.f = partial(get_nn_interpolation,spacing = self.spacing)
         else:
-            self.f = STNFunction_ND_BCXYZ( self.spacing,zero_boundary= zero_boundary,using_bilinear= use_bilinear)
+            self.f = STNFunction_ND_BCXYZ( self.spacing,zero_boundary= zero_boundary,using_bilinear= use_bilinear,using_01_input = use_01_input)
 
         """spatial transform function"""
     def forward(self, input1, input2):

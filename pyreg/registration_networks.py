@@ -1299,7 +1299,8 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         """ smoother for forward term"""
         print("the param of smoother is {}".format(self.smoother))
         print("the param of the smoother_for_forward is {}".format(self.smoother_for_forward))
-        self._shared_states = self._shared_states.union(self.smoother.associate_parameters_with_module(self))
+        if not EV.use_mermaid_net:
+            self._shared_states = self._shared_states.union(self.smoother.associate_parameters_with_module(self))
         """registers the smoother parameters so gbgithat they are optimized over if applicable"""
 
         if params['forward_model']['smoother']['type'] == 'adaptiveNet':
@@ -1312,6 +1313,9 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         """order of the spline for interpolations"""
         self.first_step_velocity = None
 
+
+    def associate_parameters_with_module(self):
+        self._shared_states = self._shared_states.union(self.smoother.associate_parameters_with_module(self))
     def write_parameters_to_settings(self):
         super(ShootingVectorMomentumNet, self).write_parameters_to_settings()
         self.smoother.write_parameters_to_settings()
@@ -2003,12 +2007,8 @@ class LDDMMAdaptiveSmootherMomentumMapNet(ShootingVectorMomentumNet):
                 self.integrator.set_func(func)
                 func.set_dim_info([self.dim, self.dim])
                 input = torch.cat((self.m,phi),1)
-            try:
-                output = self.integrator(input)
-            except:
-                self.f.debug_mode_on = True
-                output = self.integrator(input)
-                raise ValueError
+            #self.f.debug_mode_on=True
+            output = self.integrator(input)
             phi1 = output[:,self.dim:self.dim*2,...]
             if self.update_sm_by_advect and self.update_sm_with_interpolation and not self.bysingle_int:
                 phi1 = utils.compute_warped_image_multiNC(phi,phi1,self.spacing,spline_order=1,zero_boundary=False)# todo check the spacing is right here

@@ -48,8 +48,9 @@ class ODEBlock(nn.Module):
         try:
             out = odesolver(self.odefunc, x, self.integration_time, rtol=self.rtol, atol=self.atol,method=self.method, options={'step_size':self.dt})
         except:
-            print("the {} solver failed,now try rk4 solver".format(self.method))
-            out = odesolver(self.odefunc, x, self.integration_time, rtol=self.rtol, atol=self.atol,method='rk4', options={'step_size':self.dt})
+            print("the {} solver failed, now move into the debug mode".format(self.method))
+            self.odefunc.set_debug_mode_on()
+            out = odesolver(self.odefunc, x, self.integration_time, rtol=self.rtol, atol=self.atol,method=self.method, options={'step_size':self.dt})
 
         return out[1]
 

@@ -20,6 +20,9 @@ class ODEWarpedFunc(nn.Module):
     def set_opt_param(self,opt_param):
         self.opt_param = opt_param
 
+    def set_debug_mode_on(self):
+        self.nested_class.debug_mode_on = True
+
     def factor_y(self,y):
         x = [y[:, self.dim_info[ind]:self.dim_info[ind + 1], ...] for ind in range(len(self.dim_info)-1)]
         if not self.single_param:
@@ -30,7 +33,7 @@ class ODEWarpedFunc(nn.Module):
         return u, x
     def factor_res(self,u,res):
         if u is not None:
-            res = torch.cat((u,*res),1)
+            res = torch.cat((torch.zeros_like(u),*res),1)
         else:
             res = torch.cat(res,1)
         return res

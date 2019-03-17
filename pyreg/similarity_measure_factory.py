@@ -368,13 +368,13 @@ class LNCCSimilarity(SimilarityMeasure):
         self.resol_bound = params['similarity_measure']['lncc'][('resol_bound',[128,64], "resolution bound for using different strategy")]
         self.kernel_size_ratio = params['similarity_measure']['lncc'][('kernel_size_ratio',[[1./16,1./8,1./4],[1./4,1./2],[1./2]], "kernel size, ratio of input size")]
         self.kernel_weight_ratio = params['similarity_measure']['lncc'][('kernel_weight_ratio',[[0.1, 0.3, 0.6],[0.3,0.7],[1.]], "kernel size, ratio of input size")]
-        self.stride = params['similarity_measure']['lncc'][('stride',[1./4,1./4,1./4], "step size, responded with ratio of kernel size")]
-        self.dilation = params['similarity_measure']['lncc'][('dilation',[1,2,2], "dilation param, responded with ratio of kernel size")]
+        self.strides = params['similarity_measure']['lncc'][('stride',[[1./4,1./4,1./4],[1./4,1./4],[1./4]], "step size, responded with ratio of kernel size")]
+        self.dilations = params['similarity_measure']['lncc'][('dilation',[[2,2,2],[2,2],[1]], "dilation param, responded with ratio of kernel size")]
         if self.resol_bound[0] >-1:
             assert len(self.resol_bound)+1 == len(self.kernel_size_ratio)
             assert len(self.resol_bound)+1 == len(self.kernel_weight_ratio)
-            assert max(len(kernel) for kernel in self.kernel_size_ratio) == len(self.stride)
-            assert max(len(kernel) for kernel in self.kernel_size_ratio) == len(self.dilation)
+            assert len(self.resol_bound)+1 == len(self.strides)
+            assert len(self.resol_bound)+1 == len(self.dilations)
 
     def __stepup(self,img_sz):
         max_scale  = min(img_sz)
@@ -382,10 +382,14 @@ class LNCCSimilarity(SimilarityMeasure):
             if max_scale >= bound:
                 self.kernel = [int(max_scale*kz) for kz in self.kernel_size_ratio[i]]
                 self.weight = self.kernel_weight_ratio[i]
+                self.stride = self.strides[i]
+                self.dilation = self.dilations[i]
                 break
         if max_scale < self.resol_bound[-1]:
             self.kernel =  [int(max_scale*kz) for kz in self.kernel_size_ratio[-1]]
             self.weight = self.kernel_weight_ratio[-1]
+            self.stride = self.strides[-1]
+            self.dilation = self.dilations[-1]
 
         self.num_scale = len(self.kernel)
         self.kernel_sz = [[k for _ in range(self.dim)] for k in self.kernel]

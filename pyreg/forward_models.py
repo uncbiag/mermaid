@@ -216,6 +216,8 @@ class RHSLibrary(object):
             #return rhsphi
         else:
             raise ValueError('Only supported up to dimension 3')
+        #print("debugging, abs_sum v{}, and phi {},new_phi {}".format(torch.sum(torch.abs(v)), torch.sum(torch.abs(phi)),torch.sum(torch.abs(rhsphi))))
+
 
 
 
@@ -440,6 +442,7 @@ class ForwardModel(with_metaclass(ABCMeta, object)):
 
         self.fdt = fd.FD_torch( self.spacing )
         """torch finite difference support"""
+        self.debug_mode_on =False
 
     @abstractmethod
     def f(self,t,x,u,pars,variables_from_optimizer=None):
@@ -563,6 +566,7 @@ class BGAdvMap(ForwardModel):
         self.smoother = smoother
         self.speed_nest_factor = 1.
         self.use_net = True if self.params['smoother']['type'] == 'adaptiveNet' else False
+
 
     def debugging(self, input, t):
         x = utils.checkNan(input)
@@ -732,7 +736,10 @@ class EPDiffMap(ForwardModel):
                       self.rhs.rhs_advect_map_multiNC(phi,v),
                       self.rhs.rhs_lagrangian_evolve_map_multiNC(phi_inv,v)]
         else:
-            ret_val= [self.rhs.rhs_epdiff_multiNC(m,v),self.rhs.rhs_advect_map_multiNC(phi,v)]
+            new_m = self.rhs.rhs_epdiff_multiNC(m,v)
+            new_phi = self.rhs.rhs_advect_map_multiNC(phi,v)
+            ret_val= [new_m, new_phi]
+            #print("debugging, abs_sum v{}, and new_m {},new_phi {}".format(torch.sum(torch.abs(v)), torch.sum(torch.abs(new_m)),torch.sum(torch.abs(new_phi))))
         #self.debugging([m, v, phi, new_val[0], new_val[1]], t)
         return ret_val
 
@@ -775,7 +782,7 @@ class EPDiffAdaptMap(ForwardModel):
 
 
     def debug_distrib(self,var,name):
-        var = var.cpu().numpy()
+        var = var.detach().cpu().numpy()
         density,_= np.histogram(var,[-100,-10,-1,0,1,10,100],density=True)
         print("{} distri:{}".format(name,density))
 
@@ -797,9 +804,10 @@ class EPDiffAdaptMap(ForwardModel):
 
         # assume x[0] is m and x[1] is phi for the state
         m = x[0]
+        m=m.clamp(max=1., min=-1.)
         phi = x[1]
         return_val_name = []
-
+        sm_weight = None
         if self.update_sm_by_advect:
             if not self.update_sm_with_interpolation:
                 sm_weight = x[2]
@@ -827,8 +835,19 @@ class EPDiffAdaptMap(ForwardModel):
                     sm_weight = x[2]
                     new_sm_weight = utils.compute_warped_image_multiNC(sm_weight, phi, self.spacing, 1,
                                                                        zero_boundary=False)
+
+
                     # print('t{},m min, mean,max {} {} {}'.format(t,m.min().item(),m.mean().item(),m.max().item()))
                     v = self.smoother.smooth(m, new_sm_weight)
+
+                    # #################################
+                    # from tools.visual_tools import save_smoother_map, plot_2d_img
+                    # # save_smoother_map(new_sm_weight, self.smoother.gaussian_stds, t.item(),
+                    # #                   '/playpen/zyshen/debugs/visual_sm')
+                    # plot_2d_img(m[0, 0, :, 40, :], 'm' + str(t.item()), '/playpen/zyshen/debugs/visual_m')
+                    #
+                    # ###############################
+
                     new_m = self.rhs.rhs_epdiff_multiNC(m, v)
                     new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
                     new_sm_weight = self.update_sm_weight.detach()
@@ -850,9 +869,12 @@ class EPDiffAdaptMap(ForwardModel):
             ret_val = [new_m, new_phi]
             return_val_name =['new_m','new_phi']
 
+
+
+
         if self.debug_mode_on:
-            toshows = [m, v]+ret_val
-            name = ['m', 'v']+return_val_name
+            toshows = [m, v,phi]+ret_val if sm_weight is None else  [m, v,phi]+ret_val +[sm_weight]
+            name = ['m', 'v','phi']+return_val_name if sm_weight is None else ['m', 'v','phi']+return_val_name +['sm_weight']
             for i, toshow in enumerate(toshows):
                 print('t{},{} min, mean,max {} {} {}'.format(t, name[i], toshow.min().item(), toshow.mean().item(),
                                                              toshow.max().item()))

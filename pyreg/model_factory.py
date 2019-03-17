@@ -164,6 +164,7 @@ class ModelFactory(object):
                 loss = self.models[modelName][1](model.m, self.sz_sim, self.spacing_sim, self.sz_model,
                                                  self.spacing_model, cparams)
             else:
+                print("works in mermaid iter mode")
                 loss = self.models[modelName][1](list(model.parameters())[0], self.sz_sim, self.spacing_sim, self.sz_model, self.spacing_model, cparams)
             return model, loss
         else:

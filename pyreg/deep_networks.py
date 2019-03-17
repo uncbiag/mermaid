@@ -338,7 +338,7 @@ class DeepNetwork(with_metaclass(ABCMeta,nn.Module)):
         self.dim = dim
         self.params = params
 
-        self.normalization_type = self.params[('normalization_type', 'none',
+        self.normalization_type = self.params[('normalization_type', 'group',
                                                "Normalization type between layers: ['batch'|'layer'|'instance'|'group'|'none']")]
         if self.normalization_type.lower() == 'none':
             self.normalization_type = None
@@ -1199,7 +1199,7 @@ class WeightRangeLoss(nn.Module):
 
             return float(factor)
 
-        cur_weight = max(sigmoid_decay(epoch, static=10, k=self.decay_factor),0.001)
+        cur_weight = max(sigmoid_decay(epoch, static=10, k=self.decay_factor),0.1)
         return cur_weight
 
 
