@@ -6,12 +6,7 @@ from __future__ import absolute_import
 
 from builtins import object
 from . import registration_networks as RN
-from . import utils
-from . import image_sampling as IS
-from .data_wrapper import AdaptVal
-
-import torch
-import numpy as np
+from . import external_variable as EV
 
 def _print_models(models):
     print('\nKnown registration models are:')
@@ -59,7 +54,16 @@ class AvailableModels(object):
                                                      'image-based shooting-based LDDMM using the scalar momentum'),
             'svf_quasi_momentum_image': (RN.SVFQuasiMomentumImageNet,
                                          RN.SVFQuasiMomentumImageLoss, False,
-                                         'EXPERIMENTAL: Image-based SVF version which estimates velcocity based on a smoothed vetor field')
+                                         'EXPERIMENTAL: Image-based SVF version which estimates velcocity based on a smoothed vetor field'),
+            'to_rename_map': (RN.ToReNameNet,
+                                         RN.ToReNameLoss, True,
+                                         'EXPERIMENTAL: test on learning smoother network'),
+            'lddmm_adapt_smoother_map': (RN.LDDMMAdaptiveSmootherMomentumMapNet,RN.LDDMMAdaptiveSmootherMomentumMapLoss,True,"EXPERIMENT: test"
+                                                                                                                             "on th learning smoother lddmm"),
+            'cvf_vector_momentum_map': (RN.CVFVectorMomentumMapNet,
+                                        RN.CVFVectorMomentumMapLoss, True,
+                                        'EXPERIMENTAL: map-based constant velocity field using the vector momentum'),
+            'one_step_map': (RN.OneStepMapNet, RN.OneStepMapLoss, True, 'EXPERIMENTAL: one-step map based velocity registration')
         }
         """dictionary defining all the models"""
 
@@ -156,8 +160,12 @@ class ModelFactory(object):
             else:
                 print('Using ' + modelName + ' model')
                 model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams)
-
-            loss = self.models[modelName][1](list(model.parameters())[0], self.sz_sim, self.spacing_sim, self.sz_model, self.spacing_model, cparams)
+            if EV.use_mermaid_net:
+                loss = self.models[modelName][1](model.m, self.sz_sim, self.spacing_sim, self.sz_model,
+                                                 self.spacing_model, cparams)
+            else:
+                print("works in mermaid iter mode")
+                loss = self.models[modelName][1](list(model.parameters())[0], self.sz_sim, self.spacing_sim, self.sz_model, self.spacing_model, cparams)
             return model, loss
         else:
             self.print_available_models()

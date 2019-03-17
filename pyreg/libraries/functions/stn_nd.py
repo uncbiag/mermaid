@@ -14,15 +14,18 @@ from torch.nn import Module
 from cffi import FFI
 from pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
 
-if sys.version_info >= (3, 0):
-    if USE_CUDA:
-        from pyreg.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
-    from pyreg.libraries._ext import my_lib_nd
-else:
-    if USE_CUDA:
-        from pyreg.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
-    from pyreg.libraries._ext import my_lib_nd
 
+###########TODO temporal comment for torch1 compatability
+
+# if sys.version_info >= (3, 0):
+#     if USE_CUDA:
+#         from pyreg.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
+#     from pyreg.libraries._ext import my_lib_nd
+# else:
+#     if USE_CUDA:
+#         from pyreg.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
+#     from pyreg.libraries._ext import my_lib_nd
+###########################################################3
 from . import map_scale_utils
 
 ffi = FFI()
@@ -37,7 +40,7 @@ class STNFunction_ND_BCXYZ(Module):
    Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox).
    """
 
-    def __init__(self, spacing, zero_boundary = False):
+    def __init__(self, spacing, zero_boundary = False,using_bilinear=True,using_01_input=True):
         """
         Constructor
 
@@ -48,6 +51,8 @@ class STNFunction_ND_BCXYZ(Module):
         self.ndim = len(spacing)
         #zero_boundary = False
         self.zero_boundary = 'zeros' if zero_boundary else 'border'
+        self.mode = 'bilinear' if using_bilinear else 'nearest'
+        self.using_01_input=using_01_input
 
     def forward_stn(self, input1, input2, ndim):
         if ndim==1:
@@ -56,14 +61,14 @@ class STNFunction_ND_BCXYZ(Module):
             input2_ordered = torch.zeros_like(input2)
             input2_ordered[:,0,...] = input2[:,1,...]
             input2_ordered[:,1,...] = input2[:,0,...]
-            output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 1]), mode='bilinear',
+            output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 1]), mode=self.mode,
                                           padding_mode=self.zero_boundary)
         if ndim==3:
             input2_ordered = torch.zeros_like(input2)
             input2_ordered[:, 0, ...] = input2[:, 2, ...]
             input2_ordered[:, 1, ...] = input2[:, 1, ...]
             input2_ordered[:, 2, ...] = input2[:, 0, ...]
-            output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 4, 1]), mode='bilinear', padding_mode=self.zero_boundary)
+            output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 4, 1]), mode=self.mode, padding_mode=self.zero_boundary)
         return output
 
     def forward(self, input1, input2):
@@ -76,8 +81,10 @@ class STNFunction_ND_BCXYZ(Module):
         """
 
         assert(len(self.spacing)+2==len(input2.size()))
-
-        output = self.forward_stn(input1, map_scale_utils.scale_map(input2,self.spacing), self.ndim)
+        if self.using_01_input:
+            output = self.forward_stn(input1, map_scale_utils.scale_map(input2,self.spacing), self.ndim)
+        else:
+            output = self.forward_stn(input1, input2, self.ndim)
         # print(STNVal(output, ini=-1).sum())
         return output
 

@@ -16,7 +16,7 @@ import numpy as np
 import numpy.testing as npt
 
 from .data_wrapper import USE_CUDA, MyTensor, AdaptVal
-
+from . import external_variable as EV
 from . import finite_differences as fd
 from . import utils
 from . import custom_pytorch_extensions as ce
@@ -652,6 +652,82 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
                 cFilter,_ = ce.create_complex_fourier_filter(g, self.sz)
                 self.FFilter += cFilter
 
+
+
+class LocalFourierSmoother(object):
+    """
+    Performs multi Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
+    than spatial Gaussian smoothing on the CPU in large dimensions.
+    """
+
+    def __init__(self, sz, spacing, params):
+        super(LocalFourierSmoother, self).__init__()
+        self.sz = sz
+        self.spacing = spacing
+        self.dim = len(spacing)
+        self.gaussian_stds = AdaptVal(torch.from_numpy(np.array(params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')],dtype='float32')))
+        self.nr_of_gaussians = len(self.gaussian_stds)
+        self.weighting_type = params[('weighting_type','sqrt_w_K_sqrt_w','Type of weighting: w_K|w_K_w|sqrt_w_K_sqrt_w')]
+        self.gaussian_fourier_filter_generator=ce.GaussianFourierFilterGenerator(self.sz, self.spacing, nr_of_slots=self.nr_of_gaussians)
+        self.gaussian_fourier_filter_generator.get_gaussian_filters(self.gaussian_stds)
+
+    def get_nr_of_gaussians(self):
+        return self.nr_of_gaussians
+    def debugging(self, input, t):
+        x = utils.checkNan(input)
+        if np.sum(x):
+            print(input[0])
+            print(input[1])
+            print("flag m: {}, ".format(x[0]))
+            print("flag smooth_m: {},".format(x[1]))
+            raise ValueError("nan error")
+
+
+
+    def smooth(self, momentum, weights):
+        from . import deep_smoothers as DS
+        weights = torch.clamp((weights), min=1e-6)
+
+        if self.weighting_type=='sqrt_w_K_sqrt_w':
+            sqrt_weights = torch.sqrt(weights)
+            sqrt_weighted_multi_smooth_v = DS.compute_weighted_multi_smooth_v( momentum=momentum, weights=sqrt_weights, gaussian_stds=self.gaussian_stds,
+                                                                   gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator )
+            if EV.debug_mode_on:
+                pass #self.debugging([sqrt_weights,sqrt_weighted_multi_smooth_v],0)
+        elif self.weighting_type=='w_K_w':
+            # now create the weighted multi-smooth-v
+            weighted_multi_smooth_v = DS.compute_weighted_multi_smooth_v( momentum=momentum, weights=weights, gaussian_stds=self.gaussian_stds,
+                                                                       gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator )
+        elif self.weighting_type=='w_K':
+            # todo: check if we can do a more generic datatype conversion than using .float()
+            multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(momentum,
+                                                                     gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
+                                                                     sigma=self.gaussian_stds,
+                                                                     compute_std_gradients=False)
+        else:
+            raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
+        sz_m = momentum.size()
+        ret = AdaptVal(MyTensor(*sz_m))
+
+        for n in range(self.dim):
+            if self.weighting_type=='sqrt_w_K_sqrt_w':
+                # roc should be: batch x multi_v x X x Y
+                roc = sqrt_weighted_multi_smooth_v[:, :, n, ...]
+                yc = torch.sum(roc * sqrt_weights, dim=1)
+            elif self.weighting_type=='w_K_w':
+                # roc should be: batch x multi_v x X x Y
+                roc = weighted_multi_smooth_v[:, :, n, ...]
+                yc = torch.sum(roc*weights,dim=1)
+            elif self.weighting_type=='w_K':
+                # roc should be: batch x multi_v x X x Y
+                roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
+                yc = torch.sum(roc * weights, dim=1)
+            else:
+                raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
+
+            ret[:, n, ...] = yc # ret is: batch x channels x X x Y
+        return ret
+
 def _compute_omt_penalty_for_weight_vectors(weights,multi_gaussian_stds,omt_power=2.0,use_log_transform=False):
 
     penalty = MyTensor(1).zero_()
@@ -966,9 +1042,10 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         """minimal allowed weight during optimization"""
 
         self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(sz, spacing, nr_of_slots=self.nr_of_gaussians)
+        self.gaussian_fourier_filter_generator.get_gaussian_filters(self.multi_gaussian_stds)
         """creates the smoothed vector fields"""
 
-        self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,dim=self.dim,spacing=self.spacing,im_sz=self.sz).create_deep_smoother(params)
+        self.ws = deep_smoothers.DeepSmootherFactory(nr_of_gaussians=self.nr_of_gaussians,gaussian_stds=self.multi_gaussian_stds,nr_of_image_channels=0,dim=self.dim,spacing=self.spacing,im_sz=self.sz).create_deep_smoother(params)
         """learned mini-network to predict multi-Gaussian smoothing weights"""
 
         last_kernel_size = self.ws.get_last_kernel_size()
@@ -1025,8 +1102,11 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         self._is_optimizing_over_deep_network = True
 
         self._nn_hooks = None
+        self._nn_check_hooks = None
 
         self.weight_input_range_loss = deep_networks.WeightInputRangeLoss()
+
+        print("ATTENTION!!!! THE DEEP SMOOTHER SHOULD ONLY INITIALIZED ONCE")
 
     def _compute_weights_from_preweights(self,pre_weights):
         weights = deep_smoothers.weighted_linear_softmax(pre_weights*self.global_parameter_scaling_factor,dim=0,weights=self.multi_gaussian_weights)
@@ -1068,15 +1148,37 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         if self._nn_hooks is None:
             return
-
+        print("the gradient mask will be removed in deep smoother")
         for h in self._nn_hooks:
             h.remove()
 
         self._nn_hooks = None
 
+
+    def disable_penalty_computation_in_deep_smoother(self):
+        self.ws.compute_the_penalty=False
+    def enable_accumulated_penalty(self):
+        self.ws.accumulate_the_penalty=True
+
+    def reset_penalty(self):
+        self.ws.current_penalty=0.
+        self.ws.compute_the_penalty= True
+
+    def __print_grad_hook(self,grad):
+        print(torch.sum(torch.abs(grad)))
+        return grad
+    def __debug_grad_exist(self):
+        self._nn_check_hooks = []
+        for child in self.ws.children():
+            for cur_param in child.parameters():
+                current_hook = cur_param.register_hook(self.__print_grad_hook)
+                self._nn_check_hooks.append(current_hook)
+
+
     def _enable_force_nn_gradients_to_zero_hooks(self):
 
         if self._nn_hooks is None:
+            print("the gradient mask will be added in deep smoother")
             self._nn_hooks = []
 
             for child in self.ws.children():
@@ -1101,14 +1203,16 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             s.add('pre_multi_gaussian_weights')
 
         # todo: is it possible that the following code not properly disable parameter updates
-        for child in self.ws.children():
-            for cur_param in child.parameters():
-                cur_param.requires_grad = not freeze_shared_parameters
+        if self.optimize_over_deep_network:
+            for child in self.ws.children():
+                for cur_param in child.parameters():
+                    cur_param.requires_grad = not freeze_shared_parameters
 
-        module.add_module('weighted_smoothing_net',self.ws)
-        sd = self.ws.state_dict()
-        for key in sd:
-            s.add('weighted_smoothing_net.' + str(key))
+        if self.optimize_over_deep_network or self.evaluate_but_do_not_optimize_over_shared_registration_parameters:
+            module.add_module('weighted_smoothing_net',self.ws)
+            sd = self.ws.state_dict()
+            for key in sd:
+                s.add('weighted_smoothing_net.' + str(key))
 
         if self.evaluate_but_do_not_optimize_over_shared_registration_parameters:
              print('INFO: Setting network to evaluation mode')
@@ -1175,6 +1279,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         """
         gaussianWeights = self._get_gaussian_weights_from_optimizer_params()
         return gaussianWeights
+    def get_deep_smoother_weights(self):
+        return self.ws.get_weights()
 
     def _get_gaussian_stds_from_optimizer_params(self):
         return self._compute_stds_from_prestds(pre_stds=self.pre_multi_gaussian_stds_optimizer_params)
@@ -1237,7 +1343,6 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             # norrmalize by  batch size to make it consistent with the global approach above
             penalty = self.ws.get_current_penalty()
             penalty += self.ws.compute_l2_parameter_weight_penalty()
-
         return penalty
 
     def _smooth_via_deep_network(self,I,additional_inputs,iter=0,retain_computed_local_weights=False):
@@ -1295,6 +1400,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         :return: smoothed image
         """
 
+
+
         compute_std_gradients = self.optimize_over_smoother_stds
 
         if variables_from_optimizer is not None:
@@ -1305,6 +1412,8 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                 iter_or_epoch = variables_from_optimizer['iter']
         else:
             iter_or_epoch = None
+
+        self.ws.set_cur_epoch(iter_or_epoch)
 
         if variables_from_optimizer is not None:
             if self.start_optimize_over_smoother_parameters_at_iteration > iter_or_epoch:
@@ -1329,6 +1438,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         # todo: make this more generic later
         additional_inputs = {'m':v,'I0':pars['I0'],'I1':pars['I1']}
+        #print(pars['I0'].shape, pars['I1'].shape)
 
         # if variables_from_optimizer is not None:
         #     if self.start_optimize_over_smoother_parameters_at_iteration > variables_from_optimizer['iter']:
@@ -1344,7 +1454,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
         #print('Current weight l2 = {}'.format(self._compute_current_nn_weight_l2().item()))
 
-        self._is_optimizing_over_deep_network = self.optimize_over_deep_network
+        self._is_optimizing_over_deep_network = self.optimize_over_deep_network   #TODO  Should be recovered ###########################################################3
         if self._is_optimizing_over_deep_network:
             if variables_from_optimizer is not None:
                 if self.start_optimize_over_nn_smoother_parameters_at_iteration > iter_or_epoch:
@@ -1354,7 +1464,11 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                 else:
                     if self.start_optimize_over_nn_smoother_parameters_at_iteration == iter_or_epoch:
                         print('INFO: Allowing optimization over deep smoother network (assuming we are not in evaluation-only mode)')
-                    self._remove_all_nn_hooks()
+                        self._remove_all_nn_hooks()  # todo we put this line under if statement, so that it will only remove hooks when hit the start epoch
+
+        # if self. _nn_check_hooks is None:
+        #     self.__debug_grad_exist()
+
 
         # distiniguish the two cases where we compute the vector field (for the deformation) versus where we compute for regularization
         if smooth_to_compute_regularizer_energy:
@@ -1391,7 +1505,7 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
                 smoothed_v = self._smooth_via_std_multi_gaussian(v=v,compute_std_gradients=compute_std_gradients)
 
 
-        smoothed_v = self._do_CFL_clamping_if_necessary(smoothed_v,clampCFL_dt=clampCFL_dt)
+        smoothed_v = self._do_CFL_clamping_if_necessary(smoothed_v,clampCFL_dt=clampCFL_dt) # TODO check if we need to remove this when use dopri
 
         if vout is not None:
             vout[:] = smoothed_v
@@ -1466,7 +1580,8 @@ class AvailableSmoothers(object):
             'adaptive_multiGaussian': (AdaptiveMultiGaussianFourierSmoother, 'Adaptive multi Gaussian smoothing in the Fourier domain w/ optimization over weights and stds'),
             'learned_multiGaussianCombination': (LearnedMultiGaussianCombinationFourierSmoother, 'Experimental learned smoother'),
             'gaussianSpatial': (GaussianSpatialSmoother, 'Gaussian smoothing in the spatial domain'),
-            'adaptiveNet': (AdaptiveSmoother,'Epxerimental learned smoother')
+            'adaptiveNet': (AdaptiveSmoother,'Epxerimental learned smoother'),
+            'localAdaptive':(LocalFourierSmoother,'Experimental local smoother')
         }
         """dictionary defining all the smoothers"""
 
@@ -1549,14 +1664,14 @@ class SmootherFactory(object):
         params['smoother']['type'] = smoother_name
         return self.create_smoother(params)
 
-    def create_smoother(self, params ):
+    def create_smoother(self, params, sm_setting_name='smoother'):
         """
         Create the desired smoother
         :param params: ParamterDict() object to hold paramters which should be passed on
         :return: returns the smoother
         """
 
-        cparams = params[('smoother',{})]
+        cparams = params[(sm_setting_name,{})]
         smootherType = cparams[('type', self.default_smoother_type,
                                           'type of smoother (diffusion|gaussian|adaptive_gaussian|multiGaussian|adaptive_multiGaussian|gaussianSpatial|adaptiveNet)' )]
 

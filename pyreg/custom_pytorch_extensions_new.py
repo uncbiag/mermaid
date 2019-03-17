@@ -15,6 +15,7 @@ import torch
 from torch.autograd import Function
 import numpy as np
 from torch.autograd import gradcheck
+import torch.nn as nn
 from .data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor
 # if USE_CUDA:
 #     import pytorch_fft.fft as fft
@@ -116,7 +117,7 @@ def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True, m
     """
     Creates a filter in the Fourier domain given a spatial array defining the filter
     
-    :param spatial_filter: Array defining the filter.
+    :param spatial_filter: [X,Y,Z] e.g. in 3d,  numpy array defining the filter.
     :param sz: Desired size of the filter in the Fourier domain.
     :param enforceMaxSymmetry: If set to *True* (default) forces the filter to be real and hence forces the filter
         in the spatial domain to be symmetric
@@ -145,22 +146,15 @@ def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True, m
 
         # we assume this is symmetric and hence take the absolute value
         # as the FT of a symmetric kernel has to be real
-        if USE_CUDA:
-            f_filter =  create_cuda_filter(spatial_filter_max_at_zero, sz)
-            ret_filter = f_filter[...,0] # only the real part
-        else:
-            f_filter = create_numpy_filter(spatial_filter_max_at_zero, sz)
-            ret_filter = f_filter.real
+        f_filter =  create_tensor_filter(spatial_filter_max_at_zero, sz)
+        ret_filter = f_filter[...,0] # only the real part
 
         return ret_filter,maxIndex
     else:
-        if USE_CUDA:
-            return create_cuda_filter(spatial_filter),maxIndex
-        else:
-            return create_numpy_filter(spatial_filter, sz),maxIndex
+        return create_tensor_filter(spatial_filter),maxIndex
 
 
-def create_cuda_filter(spatial_filter, sz):
+def create_tensor_filter(spatial_filter, sz):
     """
     create cuda version filter, another one dimension is added to the output for computational convenient
     besides the output will not be full complex result of shape (∗,2),
@@ -170,14 +164,11 @@ def create_cuda_filter(spatial_filter, sz):
     :return: filter, with size [1,N1,..Nd-1,⌊Nd/2⌋+1,2⌋
     """
     fftn = torch.rfft
-    spatial_filter_th = torch.from_numpy(spatial_filter).float().cuda()
+    spatial_filter_th = AdaptVal(torch.from_numpy(spatial_filter).float())
     spatial_filter_th = spatial_filter_th[None, ...]
-    spatial_filter_th_fft = fftn(spatial_filter_th, len(sz))
+    spatial_filter_th_fft = fftn(spatial_filter_th, len(sz),onesided=True)
     return spatial_filter_th_fft
 
-
-def create_numpy_filter(spatial_filter, sz):
-    return np.fft.fftn(spatial_filter, s=sz)
 
 # todo: maybe check if we can use rfft's here for better performance
 def sel_fftn(dim):
@@ -186,22 +177,12 @@ def sel_fftn(dim):
     :param dim:
     :return: function pointer
     """
-    if USE_CUDA:
-        if dim in[1,2,3]:
-            f= torch.rfft
-        else:
-            raise ValueError('Only 3D cuda fft supported')
-        return f
+    if dim in[1,2,3]:
+        f= torch.rfft
     else:
-        if dim == 1:
-            f = np.fft.fft
-        elif dim == 2:
-            f = np.fft.fft2
-        elif dim == 3:
-            f = np.fft.fftn
-        else:
-            raise ValueError('Only 3D cpu fft supported')
-        return f
+        raise ValueError('Only 3D cuda fft supported')
+    return f
+
 
 def sel_ifftn(dim):
     """
@@ -209,23 +190,14 @@ def sel_ifftn(dim):
     :param dim:
     :return: function pointer
     """
-    if USE_CUDA:
-        if dim in [1,2,3]:
-            f = torch.irfft
-        else:
-            raise ValueError('Only 3D cuda fft supported')
+    if dim in [1,2,3]:
+        f = torch.irfft
     else:
-        if dim == 1:
-            f = np.fft.ifft
-        elif dim == 2:
-            f = np.fft.ifft2
-        elif dim == 3:
-            f = np.fft.ifftn
-        else:
-            raise ValueError('Only 3D cpu ifft supported')
+        raise ValueError('Only 3D cuda fft supported')
+
     return f
 
-class FourierConvolution(Function):
+class FourierConvolution(nn.Module):
     """
     pyTorch function to compute convolutions in the Fourier domain: f = g*h
     """
@@ -239,14 +211,10 @@ class FourierConvolution(Function):
         # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
         super(FourierConvolution, self).__init__()
         self.complex_fourier_filter = complex_fourier_filter
-        if USE_CUDA:
-            self.dim = complex_fourier_filter.dim() -1
-        else:
-            self.dim = len(complex_fourier_filter.shape)
+        self.dim = complex_fourier_filter.dim() -1
         self.fftn = sel_fftn(self.dim)
         self.ifftn = sel_ifftn(self.dim)
 
-        """The filter in the Fourier domain"""
 
     def forward(self, input):
         """
@@ -257,243 +225,22 @@ class FourierConvolution(Function):
         in gpu implementation, the rfft is used for efficiency, which means the filter should be symmetric
         (input_real+input_img)(filter_real+filter_img) = (input_real*filter_real-input_img*filter_img) + (input_img*filter_real+input_real*filter_img)i
         filter_img =0, then get input_real*filter_real + (input_img*filter_real)i ac + bci
-
         :param input: Image
         :return: Filtered-image
         """
-
-        if USE_CUDA:
-            input = FFTVal(input,ini=1)
-            f_input = self.fftn(input,self.dim,onesided=True)
-            f_filter_real = self.complex_fourier_filter[0]
-            f_filter_real=f_filter_real.expand_as(f_input[...,0])
-            f_filter_real = torch.stack((f_filter_real,f_filter_real),-1)
-            f_conv = f_input * f_filter_real
-            conv_ouput_real = self.ifftn(f_conv, self.dim,onesided=True,signal_sizes=input.shape[2::])
-            result = conv_ouput_real
-
-            return FFTVal(result, ini=-1)
-        else:
-            if self.dim <3:
-                conv_output = self.ifftn(self.fftn(input.detach().cpu().numpy()) * self.complex_fourier_filter)
-                result = conv_output.real  # should in principle be real
-            elif self.dim == 3:
-                result = np.zeros(input.shape)
-                for batch in range(input.size()[0]):
-                    for ch in range(input.size()[1]):
-                        conv_output = self.ifftn(self.fftn(input[batch,ch].detach().cpu().numpy()) * self.complex_fourier_filter)
-                        result[batch,ch] = conv_output.real
-            else:
-                raise ValueError("cpu fft smooth should be 1d-3d")
-
-
-
-            return torch.FloatTensor(result)
-            # print( 'max(imag) = ' + str( (abs( conv_output.imag )).max() ) )
-            # print( 'max(real) = ' + str( (abs( conv_output.real )).max() ) )
-
-
-    # This function has only a single output, so it gets only one gradient
-    def backward(self, grad_output):
-        """
-        Computes the gradient
-        the 3d cpu ifft is not implemented in ifftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
-        1d 2d cpu works well because ifft and ifft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
-
-        in gpu implementation, the irfft is used for efficiency, which means the filter should be symmetric
-        :param grad_output: Gradient output of previous layer
-        :return: Gradient including the Fourier-based convolution
-        """
-
-        # Initialize all gradients w.r.t. inputs to
-        # None. Thanks to the fact that additional trailing Nones are
-        # ignored, the return statement is simple even when the function has
-        # optional inputs.
-
-        grad_input = None
-
-        # These needs_input_grad checks are optional and there only to
-        # improve efficiency. If you want to make your code simpler, you can
-        # skip them. Returning gradients for inputs that don't require it is
-        # not an error.
-
-
         # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
-        # input_imag =0, then get  ac + bci
-        if USE_CUDA:
+        # filter_imag =0, then get  ac + bci
 
-            grad_output = FFTVal(grad_output, ini=1)
-            #print grad_output.view(-1,1).sum()
-            f_go = self.fftn(grad_output,self.dim,onesided=True)
-            f_filter_real = self.complex_fourier_filter[0]
-            f_filter_real = f_filter_real.expand_as(f_go[..., 0])
-            f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
-            f_conv = f_go * f_filter_real
-            grad_input = self.ifftn(f_conv,self.dim,onesided=True,signal_sizes=grad_output.shape[2::])
+        input = FFTVal(input,ini=1)
+        f_input = self.fftn(input,self.dim,onesided=True)
+        f_filter_real = self.complex_fourier_filter[0]
+        f_filter_real=f_filter_real.expand_as(f_input[...,0])
+        f_filter_real = torch.stack((f_filter_real,f_filter_real),-1)
+        f_conv = f_input * f_filter_real
+        conv_ouput_real = self.ifftn(f_conv, self.dim,onesided=True,signal_sizes=input.shape[2::])
+        result = conv_ouput_real
+        return FFTVal(result, ini=-1)
 
-            # print(grad_input)
-            # print((grad_input[0,0,12:15]))
-
-            return FFTVal(grad_input, ini=-1)
-        else:
-            # if self.needs_input_grad[0]:
-            numpy_go = grad_output.detach().cpu().numpy()
-            # we use the conjugate because the assumption was that the spatial filter is real
-            # THe following two lines should be correct
-            if self.dim < 3:
-                grad_input_c = (self.ifftn(np.conjugate(self.complex_fourier_filter) * self.fftn(numpy_go)))
-                grad_input = grad_input_c.real
-            elif self.dim == 3:
-                grad_input = np.zeros(numpy_go.shape)
-                assert grad_output.dim() == 5
-                for batch in range(grad_output.size()[0]):
-                    for ch in range(grad_output.size()[1]):
-                        grad_input_c = (self.ifftn(np.conjugate(self.complex_fourier_filter) *self.fftn(numpy_go[batch,ch])))
-                        grad_input[batch,ch] = grad_input_c.real
-            else:
-                raise ValueError("cpu fft smooth should be 1d-3d")
-            # print(grad_input)
-
-            # print((grad_input[0,0,12:15]))
-            return torch.FloatTensor(grad_input)
-            # print( 'grad max(imag) = ' + str( (abs( grad_input_c.imag )).max() ) )
-            # print( 'grad max(real) = ' + str( (abs( grad_input_c.real )).max() ) )
-
-
-class InverseFourierConvolution(Function):
-    """
-    pyTorch function to compute convolutions in the Fourier domain: f = g*h
-    But uses the inverse of the smoothing filter
-    """
-
-    def __init__(self, complex_fourier_filter):
-        """
-        Constructor for the Fouier-based convolution (WARNING: EXPERIMENTAL)
-
-        :param complex_fourier_filter: Filter in the Fourier domain as created by *createComplexFourierFilter*
-        """
-        # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
-        super(InverseFourierConvolution, self).__init__()
-        self.complex_fourier_filter = complex_fourier_filter
-        if USE_CUDA:
-            self.dim = complex_fourier_filter.dim() - 1
-        else:
-            self.dim = len(complex_fourier_filter.shape)
-        self.fftn = sel_fftn(self.dim)
-        self.ifftn = sel_ifftn(self.dim)
-        """Fourier filter"""
-        self.alpha = 0.1
-        """Regularizing weight"""
-
-    def set_alpha(self, alpha):
-        """
-        Sets the regularizing weight
-        
-        :param alpha: regularizing weight
-        """
-        self.alpha = alpha
-
-    def get_alpha(self):
-        """
-        Returns the regularizing weight
-        
-        :return: regularizing weight 
-        """
-        return self.alpha
-
-    def forward(self, input):
-        """
-        Performs the Fourier-based filtering
-
-        :param input: Image
-        :return: Filtered-image
-        """
-        # do the filtering in the Fourier domain
-        # (a+bi)/(c) = (a/c) + (b/c)i
-
-        if USE_CUDA:
-            input = FFTVal(input, ini=1)
-            f_input =  self.fftn(input,self.dim,onesided=True)
-            f_filter_real = self.complex_fourier_filter[0]
-            f_filter_real += self.alpha
-            f_filter_real = f_filter_real.expand_as(f_input[..., 0])
-            f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
-            f_conv = f_input/f_filter_real
-            conv_ouput_real = self.ifftn(f_conv,self.dim,onesided=True,signal_sizes=input.shape[2::])
-            result = conv_ouput_real
-            return FFTVal(result, ini=-1)
-
-
-        else:
-            result = np.zeros(input.shape)
-            if self.dim <3:
-                conv_output = self.ifftn(self.fftn(input.detach().cpu().numpy()) / (self.alpha + self.complex_fourier_filter))
-                # result = abs(conv_output) # should in principle be real
-                result = conv_output.real
-            elif self.dim == 3:
-                result = np.zeros(input.shape)
-                for batch in range(input.size()[0]):
-                    for ch in range(input.size()[1]):
-                        conv_output = self.ifftn(
-                            self.fftn(input[batch,ch].detach().cpu().numpy()) / (self.alpha + self.complex_fourier_filter))
-                        result[batch, ch] = conv_output.real
-            else:
-                raise ValueError("cpu fft smooth should be 1d-3d")
-            return torch.FloatTensor(result)
-
-
-    # This function has only a single output, so it gets only one gradient
-    def backward(self, grad_output):
-        """
-        Computes the gradient
-
-        :param grad_output: Gradient output of previous layer
-        :return: Gradient including the Fourier-based convolution
-        """
-
-        # Initialize all gradients w.r.t. inputs to
-        # None. Thanks to the fact that additional trailing Nones are
-        # ignored, the return statement is simple even when the function has
-        # optional inputs.
-
-        grad_input = None
-
-        # These needs_input_grad checks are optional and there only to
-        # improve efficiency. If you want to make your code simpler, you can
-        # skip them. Returning gradients for inputs that don't require it is
-        # not an error.
-        # if self.needs_input_grad[0]:
-
-        if USE_CUDA:
-            grad_output =FFTVal(grad_output, ini=1)
-
-            f_go = self.fftn(grad_output, self.dim, onesided=True)
-            f_filter_real = self.complex_fourier_filter[0]
-            f_filter_real += self.alpha
-            f_filter_real = f_filter_real.expand_as(f_go[..., 0])
-            f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
-            f_conv = f_go / f_filter_real
-            grad_input = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=grad_output.shape[2::])
-
-            return FFTVal(grad_input, ini=-1)
-        else:
-            # if self.needs_input_grad[0]:
-            numpy_go = grad_output.detach().cpu().numpy()
-            # we use the conjugate because the assumption was that the spatial filter is real
-            # THe following two lines should be correct
-            if self.dim<3:
-                grad_input_c = (self.ifftn(self.fftn(numpy_go) / (self.alpha + np.conjugate(self.complex_fourier_filter))))
-                grad_input = grad_input_c.real
-            elif self.dim == 3:
-                grad_input = np.zeros(numpy_go.shape)
-                for batch in range(grad_output.size()[0]):
-                    for ch in range(grad_output.size()[1]):
-                        grad_input_c = (
-                            self.ifftn(self.fftn(numpy_go[batch,ch]) / (self.alpha + np.conjugate(self.complex_fourier_filter))))
-                        grad_input[batch, ch] = grad_input_c.real
-            else:
-                raise ValueError("cpu fft smooth should be 1d-3d")
-            return torch.FloatTensor(grad_input)
 
 
 
@@ -512,11 +259,6 @@ def fourier_convolution(input, complex_fourier_filter):
     # operator, that will then use forward() to compute the result and
     # return it.
     return FourierConvolution(complex_fourier_filter)(input)
-
-
-def inverse_fourier_convolution(input, complex_fourier_filter):
-    # just filtering with inverse filter
-    return InverseFourierConvolution(complex_fourier_filter)(input)
 
 
 class GaussianFourierFilterGenerator(object):
@@ -688,7 +430,7 @@ class GaussianFourierFilterGenerator(object):
             else:
                 need_to_recompute = True
 
-            if need_to_recompute: # todo  not comment this warning
+            if need_to_recompute: #todo should not comment this warning
                 print('INFO: Recomputing gaussian filter for sigma={:.2f}'.format(sigma))
                 self.sigmas_complex_gaussian_fourier_filters[i] = sigma #.clone()
                 self.complex_gaussian_fourier_filters[i], self.max_indices[i] = self._compute_complex_gaussian_fourier_filter(sigma)
@@ -697,7 +439,7 @@ class GaussianFourierFilterGenerator(object):
 
         return current_complex_gaussian_fourier_filters
 
-class FourierGaussianConvolution(Function):
+class FourierGaussianConvolution(nn.Module):
     """
     pyTorch function to compute Gaussian convolutions in the Fourier domain: f = g*h.
     Also allows to differentiate through the Gaussian standard deviation.
@@ -747,37 +489,6 @@ class FourierGaussianConvolution(Function):
         # print( 'max(real) = ' + str( (abs( conv_output.real )).max() ) )
 
 
-    def _compute_input_gradient_CUDA(self,grad_output,complex_fourier_filter):
-        grad_output = FFTVal(grad_output, ini=1)
-        # print grad_output.view(-1,1).sum()
-        f_go = self.fftn(grad_output, self.dim, onesided=True)
-        f_filter_real = complex_fourier_filter[0]
-        f_filter_real = f_filter_real.expand_as(f_go[..., 0])
-        f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
-        f_conv = f_go * f_filter_real
-        grad_input = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=grad_output.shape[2::])
-
-        return FFTVal(grad_input, ini=-1)
-
-    def _compute_input_gradient_CPU(self,grad_output,complex_fourier_filter):
-        numpy_go = grad_output.detach().cpu().numpy()
-        # we use the conjugate because the assumption was that the spatial filter is real
-        # THe following two lines should be correct
-        if self.dim < 3:
-            grad_input_c = (self.ifftn(np.conjugate(complex_fourier_filter) * self.fftn(numpy_go)))
-            grad_input = grad_input_c.real
-        elif self.dim == 3:
-            grad_input = np.zeros(numpy_go.shape)
-            assert grad_output.dim() == 5
-            for batch in range(grad_output.size()[0]):
-                for ch in range(grad_output.size()[1]):
-                    grad_input_c = (
-                        self.ifftn(np.conjugate(complex_fourier_filter) * self.fftn(numpy_go[batch, ch])))
-                    grad_input[batch, ch] = grad_input_c.real
-        else:
-            raise ValueError("cpu fft smooth should be 1d-3d")
-
-        return torch.FloatTensor(grad_input)
 
     def _compute_sigma_gradient_CUDA(self,input,sigma,grad_output,complex_fourier_filter,complex_fourier_xsqr_filter):
         convolved_input = self._compute_convolution_CUDA(input, complex_fourier_filter)
@@ -847,51 +558,7 @@ class FourierSingleGaussianConvolution(FourierGaussianConvolution):
         else:
             return self._compute_convolution_CPU(input,self.complex_fourier_filter)
 
-    # This function has only a single output, so it gets only one gradient
-    def backward(self, grad_output):
-        """
-        Computes the gradient
-        the 3d cpu ifft is not implemented in ifftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
-        1d 2d cpu works well because ifft and ifft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
 
-        in gpu implementation, the irfft is used for efficiency, which means the filter should be symmetric
-        :param grad_output: Gradient output of previous layer
-        :return: Gradient including the Fourier-based convolution
-        """
-
-        # Initialize all gradients w.r.t. inputs to
-        # None. Thanks to the fact that additional trailing Nones are
-        # ignored, the return statement is simple even when the function has
-        # optional inputs.
-
-        grad_input = grad_sigma = None
-
-        # These needs_input_grad checks are optional and there only to
-        # improve efficiency. If you want to make your code simpler, you can
-        # skip them. Returning gradients for inputs that don't require it is
-        # not an error.
-
-        # first compute the gradient with respect to the input
-        if self.needs_input_grad[0]:
-            # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
-            # input_imag =0, then get  ac + bci
-            if USE_CUDA:
-                grad_input = self._compute_input_gradient_CUDA(grad_output,self.complex_fourier_filter)
-            else:
-                grad_input = self._compute_input_gradient_CPU(grad_output,self.complex_fourier_filter)
-
-        # now compute the gradient with respect to the standard deviation of the filter
-        if self.compute_std_gradient:
-            if self.needs_input_grad[1]:
-                if USE_CUDA:
-                    grad_sigma = self._compute_sigma_gradient_CUDA(self.input,self.sigma,grad_output,self.complex_fourier_filter,self.complex_fourier_xsqr_filter)
-                else:
-                    grad_sigma = self._compute_sigma_gradient_CPU(self.input,self.sigma,grad_output,self.complex_fourier_filter,self.complex_fourier_xsqr_filter)
-        else:
-            grad_sigma = torch.zeros_like(self.sigma)
-
-        # now return the computed gradients
-        return grad_input, grad_sigma
 
 
 def fourier_single_gaussian_convolution(input, gaussian_fourier_filter_generator,sigma,compute_std_gradient):
@@ -949,7 +616,7 @@ class FourierMultiGaussianConvolution(FourierGaussianConvolution):
         the 3d cpu fft is not implemented in fftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
         1d 2d cpu works well because fft and fft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
 
-        in gpu implementation, the rfft is used for efficiency, which means the filter should be symmetric
+        in gpu implementation, the rfft is used for efficiency, which means the filter should be even and real
         :param input: Image
         :return: Filtered-image
         """
@@ -979,107 +646,6 @@ class FourierMultiGaussianConvolution(FourierGaussianConvolution):
 
         return ret
 
-    def _compute_input_gradient_CUDA_multi_gaussian(self,grad_output,complex_fourier_filters):
-        grad_input = torch.zeros_like(self.input)
-        for i in range(self.nr_of_gaussians):
-            grad_input += self.weights[i]*self._compute_input_gradient_CUDA(grad_output, complex_fourier_filters[i])
-        return grad_input
-
-    def _compute_input_gradient_CPU_multi_gaussian(self,grad_output,complex_fourier_filters):
-        grad_input = torch.zeros_like(self.input)
-        for i in range(self.nr_of_gaussians):
-            grad_input += self.weights[i] * self._compute_input_gradient_CPU(grad_output,complex_fourier_filters[i])
-        return grad_input
-
-    def _compute_sigmas_gradient_CUDA_multi_gaussian(self,input,sigmas,grad_output,complex_fourier_filters,complex_fourier_xsqr_filters):
-        grad_sigmas = torch.zeros_like(sigmas)
-        for i in range(self.nr_of_gaussians):
-            grad_sigmas[i] = self.weights[i] * self._compute_sigma_gradient_CUDA(input,sigmas[i],grad_output,
-                                                                                complex_fourier_filters[i],
-                                                                                complex_fourier_xsqr_filters[i])
-        return grad_sigmas
-
-    def _compute_sigmas_gradient_CPU_multi_gaussian(self,input,sigmas,grad_output,complex_fourier_filters,complex_fourier_xsqr_filters):
-        grad_sigmas = torch.zeros_like(sigmas)
-        for i in range(self.nr_of_gaussians):
-            grad_sigmas[i] = self.weights[i] * self._compute_sigma_gradient_CPU(input,sigmas[i],grad_output,
-                                                                                complex_fourier_filters[i],
-                                                                                complex_fourier_xsqr_filters[i])
-        return grad_sigmas
-
-    def _compute_weights_gradient_CUDA_multi_gaussian(self,input,weights,grad_output,complex_fourier_filters):
-        grad_weights = torch.zeros_like(weights)
-        for i in range(self.nr_of_gaussians):
-            grad_weights[i] = (grad_output*self._compute_convolution_CUDA(input,complex_fourier_filters[i])).sum()
-        return grad_weights
-
-    def _compute_weights_gradient_CPU_multi_gaussian(self,input,weights,grad_output,complex_fourier_filters):
-        grad_weights = torch.zeros_like(weights)
-        for i in range(self.nr_of_gaussians):
-            grad_weights[i] = (grad_output * self._compute_convolution_CPU(input, complex_fourier_filters[i])).sum()
-        return grad_weights
-
-    # This function has only a single output, so it gets only one gradient
-    def backward(self, grad_output):
-        """
-        Computes the gradient
-        the 3d cpu ifft is not implemented in ifftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
-        1d 2d cpu works well because ifft and ifft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
-
-        in gpu implementation, the irfft is used for efficiency, which means the filter should be symmetric
-        :param grad_output: Gradient output of previous layer
-        :return: Gradient including the Fourier-based convolution
-        """
-
-        # Initialize all gradients w.r.t. inputs to
-        # None. Thanks to the fact that additional trailing Nones are
-        # ignored, the return statement is simple even when the function has
-        # optional inputs.
-
-        grad_input = grad_sigmas = grad_weights = None
-
-        # These needs_input_grad checks are optional and there only to
-        # improve efficiency. If you want to make your code simpler, you can
-        # skip them. Returning gradients for inputs that don't require it is
-        # not an error.
-
-        # first compute the gradient with respect to the input
-        if self.needs_input_grad[0]:
-            # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
-            # input_imag =0, then get  ac + bci
-            if USE_CUDA:
-                grad_input = self._compute_input_gradient_CUDA_multi_gaussian(grad_output,self.complex_fourier_filters)
-            else:
-                grad_input = self._compute_input_gradient_CPU_multi_gaussian(grad_output,self.complex_fourier_filters)
-
-        # now compute the gradient with respect to the standard deviation of the filter
-        if self.needs_input_grad[1]:
-            if self.compute_std_gradients:
-                if USE_CUDA:
-                    grad_sigmas = self._compute_sigmas_gradient_CUDA_multi_gaussian(self.input,self.sigmas,grad_output,self.complex_fourier_filters,self.complex_fourier_xsqr_filters)
-                else:
-                    grad_sigmas = self._compute_sigmas_gradient_CPU_multi_gaussian(self.input,self.sigmas,grad_output,self.complex_fourier_filters,self.complex_fourier_xsqr_filters)
-            else:
-                grad_sigmas = torch.zeros_like(self.sigmas)
-
-        if self.needs_input_grad[2]:
-            if self.compute_weight_gradients:
-                if USE_CUDA:
-                    grad_weights = self._compute_weights_gradient_CUDA_multi_gaussian(self.input,self.weights,grad_output,self.complex_fourier_filters)
-                else:
-                    grad_weights = self._compute_weights_gradient_CPU_multi_gaussian(self.input,self.weights,grad_output,self.complex_fourier_filters)
-            else:
-                grad_weights = torch.zeros_like(self.weights)
-
-        # now return the computed gradients
-
-        #print('gsigmas: min=' + str(grad_sigmas.min()) + '; max=' + str(grad_sigmas.max()))
-        #print('gweight: min=' + str(grad_weights.min()) + '; max=' + str(grad_weights.max()))
-        #print( 'gsigmas = ' + str( grad_sigmas))
-        #print( 'gweight = ' + str( grad_weights))
-
-
-        return grad_input, grad_sigmas, grad_weights
 
 def fourier_multi_gaussian_convolution(input, gaussian_fourier_filter_generator,sigma,weights,compute_std_gradients=True,compute_weight_gradients=True):
     """
@@ -1147,9 +713,7 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
         self.nr_of_gaussians = len(self.sigmas)
 
         self.complex_fourier_filters = self.gaussian_fourier_filter_generator.get_gaussian_filters(self.sigmas)
-        if self.compute_std_gradients:
-            self.complex_fourier_xsqr_filters = self.gaussian_fourier_filter_generator.get_gaussian_xsqr_filters(self.sigmas)
-        # TODO check if the xsqr should be put into an if statement here
+        self.complex_fourier_xsqr_filters = self.gaussian_fourier_filter_generator.get_gaussian_xsqr_filters(self.sigmas)
 
         # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
         # filter_imag =0, then get  ac + bci
@@ -1167,80 +731,6 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
 
         return ret
 
-    def _compute_input_gradient_CUDA_multi_gaussian(self,grad_output,complex_fourier_filters):
-        grad_input = torch.zeros_like(self.input)
-        for i in range(self.nr_of_gaussians):
-            grad_input += self._compute_input_gradient_CUDA(grad_output[i,...], complex_fourier_filters[i])
-        return grad_input
-
-    def _compute_input_gradient_CPU_multi_gaussian(self,grad_output,complex_fourier_filters):
-        grad_input = torch.zeros_like(self.input)
-        for i in range(self.nr_of_gaussians):
-            grad_input += self._compute_input_gradient_CPU(grad_output[i,...],complex_fourier_filters[i])
-        return grad_input
-
-    def _compute_sigmas_gradient_CUDA_multi_gaussian(self,input,sigmas,grad_output,complex_fourier_filters,complex_fourier_xsqr_filters):
-        grad_sigmas = torch.zeros_like(sigmas)
-        for i in range(self.nr_of_gaussians):
-            grad_sigmas[i] = self._compute_sigma_gradient_CUDA(input,sigmas[i],grad_output[i,...],
-                                                                                complex_fourier_filters[i],
-                                                                                complex_fourier_xsqr_filters[i])
-        return grad_sigmas
-
-    def _compute_sigmas_gradient_CPU_multi_gaussian(self,input,sigmas,grad_output,complex_fourier_filters,complex_fourier_xsqr_filters):
-        grad_sigmas = torch.zeros_like(sigmas)
-        for i in range(self.nr_of_gaussians):
-            grad_sigmas[i] = self._compute_sigma_gradient_CPU(input,sigmas[i],grad_output[i,...],
-                                                                                complex_fourier_filters[i],
-                                                                                complex_fourier_xsqr_filters[i])
-        return grad_sigmas
-
-    # This function has only a single output, so it gets only one gradient
-    def backward(self, grad_output):
-        """
-        Computes the gradient
-        the 3d cpu ifft is not implemented in ifftn, to avoid fusing with batch and channel, here 3d is calcuated in loop
-        1d 2d cpu works well because ifft and ifft2 is inbuilt, similarly , 1d 2d 3d gpu fft also is inbuilt
-
-        in gpu implementation, the irfft is used for efficiency, which means the filter should be symmetric
-        :param grad_output: Gradient output of previous layer
-        :return: Gradient including the Fourier-based convolution
-        """
-
-        # Initialize all gradients w.r.t. inputs to
-        # None. Thanks to the fact that additional trailing Nones are
-        # ignored, the return statement is simple even when the function has
-        # optional inputs.
-
-        grad_input = grad_sigmas = None
-
-        # These needs_input_grad checks are optional and there only to
-        # improve efficiency. If you want to make your code simpler, you can
-        # skip them. Returning gradients for inputs that don't require it is
-        # not an error.
-
-        # first compute the gradient with respect to the input
-        if self.needs_input_grad[0]:
-            # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
-            # input_imag =0, then get  ac + bci
-            if USE_CUDA:
-                grad_input = self._compute_input_gradient_CUDA_multi_gaussian(grad_output,self.complex_fourier_filters)
-            else:
-                grad_input = self._compute_input_gradient_CPU_multi_gaussian(grad_output,self.complex_fourier_filters)
-
-        # now compute the gradient with respect to the standard deviation of the filter
-        if self.needs_input_grad[1]:
-            if self.compute_std_gradients:
-                if USE_CUDA:
-                    grad_sigmas = self._compute_sigmas_gradient_CUDA_multi_gaussian(self.input,self.sigmas,grad_output,self.complex_fourier_filters,self.complex_fourier_xsqr_filters)
-                else:
-                    grad_sigmas = self._compute_sigmas_gradient_CPU_multi_gaussian(self.input,self.sigmas,grad_output,self.complex_fourier_filters,self.complex_fourier_xsqr_filters)
-            else:
-                grad_sigmas = torch.zeros_like(self.sigmas)
-
-
-        # now return the computed gradients
-        return grad_input, grad_sigmas
 
 def fourier_set_of_gaussian_convolutions(input, gaussian_fourier_filter_generator,sigma,compute_std_gradients=False):
     """

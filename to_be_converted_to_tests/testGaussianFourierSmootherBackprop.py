@@ -5,18 +5,18 @@ import sys
 import matplotlib.pyplot as plt
 import torch.optim as optim
 import torch.nn as nn
-os.chdir('../')
+#os.chdir('../')
 
-sys.path.insert(0,os.path.abspath('.'))
-sys.path.insert(0,os.path.abspath('./pyreg'))
-sys.path.insert(0,os.path.abspath('./pyreg/libraries'))
+sys.path.insert(0,os.path.abspath('..'))
+sys.path.insert(0,os.path.abspath('../pyreg'))
+sys.path.insert(0,os.path.abspath('../pyreg/libraries'))
 import torch
 import time
 import pyreg.module_parameters as pars
 import numpy as np
 import pyreg.smoother_factory as SF
 import pyreg.example_generation as eg
-import pyreg.custom_pytorch_extensions as ce
+import pyreg.custom_pytorch_extensions_new as ce
 import pyreg.utils as utils
 from pyreg.data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor
 import ants
@@ -58,7 +58,7 @@ class ImageReconst(nn.Module):
         self.Target = self.__get_smoothed_target(I0)
         self.Source = self.__init_rand_source()
         self.sobel_filter = SobelFilter()
-        self.smooth_factor =0.0
+        self.smooth_factor =0.1
 
 
 
@@ -113,13 +113,15 @@ params['square_example_images']['len_s'] = szEx.min()//6
 params['square_example_images']['len_l'] = szEx.max()//4
 
 I0,I1,spacing= eg.CreateSquares(dim).create_image_pair(szEx,params)
+#I0, I1,spacing = eg.CreateRealExampleImages(dim).create_image_pair(szEx, params)  # create a default image size with two sample squares
+
 sz = np.array(I0.shape)
 assert( len(sz)==dim+2 )
 saved_folder = '/playpen/zyshen/debugs/fft_grad_check'
 if not os.path.exists(saved_folder):
     os.makedirs(saved_folder)
 ants.image_write(ants.from_numpy(np.squeeze(I0)),saved_folder+'/non_smoothed.nii.gz')
-img_reconst = ImageReconst(I0,dim,szEx,spacing)
+img_reconst = ImageReconst(I0,dim,sz[2::],spacing)
 target = img_reconst.get_target()
 target = np.squeeze(target.cpu().numpy())
 ants.image_write( ants.from_numpy(target),saved_folder+'/target.nii.gz')
@@ -133,12 +135,13 @@ for i in range(80000):
     loss.backward()
     optimizer_ft.step()
     if (i+1)%8000==0:
-        lr = max(lr/5.,1e-5)
+        lr = lr #max(lr/5.,1e-5)
         adjust_learning_rate(optimizer_ft,lr)
     if i%100==0:
         print(" the current step is {} with reconstruction loss is {}".format(i,loss.item()))
+    optimizer_ft.zero_grad()
 
-
+print("the optimization finished in {} s".format(time.time()-start))
 reconstructed_img = img_reconst.get_reconst_img()
 reconstructed_img = np.squeeze(reconstructed_img.cpu().numpy())
 reconstructed_img_ants = ants.from_numpy(reconstructed_img)

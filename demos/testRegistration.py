@@ -13,7 +13,9 @@ import pyreg.smoother_factory as SF
 
 params = pars.ParameterDict()
 #params.load_JSON('../test/json/test_svf_image_single_scale_config.json')
-params.load_JSON('../test/../test/json/svf_momentum_base_config.json')
+#params.load_JSON('../test/json/to_rename_net_base_config.json')
+#params.load_JSON('../test/json/lddmm_localadapt_net_base_config.json')
+params.load_JSON('/playpen/zyshen/reg_clean/mermaid_settings/cur_settings_adpt_lddmm_undercheck.json')
 #params['model']['deformation']['use_map'] = False
 #params['model']['registration_model']['type'] = 'svf_scalar_momentum_image'
 #params['model']['deformation']['use_map'] = True
@@ -21,10 +23,10 @@ params.load_JSON('../test/../test/json/svf_momentum_base_config.json')
 #params['model']['deformation']['use_map'] = False
 #params['model']['registration_model']['type'] = 'svf_vector_momentum_image'
 params['model']['deformation']['use_map'] = True
-params['model']['registration_model']['type'] = 'svf_vector_momentum_map'
+params['model']['registration_model']['type'] = 'lddmm_adapt_smoother_map'
 
 example_img_len = 64
-dim = 2
+dim = 3
 szEx = np.tile(example_img_len, dim)  # size of the desired images: (sz)^dim
 I0, I1,spacing = eg.CreateSquares(dim).create_image_pair(szEx, params)  # create a default image size with two sample squares
 sz = np.array(I0.shape)
@@ -34,18 +36,18 @@ ISource = AdaptVal(torch.from_numpy(I0.copy()))
 ITarget = AdaptVal(torch.from_numpy(I1))
 
 # smooth both a little bit
-params[('image_smoothing', {}, 'image smoothing settings')]
-params['image_smoothing'][('smooth_images', True, '[True|False]; smoothes the images before registration')]
-params['image_smoothing'][('smoother',{},'settings for the image smoothing')]
-params['image_smoothing']['smoother'][('gaussian_std', 0.05, 'how much smoothing is done')]
-params['image_smoothing']['smoother'][('type', 'gaussian', "['gaussianSpatial'|'gaussian'|'diffusion']")]
+# params[('image_smoothing', {}, 'image smoothing settings')]
+# params['image_smoothing'][('smooth_images', True, '[True|False]; smoothes the images before registration')]
+# params['image_smoothing'][('smoother',{},'settings for the image smoothing')]
+# params['image_smoothing']['smoother'][('gaussian_std', 0.05, 'how much smoothing is done')]
+# params['image_smoothing']['smoother'][('type', 'gaussian', "['gaussianSpatial'|'gaussian'|'diffusion']")]
 
 cparams = params['image_smoothing']
-s = SF.SmootherFactory(sz[2::], spacing).create_smoother(cparams)
-ISource = s.smooth(ISource)
-ITarget = s.smooth(ITarget)
+# s = SF.SmootherFactory(sz[2::], spacing).create_smoother(cparams)
+# ISource = s.smooth(ISource)
+# ITarget = s.smooth(ITarget)
 
-so = MO.SimpleSingleScaleRegistration(ISource, ITarget, spacing, params)
+so = MO.SimpleSingleScaleRegistration(ISource, ITarget, spacing,sz, params)
 so.get_optimizer().set_visualization( True )
 so.get_optimizer().set_visualize_step( 3 )
 so.set_light_analysis_on(True)

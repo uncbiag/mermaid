@@ -22,6 +22,7 @@ import numpy as np
 from . import finite_differences as fd
 import torch.nn as nn
 import torch.nn.init as init
+from . import external_variable as EV
 
 from . import module_parameters as pars
 
@@ -335,14 +336,14 @@ def compute_normalized_gaussian(X, mu, sig):
         raise ValueError('Can only compute Gaussians in dimensions 1-3')
 
 
-def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order,zero_boundary=False):
+def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order,zero_boundary=False,use_01_input=True):
 
     if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
     if spline_order==0:
-        return get_warped_label_map(I0,phi,spacing)
+        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=False,use_01_input=use_01_input)
     elif spline_order==1:
-        stn = STN_ND_BCXYZ(spacing,zero_boundary)
+        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=True,use_01_input=use_01_input)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
 
@@ -350,14 +351,14 @@ def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order,zero_boundar
 
     return I1_warped
 
-def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order,zero_boundary=False):
+def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order,zero_boundary=False,use_01_input=True):
 
     if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
     if spline_order==0:
-        return get_warped_label_map(I0,phi,spacing)
+        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=False,use_01_input=use_01_input)
     elif spline_order==1:
-        stn = STN_ND_BCXYZ(spacing,zero_boundary)
+        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=True,use_01_input=use_01_input)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
 
@@ -365,14 +366,15 @@ def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order,zero_boundar
 
     return I1_warped
 
-def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order,zero_boundary=False):
+def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order,zero_boundary=False,use_01_input=True):
 
     if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
     if spline_order==0:
-        return get_warped_label_map(I0,phi,spacing)
+        #return get_warped_label_map(I0,phi,spacing)
+        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=False,use_01_input=use_01_input)
     elif spline_order==1:
-        stn = STN_ND_BCXYZ(spacing,zero_boundary)
+        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=True,use_01_input=use_01_input)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing,spline_order)
 
@@ -381,7 +383,7 @@ def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order,zero_boundar
     return I1_warped
 
 
-def compute_warped_image(I0,phi,spacing,spline_order,zero_boundary=False):
+def compute_warped_image(I0,phi,spacing,spline_order,zero_boundary=False,use_01_input=True):
     """
     Warps image.
 
@@ -393,10 +395,10 @@ def compute_warped_image(I0,phi,spacing,spline_order,zero_boundary=False):
 
     # implements this by creating a different view (effectively adding dimensions)
     Iw = compute_warped_image_multiNC(I0.view(torch.Size([1, 1]+ list(I0.size()))),
-                                        phi.view(torch.Size([1]+ list(phi.size()))),spacing,spline_order,zero_boundary)
+                                        phi.view(torch.Size([1]+ list(phi.size()))),spacing,spline_order,zero_boundary,use_01_input)
     return Iw.view(I0.size())
 
-def compute_warped_image_multiNC(I0, phi, spacing, spline_order,zero_boundary=False):
+def compute_warped_image_multiNC(I0, phi, spacing, spline_order,zero_boundary=False,use_01_input=True):
     """
     Warps image.
 
@@ -408,11 +410,11 @@ def compute_warped_image_multiNC(I0, phi, spacing, spline_order,zero_boundary=Fa
 
     dim = I0.dim()-2
     if dim == 1:
-        return _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order,zero_boundary)
+        return _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order,zero_boundary,use_01_input=use_01_input)
     elif dim == 2:
-        return _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order,zero_boundary)
+        return _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order,zero_boundary,use_01_input=use_01_input)
     elif dim == 3:
-        return _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order,zero_boundary)
+        return _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order,zero_boundary,use_01_input=use_01_input)
     else:
         raise ValueError('Images can only be warped in dimensions 1 to 3')
 
@@ -520,7 +522,7 @@ def create_ND_vector_field_variable_multiN(sz, nrOfI=1):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
-    return MyTensor(*(csz.tolist())).zero_()
+    return MyTensor(*(csz.tolist())).normal_(0.,1e-7)
 
 def create_ND_vector_field_variable(sz):
     """
@@ -532,7 +534,7 @@ def create_ND_vector_field_variable(sz):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([dim]+list(csz))
-    return MyTensor(*(csz.tolist())).zero_()
+    return MyTensor(*(csz.tolist())).normal_(0.,1e-7)
 
 def create_vector_parameter(nr_of_elements):
     """
@@ -540,7 +542,7 @@ def create_vector_parameter(nr_of_elements):
     :param nr_of_elements: number of vector elements
     :return: returns the parameter vector
     """
-    return Parameter(MyTensor(nr_of_elements).zero_())
+    return Parameter(MyTensor(nr_of_elements).normal_(0.,1e-7))
 
 def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
     """
@@ -553,7 +555,12 @@ def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
-    return Parameter(MyTensor(*(csz.tolist())).zero_())
+    if EV.use_mermaid_net:
+        tmp = MyTensor(*(csz.tolist())).normal_(0.,1e-7)
+        tmp.requires_grad = True
+    else:
+        tmp = Parameter(MyTensor(*(csz.tolist())).normal_(0.,1e-7))
+    return tmp
 
 def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
     """
@@ -567,7 +574,7 @@ def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
 
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,nrOfC]+list(csz))
-    return Parameter(MyTensor(*(csz.tolist())).zero_())
+    return Parameter(MyTensor(*(csz.tolist())).normal_(0.,1e-7))
 
 def centered_identity_map_multiN(sz, spacing, dtype='float32'):
     """

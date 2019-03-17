@@ -17,7 +17,7 @@ from pyreg.utils import apply_affine_transform_to_map_multiNC, get_inverse_affin
     update_affine_param, identity_map_multiN
 import pyreg.simple_interface as SI
 import pyreg.fileio as FIO
-torch.cuda.set_device(1)
+torch.cuda.set_device(3)
     
 def setup_pair_register():
     """
@@ -51,34 +51,34 @@ def register_pair_img(moving, target, spacing, register_param, hdrc0=None):
     model1_name = register_param['model1_name']
 
     #moving[np.where(moving==0)]=0.6
-    si.set_initial_map(None)
-    si.register_images(moving, target, spacing,
-                            model_name=model0_name,
-                            use_multi_scale=True,
-                       visualize_step=None,
-                            rel_ftol=1e-7,
-                            json_config_out_filename='output_cur_settings.json',
-                            compute_inverse_map=True,
-                            params='cur_settings.json')
-
-    Ab = si.opt.optimizer.ssOpt.model.Ab
-    affine_param = Ab.detach().cpu().numpy().reshape((4, 3))
-    affine_param = np.transpose(affine_param)
-    print(" the affine param is {}".format(affine_param))
-
-    inv_Ab = get_inverse_affine_param(Ab.detach())
-    #id_Ab = update_affine_param(Ab,inv_Ab)
-    identity_map = torch.Tensor(identity_map_multiN(moving.shape, spacing)).cuda()
-    inversed_affine_map = apply_affine_transform_to_map_multiNC(inv_Ab, identity_map)
-
-
-
-
-    print("let's come to step 2 ")
-
-    affine_map = si.opt.optimizer.ssOpt.get_map()
-    si.opt = None
-    si.set_initial_map(affine_map.detach())
+    # si.set_initial_map(None)
+    # si.register_images(moving, target, spacing,
+    #                         model_name=model0_name,
+    #                         use_multi_scale=True,
+    #                    visualize_step=None,
+    #                         rel_ftol=1e-7,
+    #                         json_config_out_filename='output_cur_settings.json',
+    #                         compute_inverse_map=True,
+    #                         params='cur_settings.json')
+    #
+    # Ab = si.opt.optimizer.ssOpt.model.Ab
+    # affine_param = Ab.detach().cpu().numpy().reshape((4, 3))
+    # affine_param = np.transpose(affine_param)
+    # print(" the affine param is {}".format(affine_param))
+    #
+    # inv_Ab = get_inverse_affine_param(Ab.detach())
+    # #id_Ab = update_affine_param(Ab,inv_Ab)
+    # identity_map = torch.Tensor(identity_map_multiN(moving.shape, spacing)).cuda()
+    # inversed_affine_map = apply_affine_transform_to_map_multiNC(inv_Ab, identity_map)
+    #
+    #
+    #
+    #
+    # print("let's come to step 2 ")
+    #
+    # affine_map = si.opt.optimizer.ssOpt.get_map()
+    # si.opt = None
+    # si.set_initial_map(affine_map.detach())
 
     si.register_images(moving, target, spacing,
                             model_name=model1_name,
@@ -87,6 +87,7 @@ def register_pair_img(moving, target, spacing, register_param, hdrc0=None):
                             rel_ftol=1e-7,
                             json_config_out_filename='output_settings_lbfgs.json',
                             compute_inverse_map=True,
+                       similarity_measure_type='lncc',
                             params='cur_settings_lbfgs.json')
 
     warped_image = si.get_warped_image()

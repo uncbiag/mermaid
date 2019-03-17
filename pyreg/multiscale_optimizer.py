@@ -906,7 +906,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.clip_display = clip_params[('clip_display',True,'If set to True displays if clipping occurred')]
         self.clip_individual_gradient = clip_params[('clip_individual_gradient',False,'If set to True, the gradient for the individual parameters will be clipped')]
         self.clip_individual_gradient_value = clip_params[('clip_individual_gradient_value',max_extent,'Value to which the gradient for the individual parameters is clipped')]
-        self.clip_shared_gradient = clip_params[('clip_shared_gradient', True, 'If set to True, the gradient for the shared parameters will be clipped')]
+        self.clip_shared_gradient = clip_params[('clip_shared_gradient', True, 'If set to True, the gradient for the shared parameters will be clipped')] # todo recover the clip gradient,or it may cause unstable
         self.clip_shared_gradient_value = clip_params[('clip_shared_gradient_value', 1.0, 'Value to which the gradient for the shared parameters is clipped')]
 
         self.scheduler = None # for the step size scheduler
@@ -1006,7 +1006,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.useMap:
             cmap = self.get_map()
             # and now warp it
-            return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing, self.spline_order)
+            return utils.compute_warped_image_multiNC(self.ISource, cmap, self.spacing, self.spline_order,zero_boundary=True)
         else:
             return self.rec_IWarped
 
@@ -1461,7 +1461,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # to support consensus optimization we have the option of adding a penalty term
         # based on shared parameters
         opt_par_loss_energy = self.compute_optimizer_parameter_loss(self.model.get_shared_registration_parameters())
-        loss_overall_energy = loss_overall_energy + opt_par_loss_energy
+        loss_overall_energy  = loss_overall_energy + opt_par_loss_energy
         loss_overall_energy.backward()
 
         # do gradient clipping
