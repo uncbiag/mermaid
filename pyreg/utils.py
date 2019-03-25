@@ -664,6 +664,7 @@ def centered_identity_map(sz, spacing, dtype='float32'):
             #odd
             id[d] -= spacing[d]*((sz[d]+1)//2)
 
+
     # and now store it in a dim+1 array
     if dim == 1:
         idnp = np.zeros([1, sz[0]], dtype=dtype)
@@ -681,6 +682,94 @@ def centered_identity_map(sz, spacing, dtype='float32'):
         raise ValueError('Only dimensions 1-3 are currently supported for the centered identity map')
 
     return idnp
+
+# 
+# def centered_min_normalized_identity_map(sz, spacing, dtype='float32'):
+#     """
+#     Returns a centered identity map (with 0 in the middle) if the sz is odd
+#     Otherwise shifts everything by 0.5*spacing
+# 
+#     :param sz: just the spatial dimensions, i.e., XxYxZ
+#     :param spacing: list with spacing information [sx,sy,sz]
+#     :param dtype: numpy data-type ('float32', 'float64', ...)
+#     :return: returns the identity map of dimension dimxXxYxZ
+#     """
+#     dim = len(sz)
+#     if dim == 1:
+#         id = np.mgrid[0:sz[0]]
+#     elif dim == 2:
+#         id = np.mgrid[0:sz[0], 0:sz[1]]
+#     elif dim == 3:
+#         id = np.mgrid[0:sz[0], 0:sz[1], 0:sz[2]]
+#     else:
+#         raise ValueError('Only dimensions 1-3 are currently supported for the identity map')
+#     
+#     min_spacing = np.min(spacing)
+#     spacing_ratio = spacing/min_spacing
+# 
+# 
+#     # now get it into range [0,(sz-1)*spacing]^d
+#     id = np.array(id.astype(dtype))
+#     if dim == 1:
+#         id = id.reshape(1, sz[0])  # add a dummy first index
+# 
+#     for d in range(dim):
+#         id[d] *= spacing[d]
+#         if sz[d]%2==0:
+#             #even
+#             id[d] -= spacing[d]*(sz[d]//2)
+#         else:
+#             #odd
+#             id[d] -= spacing[d]*((sz[d]+1)//2)
+# 
+#     # and now store it in a dim+1 array and rescale by the ratio
+#     if dim == 1:
+#         idnp = np.zeros([1, sz[0]], dtype=dtype)
+#         idnp[0, :] = id[0] * spacing_ratio[0]
+#     elif dim == 2:
+#         idnp = np.zeros([2, sz[0], sz[1]], dtype=dtype)
+#         idnp[0, :, :] = id[0] * spacing_ratio[0]
+#         idnp[1, :, :] = id[1] * spacing_ratio[1]
+#     elif dim == 3:
+#         idnp = np.zeros([3, sz[0], sz[1], sz[2]], dtype=dtype)
+#         idnp[0, :, :, :] = id[0] * spacing_ratio[0]
+#         idnp[1, :, :, :] = id[1] * spacing_ratio[1]
+#         idnp[2, :, :, :] = id[2] * spacing_ratio[2]
+#     else:
+#         raise ValueError('Only dimensions 1-3 are currently supported for the centered identity map')
+# 
+#     return idnp
+
+def tranfrom_var_list_into_min_normalized_space(var_list,spacing,do_transform=True):
+    if do_transform:
+        min_spacing = np.min(spacing)
+        spacing_ratio =min_spacing/spacing
+        dim = spacing.size
+        spacing_ratio_t = AdaptVal(torch.Tensor(spacing_ratio))
+        sp_sz = [1]+[dim] +[1]*dim
+        spacing_ratio_t = spacing_ratio_t.view(*sp_sz)
+        new_var_list = [var*spacing_ratio_t if var is not None else None for var in var_list]
+    else:
+        new_var_list = var_list
+    return new_var_list
+
+def recover_var_list_from_min_normalized_space(var_list,spacing,do_transform=True):
+    if do_transform:
+        min_spacing = np.min(spacing)
+        spacing_ratio =spacing/min_spacing
+        dim = spacing.size
+        spacing_ratio_t = AdaptVal(torch.Tensor(spacing_ratio))
+        sp_sz = [1]+[dim] +[1]*dim
+        spacing_ratio_t = spacing_ratio_t.view(*sp_sz)
+        new_var_list = [var*spacing_ratio_t if var is not None else None for var in var_list]
+    else:
+        new_var_list = var_list
+    return new_var_list
+
+
+
+
+
 
 
 def identity_map(sz,spacing,dtype='float32'):
@@ -761,9 +850,28 @@ def checkNan(x):
     return [len(np.argwhere(np.isnan(elem.detach().cpu().numpy()))) for elem in x]
 
 
+def noramlized_spacing_to_smallest(spacing):
+    min_sp = np.min(spacing)
+    spacing[spacing>min_sp]=min_sp
+    return spacing
 
 
+def time_warped_function(f):
+    def __time_warped_function(input=None):
+        start = torch.cuda.Event(enable_timing=True)
+        end = torch.cuda.Event(enable_timing=True)
 
+        start.record()
+        output = f(input)
+        end.record()
+
+        # Waits for everything to finish running
+        torch.cuda.synchronize()
+
+        print(start.elapsed_time(end))
+        return output
+
+    return __time_warped_function
 
 
 ##########################################  Adaptive Net ###################################################3

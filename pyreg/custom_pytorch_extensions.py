@@ -16,6 +16,7 @@ from torch.autograd import Function
 import numpy as np
 from torch.autograd import gradcheck
 from .data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor
+from . import external_variable as EV
 # if USE_CUDA:
 #     import pytorch_fft.fft as fft
 
@@ -190,7 +191,7 @@ def sel_fftn(dim):
         if dim in[1,2,3]:
             f= torch.rfft
         else:
-            raise ValueError('Only 3D cuda fft supported')
+            print('Warning, fft more than 3d is supported but not tested')
         return f
     else:
         if dim == 1:
@@ -200,7 +201,7 @@ def sel_fftn(dim):
         elif dim == 3:
             f = np.fft.fftn
         else:
-            raise ValueError('Only 3D cpu fft supported')
+            raise ValueError('Only 3D cpu ifft supported')
         return f
 
 def sel_ifftn(dim):
@@ -213,7 +214,7 @@ def sel_ifftn(dim):
         if dim in [1,2,3]:
             f = torch.irfft
         else:
-            raise ValueError('Only 3D cuda fft supported')
+            print('Warning, fft more than 3d is supported but not tested')
     else:
         if dim == 1:
             f = np.fft.ifft
@@ -269,7 +270,9 @@ class FourierConvolution(Function):
             f_filter_real=f_filter_real.expand_as(f_input[...,0])
             f_filter_real = torch.stack((f_filter_real,f_filter_real),-1)
             f_conv = f_input * f_filter_real
-            conv_ouput_real = self.ifftn(f_conv, self.dim,onesided=True,signal_sizes=input.shape[2::])
+            dim_input = len(input.shape)
+            dim_input_batch = dim_input-self.dim
+            conv_ouput_real = self.ifftn(f_conv, self.dim,onesided=True,signal_sizes=input.shape[dim_input_batch::])
             result = conv_ouput_real
 
             return FFTVal(result, ini=-1)
@@ -277,7 +280,7 @@ class FourierConvolution(Function):
             if self.dim <3:
                 conv_output = self.ifftn(self.fftn(input.detach().cpu().numpy()) * self.complex_fourier_filter)
                 result = conv_output.real  # should in principle be real
-            elif self.dim == 3:
+            elif self.dim==3:
                 result = np.zeros(input.shape)
                 for batch in range(input.size()[0]):
                     for ch in range(input.size()[1]):
@@ -329,7 +332,9 @@ class FourierConvolution(Function):
             f_filter_real = f_filter_real.expand_as(f_go[..., 0])
             f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
             f_conv = f_go * f_filter_real
-            grad_input = self.ifftn(f_conv,self.dim,onesided=True,signal_sizes=grad_output.shape[2::])
+            dim_input = len(grad_output.shape)
+            dim_input_batch = dim_input - self.dim
+            grad_input = self.ifftn(f_conv,self.dim,onesided=True,signal_sizes=grad_output.shape[dim_input_batch::])
 
             # print(grad_input)
             # print((grad_input[0,0,12:15]))
@@ -419,7 +424,9 @@ class InverseFourierConvolution(Function):
             f_filter_real = f_filter_real.expand_as(f_input[..., 0])
             f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
             f_conv = f_input/f_filter_real
-            conv_ouput_real = self.ifftn(f_conv,self.dim,onesided=True,signal_sizes=input.shape[2::])
+            dim_input = len(input.shape)
+            dim_input_batch = dim_input - self.dim
+            conv_ouput_real = self.ifftn(f_conv,self.dim,onesided=True,signal_sizes=input.shape[dim_input_batch::])
             result = conv_ouput_real
             return FFTVal(result, ini=-1)
 
@@ -473,7 +480,9 @@ class InverseFourierConvolution(Function):
             f_filter_real = f_filter_real.expand_as(f_go[..., 0])
             f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
             f_conv = f_go / f_filter_real
-            grad_input = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=grad_output.shape[2::])
+            dim_input = len(grad_output.shape)
+            dim_input_batch = dim_input - self.dim
+            grad_input = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=grad_output.shape[dim_input::])
 
             return FFTVal(grad_input, ini=-1)
         else:
@@ -724,7 +733,9 @@ class FourierGaussianConvolution(Function):
         f_filter_real = f_filter_real.expand_as(f_input[..., 0])
         f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
         f_conv = f_input * f_filter_real
-        conv_ouput_real = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=input.shape[2::])
+        dim_input = len(input.shape)
+        dim_input_batch = dim_input - self.dim
+        conv_ouput_real = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=input.shape[dim_input_batch::])
         result = conv_ouput_real
 
         return FFTVal(result, ini=-1)
@@ -755,7 +766,9 @@ class FourierGaussianConvolution(Function):
         f_filter_real = f_filter_real.expand_as(f_go[..., 0])
         f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
         f_conv = f_go * f_filter_real
-        grad_input = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=grad_output.shape[2::])
+        dim_input = len(grad_output.shape)
+        dim_input_batch = dim_input - self.dim
+        grad_input = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=grad_output.shape[dim_input_batch::])
 
         return FFTVal(grad_input, ini=-1)
 

@@ -12,7 +12,10 @@ import torch
 from torch.autograd import Function
 from torch.nn import Module
 from cffi import FFI
-from pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
+try:
+    from pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
+except:
+    from mermaid.pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
 
 
 ###########TODO temporal comment for torch1 compatability

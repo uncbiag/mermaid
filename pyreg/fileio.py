@@ -11,7 +11,7 @@ from future.utils import native_str
 # from builtins import object
 import itk
 # needs to be imported after itk to overwrite itk's incorrect error handling
-import pyreg.fixwarnings
+from . import fixwarnings
 
 import os
 import nrrd

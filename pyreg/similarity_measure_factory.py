@@ -51,20 +51,25 @@ class SimilarityMeasure(with_metaclass(ABCMeta, object)):
         sim = torch.zeros(1).type_as(I0)
 
         if I0Source is None and phi is None:
+            raise ValueError("no implemented in multi-batch-channel way1")
             for nrI in range(sz[0]):  # loop over all the images
                 sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], None, None )
 
         elif I0Source is not None and phi is None:
-            for nrI in range(sz[0]):  # loop over all the images
-                sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], I0Source[nrI,...], None)
+            # for nrI in range(sz[0]):  # loop over all the images
+            #     sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], I0Source[nrI,...], None)
+            sim = sim+self.compute_similarity(I0, I1, I0Source, None)
+
 
         elif I0Source is None and phi is not None:
+            raise ValueError("no implemented in multi-batch-channel way3")
             for nrI in range(sz[0]):  # loop over all the images
                 sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], None, phi[nrI,...])
 
         else:
-            for nrI in range(sz[0]):  # loop over all the images
-                sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], I0Source[nrI,...], phi[nrI,...])
+            # for nrI in range(sz[0]):  # loop over all the images
+            #     sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], I0Source[nrI,...], phi[nrI,...])
+            sim = sim+self.compute_similarity(I0, I1, I0Source, phi)
 
         return sim
 
@@ -230,12 +235,25 @@ class NCCSimilarity(SimilarityMeasure):
         # TODO: may require a safeguard against infinity
 
         # this way of computing avoids the square root of the standard deviation
-        I0mean = I0.mean()
-        I1mean = I1.mean()
-        nccSqr = (((I0-I0mean.expand_as(I0))*(I1-I1mean.expand_as(I1))).mean()**2)/\
-                 (((I0-I0mean)**2).mean()*((I1-I1mean)**2).mean())
-
-        return AdaptVal((1-nccSqr)/self.sigma**2)
+        # I0mean = I0.mean()
+        # I1mean = I1.mean()
+        # I0_m_mean = I0-I0mean
+        # I1_m_mean = I1-I1mean
+        # nccSqr = (((I0_m_mean)*(I1_m_mean)).mean()**2)/\
+        #          (((I0_m_mean)**2).mean()*((I1_m_mean)**2).mean())
+        n_batch = I0.shape[0]
+        dim = len(I0.shape[2:])
+        input_shape = [I0.shape[0], I0.shape[1], -1]+[1]*dim
+        I0 = I0.view(*input_shape)
+        I1 = I1.view(*input_shape)
+        I0mean = I0.mean(2)
+        I1mean = I1.mean(2)
+        I0_m_mean = I0-I0mean
+        I1_m_mean = I1-I1mean
+        nccSqr = (((I0_m_mean)*(I1_m_mean)).mean()**2)/\
+                 (((I0_m_mean)**2).mean()*((I1_m_mean)**2).mean())
+        nccSqr =nccSqr.sum()
+        return AdaptVal((n_batch*1.-nccSqr)/self.sigma**2)
 
         #ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
         # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
@@ -262,12 +280,20 @@ class NCCPositiveSimilarity(SimilarityMeasure):
         # TODO: may require a safeguard against infinity
 
         # this way of computing avoids the square root of the standard deviation
-        I0mean = I0.mean()
-        I1mean = I1.mean()
-        ncc = (((I0-I0mean.expand_as(I0))*(I1-I1mean.expand_as(I1))).mean())/\
-                 (torch.sqrt(((I0-I0mean)**2).mean())*torch.sqrt(((I1-I1mean)**2).mean()))
+        n_batch = I0.shape[0]
+        dim = len(I0.shape[2:])
+        input_shape = [I0.shape[0], I0.shape[1], -1]+[1]*dim
+        I0 = I0.view(*input_shape)
+        I1 = I1.view(*input_shape)
+        I0mean = I0.mean(2)
+        I1mean = I1.mean(2)
+        I0_m_mean = I0 - I0mean
+        I1_m_mean = I1 - I1mean
+        ncc = (((I0_m_mean)*(I1_m_mean)).mean())/\
+                 (torch.sqrt(((I0_m_mean)**2).mean())*torch.sqrt(((I1_m_mean)**2).mean()))
+        ncc = ncc.sum()
 
-        return AdaptVal((1-ncc)/self.sigma**2)
+        return AdaptVal((n_batch*1.-ncc)/self.sigma**2)
 
 class NCCNegativeSimilarity(SimilarityMeasure):
     """
@@ -290,10 +316,17 @@ class NCCNegativeSimilarity(SimilarityMeasure):
         # TODO: may require a safeguard against infinity
 
         # this way of computing avoids the square root of the standard deviation
-        I0mean = I0.mean()
-        I1mean = I1.mean()
-        ncc = (((I0 - I0mean.expand_as(I0)) * (I1 - I1mean.expand_as(I1))).mean()) / \
-              (torch.sqrt(((I0 - I0mean) ** 2).mean()) * torch.sqrt(((I1 - I1mean) ** 2).mean()))
+        dim = len(I0.shape[2:])
+        input_shape = [I0.shape[0], I0.shape[1], -1] + [1] * dim
+        I0 = I0.view(*input_shape)
+        I1 = I1.view(*input_shape)
+        I0mean = I0.mean(2)
+        I1mean = I1.mean(2)
+        I0_m_mean = I0 - I0mean
+        I1_m_mean = I1 - I1mean
+        ncc = (((I0_m_mean) * (I1_m_mean)).mean()) / \
+              (torch.sqrt((I0_m_mean ** 2).mean()) * torch.sqrt((I1_m_mean ** 2).mean()))
+        ncc = ncc.sum()
 
         return AdaptVal((ncc)/self.sigma**2)
 
@@ -415,9 +448,10 @@ class LNCCSimilarity(SimilarityMeasure):
        :param phi: not used
 
        """
-        input = I0.view([1,1]+ list(I0.shape))
-        target =I1.view([1,1]+ list(I1.shape))
-        self.__stepup(img_sz=list(I0.shape))
+        n_batch = I0.shape[0]
+        input = I0 #.view([1,1]+ list(I0.shape))
+        target =I1 #.view([1,1]+ list(I1.shape))
+        self.__stepup(img_sz=list(I0.shape[2:]))
 
         input_2 = input ** 2
         target_2 = target ** 2
@@ -457,6 +491,7 @@ class LNCCSimilarity(SimilarityMeasure):
 
             lncc = cross * cross / (input_local_var * target_local_var + 1e-5)
             lncc = 1 - lncc.mean()
+            lncc = n_batch* lncc
             lncc_total += lncc * self.weight[scale_id]
 
         return lncc_total / (self.sigma ** 2)

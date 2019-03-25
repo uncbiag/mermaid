@@ -110,13 +110,13 @@ class Dopri5Solver(AdaptiveStepsizeODESolver):
         #                      Assertions                      #
         ########################################################
         assert t0 + dt > t0, 'underflow in dt {}'.format(dt.item())
-        for y0_ in y0:
-            #assert _is_finite(torch.abs(y0_)), 'non-finite values in state `y`: {}'.format(y0_)
-            is_finite= _is_finite(torch.abs(y0_))
-            if not is_finite:
-                print(" non-finite elements exist, try to fix")
-                y0_[y0_ != y0_] = 0.
-                y0_[y0_ == float("Inf")] = 0.
+        # for y0_ in y0:
+        #     #assert _is_finite(torch.abs(y0_)), 'non-finite values in state `y`: {}'.format(y0_)
+        #     is_finite= _is_finite(torch.abs(y0_))
+        #     if not is_finite:
+        #         print(" non-finite elements exist, try to fix")
+        #         y0_[y0_ != y0_] = 0.
+        #         y0_[y0_ == float("Inf")] = 0.
 
         y1, f1, y1_error, k = _runge_kutta_step(self.func, y0, f0, t0, dt, tableau=_DORMAND_PRINCE_SHAMPINE_TABLEAU)
 

@@ -107,8 +107,8 @@ class CreateRealExampleImages(CreateExample):
 
         # create small and large squares
         if self.dim==2:
-            I0,_,_,squeezed_spacing = fileio.ImageIO().read_to_nc_format(filename='../test_data/brain_slices/ws_slice.nrrd',intensity_normalize=True,squeeze_image=True)
-            I1,_,_,squeezed_spacing = fileio.ImageIO().read_to_nc_format(filename='../test_data/brain_slices/wt_slice.nrrd',intensity_normalize=True,squeeze_image=True)
+            I0,_,_,squeezed_spacing = fileio.ImageIO().read_to_nc_format(filename='/playpen/zyshen/reg_clean/mermaid/test_data/brain_slices/ws_slice.nrrd',intensity_normalize=True,squeeze_image=True)
+            I1,_,_,squeezed_spacing = fileio.ImageIO().read_to_nc_format(filename='/playpen/zyshen/reg_clean/mermaid/test_data/brain_slices/wt_slice.nrrd',intensity_normalize=True,squeeze_image=True)
         else:
             raise ValueError('Real examples only supported in dimension 2 at the moment.')
 

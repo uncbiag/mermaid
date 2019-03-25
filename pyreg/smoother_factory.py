@@ -585,6 +585,7 @@ class SingleGaussianFourierSmoother(GaussianFourierSmoother):
         mus = np.zeros(self.dim)
         stds = self.gaussianStd*np.ones(self.dim)
         centered_id = utils.centered_identity_map(self.sz,self.spacing)
+
         g = utils.compute_normalized_gaussian(centered_id, mus, stds)
 
         self.FFilter,_ = ce.create_complex_fourier_filter(g, self.sz)
@@ -692,18 +693,21 @@ class LocalFourierSmoother(object):
             sqrt_weights = torch.sqrt(weights)
             sqrt_weighted_multi_smooth_v = DS.compute_weighted_multi_smooth_v( momentum=momentum, weights=sqrt_weights, gaussian_stds=self.gaussian_stds,
                                                                    gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator )
+            extra_ret = sqrt_weighted_multi_smooth_v
             if EV.debug_mode_on:
                 pass #self.debugging([sqrt_weights,sqrt_weighted_multi_smooth_v],0)
         elif self.weighting_type=='w_K_w':
             # now create the weighted multi-smooth-v
             weighted_multi_smooth_v = DS.compute_weighted_multi_smooth_v( momentum=momentum, weights=weights, gaussian_stds=self.gaussian_stds,
                                                                        gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator )
+            extra_ret = weighted_multi_smooth_v
         elif self.weighting_type=='w_K':
             # todo: check if we can do a more generic datatype conversion than using .float()
             multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(momentum,
                                                                      gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
                                                                      sigma=self.gaussian_stds,
                                                                      compute_std_gradients=False)
+            extra_ret = multi_smooth_v
         else:
             raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
         sz_m = momentum.size()
@@ -711,6 +715,7 @@ class LocalFourierSmoother(object):
 
         for n in range(self.dim):
             if self.weighting_type=='sqrt_w_K_sqrt_w':
+                # sqrt_weighted_multi-smooth_v should be:  batch x K x dim x X x Y x ...
                 # roc should be: batch x multi_v x X x Y
                 roc = sqrt_weighted_multi_smooth_v[:, :, n, ...]
                 yc = torch.sum(roc * sqrt_weights, dim=1)
@@ -726,7 +731,7 @@ class LocalFourierSmoother(object):
                 raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
 
             ret[:, n, ...] = yc # ret is: batch x channels x X x Y
-        return ret
+        return ret, extra_ret
 
 def _compute_omt_penalty_for_weight_vectors(weights,multi_gaussian_stds,omt_power=2.0,use_log_transform=False):
 
@@ -1281,6 +1286,9 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
         return gaussianWeights
     def get_deep_smoother_weights(self):
         return self.ws.get_weights()
+
+    def get_deep_smoother_preweights(self):
+        return self.ws.get_pre_weights()
 
     def _get_gaussian_stds_from_optimizer_params(self):
         return self._compute_stds_from_prestds(pre_stds=self.pre_multi_gaussian_stds_optimizer_params)

@@ -14,7 +14,7 @@ from torch.nn.modules.module import Module
 # from pyreg.libraries.functions.stn_nd import  STNFunction_ND_BCXYZ, STNFunction_ND_BCXYZ_Compile
 # from pyreg.libraries.functions.nn_interpolation import get_nn_interpolationf
 ################################################################3
-from pyreg.libraries.functions.stn_nd import  STNFunction_ND_BCXYZ
+from ..functions.stn_nd import  STNFunction_ND_BCXYZ
 from functools import partial
 # class STN_ND(Module):
 #     """

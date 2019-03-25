@@ -1066,7 +1066,7 @@ class WeightedSqrtSoftmax(nn.Module):
 
 def compute_weighted_multi_smooth_v(momentum, weights, gaussian_stds, gaussian_fourier_filter_generator):
     # computes the weighted smoothed velocity field i.e., K_i*( w_i m ) for all i in one data structure
-    # dimension will be multi_v x batch x X x Y x ...
+    # dimension will be batch x K x dim x X x Y x ...
 
     sz_m = momentum.size()
     #sz_mv = [len(gaussian_stds)] + list(sz_m)
@@ -1306,6 +1306,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         self.compute_the_penalty = True
         self.accumulate_the_penalty = False
         self.weights = None
+        self.preweights =None
 
     def get_weighting_type(self):
         return self.weighting_type
@@ -1528,6 +1529,10 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
     def get_weights(self):
         return self.weights
 
+
+    def get_pre_weights(self):
+        return self.preweights
+
     @abstractmethod
     def compute_l2_parameter_weight_penalty(self):
         """
@@ -1716,6 +1721,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
         weights, pre_weights, input_to_pre_weights = self._compute_weights_and_preweights(I, additional_inputs, global_multi_gaussian_weights, iter)
         #self.displacy_weight_info(weights)
         self.weights = weights
+        self.preweights = pre_weights
         # if the weights should be stored (for debugging), create the tensor to store them here
         if retain_weights:
             if self.computed_weights is None:
@@ -1919,7 +1925,11 @@ class GeneralNetworkWeightedSmoothingModel(DeepSmoothingModel):
             # for this model the square of the weights should sum to one
             if self.estimate_around_global_weights:
                 #pre_weights = stable_softmax(x,dim=1)
-                pre_weights = weighted_linear_softnorm(x, dim=1, weights=global_multi_gaussian_weights)
+                if not self.use_weighted_linear_softmax:
+                    pre_weights = stable_softmax(x, dim=1)
+                    pre_weights = x / torch.norm(pre_weights, p=None, dim=1, keepdim=True)
+                else:
+                    pre_weights = weighted_linear_softnorm(x, dim=1, weights=global_multi_gaussian_weights)
             else:
                 pre_weights = linear_softnorm(x, dim=1)
 
