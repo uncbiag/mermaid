@@ -60,6 +60,8 @@ class AvailableModels(object):
                                          'EXPERIMENTAL: test on learning smoother network'),
             'lddmm_adapt_smoother_map': (RN.LDDMMAdaptiveSmootherMomentumMapNet,RN.LDDMMAdaptiveSmootherMomentumMapLoss,True,"EXPERIMENT: test"
                                                                                                                              "on th learning smoother lddmm"),
+            'svf_adapt_smoother_map': (RN.SVFVectorAdaptiveSmootherMomentumMapNet,RN.SVFVectorAdaptiveSmootherMomentumMapLoss,True,"EXPERIMENT: test"
+                                                                                                                             "on th learning smoother svf"),
             'cvf_vector_momentum_map': (RN.CVFVectorMomentumMapNet,
                                         RN.CVFVectorMomentumMapLoss, True,
                                         'EXPERIMENTAL: map-based constant velocity field using the vector momentum'),

@@ -61,6 +61,7 @@ class STNFunction_ND_BCXYZ(Module):
         if ndim==1:
             raise ValueError("Not implemented")
         if ndim==2:
+            # todo double check, it seems no transpose is need for 2d, already in height width design
             input2_ordered = torch.zeros_like(input2)
             input2_ordered[:,0,...] = input2[:,1,...]
             input2_ordered[:,1,...] = input2[:,0,...]

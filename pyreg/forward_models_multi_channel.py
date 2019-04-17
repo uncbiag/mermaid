@@ -184,7 +184,7 @@ class RHSLibrary(object):
         :return rhsphi: Returns the RHS of the advection equations involved  BxCxXxYxZ
         """
 
-        fdc = self.fdt # use zero Neumann boundary conditions
+        fdc = self.fdt_le # use zero Neumann boundary conditions
 
         if self.dim==1:
             dxc_phi = -fdc.dXc(phi)
@@ -409,7 +409,7 @@ class RHSLibrary(object):
 
         rhs = self._rhs_epdiff_call(m,v,rhsm)
         ret_var = torch.empty_like(rhs)
-        # rhs should batch x dim x X x Yx ..
+        # ret_var, rhs should batch x dim x X x Yx ..
         dim = m.shape[1]
         n_smoother = w.shape[1]
 
@@ -418,9 +418,13 @@ class RHSLibrary(object):
         m_sm_wm = m* sm_wm
         sm_m_sm_wm = smoother.smooth(m_sm_wm) # batchx Kxdim x X xY...
         dxc_w = fdc.dXc(w)
-        dyc_w = fdc.dYc(w)
-        dzc_w = fdc.dZc(w) # batch x K x X xY ...
-        dc_w_list = [dxc_w,dyc_w,dzc_w]
+        dc_w_list = [dxc_w]
+        if dim==2 or dim==3:
+            dyc_w = fdc.dYc(w)
+            dc_w_list.append(dyc_w)
+        if dim==3:
+            dzc_w = fdc.dZc(w) # batch x K x X xY ...
+            dc_w_list.append(dzc_w)
         for i in range(dim):
             ret_var[:,i] = rhs[:,i]+(sm_m_sm_wm[:,:,i]* dc_w_list[i]).sum(1)
         ######################
@@ -472,7 +476,7 @@ class ForwardModel(with_metaclass(ABCMeta, object)):
         if self.dim>3 or self.dim<1:
             raise ValueError('Forward models are currently only supported in dimensions 1 to 3')
 
-        self.fdt = fdm.FD_torch_multi_channel(spacing )
+        #self.fdt = fdm.FD_torch_multi_channel(spacing )
         """torch finite difference support"""
         self.debug_mode_on =False
 
@@ -976,14 +980,16 @@ class EPDiffAdaptMap(ForwardModel):
                     sm_phi = x[3]
                     new_sm_weight = utils.compute_warped_image_multiNC(sm_weight, sm_phi, self.spacing, 1,
                                                                     zero_boundary=False)
+                    pre_weight = None
                     if EV.use_preweights_advect:
+                        pre_weight = sm_weight
                         new_sm_weight = self.embedded_smoother.smooth(new_sm_weight)
                     #print('t{},m min, mean,max {} {} {}'.format(t,m.min().item(),m.mean().item(),m.max().item()))
                     v,extra_ret = self.smoother.smooth(m, new_sm_weight)
                     if not EV.use_fixed_wkw_equation:
                         new_m = self.rhs.rhs_epdiff_multiNC(m, v)
                     else:
-                        new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,new_sm_weight,extra_ret,self.embedded_smoother)
+                        new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,pre_weight,extra_ret,self.embedded_smoother)
                     new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
                     new_sm_phi = self.rhs.rhs_advect_map_multiNC(sm_phi, v)
                     new_sm_weight = self.update_sm_weight.detach()
@@ -993,26 +999,38 @@ class EPDiffAdaptMap(ForwardModel):
                     sm_weight = x[2]
                     new_sm_weight = utils.compute_warped_image_multiNC(sm_weight, phi, self.spacing, 1,
                                                                        zero_boundary=False)
+                    # ######################################################
+                    # w_norm = torch.norm(new_sm_weight, p=None, dim=1, keepdim=True)
+                    # print('t{},w_norm before smoothing min, mean,max {} {} {}'.format(t, w_norm.min().item(),
+                    #                                                                  w_norm.mean().item(),
+                    #                                                                  w_norm.max().item()))
+                    # ######################################################
                     if EV.use_preweights_advect:
                         new_sm_weight = self.embedded_smoother.smooth(new_sm_weight)
+
+                    # ######################################################
                     # w_norm = torch.norm(new_sm_weight, p=None, dim=1, keepdim=True)
                     # print('t{},w_norm after smoothing min, mean,max {} {} {}'.format(t, w_norm.min().item(),
                     #                                                                   w_norm.mean().item(),
                     #                                                                   w_norm.max().item()))
                     # w_norm_distr = np.histogram(w_norm.detach().cpu().numpy(), density=True)
                     # print('the histogram of the w_norm is {}'.format(w_norm_distr))
-
                     # print('t{},m min, mean,max {} {} {}'.format(t,m.min().item(),m.mean().item(),m.max().item()))
+                    # ######################################################
+
 
                     v, extra_ret = self.smoother.smooth(m, new_sm_weight)
 
                     # #################################
                     # from tools.visual_tools import save_smoother_map, plot_2d_img
-                    # # save_smoother_map(new_sm_weight, self.smoother.gaussian_stds, t.item(),
-                    # #                   '/playpen/zyshen/debugs/visual_sm')
+                    # import os
+                    # saving_path = '/playpen/zyshen/reg_clean/mermaid/demos/synthetic_example_out_kernel_weighting_type_w_K_w/moving_weights_fixed'
+                    # os.makedirs(saving_path,exist_ok=True)
+                    # save_smoother_map(new_sm_weight, self.smoother.multi_gaussian_stds, t.item(),
+                    #                   os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
                     # plot_2d_img(m[0, 0, :, 40, :], 'm' + str(t.item()), '/playpen/zyshen/debugs/visual_m')
-                    #
                     # ###############################
+
                     if not EV.use_fixed_wkw_equation:
                         new_m = self.rhs.rhs_epdiff_multiNC(m, v)
                     else:
@@ -1025,7 +1043,7 @@ class EPDiffAdaptMap(ForwardModel):
         else:
             if not t==0:
                 if self.use_the_first_step_penalty:
-                    self.smoother.disable_penalty_computation_in_deep_smoother()
+                    self.smoother.disable_penalty_computation()
                 else:
                     self.smoother.enable_accumulated_penalty()
 

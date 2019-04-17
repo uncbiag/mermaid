@@ -14,7 +14,7 @@ from . import noisy_convolution as nc
 
 import numpy as np
 
-from pyreg.data_wrapper import MyTensor, AdaptVal, USE_CUDA
+from  .data_wrapper import MyTensor, AdaptVal, USE_CUDA
 
 device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
 
@@ -23,7 +23,7 @@ import math
 import torch
 from torch.nn.parameter import Parameter
 import torch.nn.functional as F
-import pyreg.utils as utils
+from . import utils as utils
 
 def DimNoisyConv(dim):
     if dim == 1:
@@ -1175,15 +1175,17 @@ class Unet_no_skip(DeepNetwork):
 # custom loss function
 
 class WeightRangeLoss(nn.Module):
-    def __init__(self,dim,weights,decay_factor):
+    def __init__(self,dim,decay_factor,weight_type):
         super(WeightRangeLoss,self).__init__()
         self.dim = dim
-        view_sz = [1] + [len(weights)] + [1]*dim
-        self.init_weights = weights.view(*view_sz)
         self.decay_factor = decay_factor
+        self.is_w_K_w = weight_type=='w_K_w'
 
-    def forward(self,x, spacing):
-        diff = x - self.init_weights
+    def forward(self,x, spacing, weights):
+        weights = weights if not self.is_w_K_w else torch.sqrt(weights)
+        view_sz = [1] + [len(weights)] + [1]*self.dim
+        init_weights = weights.view(*view_sz)
+        diff = x - init_weights
         volumeElement = spacing.prod()
         loss = utils.remove_infs_from_variable(diff ** 2).sum() * volumeElement
         return loss
@@ -1394,7 +1396,7 @@ class TotalVariationLoss(nn.Module):
             self.tv_weights = self._compute_tv_weights()
 
         if self.smooth_image_for_edge_detection:
-            import pyreg.smoother_factory as sf
+            from . import smoother_factory as sf
 
             s_m_params = pars.ParameterDict()
             s_m_params['smoother']['type'] = 'gaussian'

@@ -35,7 +35,8 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         self.spacing = np.ones(self.dim)
         """spacing"""
         self.bcNeumannZero = bcNeumannZero  # if false then linear interpolation
-        self.order_smooth =False
+        self.order_smooth =True
+        self.strict_bcNeumannZero = False
         """should Neumann boundary conditions be used? (otherwise linear extrapolation)"""
         if spacing.size == 1:
             self.spacing[0] = spacing[0]
@@ -47,6 +48,9 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
 
+
+
+
     def dXb(self,I):
         """
         Backward difference in x direction:
@@ -55,7 +59,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image  
         :return: Returns the first derivative in x direction using backward differences
         """
-        return (I-self.xm(I))*(1./self.spacing[0])
+        res= (I-self.xm(I))*(1./self.spacing[0])
+        if self.strict_bcNeumannZero:
+            return self.zero_x_boundary(res)
+        else:
+            return res
 
     def dXf(self,I):
         """
@@ -65,7 +73,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the first derivative in x direction using forward differences
         """
-        return (self.xp(I)-I)*(1./self.spacing[0])
+        res= (self.xp(I)-I)*(1./self.spacing[0])
+        if self.strict_bcNeumannZero:
+            return self.zero_x_boundary(res)
+        else:
+            return res
 
     def dXc(self,I):
         """
@@ -75,7 +87,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the first derivative in x direction using central differences
         """
-        return (self.xp(I)-self.xm(I))*(0.5/self.spacing[0])
+        res= (self.xp(I)-self.xm(I))*(0.5/self.spacing[0])
+        if self.strict_bcNeumannZero:
+            return self.zero_x_boundary(res)
+        else:
+            return res
 
 
     def ddXc(self,I):
@@ -85,7 +101,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the second derivative in x direction
         """
-        return (self.xp(I)-I-I+self.xm(I))*(1/(self.spacing[0]**2))
+        res= (self.xp(I)-I-I+self.xm(I))*(1/(self.spacing[0]**2))
+        if self.strict_bcNeumannZero:
+            return self.zero_x_boundary(res)
+        else:
+            return res
 
     def dYb(self,I):
         """
@@ -94,7 +114,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the first derivative in y direction using backward differences
         """
-        return (I-self.ym(I))*(1./self.spacing[1])
+        res= (I-self.ym(I))*(1./self.spacing[1])
+        if self.strict_bcNeumannZero:
+            return self.zero_y_boundary(res)
+        else:
+            return res
 
     def dYf(self,I):
         """
@@ -103,7 +127,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the first derivative in y direction using forward differences
         """
-        return (self.yp(I)-I)*(1./self.spacing[1])
+        res= (self.yp(I)-I)*(1./self.spacing[1])
+        if self.strict_bcNeumannZero:
+            return self.zero_y_boundary(res)
+        else:
+            return res
 
     def dYc(self,I):
         """
@@ -112,7 +140,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the first derivative in y direction using central differences
         """
-        return (self.yp(I)-self.ym(I))*(0.5/self.spacing[1])
+        res= (self.yp(I)-self.ym(I))*(0.5/self.spacing[1])
+        if self.strict_bcNeumannZero:
+            return self.zero_y_boundary(res)
+        else:
+            return res
 
 
 
@@ -123,7 +155,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the second derivative in the y direction
         """
-        return (self.yp(I)-I-I+self.ym(I))*(1/(self.spacing[1]**2))
+        res= (self.yp(I)-I-I+self.ym(I))*(1/(self.spacing[1]**2))
+        if self.strict_bcNeumannZero:
+            return self.zero_y_boundary(res)
+        else:
+            return res
 
     def dZb(self,I):
         """
@@ -132,7 +168,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image 
         :return: Returns the first derivative in the z direction using backward differences
         """
-        return (I - self.zm(I))*(1./self.spacing[2])
+        res= (I - self.zm(I))*(1./self.spacing[2])
+        if self.strict_bcNeumannZero:
+            return self.zero_z_boundary(res)
+        else:
+            return res
 
     def dZf(self, I):
         """
@@ -141,7 +181,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the first derivative in the z direction using forward differences
         """
-        return (self.zp(I)-I)*(1./self.spacing[2])
+        res= (self.zp(I)-I)*(1./self.spacing[2])
+        if self.strict_bcNeumannZero:
+            return self.zero_z_boundary(res)
+        else:
+            return res
 
     def dZc(self, I):
         """
@@ -150,7 +194,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the first derivative in the z direction using central differences
         """
-        return (self.zp(I)-self.zm(I))*(0.5/self.spacing[2])
+        res= (self.zp(I)-self.zm(I))*(0.5/self.spacing[2])
+        if self.strict_bcNeumannZero:
+            return self.zero_z_boundary(res)
+        else:
+            return res
 
 
 
@@ -161,7 +209,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input iamge
         :return: Returns the second derivative in the z direction 
         """
-        return (self.zp(I)-I-I+self.zm(I))*(1/(self.spacing[2]**2))
+        res= (self.zp(I)-I-I+self.zm(I))*(1/(self.spacing[2]**2))
+        if self.strict_bcNeumannZero:
+            return self.zero_z_boundary(res)
+        else:
+            return res
 
     def lap(self, I):
         """
@@ -276,6 +328,52 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns its size (e.g., [5,10] or [3,4,6]
         """
         pass
+
+
+
+    def zero_x_boundary(self, I):
+        rx = I
+        ndim = self.getdimension(I)
+        if ndim ==1+2:
+            rx[:, :,  0] = 0.
+            rx[:, :, -1] = 0.
+        elif ndim==2+2:
+            rx[:, :, 0,:] = 0.
+            rx[:, :, -1,:] = 0.
+        elif ndim ==3+2:
+            rx[:, :, 0, :,:] = 0.
+            rx[:, :, -1, :,:] = 0.
+        elif ndim == 4 + 2:
+            rx[:, :, :, 0, :, :] = 0.
+            rx[:, :, :, -1, :, :] = 0.
+        return rx
+
+
+    def zero_y_boundary(self, I):
+        ry = I
+        ndim = self.getdimension(I)
+        if ndim==2+2:
+            ry[:, :, :, 0] = 0.
+            ry[:, :, :,-1] = 0.
+        elif ndim ==3+2:
+            ry[:, :, :, 0, :] = 0.
+            ry[:, :, :,-1, :] = 0.
+        elif ndim == 4 + 2:
+            ry[:, :, :, :, 0, :] = 0.
+            ry[:, :, :, :,-1, :] = 0.
+        return ry
+
+    def zero_z_boundary(self, I):
+        rz =I
+        ndim = self.getdimension(I)
+        if ndim ==3+2:
+            rz[:, :, :, :,0] = 0.
+            rz[:, :, :, :,-1] = 0.
+        elif ndim == 4 + 2:
+            rz[:, :, :, :, :,0] = 0.
+            rz[:, :, :, :, :,-1] = 0.
+        return rz
+
 
     def xp(self,I):
         """

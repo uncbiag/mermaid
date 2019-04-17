@@ -562,6 +562,31 @@ def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
         tmp = Parameter(MyTensor(*(csz.tolist())).normal_(0.,1e-7))
     return tmp
 
+def create_local_filter_weights_parameter_multiN(sz,gaussian_std_weights, nrOfI=1,sched='w_K_w' ):
+    """
+    Create vector field torch Parameter of given size
+
+    :param sz: just the spatial sizes (e.g., [5] in 1D, [5,10] in 2D, [5,10,10] in 3D)
+    :param nrOfI: number of images
+    :return: returns vector field of size nrOfIxdimxXxYxZ
+    """
+    nr_of_mg_weights = len(gaussian_std_weights)
+    csz = np.array(sz) # just to make sure it is a numpy array
+    csz = np.array([nrOfI,nr_of_mg_weights]+list(csz))
+    weights = torch.empty(*csz)
+    # set the default
+    if sched =='w_K_w':
+        gaussian_std_weights = [torch.sqrt(std_w) for std_w in gaussian_std_weights]
+    for g in range(nr_of_mg_weights):
+        weights[:, g, ...] = gaussian_std_weights[g]
+    tmp = AdaptVal(weights)
+
+    if EV.use_mermaid_net:
+        tmp.requires_grad = True
+    else:
+        tmp = Parameter(tmp)
+    return tmp
+
 def create_ND_scalar_field_parameter_multiNC(sz, nrOfI=1, nrOfC=1):
     """
     Create vector field torch Parameter of given size

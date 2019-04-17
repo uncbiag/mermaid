@@ -133,6 +133,10 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
             self.optimizer.set_initial_map(map0, initial_inverse_map)
             # self.optimizer.set_initial_inverse_map(initial_inverse_map)
 
+    def set_weight_map(self,weight_map):
+        if self.optimizer is not None:
+            self.optimizer.set_initial_map(weight_map)
+
     def get_initial_map(self):
         """
         Returns the initial map; this will typically be the identity map, but can be set to a different initial
@@ -544,6 +548,8 @@ class ImageRegistrationOptimizer(Optimizer):
         """  initial map"""
         self.initialInverseMap = None
         """ initial inverse map"""
+        self.weight_map =None
+        """ initial weight map"""
         self.multi_scale_info_dic = None
         """ dicts containing full resolution image and label"""
         self.optimizer_name = None #''lbfgs_ls'
@@ -886,6 +892,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """low res initial map, by default the identity map, will be needed for map-based solutions which are computed at lower resolution"""
         self.lowResInitialInverseMap = None
         """low res initial inverse map, by default the identity map, will be needed for map-based solutions which are computed at lower resolution"""
+        self.weight_map =None
+        """init_weight map, which only used by metric learning models"""
         self.optimizer_instance = None
         """the optimizer instance to perform the actual optimization"""
 
@@ -1108,6 +1116,19 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.initialMap is not None:
             # was already set, so let's modify it
             self._create_initial_maps()
+
+
+
+    def set_initial_weight_map(self,weight_map,freeze_weight=False):
+        """
+        Sets the initial map (overwrites the default identity map)
+        :param map0: intial map
+        :param map0_inverse: initial inverse map
+        :return: n/a
+        """
+        self.model.local_weights.data = weight_map
+        if freeze_weight:
+            self.model.mask_local_weight()
 
     def get_initial_map(self):
         """
@@ -3390,6 +3411,12 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.initialInverseMap = map0_inverse
 
 
+    def set_initial_weight_map(self,weight_map,freeze_weight=False):
+        if self.ssOpt is None:
+            self.weight_map = weight_map
+            self.freeze_weight = freeze_weight
+
+
     def set_pair_path(self,pair_paths):
         # f = lambda name: os.path.split(name)
         # get_in = lambda x: os.path.splitext(f(x)[1])[0]
@@ -3592,10 +3619,13 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 LTargetC, spacingC = self.sampler.downsample_image_to_size(self.LTarget, self.spacing, currentDesiredSz[2::],0)
             initialMap = None
             initialInverseMap = None
+            weight_map=None
             if self.initialMap is not None:
                 initialMap,_ = self.sampler.downsample_image_to_size(self.initialMap,self.spacing, currentDesiredSz[2::],1,zero_boundary=False)
             if self.initialInverseMap is not None:
                 initialInverseMap,_ = self.sampler.downsample_image_to_size(self.initialInverseMap,self.spacing, currentDesiredSz[2::],1,zero_boundary=False)
+            if self.weight_map is not None:
+                weight_map,_ =self.sampler.downsample_image_to_size(self.weight_map,self.spacing, currentDesiredSz[2::],1,zero_boundary=False)
             szC = np.array(ISourceC.size())  # this assumes the BxCxXxYxZ format
             mapLowResFactor = None if currentScaleNumber==0 else self.mapLowResFactor
             self.ssOpt = SingleScaleRegistrationOptimizer(szC, spacingC, self.useMap, mapLowResFactor, self.params, compute_inverse_map=self.compute_inverse_map)
@@ -3610,6 +3640,9 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             # now set the actual model we want to solve
             self.ssOpt.set_model(self.model_name)
+            if weight_map is not None:
+                self.ssOpt.set_initial_weight_map(weight_map,self.freeze_weight)
+
 
             if (self.addSimName is not None) and (self.addSimMeasure is not None):
                 self.ssOpt.add_similarity_measure(self.addSimName, self.addSimMeasure)

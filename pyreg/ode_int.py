@@ -1,6 +1,8 @@
+from __future__ import print_function
+from __future__ import absolute_import
 import torch
 import torch.nn as nn
-from pyreg import torchdiffeq
+from .  import torchdiffeq
 
 
 class ODEBlock(nn.Module):

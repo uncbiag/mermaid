@@ -16,6 +16,7 @@ class IntensityNormalizeImage(object):
 
     def max_normalization(self,I):
         # first zero out negative values
+        I = I - I.min()
         np.clip(I, 0, None, out=I)
         I = I/np.max(I)
         return I
@@ -28,9 +29,11 @@ class IntensityNormalizeImage(object):
         :return: returns the normalized image
         """
         # first zero out negative values
+        I =I - I.min()
         np.clip(I, 0, None, out=I)
         # then normalize the 99th percentile
         percI = np.percentile(I, perc)
+        #np.clip (I,None,percI,out=I)
         if percI == 0:
             print('Cannot normalize based on percentile; as 99-th percentile is 0. Ignoring normalization')
             return I

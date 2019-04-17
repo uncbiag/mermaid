@@ -93,8 +93,15 @@ class CreateRealExampleImages(CreateExample):
     """
     Class to create two example brain images. Currently only supported in 2D
     """
-    def __init__(self,dim):
+    def __init__(self,dim=2,s_path=None,t_path=None):
         super(CreateRealExampleImages, self).__init__(dim)
+        if s_path is None:
+            self.s_path = '/playpen/zyshen/reg_clean/mermaid/test_data/brain_slices/ws_slice.nrrd'
+            self.t_path = '/playpen/zyshen/reg_clean/mermaid/test_data/brain_slices/wt_slice.nrrd'
+        else:
+            self.s_path = s_path
+            self.t_path = t_path
+        
 
     def create_image_pair(self,sz=None,params=None):
         """
@@ -107,8 +114,8 @@ class CreateRealExampleImages(CreateExample):
 
         # create small and large squares
         if self.dim==2:
-            I0,_,_,squeezed_spacing = fileio.ImageIO().read_to_nc_format(filename='/playpen/zyshen/reg_clean/mermaid/test_data/brain_slices/ws_slice.nrrd',intensity_normalize=True,squeeze_image=True)
-            I1,_,_,squeezed_spacing = fileio.ImageIO().read_to_nc_format(filename='/playpen/zyshen/reg_clean/mermaid/test_data/brain_slices/wt_slice.nrrd',intensity_normalize=True,squeeze_image=True)
+            I0,_,_,squeezed_spacing = fileio.ImageIO().read_to_nc_format(filename=self.s_path,intensity_normalize=True,squeeze_image=True)
+            I1,_,_,squeezed_spacing = fileio.ImageIO().read_to_nc_format(filename=self.t_path,intensity_normalize=True,squeeze_image=True)
         else:
             raise ValueError('Real examples only supported in dimension 2 at the moment.')
 

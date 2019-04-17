@@ -98,7 +98,7 @@ so = MO.SimpleSingleScaleRegistration(ISource, ITarget, spacing,sz, params)
 #so = MO.SimpleMultiScaleRegistration(ISource, ITarget, spacing,sz, params)
 
 so.get_optimizer().set_visualization( True )
-so.get_optimizer().set_visualize_step( 5 )
+so.get_optimizer().set_visualize_step( 3 )
 so.set_light_analysis_on(True)
 so.optimizer.set_model(params['model']['registration_model']['type'])
 # so.optimizer.model.m.data = MyTensor(momentum)

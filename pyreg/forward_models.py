@@ -1060,7 +1060,7 @@ class EPDiffAdaptMap(ForwardModel):
         else:
             if not t==0:
                 if self.use_the_first_step_penalty:
-                    self.smoother.disable_penalty_computation_in_deep_smoother()
+                    self.smoother.disable_penalty_computation()
                 else:
                     self.smoother.enable_accumulated_penalty()
 
