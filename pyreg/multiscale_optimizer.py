@@ -133,9 +133,9 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
             self.optimizer.set_initial_map(map0, initial_inverse_map)
             # self.optimizer.set_initial_inverse_map(initial_inverse_map)
 
-    def set_weight_map(self,weight_map):
+    def set_initial_weight_map(self,weight_map, freeze_weight=False):
         if self.optimizer is not None:
-            self.optimizer.set_initial_map(weight_map)
+            self.optimizer.set_initial_weight_map(weight_map,freeze_weight=freeze_weight)
 
     def get_initial_map(self):
         """
@@ -567,6 +567,9 @@ class ImageRegistrationOptimizer(Optimizer):
         self.current_epoch = None
         """Can be set externally, so the optimizer knowns in which epoch we are"""
 
+
+        """ the following are settings for saving visualized results"""
+        self.expr_name=''
         self.save_fig_path=None
         self.save_fig=None
         self.save_fig_num =None
@@ -784,7 +787,6 @@ class ImageRegistrationOptimizer(Optimizer):
         :param LSource:
         :return:
         """
-        print(LSource.shape)
         self.LSource = LSource
 
 
@@ -1126,7 +1128,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param map0_inverse: initial inverse map
         :return: n/a
         """
+        if self.mapLowResFactor is not None:
+            sampler = IS.ResampleImage()
+            weight_map, _ = sampler.downsample_image_to_size(weight_map, self.spacing, self.lowResSize[2::], 1,
+                                                            zero_boundary=False)
         self.model.local_weights.data = weight_map
+
         if freeze_weight:
             self.model.mask_local_weight()
 
@@ -1623,7 +1630,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.visualize or self.save_fig:
             visual_param = {}
             visual_param['visualize'] = self.visualize
-            if not self.light_analysis_on:
+            if self.save_fig_path:
                 visual_param['save_fig'] = self.save_fig
                 visual_param['save_fig_path'] = self.save_fig_path
                 visual_param['save_fig_path_byname'] = os.path.join(self.save_fig_path,'byname')
@@ -3431,11 +3438,16 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param save_fig_path:
         :return:
         """
-        self.save_fig_path = os.path.join(save_fig_path, self.expr_name)
+        if len(self.expr_name):
+            self.save_fig_path = os.path.join(save_fig_path, self.expr_name)
+        else:
+            self.save_fig_path = save_fig_path
+        if save_fig_path is not None:
+            self.set_save_fig(True)
 
     def init_recorder(self, task_name):
         self.recorder = XlsxRecorder(task_name, self.save_fig_path)
-        return self.recorder
+        return self.recorder 
 
 
     def set_saving_env(self):

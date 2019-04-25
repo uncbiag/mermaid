@@ -688,7 +688,8 @@ class LocalFourierSmoother(object):
     def associate_parameters_with_module(self,module):
         return set()
 
-
+    def write_parameters_to_settings(self):
+        pass
 
 
     def get_custom_optimizer_output_string(self):

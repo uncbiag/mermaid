@@ -270,9 +270,11 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
             make_dir(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']))
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
-            plt.clf()
+            #plt.close('all')
     else:
         plt.show()
+        plt.clf()
+
 
 
 def _show_current_images_2d(iS, iT, iW,iSL, iTL,iWL, iter, vizImage, vizName, phiWarped, visual_param=None, i=0):
@@ -463,10 +465,13 @@ def show_current_images(iter, iS, iT, iW,iSL=None, iTL=None, iWL=None, vizImages
     """
 
     dim = iS.ndimension()-2
+    save_fig_num =visual_param['save_fig_num']
+    if save_fig_num==-1:
+        save_fig_num = iS.shape[0]
 
     if visual_param is not None:
         if visual_param['save_fig'] == True:
-            save_fig_num = min(visual_param['save_fig_num'], len(visual_param['pair_path']))
+            save_fig_num = min(save_fig_num, len(visual_param['pair_path']))
             print("num {} of pair would be saved in {}".format(save_fig_num,visual_param['save_fig_path']))
         else:
             save_fig_num = 1

@@ -7,6 +7,7 @@ import torch
 import sys
 import random
 sys.path.insert(0,'/playpen/zyshen/reg_clean/mermaid')
+sys.path.insert(0,'/playpen/zyshen/reg_clean')
 
 from combine_shape import generate_shape_objects,get_image,randomize_pair
 from moving_shape import MovingShape, MovingShapes
@@ -19,7 +20,7 @@ import progressbar as pb
 from functools import partial
 
 import matplotlib.pyplot as plt
-multi_gaussian_weight = np.array([0.2,0.5,0.2,0.1])
+multi_gaussian_weight = np.array([0.2,0.5,0.3,0.0])
 default_multi_gaussian_weight = np.array([0,0,0,1.])
 multi_gaussian_stds = np.array([0.05,0.1,0.15,0.2])
 def get_settings_for_shapes(img_sz):
@@ -54,39 +55,82 @@ def get_adaptive_weight_map(img_sz,shape_setting_list):
          moving_shape =  MovingShape(shape, multi_gaussian_weight, using_weight=using_weight, weight_type='w_K_w')
          moving_shape_list.append(moving_shape)
 
-    moving_shapes =MovingShapes(img_sz, moving_shape_list, default_multi_gaussian_weight, multi_gaussian_stds, local_smoother = local_smoother)
+    moving_shapes =MovingShapes(img_sz, moving_shape_list, default_multi_gaussian_weight, local_smoother = local_smoother)
     weight_map = moving_shapes.create_weight_map()
     return weight_map
 
 
 def generate_random_pairs(fpath=None,fname=None,random_state=None):
     img_sz = [200,200]
-    fg_setting={'type':['ellipse','rect'], 'scale':[0.7,0.9],'t_var':0.1}
-    bg_setting={'type':['ellipse','rect','tri'], 'scale':[0.1,0.3],'t_var':0.1}
-    overlay_num=3
-    bg_num = 7
+    fg_setting={'type':['ellipse','rect'], 'scale':[0.8,0.9],'t_var':0.1}
+    bg_setting={'type':['ellipse','rect','tri'], 'scale':[0.15,0.25],'t_var':0.1}
+    overlay_num=2
+    bg_num = 6
     add_texture=False
     complete_flg =False
     while not complete_flg:
         s_setting_list, t_setting_list, complete_flg = randomize_pair(img_sz=img_sz,fg_setting=fg_setting,bg_setting=bg_setting,overlay_num=overlay_num,bg_num=bg_num,random_state=random_state)
+        print("failed to find an instance, now try again ...")
     get_and_save_img_and_weight(img_sz, s_setting_list, add_texture=add_texture, color=None, fpath=fpath, fname=fname + '_s')
     get_and_save_img_and_weight(img_sz, t_setting_list, add_texture=add_texture, color=None, fpath=fpath, fname=fname + '_t')
 
+def visualize(img,visual):
+    if visual:
+        plt.style.use('bmh')
+        fig, ax = plt.subplots()
+        plt.imshow(img[0,0].cpu().numpy(),alpha =0.8)
+        #fig.patch.set_visible(False)
+        ax.axis('off')
+        plt.show()
 
+def smooth_img(img,img_sz,gaussian_std=0.02):
+    spacing = 1./(np.array(img_sz)-1)
+    local_smoother = get_single_gaussian_smoother(gaussian_std=gaussian_std,sz=img_sz,spacing=spacing)
+    smoothed_img = local_smoother.smooth(img)
+    return smoothed_img
 
 def get_and_save_img_and_weight(img_sz,shape_setting_list,add_texture=False, color=None,fpath=None,fname=None):
 
     img,color = get_image(img_sz,shape_setting_list,color)
+
     if add_texture:
         img =add_texture_on_img(img.numpy())
+    #img = smooth_img(img,img_sz,gaussian_std=0.01)
+    #visualize(img,True)
     weight = get_adaptive_weight_map(img_sz,shape_setting_list)
     if fpath and fname:
         os.makedirs(fpath,exist_ok=True)
         pth = os.path.join(fpath,fname)
         torch.save(img,pth+'_img.pt')
         torch.save(weight, pth+'_weight.pt')
-        plot_2d_img(img,name='img',path= pth+'img.png')
+        plot_2d_img(img,name='img',path= pth+'_img.png')
         save_smoother_map(weight,gaussian_stds=MyTensor(multi_gaussian_stds),t=0,path=pth+'weight.png',weighting_type='w_K_w')
+
+
+def get_txt_from_generated_images(folder_path,output_folder):
+    """ to get the pair information from folder_path and then transfer into standard txt file"""
+    from glob import glob
+    from data_pre.reg_data_utils import write_list_into_txt, get_file_name
+    os.makedirs(output_folder,exist_ok=True)
+    s_post = 's_img.pt'
+    t_post = 't_img.pt'
+    s_weight ='s_weight.pt'
+    t_weight ='t_weight.pt'
+    s_post_path = os.path.join(folder_path, '**','*'+s_post )
+    s_path_list = glob(s_post_path, recursive=True)
+    t_path_list = [s_path.replace(s_post,t_post) for s_path in s_path_list]
+    sw_path_list = [s_path.replace(s_post,s_weight) for s_path in s_path_list]
+    tw_path_list = [s_path.replace(s_post,t_weight) for s_path in s_path_list]
+    num_pair = len(s_path_list)
+    st_path_list = [[s_path_list[i],t_path_list[i]] for i in range(num_pair)]
+    stw_path_list = [[sw_path_list[i],tw_path_list[i]] for i in range(num_pair)]
+    st_name_list = [get_file_name(s_path_list[i])+'_'+ get_file_name(t_path_list[i]) for i in range(num_pair)]
+    st_path_txt = os.path.join(output_folder,'pair_path_list.txt')
+    stw_path_txt = os.path.join(output_folder,'pair_weight_path_list.txt')
+    st_name_txt = os.path.join(output_folder,'pair_name_list.txt')
+    write_list_into_txt(st_path_txt,st_path_list)
+    write_list_into_txt(stw_path_txt,stw_path_list)
+    write_list_into_txt(st_name_txt,st_name_list)
 
 
 # def get_pair(fpath,fname):
@@ -110,18 +154,17 @@ def sub_process(index,fpath,fname):
     pbar.finish()
 
 
-
-if __name__ == '__main__':
-    fpath = '/playpen/zyshen/debugs/syn_expr_0414'
+def get_data(folder_path=None):
+    fpath = folder_path
     fname = 'debug'
-    num_pairs_to_generate =40
+    num_pairs_to_generate = 40
     random_seed = 2018
     np.random.seed(random_seed)
     random.seed(random_seed)
     random_state = np.random.RandomState(random_seed)
-    num_of_workers= 1
-    sub_p = partial(sub_process,fpath=fpath,fname=fname)
-    if num_of_workers>1:
+    num_of_workers = 20
+    sub_p = partial(sub_process, fpath=fpath, fname=fname)
+    if num_of_workers > 1:
         split_index = np.array_split(np.array(range(num_pairs_to_generate)), num_of_workers)
         procs = []
         for i in range(num_of_workers):
@@ -137,6 +180,17 @@ if __name__ == '__main__':
             if i % 5 == 0:
                 print("generating the {} the pair".format(i))
             generate_random_pairs(fpath, 'id_{:03d}_{}'.format(i, fname), random_state)
+
+
+def get_txt(folder_path=None,output_folder=None):
+    get_txt_from_generated_images(folder_path, output_folder)
+
+
+if __name__ == '__main__':
+    folder_path = '/playpen/zyshen/debugs/syn_expr_0422_2'
+    txt_output_path = '/playpen/zyshen/data/syn_data/test'
+    #get_data(folder_path)
+    get_txt(folder_path,txt_output_path)
 
 
 

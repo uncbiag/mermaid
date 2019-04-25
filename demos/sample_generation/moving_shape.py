@@ -9,11 +9,10 @@ class MovingShape():
 
 
 class MovingShapes():
-    def __init__(self,img_sz,mov_shape_list, default_multi_gaussian_weights,multi_gaussian_stds, local_smoother=None, weight_type='w_K_w'):
+    def __init__(self,img_sz,mov_shape_list, default_multi_gaussian_weights, local_smoother=None, weight_type='w_K_w'):
         self.mov_shapes = mov_shape_list
         self.img_sz = img_sz
         self.default_multi_gaussian_weights = default_multi_gaussian_weights if weight_type!='w_K_w' else np.sqrt(default_multi_gaussian_weights)
-        self.multi_gaussian_stds = multi_gaussian_stds
         self.local_smoother = local_smoother
 
 

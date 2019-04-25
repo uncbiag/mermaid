@@ -113,10 +113,14 @@ class AdaptiveWeightLoss(with_metaclass(ABCMeta,nn.Module)):
                                              gaussian_stds=self.gaussian_stds,
                                              omt_power=self.omt_power,
                                              omt_use_log_transformed_std=self.omt_use_log_transformed_std,
-                                             params=self.params).cuda()
+                                             params=self.params)
+        if USE_CUDA:
+            self.tv_loss= self.tv_loss.cuda()
 
         self.omt_loss = dn.OMTLoss(spacing=spacing, desired_power=self.omt_power,
-                                   use_log_transform=self.omt_use_log_transformed_std, params=params).cuda()
+                                   use_log_transform=self.omt_use_log_transformed_std, params=params,img_sz=im_sz)
+        if USE_CUDA:
+            self.omt_loss= self.omt_loss.cuda()
 
         self.preweight_input_range_loss = dn.WeightInputRangeLoss()
         self.weight_range_loss = dn.WeightRangeLoss(self.dim, self.weight_range_epoch_factor,self.weighting_type)

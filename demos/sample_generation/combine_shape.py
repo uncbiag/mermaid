@@ -1,5 +1,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
+import matplotlib as matplt
+matplt.use('Agg')
 import numpy as np
 import random as rd
 from skimage.draw._random_shapes import _generate_random_colors
@@ -155,10 +157,13 @@ def randomize_pair(img_sz,fg_setting,bg_setting, overlay_num=3,bg_num=7, random_
             sbg_avail = sbg.avail
             if sbg.avail:
                 sbg.create_shape()
-                sbg_set = convert_index_into_coord_set(sbg.index,expand=5)
-                sbg_fg_avail_f = len(sbg_set - sfg_set) == 0
-                sbg_fg_avail_b = len(sbg_set - sfg_set) == len(sbg_set)
-                sbg_inter_avail = len(sbg_set - sfg_inshape_set) == len(sbg_set)
+                #sbg_set = convert_index_into_coord_set(sbg.index,expand=10)
+                sbg_set_f = convert_index_into_coord_set(sbg.index,expand=10)
+                sbg_set_i = convert_index_into_coord_set(sbg.index,expand=5)
+                sbg_set_b = convert_index_into_coord_set(sbg.index,expand=5)
+                sbg_fg_avail_f = len(sbg_set_f - sfg_set) == 0
+                sbg_fg_avail_b = len(sbg_set_b - sfg_set) == len(sbg_set_b)
+                sbg_inter_avail = len(sbg_set_i - sfg_inshape_set) == len(sbg_set_i)
                 sbg_avail = ((sbg_fg_avail_f and count_bg<overlay_num) or (sbg_fg_avail_b and count_ibg<bg_num)) and sbg_inter_avail
             count.inc()
             if count.over_count():
@@ -179,10 +184,13 @@ def randomize_pair(img_sz,fg_setting,bg_setting, overlay_num=3,bg_num=7, random_
             tbg_avail = tbg.avail
             if tbg.avail:
                 tbg.create_shape()
-                tbg_set = convert_index_into_coord_set(tbg.index,expand=5)
-                tbg_fg_avail_f = len(tbg_set - tfg_set) == 0
-                tbg_fg_avail_b = len(tbg_set - tfg_set) == len(tbg_set)
-                tbg_inter_avail = len(tbg_set - tfg_inshape_set) == len(tbg_set)
+                #tbg_set = convert_index_into_coord_set(tbg.index,expand=10)
+                tbg_set_f = convert_index_into_coord_set(tbg.index,expand=10)
+                tbg_set_i = convert_index_into_coord_set(tbg.index,expand=5)
+                tbg_set_b = convert_index_into_coord_set(tbg.index,expand=5)
+                tbg_fg_avail_f = len(tbg_set_f - tfg_set) == 0
+                tbg_fg_avail_b = len(tbg_set_b - tfg_set) == len(tbg_set_b)
+                tbg_inter_avail = len(tbg_set_i - tfg_inshape_set) == len(tbg_set_i)
                 tbg_avail = ((tbg_fg_avail_f and count_bg<overlay_num) or (tbg_fg_avail_b and count_ibg<bg_num)) and tbg_inter_avail
 
             count.inc()
@@ -196,8 +204,8 @@ def randomize_pair(img_sz,fg_setting,bg_setting, overlay_num=3,bg_num=7, random_
                 break
             continue
 
-        sfg_inshape_set = sfg_inshape_set.union(sbg_set)
-        tfg_inshape_set = tfg_inshape_set.union(tbg_set)
+        sfg_inshape_set = sfg_inshape_set.union(sbg_set_i)
+        tfg_inshape_set = tfg_inshape_set.union(tbg_set_i)
         if sbg_fg_avail_f and count_bg<overlay_num:
             count_bg += 1
             sbg_setting['use_weight']=True

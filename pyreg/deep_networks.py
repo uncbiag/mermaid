@@ -16,7 +16,7 @@ import numpy as np
 
 from  .data_wrapper import MyTensor, AdaptVal, USE_CUDA
 
-device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
+device = torch.device("cuda:0" if (USE_CUDA and torch.cuda.is_available()) else "cpu")
 
 import math
 
@@ -1292,14 +1292,18 @@ class OMTLoss(nn.Module):
     OMT Loss function
     """
 
-    def __init__(self,spacing,desired_power,use_log_transform,params):
+    def __init__(self,spacing,desired_power,use_log_transform,params,img_sz):
         super(OMTLoss, self).__init__()
 
         self.params = params
         self.spacing = spacing
         self.desired_power = desired_power
         self.use_log_transform = use_log_transform
-
+        self.img_sz =img_sz
+        self.use_boundary_mask = True
+        if self.use_boundary_mask:
+            print("ATTENTION, THE BOUNDARY MASK IS USED, CURRENT SETTING IS ONLY FOR OAI DATASET")
+            self.mask =utils.omt_boundary_weight_mask(img_sz, spacing, mask_range=3, mask_value=10, smoother_std=0.04)
         self.volume_element = self.spacing.prod()
 
     def compute_omt_penalty(self, weights, multi_gaussian_stds):
@@ -1318,9 +1322,9 @@ class OMTLoss(nn.Module):
         if self.desired_power == 2:
             for i, s in enumerate(multi_gaussian_stds):
                 if self.use_log_transform:
-                    penalty += ((weights[:, i, ...]).sum()) * ((torch.log(max_std / s)) ** self.desired_power)
+                    penalty += ((weights[:, i, ...]).sum() if self.mask is None else weights[:, i]*self.mask[:,0]) * ((torch.log(max_std / s)) ** self.desired_power)
                 else:
-                    penalty += ((weights[:, i, ...]).sum()) * ((s - max_std) ** self.desired_power)
+                    penalty += ((weights[:, i, ...]).sum() if self.mask is None else weights[:, i]*self.mask[:,0]) * ((s - max_std) ** self.desired_power)
 
             if self.use_log_transform:
                 penalty /= (torch.log(max_std / min_std)) ** self.desired_power
@@ -1329,9 +1333,9 @@ class OMTLoss(nn.Module):
         else:
             for i, s in enumerate(multi_gaussian_stds):
                 if self.use_log_transform:
-                    penalty += ((weights[:, i, ...]).sum()) * (torch.abs(torch.log(max_std / s)) ** self.desired_power)
+                    penalty += ((weights[:, i, ...] if self.mask is None else weights[:, i]*self.mask[:,0]).sum()) * (torch.abs(torch.log(max_std / s)) ** self.desired_power)
                 else:
-                    penalty += ((weights[:, i, ...]).sum()) * (torch.abs(s - max_std) ** self.desired_power)
+                    penalty += ((weights[:, i, ...] if self.mask is None else weights[:, i]*self.mask[:,0]).sum()) * (torch.abs(s - max_std) ** self.desired_power)
 
             if self.use_log_transform:
                 penalty /= torch.abs(torch.log(max_std / min_std)) ** self.desired_power

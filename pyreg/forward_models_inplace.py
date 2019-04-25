@@ -26,7 +26,8 @@ from builtins import range
 from builtins import object
 from abc import ABCMeta, abstractmethod
 import numpy as np
-from . import finite_differences_multi_channel as fdm
+#from . import finite_differences_multi_channel as fdm
+from . import finite_differences_inplace as fdm
 from . import utils
 from .data_wrapper import MyTensor
 from future.utils import with_metaclass
@@ -50,7 +51,7 @@ class RHSLibrary(object):
         self.spacing_min = np.min(spacing)
         """ min of the spacing"""
         self.spacing_ratio = spacing/self.spacing_min
-        self.fdt = fdm.FD_torch_multi_channel( spacing,False )
+        self.fdt = fdm.FD_torch_multi_channel( spacing )
         """torch finite differencing support"""
         self.fdt_le = fdm.FD_torch_multi_channel( spacing, False)
         """torch finite differencing support w/ linear extrapolation"""
@@ -92,6 +93,7 @@ class RHSLibrary(object):
             rhs_ret = -self.fdt.dXc(I) * v[:,0:1] -self.fdt.dYc(I)*v[:,1:2]-self.fdt.dZc(I)*v[:,2:3]
         else:
             raise ValueError('Only supported up to dimension 3')
+
         return rhs_ret
 
 
@@ -185,21 +187,25 @@ class RHSLibrary(object):
         """
 
         fdc = self.fdt_le # use order boundary conditions (interpolation)
+        phi_in = phi
+        v = fdc.shrink_boundary(v)
 
         if self.dim==1:
-            dxc_phi = -fdc.dXc(phi)
+            dxc_phi = -fdc.dXc(phi_in)
             rhsphi = v[:, 0:1] * dxc_phi
         elif self.dim==2:
-            dxc_phi = -fdc.dXc(phi)
-            dyc_phi = -fdc.dYc(phi)
+            dxc_phi = -fdc.dXc(phi_in)
+            dyc_phi = -fdc.dYc(phi_in)
             rhsphi = v[:, 0:1] * dxc_phi + v[:, 1:2] * dyc_phi
         elif self.dim==3:
-            dxc_phi = -fdc.dXc(phi)
-            dyc_phi = -fdc.dYc(phi)
-            dzc_phi = -fdc.dZc(phi)
+            dxc_phi = -fdc.dXc(phi_in)
+            dyc_phi = -fdc.dYc(phi_in)
+            dzc_phi = -fdc.dZc(phi_in)
             rhsphi = v[:,0:1]*dxc_phi + v[:,1:2]*dyc_phi + v[:,2:3]*dzc_phi
         else:
             raise ValueError('Only supported up to dimension 3')
+
+        rhsphi=fdc.cover_boundary(rhsphi)
         return rhsphi
 
 
@@ -324,21 +330,28 @@ class RHSLibrary(object):
         else:
             fdc = self.fdt_le # do linear extrapolation
 
+        m_in =m
+        v_in = v
+
+        m = fdc.shrink_boundary(m)
+        v = fdc.shrink_boundary(v)
+        rhsm = fdc.shrink_boundary(rhsm)
+
 
         #fdc = self.fdt
         if self.dim == 1:
-            dxc_mv0 = -fdc.dXc(m*v[:,0:1])
-            dxc_v = -fdc.dXc(v)
+            dxc_mv0 = -fdc.dXc(m_in*v_in[:,0:1])
+            dxc_v = -fdc.dXc(v_in)
             dxc_v_multi_m = dxc_v * m
             rhsm[:]= dxc_mv0 + dxc_v_multi_m
 
         elif self.dim == 2:
             # (m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm  (EPDiff equation)
-            dxc_mv0 = -fdc.dXc(m*v[:,0:1])
-            dyc_mv1 = -fdc.dYc(m*v[:,1:2])
+            dxc_mv0 = -fdc.dXc(m_in*v_in[:,0:1])
+            dyc_mv1 = -fdc.dYc(m_in*v_in[:,1:2])
             dc_mv_sum = dxc_mv0 + dyc_mv1
-            dxc_v = -fdc.dXc(v)
-            dyc_v = -fdc.dYc(v)
+            dxc_v = -fdc.dXc(v_in)
+            dyc_v = -fdc.dYc(v_in)
             dxc_v_multi_m = dxc_v * m
             dyc_v_multi_m = dyc_v * m
             dxc_v_multi_m_sum = torch.sum(dxc_v_multi_m, 1)
@@ -348,13 +361,13 @@ class RHSLibrary(object):
             rhsm[:,1, :, :] = dc_mv_sum[:,1] + dyc_v_multi_m_sum
 
         elif self.dim == 3:
-            dxc_mv0 = -fdc.dXc(m*v[:,0:1])
-            dyc_mv1 = -fdc.dYc(m*v[:,1:2])
-            dzc_mv2 = -fdc.dZc(m*v[:,2:3])
+            dxc_mv0 = -fdc.dXc(m_in*v_in[:,0:1])
+            dyc_mv1 = -fdc.dYc(m_in*v_in[:,1:2])
+            dzc_mv2 = -fdc.dZc(m_in*v_in[:,2:3])
             dc_mv_sum = dxc_mv0 + dyc_mv1 + dzc_mv2
-            dxc_v = -fdc.dXc(v)
-            dyc_v = -fdc.dYc(v)
-            dzc_v = -fdc.dZc(v)
+            dxc_v = -fdc.dXc(v_in)
+            dyc_v = -fdc.dYc(v_in)
+            dzc_v = -fdc.dZc(v_in)
             dxc_v_multi_m = dxc_v*m
             dyc_v_multi_m = dyc_v*m
             dzc_v_multi_m = dzc_v*m
@@ -370,6 +383,7 @@ class RHSLibrary(object):
 
         else:
             raise ValueError('Only supported up to dimension ')
+        rhsm=fdc.cover_boundary(rhsm)
         return rhsm
 
 
@@ -402,13 +416,20 @@ class RHSLibrary(object):
         :param v: Velocity fields (this will be one velocity field per momentum)  BxCxXxYxZ
         :return rhsm: Returns the RHS of the EPDiff equations involved  BxCxXxYxZ
         """
+
+
+
         if self.use_neumann_BC_for_map:
             fdc = self.fdt # use zero Neumann boundary conditions
         else:
             fdc = self.fdt_le # do linear extrapolation
 
         rhs = self._rhs_epdiff_call(m,v,rhsm)
+        w_in = w
+        rhs  =fdc.shrink_boundary(rhs)
         ret_var = torch.empty_like(rhs)
+
+
         # ret_var, rhs should batch x dim x X x Yx ..
         dim = m.shape[1]
         n_smoother = w.shape[1]
@@ -417,13 +438,15 @@ class RHSLibrary(object):
         m = m.view(*sz)
         m_sm_wm = m* sm_wm
         sm_m_sm_wm = smoother.smooth(m_sm_wm) # batchx Kxdim x X xY...
-        dxc_w = fdc.dXc(w)
+        sm_m_sm_wm = fdc.shrink_boundary(sm_m_sm_wm)
+
+        dxc_w = fdc.dXc(w_in)
         dc_w_list = [dxc_w]
         if dim==2 or dim==3:
-            dyc_w = fdc.dYc(w)
+            dyc_w = fdc.dYc(w_in)
             dc_w_list.append(dyc_w)
         if dim==3:
-            dzc_w = fdc.dZc(w) # batch x K x X xY ...
+            dzc_w = fdc.dZc(w_in) # batch x K x X xY ...
             dc_w_list.append(dzc_w)
         for i in range(dim):
             ret_var[:,i] = rhs[:,i]+(sm_m_sm_wm[:,:,i]* dc_w_list[i]).sum(1)
@@ -435,6 +458,7 @@ class RHSLibrary(object):
         #     ret_var[:,i] = rhs[:,i] +res
 
         ########################
+        ret_var=fdc.cover_boundary(ret_var)
         return ret_var
 
 
@@ -1005,9 +1029,7 @@ class EPDiffAdaptMap(ForwardModel):
                     #                                                                  w_norm.mean().item(),
                     #                                                                  w_norm.max().item()))
                     # ######################################################
-                    pre_weight = None
                     if EV.use_preweights_advect:
-                        pre_weight = sm_weight
                         new_sm_weight = self.embedded_smoother.smooth(new_sm_weight)
 
                     # ######################################################
@@ -1036,7 +1058,7 @@ class EPDiffAdaptMap(ForwardModel):
                     if not EV.use_fixed_wkw_equation:
                         new_m = self.rhs.rhs_epdiff_multiNC(m, v)
                     else:
-                        new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,pre_weight,extra_ret,self.embedded_smoother)
+                        new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,new_sm_weight,extra_ret,self.embedded_smoother)
                     new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
                     new_sm_weight = self.update_sm_weight.detach()
                     ret_val = [new_m, new_phi, new_sm_weight]

@@ -11,7 +11,7 @@ import torch.nn as nn
 import numpy as np
 from .data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
-device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
+device = torch.device("cuda:0" if (USE_CUDA and torch.cuda.is_available()) else "cpu")
 
 from . import finite_differences as fd
 from . import module_parameters as pars
@@ -1917,6 +1917,7 @@ class GeneralNetworkWeightedSmoothingModel(DeepSmoothingModel):
                 if not self.use_weighted_linear_softmax:
                     pre_weights = stable_softmax(x, dim=1)
                     pre_weights = x / torch.norm(pre_weights, p=None, dim=1, keepdim=True)
+                    #pre_weights = torch.abs(x)/ torch.norm(x, p=None, dim=1, keepdim=True)
                 else:
                     pre_weights = weighted_linear_softnorm(x, dim=1, weights=global_multi_gaussian_weights)
             else:

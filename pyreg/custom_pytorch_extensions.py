@@ -350,7 +350,7 @@ class FourierConvolution(Function):
                 grad_input = grad_input_c.real
             elif self.dim == 3:
                 grad_input = np.zeros(numpy_go.shape)
-                assert grad_output.dim() == 5
+                assert grad_output.dim() == 5  # to ensure the behavior correct, we avoid more than 3 dimension fftn method
                 for batch in range(grad_output.size()[0]):
                     for ch in range(grad_output.size()[1]):
                         grad_input_c = (self.ifftn(np.conjugate(self.complex_fourier_filter) *self.fftn(numpy_go[batch,ch])))
@@ -551,6 +551,7 @@ class GaussianFourierFilterGenerator(object):
         self.sigmas_complex_gaussian_fourier_filters = [None]*self.nr_of_slots
         self.complex_gaussian_fourier_xsqr_filters = [None]*self.nr_of_slots
         self.sigmas_complex_gaussian_fourier_xsqr_filters = [None]*self.nr_of_slots
+        self.sigmas_complex_gaussian_fourier_filters_np=[]
 
     def get_number_of_slots(self):
         return self.nr_of_slots
@@ -598,6 +599,7 @@ class GaussianFourierFilterGenerator(object):
         same_i = None
         empty_slot_i = None
         current_dist_sqr = None
+
 
         for i,s in enumerate(available_sigmas):
             if s is not None:
@@ -686,21 +688,26 @@ class GaussianFourierFilterGenerator(object):
         for sigma in sigmas:
 
             # now find the index that corresponds to this
-            i = self._find_closest_sigma_index(sigma,self.sigmas_complex_gaussian_fourier_filters)
-
-            if self.sigmas_complex_gaussian_fourier_filters[i] is None:
-                need_to_recompute = True
-            elif self.complex_gaussian_fourier_filters[i] is None:
-                need_to_recompute = True
-            elif torch.isclose(sigma,self.sigmas_complex_gaussian_fourier_filters[i]):
-                need_to_recompute = False
+            sigma_value = sigma.item()
+            if sigma_value in self.sigmas_complex_gaussian_fourier_filters_np:
+                i = self.sigmas_complex_gaussian_fourier_filters_np.index(sigma_value)
             else:
-                need_to_recompute = True
+                i = self._find_closest_sigma_index(sigma,self.sigmas_complex_gaussian_fourier_filters)
 
-            if need_to_recompute: # todo  not comment this warning
-                print('INFO: Recomputing gaussian filter for sigma={:.2f}'.format(sigma))
-                self.sigmas_complex_gaussian_fourier_filters[i] = sigma #.clone()
-                self.complex_gaussian_fourier_filters[i], self.max_indices[i] = self._compute_complex_gaussian_fourier_filter(sigma)
+                if self.sigmas_complex_gaussian_fourier_filters[i] is None:
+                    need_to_recompute = True
+                elif self.complex_gaussian_fourier_filters[i] is None:
+                    need_to_recompute = True
+                elif torch.isclose(sigma,self.sigmas_complex_gaussian_fourier_filters[i]):
+                    need_to_recompute = False
+                else:
+                    need_to_recompute = True
+
+                if need_to_recompute: # todo  not comment this warning
+                    print('INFO: Recomputing gaussian filter for sigma={:.2f}'.format(sigma))
+                    self.sigmas_complex_gaussian_fourier_filters[i] = sigma #.clone()
+                    self.sigmas_complex_gaussian_fourier_filters_np.append(sigma_value)
+                    self.complex_gaussian_fourier_filters[i], self.max_indices[i] = self._compute_complex_gaussian_fourier_filter(sigma)
 
             current_complex_gaussian_fourier_filters.append(self.complex_gaussian_fourier_filters[i])
 
@@ -781,7 +788,7 @@ class FourierGaussianConvolution(Function):
             grad_input = grad_input_c.real
         elif self.dim == 3:
             grad_input = np.zeros(numpy_go.shape)
-            assert grad_output.dim() == 5
+            assert grad_output.dim() == 5 # to ensure the behavior correct, we avoid more than 3 dimension fftn method
             for batch in range(grad_output.size()[0]):
                 for ch in range(grad_output.size()[1]):
                     grad_input_c = (

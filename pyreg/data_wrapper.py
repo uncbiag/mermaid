@@ -3,7 +3,7 @@ import torch
 from .config_parser import CUDA_ON, USE_FLOAT16
 
 # ----------------- global setting ----------------------------------------
-USE_CUDA = torch.cuda.is_available() & CUDA_ON
+USE_CUDA =  CUDA_ON and torch.cuda.is_available()
 
 # --------------------   My Tensor -------------------------
 # a warped version of Tensor to adapt gpu, cpu and float16
