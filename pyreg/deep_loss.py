@@ -175,7 +175,7 @@ class AdaptiveWeightLoss(with_metaclass(ABCMeta,nn.Module)):
             weight_range_epoch_factor = self.weight_range_loss.cal_weights_for_weightrange(self.epoch)
         balance_factor = (1. - weight_range_epoch_factor) if self.weight_range_init_weight_penalty > 0 else 1.
         current_omt_penalty = self.omt_weight_penalty * omt_epoch_factor * omt_penalty * balance_factor
-        current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty
+        current_tv_penalty = self.total_variation_weight_penalty * total_variation_penalty* balance_factor
         current_preweight_input_range_penalty = self.preweight_input_range_weight_penalty * preweight_input_range_penalty
         current_range_weight_penalty = self.weight_range_init_weight_penalty * weight_range_epoch_factor * weight_range_penalty
         current_penalty = current_omt_penalty + current_tv_penalty + current_diffusion_penalty + current_preweight_input_range_penalty + current_range_weight_penalty
@@ -183,6 +183,7 @@ class AdaptiveWeightLoss(with_metaclass(ABCMeta,nn.Module)):
         current_batch_size = I.size()[0]
 
         if self.print_count % self.print_every_n_iter == 0:
+            print("loss counting epoch:{} and  current balance factor for omt loss is {}".format(self.epoch,balance_factor))
             print('     TV/TV_penalty = ' + str(total_variation_penalty.item() / current_batch_size) + '/' \
                   + str(current_tv_penalty.item() / current_batch_size) + \
                   '; OMT/OMT_penalty = ' + str(omt_penalty.item() / current_batch_size) + '/' \

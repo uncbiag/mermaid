@@ -1300,7 +1300,8 @@ class OMTLoss(nn.Module):
         self.desired_power = desired_power
         self.use_log_transform = use_log_transform
         self.img_sz =img_sz
-        self.use_boundary_mask = True
+        self.use_boundary_mask = False
+        self.mask=None
         if self.use_boundary_mask:
             print("ATTENTION, THE BOUNDARY MASK IS USED, CURRENT SETTING IS ONLY FOR OAI DATASET")
             self.mask =utils.omt_boundary_weight_mask(img_sz, spacing, mask_range=3, mask_value=10, smoother_std=0.04)

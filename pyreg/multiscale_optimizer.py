@@ -948,6 +948,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self._sgd_split_shared = None # keeps track if the shared states were split or not
         self._sgd_split_individual = None # keeps track if the individual states were split or not
 
+        self.n_scale=None
+        self.history_iter_count = None
+
 
     def write_parameters_to_settings(self):
         if self.model is not None:
@@ -1052,6 +1055,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :return:
         """
         self.n_scale = n_scale
+
+
+    def set_history_iter_count(self,iter_count):
+        self.history_iter_count=iter_count
 
 
     def _create_initial_maps(self):
@@ -1451,7 +1458,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # 2) Compute loss
 
         # first define variables that will be passed to the model and the criterion (for further use)
-        opt_variables = {'iter': self.iter_count,'epoch': self.current_epoch}
+        history_iter_count = self.iter_count if self.history_iter_count is None else self.history_iter_count+self.iter_count
+        opt_variables = {'iter': self.iter_count,'epoch': self.current_epoch,'scale':self.n_scale,'history_iter_count':history_iter_count}
 
         self.rec_IWarped,self.rec_phiWarped,self.rec_phiInverseWarped = model_evaluation.evaluate_model_low_level_interface(model=self.model,
                                                                                                                  I_source=self.ISource,
@@ -1657,7 +1665,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                                                    vizImages=vizImage, vizName=vizName, phiWarped=phi_or_warped_image, visual_param=visual_param)
                     else:
                         I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.spline_order, zero_boundary=False)
-                        vizImage = vizImage if len(vizImage)>2 else None
+                        try:
+                            vizImage = vizImage if len(vizImage.shape) > 2 else None
+                        except:
+                            vizImage = vizImage if len(vizImage) > 2 else None
                         LWarped = None
                         if self.LSource is not None  and self.LTarget is not None:
                             LWarped = utils.get_warped_label_map(self.LSource, phi_or_warped_image, self.spacing)
@@ -3610,6 +3621,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # go from lowest to highest scale
         reverseScales = self.scaleFactors[-1::-1]
         reverseIterations = self.scaleIterations[-1::-1]
+        history_iter_count = 0
 
         for en_scale in enumerate(reverseScales):
             print('Optimizing for scale = ' + str(en_scale[1]))
@@ -3671,6 +3683,9 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.ssOpt.set_visualization(self.get_visualization())
             self.ssOpt.set_visualize_step(self.get_visualize_step())
             self.ssOpt.set_light_analysis_on(self.light_analysis_on)
+            self.ssOpt.set_n_scale(en_scale[1])
+            self.ssOpt.set_history_iter_count(history_iter_count)
+
 
             if not self.light_analysis_on:
                 self.ssOpt.set_expr_name(self.get_expr_name())
@@ -3678,7 +3693,6 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 self.ssOpt.set_save_fig_path(self.get_save_fig_path())
                 self.ssOpt.set_save_fig_num(self.get_save_fig_num())
                 self.ssOpt.set_pair_path(self.get_pair_path())
-                self.ssOpt.set_n_scale(en_scale[1])
                 self.ssOpt.set_recorder(self.get_recorder())
                 self.ssOpt.set_save_excel(self.get_save_excel())
                 self.ssOpt.set_source_label(self.get_source_label())
@@ -3726,6 +3740,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self._add_to_history('ss_history',self.ssOpt.get_history())
 
             lastSuccessfulStepSizeTaken = self.ssOpt.get_last_successful_step_size_taken()
+
+            history_iter_count += currentNrOfIteratons
 
             # if we are not at the very last scale, then upsample the parameters
             if currentScaleNumber != nrOfScales - 1:

@@ -374,7 +374,7 @@ class RHSLibrary(object):
 
 
 
-    def rhs_adapt_epdiff_wkw_multiNC(self, m, v,w, sm_wm,smoother):
+    def rhs_adapt_epdiff_wkw_multiNC(self, m, v,w, sm_wm,smoother,omt_const=None):
         '''
         Computes the right hand side of the EPDiff equation for of N momenta (for N images).
         Expected format here, is BxCxXxYxZ, where B is the number of momenta (batch size), C,
@@ -391,10 +391,10 @@ class RHSLibrary(object):
         '''
         sz = m.size()
         rhs_ret = MyTensor(sz).zero_()
-        rhs_ret = self._rhs_adapt_epdiff_wkw_call(m, v,w,sm_wm,smoother, rhs_ret)
+        rhs_ret = self._rhs_adapt_epdiff_wkw_call(m, v,w,sm_wm,smoother, rhs_ret,omt_const=omt_const)
         return rhs_ret
 
-    def _rhs_adapt_epdiff_wkw_call(self, m, v,w,sm_wm, smoother, rhsm):
+    def _rhs_adapt_epdiff_wkw_call(self, m, v,w,sm_wm, smoother, rhsm, omt_const=None):
         """
         :param m: momenta batch  BxCxXxYxZ
         :param sm_wm: smoothed(wm)  batch x K x dim x X x Y x ...
@@ -416,17 +416,39 @@ class RHSLibrary(object):
         sz = [m.shape[0]]+[1]+list(m.shape[1:]) # batchx1xdimx X x Y
         m = m.view(*sz)
         m_sm_wm = m* sm_wm
-        sm_m_sm_wm = smoother.smooth(m_sm_wm) # batchx Kxdim x X xY...
+
+
+        ############################3
+        # if omt_const is not None:
+        #     m_sm_wm = m_sm_wm - omt_const
+        # sm_m_sm_wm = smoother.smooth(m_sm_wm)  # batchx Kxdim x X xY...
+        # dxc_w = fdc.dXc(w)
+        # dc_w_list = [dxc_w]
+        # if dim == 2 or dim == 3:
+        #     dyc_w = fdc.dYc(w)
+        #     dc_w_list.append(dyc_w)
+        # if dim == 3:
+        #     dzc_w = fdc.dZc(w)  # batch x K x X xY ...
+        #     dc_w_list.append(dzc_w)
+        # for i in range(dim):
+        #     ret_var[:, i] = rhs[:, i] + (sm_m_sm_wm[:, :, i] * dc_w_list[i]).sum(1)
+        #
+
+
+        ###########################
+        m_sm_wm = m_sm_wm.sum(dim=2)
+        sm_m_sm_wm = smoother.smooth(m_sm_wm)  # batchx K x X xY...
         dxc_w = fdc.dXc(w)
         dc_w_list = [dxc_w]
-        if dim==2 or dim==3:
+        if dim == 2 or dim == 3:
             dyc_w = fdc.dYc(w)
             dc_w_list.append(dyc_w)
-        if dim==3:
-            dzc_w = fdc.dZc(w) # batch x K x X xY ...
+        if dim == 3:
+            dzc_w = fdc.dZc(w)  # batch x K x X xY ...
             dc_w_list.append(dzc_w)
         for i in range(dim):
-            ret_var[:,i] = rhs[:,i]+(sm_m_sm_wm[:,:,i]* dc_w_list[i]).sum(1)
+            ret_var[:, i] = rhs[:, i] + (sm_m_sm_wm* dc_w_list[i]).sum(1)
+
         ######################
         # for i in range(dim):
         #     res = smoother.smooth(m_sm_wm[:,0,i:i+1])[:,0]*dxc_w[:,i]
@@ -755,6 +777,7 @@ class EPDiffMap(ForwardModel):
 
         # assume x[0] is m and x[1] is phi for the state
         m = x[0]
+        m = m.clamp(max=1., min=-1.)
         phi = x[1]
 
         if self.compute_inverse_map:
@@ -913,12 +936,14 @@ class EPDiffAdaptMap(ForwardModel):
         self.update_sm_with_interpolation = update_sm_with_interpolation
         self.bysingle_int=bysingle_int
         self.update_sm_weight=None
+        self.velocity_mask = None
         self.debug_mode_on = False
         s_m_params = pars.ParameterDict()
         s_m_params['smoother']['type'] = 'gaussian'
         s_m_params['smoother']['gaussian_std'] =self.params['smoother']['deep_smoother']['deep_network_local_weight_smoothing']
         self.embedded_smoother  = sf.SmootherFactory(sz[2:], spacing).create_smoother(
             s_m_params)
+        self.omt_const= None
 
         """ if only take the first step penalty as the total penalty, otherwise accumluate the penalty"""
     def debug_nan(self, input, t,name=''):
@@ -930,6 +955,13 @@ class EPDiffAdaptMap(ForwardModel):
             raise ValueError("nan error")
     def init_zero_sm_weight(self,sm_weight):
         self.update_sm_weight = torch.zeros_like(sm_weight).detach()
+
+
+    def init_velocity_mask(self,velocity_mask):
+        self.velocity_mask = velocity_mask
+
+    def init_omt_const(self,omt_const):
+        self.omt_const = omt_const
 
 
 
@@ -964,13 +996,15 @@ class EPDiffAdaptMap(ForwardModel):
             if not self.update_sm_with_interpolation:
                 sm_weight = x[2]
                 v, extra_ret = self.smoother.smooth(m, sm_weight)
+                if self.velocity_mask is not None:
+                    v = v* self.velocity_mask
                 new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
                 new_sm_weight =  self.rhs.rhs_advect_map_multiNC(sm_weight, v)
                 if not EV.use_fixed_wkw_equation:
                     new_m = self.rhs.rhs_epdiff_multiNC(m, v)
                 else:
                     new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m, v, new_sm_weight, extra_ret,
-                                                                  self.embedded_smoother)
+                                                                  self.embedded_smoother, self.omt_const)
 
                 ret_val = [new_m, new_phi,new_sm_weight]
                 return_val_name  =['new_m','new_phi','new_sm_weight']
@@ -986,16 +1020,19 @@ class EPDiffAdaptMap(ForwardModel):
                         new_sm_weight = self.embedded_smoother.smooth(new_sm_weight)
                     #print('t{},m min, mean,max {} {} {}'.format(t,m.min().item(),m.mean().item(),m.max().item()))
                     v,extra_ret = self.smoother.smooth(m, new_sm_weight)
+                    if self.velocity_mask is not None:
+                        v = v * self.velocity_mask
+
                     if not EV.use_fixed_wkw_equation:
                         new_m = self.rhs.rhs_epdiff_multiNC(m, v)
                     else:
-                        new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,pre_weight,extra_ret,self.embedded_smoother)
+                        new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,pre_weight,extra_ret,self.embedded_smoother, self.omt_const)
                     new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
                     new_sm_phi = self.rhs.rhs_advect_map_multiNC(sm_phi, v)
                     new_sm_weight = self.update_sm_weight.detach()
                     ret_val = [new_m, new_phi,new_sm_weight,new_sm_phi]
                     return_val_name = ['new_m', 'new_phi', 'new_sm_weight','new_sm_phi']
-                else:
+                else: #todo  just attention here is what we currently used
                     sm_weight = x[2]
                     new_sm_weight = utils.compute_warped_image_multiNC(sm_weight, phi, self.spacing, 1,
                                                                        zero_boundary=False)
@@ -1023,6 +1060,9 @@ class EPDiffAdaptMap(ForwardModel):
 
                     v, extra_ret = self.smoother.smooth(m, new_sm_weight)
 
+                    if self.velocity_mask is not None:
+                        v = v * self.velocity_mask
+
                     # #################################
                     # from tools.visual_tools import save_smoother_map, plot_2d_img
                     # import os
@@ -1036,7 +1076,7 @@ class EPDiffAdaptMap(ForwardModel):
                     if not EV.use_fixed_wkw_equation:
                         new_m = self.rhs.rhs_epdiff_multiNC(m, v)
                     else:
-                        new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,pre_weight,extra_ret,self.embedded_smoother)
+                        new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,pre_weight,extra_ret,self.embedded_smoother, self.omt_const)
                     new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
                     new_sm_weight = self.update_sm_weight.detach()
                     ret_val = [new_m, new_phi, new_sm_weight]
@@ -1052,6 +1092,8 @@ class EPDiffAdaptMap(ForwardModel):
             I = utils.compute_warped_image_multiNC(pars['I0'], phi, self.spacing, 1,zero_boundary=True)
             pars['I'] = I.detach()  # TODO  check whether I should be detached here
             v = self.smoother.smooth(m, None, pars, variables_from_optimizer)
+            if self.velocity_mask is not None:
+                v = v * self.velocity_mask
             new_m = self.rhs.rhs_epdiff_multiNC(m, v)
             new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
             ret_val = [new_m, new_phi]
