@@ -79,6 +79,8 @@ def outliers_suppressed(text,showfliers=True):
 
 def plot_results(all_stats,all_names,nr_of_measures,showfliers,normalize_by_spacing,ylabel,output_prefix,title_prefix,
                  suppress_pattern=None,suppress_pattern_keep_first_as=None,
+                 replace_pattern_from=None,
+                 replace_pattern_to=None,
                  custom_ranges_raw=None,
                  custom_ranges_norm=None,
                  print_title=True,
@@ -94,6 +96,8 @@ def plot_results(all_stats,all_names,nr_of_measures,showfliers,normalize_by_spac
         rs, rn = reorder_values(all_stats[k], all_names[k], nr_of_measures=nr_of_measures)
         eu.plot_boxplot(rs, rn, semilogy=False, showfliers=showfliers,
                         suppress_pattern=suppress_pattern,suppress_pattern_keep_first_as=suppress_pattern_keep_first_as,
+                        replace_pattern_from=replace_pattern_from,
+                        replace_pattern_to=replace_pattern_to,
                         show_labels=show_labels,fix_aspect=fix_aspect)
         if print_title:
             plt.title(outliers_suppressed('Raw: ' + title_prefix + ' ' + str(k), showfliers=showfliers))
@@ -126,6 +130,8 @@ def plot_results(all_stats,all_names,nr_of_measures,showfliers,normalize_by_spac
         eu.plot_boxplot(rs, rn, semilogy=False, showfliers=showfliers,
                         suppress_pattern=suppress_pattern,
                         suppress_pattern_keep_first_as=suppress_pattern_keep_first_as,
+                        replace_pattern_from=replace_pattern_from,
+                        replace_pattern_to=replace_pattern_to,
                         show_labels = show_labels,
                         fix_aspect = fix_aspect)
 
@@ -155,12 +161,24 @@ def plot_results(all_stats,all_names,nr_of_measures,showfliers,normalize_by_spac
 #datapath = '/Users/mn/sim_results/pf_out_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_300_wo_noise_sc'
 #datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc-skip-stage-1'
 #datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc_only_0.1_and_0.25'
-datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc'
+#datapath = '/Users/mn/sim_results/pf_out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc'
+datapath = '/Users/mn/sim_results/pf-out_testing_paper_experiment_wo_momentum_sqrt_w_K_sqrt_w_200_wo_noise_sc-skip-stage-1'
 
-stages = [0,1,2]
+#stages = [0,1,2]
+stages = [0,2]
+
 squeezed_aspect_ratio = 0.35
 #stages = [0,2]
 nr_of_measures = len(stages)
+
+if 1 in stages:
+    suppress_pattern_keep_first_as = 's0'
+    replace_pattern_from = None
+    replace_pattern_to = None
+else:
+    suppress_pattern_keep_first_as = 'global'
+    replace_pattern_from = '_s2'
+    replace_pattern_to = '_l'
 
 prefix = 'out_testing'
 #prefix = 'out_training'
@@ -291,7 +309,8 @@ for d in desired_directories:
 # visualization of overlaps
 plt.clf()
 rs,rn = reorder_values(all_overlaps,all_overlap_names,nr_of_measures=nr_of_measures)
-eu.plot_boxplot(rs,rn,semilogy=False,showfliers=showfliers,suppress_pattern='_s0',suppress_pattern_keep_first_as='s0')
+eu.plot_boxplot(rs,rn,semilogy=False,showfliers=showfliers,suppress_pattern='_s0',suppress_pattern_keep_first_as=suppress_pattern_keep_first_as,
+                replace_pattern_from=replace_pattern_from,replace_pattern_to=replace_pattern_to)
 plt.ylabel('Dice')
 plt.title('Dice overlap')
 
@@ -299,7 +318,8 @@ if print_output_directory is not None:
     plt.savefig(os.path.join(print_output_directory, 'dice.pdf'))
 
     plt.clf()
-    eu.plot_boxplot(rs, rn, semilogy=False, showfliers=showfliers, suppress_pattern='_s0',suppress_pattern_keep_first_as='s0')
+    eu.plot_boxplot(rs, rn, semilogy=False, showfliers=showfliers, suppress_pattern='_s0',suppress_pattern_keep_first_as=suppress_pattern_keep_first_as,
+                    replace_pattern_from=replace_pattern_from, replace_pattern_to=replace_pattern_to)
     plt.ylabel('Dice')
     plt.savefig(os.path.join(print_output_directory_no_title, 'dice.pdf'))
 
@@ -333,7 +353,9 @@ else:
 plot_results(all_stats=all_stats_map, all_names=all_names_map, nr_of_measures=nr_of_measures, showfliers=showfliers,
              normalize_by_spacing=normalize_by_spacing, ylabel='disp error (est-GT)', output_prefix='map',
              title_prefix = 'map (est-GT)',
-             suppress_pattern = '_s0', suppress_pattern_keep_first_as = 's0',
+             suppress_pattern = '_s0', suppress_pattern_keep_first_as = suppress_pattern_keep_first_as,
+             replace_pattern_from = replace_pattern_from,
+             replace_pattern_to = replace_pattern_to,
              custom_ranges_raw=custom_ranges_map_raw,
              custom_ranges_norm=custom_ranges_map_norm,
              print_title=True,
@@ -342,7 +364,9 @@ plot_results(all_stats=all_stats_map, all_names=all_names_map, nr_of_measures=nr
 plot_results(all_stats=all_stats_dj, all_names=all_names_dj, nr_of_measures=nr_of_measures, showfliers=showfliers,
              normalize_by_spacing=False, ylabel='det(jac) error (est-GT)', output_prefix='det_jac',
              title_prefix='det_jac (est-GT)',
-             suppress_pattern = '_s0', suppress_pattern_keep_first_as = 's0',
+             suppress_pattern = '_s0', suppress_pattern_keep_first_as = suppress_pattern_keep_first_as,
+             replace_pattern_from = replace_pattern_from,
+             replace_pattern_to = replace_pattern_to,
              custom_ranges_raw=custom_ranges_det_jac_raw,
              custom_ranges_norm=custom_ranges_det_jac_norm,
              print_title=True,
@@ -354,7 +378,9 @@ if print_output_directory_no_title is not None:
     plot_results(all_stats=all_stats_map, all_names=all_names_map, nr_of_measures=nr_of_measures, showfliers=showfliers,
                  normalize_by_spacing=normalize_by_spacing, ylabel='disp error (est-GT)', output_prefix='map',
                  title_prefix = 'map (est-GT)',
-                 suppress_pattern = '_s0', suppress_pattern_keep_first_as = 's0',
+                 suppress_pattern = '_s0', suppress_pattern_keep_first_as = suppress_pattern_keep_first_as,
+                 replace_pattern_from=replace_pattern_from,
+                 replace_pattern_to=replace_pattern_to,
                  custom_ranges_raw=custom_ranges_map_raw,
                  custom_ranges_norm=custom_ranges_map_norm,
                  print_title=False,
@@ -363,7 +389,9 @@ if print_output_directory_no_title is not None:
     plot_results(all_stats=all_stats_dj, all_names=all_names_dj, nr_of_measures=nr_of_measures, showfliers=showfliers,
                  normalize_by_spacing=False, ylabel='det(jac) error (est-GT)', output_prefix='det_jac',
                  title_prefix='det_jac (est-GT)',
-                 suppress_pattern = '_s0', suppress_pattern_keep_first_as = 's0',
+                 suppress_pattern = '_s0', suppress_pattern_keep_first_as = suppress_pattern_keep_first_as,
+                 replace_pattern_from=replace_pattern_from,
+                 replace_pattern_to=replace_pattern_to,
                  custom_ranges_raw=custom_ranges_det_jac_raw,
                  custom_ranges_norm=custom_ranges_det_jac_norm,
                  print_title=False,
@@ -375,7 +403,9 @@ if print_output_directory_no_title_no_label is not None:
                  showfliers=showfliers,
                  normalize_by_spacing=normalize_by_spacing, ylabel='disp error (est-GT)', output_prefix='map',
                  title_prefix='map (est-GT)',
-                 suppress_pattern='_s0', suppress_pattern_keep_first_as='s0',
+                 suppress_pattern='_s0', suppress_pattern_keep_first_as= suppress_pattern_keep_first_as,
+                 replace_pattern_from=replace_pattern_from,
+                 replace_pattern_to=replace_pattern_to,
                  custom_ranges_raw=custom_ranges_map_raw,
                  custom_ranges_norm=custom_ranges_map_norm,
                  print_title=False,
@@ -386,7 +416,9 @@ if print_output_directory_no_title_no_label is not None:
                  showfliers=showfliers,
                  normalize_by_spacing=False, ylabel='det(jac) error (est-GT)', output_prefix='det_jac',
                  title_prefix='det_jac (est-GT)',
-                 suppress_pattern='_s0', suppress_pattern_keep_first_as='s0',
+                 suppress_pattern='_s0', suppress_pattern_keep_first_as= suppress_pattern_keep_first_as,
+                 replace_pattern_from=replace_pattern_from,
+                 replace_pattern_to=replace_pattern_to,
                  custom_ranges_raw=custom_ranges_det_jac_raw,
                  custom_ranges_norm=custom_ranges_det_jac_norm,
                  print_title=False,
@@ -401,7 +433,9 @@ if print_output_directory_no_title_squeezed is not None:
     plot_results(all_stats=all_stats_map, all_names=all_names_map, nr_of_measures=nr_of_measures, showfliers=showfliers,
                  normalize_by_spacing=normalize_by_spacing, ylabel='disp error (est-GT)', output_prefix='map',
                  title_prefix = 'map (est-GT)',
-                 suppress_pattern = '_s0', suppress_pattern_keep_first_as = 's0',
+                 suppress_pattern = '_s0', suppress_pattern_keep_first_as = suppress_pattern_keep_first_as,
+                 replace_pattern_from=replace_pattern_from,
+                 replace_pattern_to=replace_pattern_to,
                  custom_ranges_raw=custom_ranges_map_raw,
                  custom_ranges_norm=custom_ranges_map_norm,
                  print_title=False,
@@ -411,7 +445,9 @@ if print_output_directory_no_title_squeezed is not None:
     plot_results(all_stats=all_stats_dj, all_names=all_names_dj, nr_of_measures=nr_of_measures, showfliers=showfliers,
                  normalize_by_spacing=False, ylabel='det(jac) error (est-GT)', output_prefix='det_jac',
                  title_prefix='det_jac (est-GT)',
-                 suppress_pattern = '_s0', suppress_pattern_keep_first_as = 's0',
+                 suppress_pattern = '_s0', suppress_pattern_keep_first_as = suppress_pattern_keep_first_as,
+                 replace_pattern_from=replace_pattern_from,
+                 replace_pattern_to=replace_pattern_to,
                  custom_ranges_raw=custom_ranges_det_jac_raw,
                  custom_ranges_norm=custom_ranges_det_jac_norm,
                  print_title=False,
@@ -424,7 +460,9 @@ if print_output_directory_no_title_no_label_squeezed is not None:
                  showfliers=showfliers,
                  normalize_by_spacing=normalize_by_spacing, ylabel='disp error (est-GT)', output_prefix='map',
                  title_prefix='map (est-GT)',
-                 suppress_pattern='_s0', suppress_pattern_keep_first_as='s0',
+                 suppress_pattern='_s0', suppress_pattern_keep_first_as=suppress_pattern_keep_first_as,
+                 replace_pattern_from=replace_pattern_from,
+                 replace_pattern_to=replace_pattern_to,
                  custom_ranges_raw=custom_ranges_map_raw,
                  custom_ranges_norm=custom_ranges_map_norm,
                  print_title=False,
@@ -436,7 +474,9 @@ if print_output_directory_no_title_no_label_squeezed is not None:
                  showfliers=showfliers,
                  normalize_by_spacing=False, ylabel='det(jac) error (est-GT)', output_prefix='det_jac',
                  title_prefix='det_jac (est-GT)',
-                 suppress_pattern='_s0', suppress_pattern_keep_first_as='s0',
+                 suppress_pattern='_s0', suppress_pattern_keep_first_as=suppress_pattern_keep_first_as,
+                 replace_pattern_from=replace_pattern_from,
+                 replace_pattern_to=replace_pattern_to,
                  custom_ranges_raw=custom_ranges_det_jac_raw,
                  custom_ranges_norm=custom_ranges_det_jac_norm,
                  print_title=False,

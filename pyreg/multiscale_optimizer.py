@@ -2567,7 +2567,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
             self.batch_size=nr_of_datasets
 
         if nr_of_datasets%self.batch_size!=0:
-            raise ValueError('Number of registration pairs needs to be divisible by the batch size.')
+            raise ValueError('nr_of_datasets = {}; batch_size = {}: Number of registration pairs needs to be divisible by the batch size.'.format(nr_of_datasets,self.batch_size))
 
         dataloader = DataLoader(registration_data_set, batch_size=self.batch_size,
                                 shuffle=self.shuffle, num_workers=self.num_workers)
