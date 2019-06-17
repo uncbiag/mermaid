@@ -320,7 +320,8 @@ def print_results_and_compute_statistics(compound_names,compound_results, traini
     print_results_as_text(results=results)
     print_results_as_latex(results=results, testing_data=testing_data)
 
-def overlapping_plot(old_results_filename, new_results, new_results_names, boxplot_filename,
+def overlapping_plot(old_results_filename, new_results, new_results_names,
+                     voxelmorph_results,voxelmorph_names,boxplot_filename,
                      visualize=True, testing_data=None,fix_aspect=None,compare_to_stage_name=None):
     """
     Plot the overlaping results of 14 old appraoch and the proposed appraoch
@@ -355,6 +356,10 @@ def overlapping_plot(old_results_filename, new_results, new_results_names, boxpl
 
     compound_names = compound_names[0:-nr_of_methods_to_remove]
 
+    if (voxelmorph_names is not None) and (voxelmorph_results is not None):
+        for n in voxelmorph_names:
+            compound_names.append(n)
+
     for n in new_results_names:
         compound_names.append(n)
 
@@ -364,12 +369,21 @@ def overlapping_plot(old_results_filename, new_results, new_results_names, boxpl
 
         # combine data
         compound_results = old_results_selected
+
+        if voxelmorph_results is not None:
+            compound_results = np.concatenate((compound_results, voxelmorph_results), axis=1)
+
         for current_new_result in new_results:
             compound_results = np.concatenate((compound_results, np.array(current_new_result['mean_target_overlap']).reshape(-1, 1)), axis=1)
     else:
-        compound_results = new_results[0]
-        for current_new_result in new_results[1:]:
-            compound_results = np.concatenate((compound_results, np.array(current_new_result['mean_target_overlap']).reshape(-1, 1)), axis=1)
+        if voxelmorph_results is not None:
+            compound_results = voxelmorph_results
+            for current_new_result in new_results:
+                compound_results = np.concatenate((compound_results, np.array(current_new_result['mean_target_overlap']).reshape(-1, 1)), axis=1)
+        else:
+            compound_results = new_results[0]
+            for current_new_result in new_results[1:]:
+                compound_results = np.concatenate((compound_results, np.array(current_new_result['mean_target_overlap']).reshape(-1, 1)), axis=1)
 
     # print out the results
     print_results_and_compute_statistics(compound_names=compound_names,compound_results=compound_results, testing_data=testing_data, compare_to_stage_name=compare_to_stage_name)
@@ -525,14 +539,36 @@ def get_validation_datasets():
 
     return validation_datasets
 
+def load_voxelmorph_data():
+    c_c_raw = sio.loadmat('./validation_mat/voxelmorph/cumc12_300_target_overlap.mat')
+    m_c_raw = sio.loadmat('./validation_mat/voxelmorph/mgh10_300_target_overlap.mat')
+    i_c_raw = sio.loadmat('./validation_mat/voxelmorph/ibsr18_300_target_overlap.mat')
+    a_c_raw = sio.loadmat('./validation_mat/voxelmorph/all_300_target_overlap.mat')
+
+    # average over anatomical regions
+    c_c = (np.nanmean(c_c_raw['to_vals'], axis=0)).reshape(-1,1)
+    m_c = (np.nanmean(m_c_raw['to_vals'], axis=0)).reshape(-1,1)
+    i_c = (np.nanmean(i_c_raw['to_vals'], axis=0)).reshape(-1,1)
+    a_c = (np.nanmean(a_c_raw['to_vals'], axis=0)).reshape(-1,1)
+
+    voxelmorph_names = ['c/c VM', 'm/c VM', 'i/c VM', '*/c VM']
+    voxelmorph_results = np.concatenate((c_c,m_c,i_c,a_c),axis=1)
+
+    return voxelmorph_results,voxelmorph_names
+
 #validation_data_dir = '/Users/mn/cumc3d_short_boxplots'
 #validation_data_dir = '/Users/mn/sim_results/cumc3d_val'
 
 
 validation_datasets = get_validation_datasets()
 
-datasets_to_test = ['mgh10','cumc12','ibsr18']
-corresponding_validation_datasets = ['MGH','CUMC','IBSR']
+#datasets_to_test = ['mgh10','cumc12','ibsr18']
+#corresponding_validation_datasets = ['MGH','CUMC','IBSR']
+
+datasets_to_test = ['cumc12']
+train_datasets_to_test = ['mgh10','cumc12','ibsr18']
+corresponding_validation_datasets = ['CUMC']
+compare_to_voxelmorph = True
 
 desired_stages =[0,2]
 
@@ -552,7 +588,7 @@ for test_dataset, validation_dataset_name in zip(datasets_to_test, corresponding
     boxplot_filename = 'boxplot_overlap_3d_test_{}.pdf'.format(test_dataset)
     boxplot_filename_squeezed = 'squeezed_boxplot_overlap_3d_test_{}.pdf'.format(test_dataset)
 
-    for train_dataset in datasets_to_test:
+    for train_dataset in train_datasets_to_test:
         validation_data_dir = '/Users/mn/sim_results/pf-out_testing_train_{}_test_{}_3d_sqrt_w_K_sqrt{}'.format(train_dataset,test_dataset,skip_stage_1_str)
         if os.path.exists(validation_data_dir):
             print('\nPlotting for train={}/test={}'.format(train_dataset,test_dataset))
@@ -595,9 +631,18 @@ for test_dataset, validation_dataset_name in zip(datasets_to_test, corresponding
 
         old_klein_results_filename = validation_datasets[validation_dataset_name]['old_klein_results_filename']
 
-        overlapping_plot(old_klein_results_filename, validation_results, validation_results_names, boxplot_filename,
-                         visualize=True,testing_data=test_dataset,compare_to_stage_name=compare_to_stage_name)
+        if (test_dataset=='cumc12') and compare_to_voxelmorph:
+            voxelmorph_results, voxelmorph_names = load_voxelmorph_data()
+        else:
+            voxelmorph_results = None
+            voxelmorph_names = None
 
-        overlapping_plot(old_klein_results_filename, validation_results, validation_results_names, boxplot_filename_squeezed,
-                         visualize=True,testing_data=test_dataset,fix_aspect=0.5,compare_to_stage_name=compare_to_stage_name)
+
+        overlapping_plot(old_results_filename=old_klein_results_filename, new_results=validation_results, new_results_names=validation_results_names,
+                         voxelmorph_results=voxelmorph_results,voxelmorph_names=voxelmorph_names,
+                         boxplot_filename=boxplot_filename,visualize=True,testing_data=test_dataset,compare_to_stage_name=compare_to_stage_name)
+
+        overlapping_plot(old_results_filename=old_klein_results_filename, new_results=validation_results, new_results_names=validation_results_names,
+                         voxelmorph_results=voxelmorph_results, voxelmorph_names=voxelmorph_names,
+                         boxplot_filename=boxplot_filename_squeezed,visualize=True,testing_data=test_dataset,fix_aspect=0.5,compare_to_stage_name=compare_to_stage_name)
 
