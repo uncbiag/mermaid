@@ -1303,7 +1303,12 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
 
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
         """smoother"""
-        self.smoother_for_forward = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams,cparams['smoother_for_forward']['type'])
+        # mn: added this check
+        if cparams.has_key(['smoother_for_forward']):
+            self.smoother_for_forward = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams,cparams['smoother_for_forward']['type'])
+        else:
+            self.smoother_for_forward = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams,cparams['smoother']['type'])
+
         if not EV.use_mermaid_net:
             self.smoother = self.smoother_for_forward
         """ smoother for forward term"""

@@ -4,12 +4,23 @@
 Installation
 ============
 
-This note briefly describes how to install and use *mermaid*. Since this is all based on pyTorch, the first step if you have not done so yet is to install pyTorch itself. These installation notes are currently for OSX.
+This note briefly describes how to install and use *mermaid*. Since this is all based on pyTorch, the first step if you have not done so yet is to install pyTorch itself. These installation notes are currently for OSX and Linux. We have not tested mermaid on windows, so chances are it will not currently run there. 
 
 anaconda installation
 ^^^^^^^^^^^^^^^^^^^^^
 
 If you have not done so yet, install anaconda. Simply follow the installation instructions `here <https://www.anaconda.com/download>`_.
+
+Creating a conda virtual environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It is best to install everything into a conda virtual environment. This can be done as follows.
+
+.. code::
+
+   conda create -n mermaid python=3.6 pip
+   conda activate mermaid
+
 
 pyTorch installation
 ^^^^^^^^^^^^^^^^^^^^
@@ -18,13 +29,18 @@ See `pyTorch <http://pytorch.org/>`_.
 
 An easier way of installation (that includes pytorch) in a conda virtual environment is described in a section below.
 
-To install via anaconda execute
+To install via anaconda execute on the Mac
 
 .. code::
 
-   conda install pytorch torchvision cuda80 -c soumith
+   conda install pytorch torchvision -c pytorch
 
+and on Linux
 
+.. code::
+   
+   conda install pytorch torchvision cudatoolkit=9.0 -c pytorch
+   
 However, as pyTorch is still actively developed it may make sense to install it from the git repository. At least at the time of writing of this document the repository had some autograd bugs fixed that were not fixed in the official release yet.
 
 To install pyTorch from source do the following
