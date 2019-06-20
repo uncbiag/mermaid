@@ -10,12 +10,12 @@ import os
 import re
 
 import set_pyreg_paths
-import pyreg.fileio as FIO
-import pyreg.module_parameters as pars
-import pyreg.deep_smoothers as deep_smoothers
-import pyreg.deep_networks as dn
+import mermaid.fileio as FIO
+import mermaid.module_parameters as pars
+import mermaid.deep_smoothers as deep_smoothers
+import mermaid.deep_networks as dn
 
-from pyreg.data_wrapper import MyTensor, AdaptVal, USE_CUDA
+from mermaid.data_wrapper import MyTensor, AdaptVal, USE_CUDA
 
 device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
 
@@ -261,7 +261,7 @@ for epoch in range(nr_of_epochs):  # loop over the dataset multiple times
 
         # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
         if deep_network_local_weight_smoothing > 0 and deep_network_weight_smoother is None:
-            import pyreg.smoother_factory as sf
+            import mermaid.smoother_factory as sf
 
             s_m_params = pars.ParameterDict()
             s_m_params['smoother']['type'] = 'gaussian'

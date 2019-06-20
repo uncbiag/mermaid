@@ -18,9 +18,9 @@ from time import time
 
 import numpy as np
 
-import pyreg.module_parameters as pars
-import pyreg.utils as utils
-import pyreg.fileio as fileio
+import mermaid.module_parameters as pars
+import mermaid.utils as utils
+import mermaid.fileio as fileio
 
 def read_images(source_image_name,target_image_name, normalize_spacing=True, normalize_intensities=True, squeeze_image=True):
 
@@ -42,10 +42,10 @@ def read_images(source_image_name,target_image_name, normalize_spacing=True, nor
 
 def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scale, normalize_spacing, normalize_intensities, squeeze_image, par_algconf ):
 
-    from pyreg.data_wrapper import AdaptVal
-    import pyreg.smoother_factory as SF
-    import pyreg.multiscale_optimizer as MO
-    from pyreg.config_parser import nr_of_threads
+    from mermaid.data_wrapper import AdaptVal
+    import mermaid.smoother_factory as SF
+    import mermaid.multiscale_optimizer as MO
+    from mermaid.config_parser import nr_of_threads
 
     params = pars.ParameterDict()
 

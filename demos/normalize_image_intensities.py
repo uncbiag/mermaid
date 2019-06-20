@@ -11,7 +11,7 @@ import torch
 
 import numpy as np
 import scipy.stats as sstats
-import pyreg.fileio as fio
+import mermaid.fileio as fio
 
 import glob
 import os

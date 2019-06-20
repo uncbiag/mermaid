@@ -19,14 +19,14 @@ import torch
 from time import time
 import numpy as np
 
-import pyreg.example_generation as eg
-import pyreg.module_parameters as pars
-import pyreg.smoother_factory as SF
-import pyreg.multiscale_optimizer as MO
+import mermaid.example_generation as eg
+import mermaid.module_parameters as pars
+import mermaid.smoother_factory as SF
+import mermaid.multiscale_optimizer as MO
 
-from pyreg.data_wrapper import AdaptVal
+from mermaid.data_wrapper import AdaptVal
 
-import pyreg.load_default_settings as ds
+import mermaid.load_default_settings as ds
 
 since = time()
 if ds.use_map:

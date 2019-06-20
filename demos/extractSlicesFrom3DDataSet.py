@@ -3,7 +3,7 @@ from builtins import str
 
 import set_pyreg_paths
 
-import pyreg.fileio as fileio
+import mermaid.fileio as fileio
 import os
 import glob
 

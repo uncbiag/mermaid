@@ -4,8 +4,8 @@ import os
 import sys
 
 sys.path.insert(0,os.path.abspath('..'))
-sys.path.insert(0,os.path.abspath('../pyreg'))
-sys.path.insert(0,os.path.abspath('../pyreg/libraries'))
+sys.path.insert(0,os.path.abspath('../mermaid'))
+sys.path.insert(0,os.path.abspath('../mermaid/libraries'))
 
 import numpy as np
 import numpy.testing as npt
@@ -25,7 +25,7 @@ except ImportError:
 
 # testing code starts here
 
-import pyreg.finite_differences as FD
+import mermaid.finite_differences as FD
 
 #TODO: add tests for non-Neumann boundary conditions (linear extrapolation)
 #TODO: do experiments how the non-Neumann bounday conditions behave in practive

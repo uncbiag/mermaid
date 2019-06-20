@@ -447,7 +447,7 @@ def _get_low_res_size_from_size(sz, factor):
         return lowResSize
 
 def _compute_low_res_image(I,spacing,low_res_size,spline_order):
-    import pyreg.image_sampling as IS
+    import mermaid.image_sampling as IS
     sampler = IS.ResampleImage()
     low_res_image, _ = sampler.downsample_image_to_size(I, spacing, low_res_size[2::],spline_order)
     return low_res_image

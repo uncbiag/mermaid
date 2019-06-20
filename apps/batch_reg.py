@@ -13,7 +13,7 @@ from builtins import str
 import set_pyreg_paths
 
 import matplotlib as matplt
-from pyreg.config_parser import MATPLOTLIB_AGG
+from mermaid.config_parser import MATPLOTLIB_AGG
 if MATPLOTLIB_AGG:
     matplt.use('Agg')
 
@@ -23,21 +23,21 @@ from time import time
 import os
 import numpy as np
 
-import pyreg.module_parameters as pars
-import pyreg.utils as utils
-import pyreg.fileio as fileio
-from pyreg import data_utils
-from pyreg.data_manager import DataManager
-from pyreg.metrics import get_multi_metric
+import mermaid.module_parameters as pars
+import mermaid.utils as utils
+import mermaid.fileio as fileio
+from mermaid import data_utils
+from mermaid.data_manager import DataManager
+from mermaid.metrics import get_multi_metric
 
 # torch.cuda.set_device(2)
 
 def do_registration():
 
-    from pyreg.data_wrapper import AdaptVal
-    import pyreg.smoother_factory as SF
-    import pyreg.multiscale_optimizer as MO
-    from pyreg.config_parser import nr_of_threads
+    from mermaid.data_wrapper import AdaptVal
+    import mermaid.smoother_factory as SF
+    import mermaid.multiscale_optimizer as MO
+    from mermaid.config_parser import nr_of_threads
 
 
     ############################################     data  setting  #############################################

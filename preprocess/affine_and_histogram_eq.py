@@ -8,7 +8,7 @@ import sys
 
 import itk
 # needs to be imported after itk to overwrite itk's incorrect error handling
-import pyreg.fixwarnings
+import mermaid.fixwarnings
 
 import numpy as np
 from skimage import exposure

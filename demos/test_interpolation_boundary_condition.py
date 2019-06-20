@@ -4,11 +4,11 @@ from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-import pyreg.simple_interface as SI
-import pyreg.example_generation as EG
-import pyreg.module_parameters as pars
-from pyreg.data_wrapper import  AdaptVal
-from pyreg.utils import *
+import mermaid.simple_interface as SI
+import mermaid.example_generation as EG
+import mermaid.module_parameters as pars
+from mermaid.data_wrapper import  AdaptVal
+from mermaid.utils import *
 # keep track of general parameters
 params = pars.ParameterDict()
 

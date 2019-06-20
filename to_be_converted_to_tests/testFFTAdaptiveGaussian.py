@@ -1,10 +1,10 @@
 from builtins import range
 import set_pyreg_paths
-import pyreg.utils as utils
+import mermaid.utils as utils
 import matplotlib.pyplot as plt
 import numpy as np
 
-import pyreg.custom_pytorch_extensions as ce
+import mermaid.custom_pytorch_extensions as ce
 
 dim = 2
 nr = 19

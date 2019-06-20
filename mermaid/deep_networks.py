@@ -1434,7 +1434,7 @@ class TotalVariationLoss(nn.Module):
     # todo: merge this with the code in deep_smoothers.py
     def compute_local_weighted_tv_norm(self, I, weights, spacing, nr_of_gaussians, use_color_tv, pnorm=2):
 
-        import pyreg.deep_smoothers as deep_smoothers
+        import mermaid.deep_smoothers as deep_smoothers
 
         volumeElement = spacing.prod()
 
@@ -1535,7 +1535,7 @@ class ClusteringLoss(nn.Module):
         return 1
 
     def forward(self, input_images, spacing, label_probabilities):
-        import pyreg.deep_smoothers as deep_smoothers
+        import mermaid.deep_smoothers as deep_smoothers
 
         # first compute the weighting functions
         localized_edge_penalty = deep_smoothers.compute_localized_edge_penalty(input_images[:,0,...],spacing,self.params)

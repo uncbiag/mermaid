@@ -6,8 +6,8 @@ import os
 import sys
 
 sys.path.insert(0,os.path.abspath('..'))
-sys.path.insert(0,os.path.abspath('../pyreg'))
-sys.path.insert(0,os.path.abspath('../pyreg/libraries'))
+sys.path.insert(0,os.path.abspath('../mermaid'))
+sys.path.insert(0,os.path.abspath('../mermaid/libraries'))
 
 import unittest
 import imp
@@ -26,14 +26,14 @@ except ImportError:
 # first do the torch imports
 import torch
 from torch.autograd import Variable
-from pyreg.data_wrapper import AdaptVal
+from mermaid.data_wrapper import AdaptVal
 import numpy as np
 import numpy.testing as npt
 
-import pyreg.example_generation as eg
-import pyreg.module_parameters as pars
-import pyreg.multiscale_optimizer as MO
-import pyreg.smoother_factory as SF
+import mermaid.example_generation as eg
+import mermaid.module_parameters as pars
+import mermaid.multiscale_optimizer as MO
+import mermaid.smoother_factory as SF
 
 # test it
 

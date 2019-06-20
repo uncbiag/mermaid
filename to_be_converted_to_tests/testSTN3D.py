@@ -10,8 +10,8 @@ from cffi import FFI
 import time
 ffi = FFI()
 
-from pyreg.libraries._ext import my_lib_3D
-from pyreg.libraries._ext import my_lib_nd
+from mermaid.libraries._ext import my_lib_3D
+from mermaid.libraries._ext import my_lib_nd
 
 device = torch.cuda.current_device()
 device_c = ffi.new("int *")

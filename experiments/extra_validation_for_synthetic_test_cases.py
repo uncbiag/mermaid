@@ -4,14 +4,14 @@ from builtins import range
 
 import set_pyreg_paths
 # needs to be imported before matplotlib to assure proper plotting
-import pyreg.visualize_registration_results as vizReg
+import mermaid.visualize_registration_results as vizReg
 
 import torch
 
-import pyreg.fileio as FIO
-import pyreg.image_sampling as IS
-import pyreg.module_parameters as pars
-from pyreg.data_wrapper import USE_CUDA, MyTensor, AdaptVal
+import mermaid.fileio as FIO
+import mermaid.image_sampling as IS
+import mermaid.module_parameters as pars
+from mermaid.data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
 import experiment_utils as eu
 

@@ -5,20 +5,20 @@ from builtins import range
 import set_pyreg_paths
 
 # needs to be imported before matplotlib to assure proper plotting
-import pyreg.visualize_registration_results as vizReg
+import mermaid.visualize_registration_results as vizReg
 
 import os
 
 import torch
 
-import pyreg.utils as utils
-import pyreg.fileio as fio
+import mermaid.utils as utils
+import mermaid.fileio as fio
 
 import scipy.io as sio
 import numpy as np
 import itk
 # needs to be imported after itk to overwrite itk's incorrect error handling
-import pyreg.fixwarnings
+import mermaid.fixwarnings
 
 import nrrd
 import torch

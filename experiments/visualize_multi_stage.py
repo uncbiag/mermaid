@@ -6,18 +6,18 @@ import set_pyreg_paths
 import multiprocessing as mp
 
 # needs to be imported before matplotlib to assure proper plotting
-from pyreg import visualize_registration_results as vizReg
+from mermaid import visualize_registration_results as vizReg
 
 import torch
 
-import pyreg.image_sampling as IS
+import mermaid.image_sampling as IS
 
-import pyreg.module_parameters as pars
-from pyreg.data_wrapper import USE_CUDA, AdaptVal, MyTensor
+import mermaid.module_parameters as pars
+from mermaid.data_wrapper import USE_CUDA, AdaptVal, MyTensor
 
-import pyreg.fileio as FIO
-import pyreg.utils as utils
-import pyreg.model_evaluation as model_evaluation
+import mermaid.fileio as FIO
+import mermaid.utils as utils
+import mermaid.model_evaluation as model_evaluation
 
 import numpy as np
 

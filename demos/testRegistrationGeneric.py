@@ -16,16 +16,16 @@ import set_pyreg_paths
 
 # first do the torch imports
 import torch
-from pyreg.data_wrapper import CUDA_ON, MyTensor, AdaptVal
+from mermaid.data_wrapper import CUDA_ON, MyTensor, AdaptVal
 import numpy as np
 
 from time import time
-import pyreg.example_generation as eg
-import pyreg.module_parameters as pars
-import pyreg.smoother_factory as SF
-import pyreg.multiscale_optimizer as MO
+import mermaid.example_generation as eg
+import mermaid.module_parameters as pars
+import mermaid.smoother_factory as SF
+import mermaid.multiscale_optimizer as MO
 
-import pyreg.load_default_settings as ds
+import mermaid.load_default_settings as ds
 
 # load settings from file
 since = time()

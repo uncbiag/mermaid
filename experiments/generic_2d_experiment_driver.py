@@ -7,7 +7,7 @@ from builtins import range
 import set_pyreg_paths
 import command_line_execution_tools as ce
 
-import pyreg.module_parameters as pars
+import mermaid.module_parameters as pars
 
 import os
 import shutil

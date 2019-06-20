@@ -11,8 +11,8 @@ This is needed for the map-based registrations for example.
 
 from torch.nn.modules.module import Module
 ###########TODO temporal comment for torch1 compatability
-# from pyreg.libraries.functions.stn_nd import  STNFunction_ND_BCXYZ, STNFunction_ND_BCXYZ_Compile
-# from pyreg.libraries.functions.nn_interpolation import get_nn_interpolationf
+# from mermaid.libraries.functions.stn_nd import  STNFunction_ND_BCXYZ, STNFunction_ND_BCXYZ_Compile
+# from mermaid.libraries.functions.nn_interpolation import get_nn_interpolationf
 ################################################################3
 from ..functions.stn_nd import  STNFunction_ND_BCXYZ
 from functools import partial

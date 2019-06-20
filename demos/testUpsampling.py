@@ -2,7 +2,7 @@ import set_pyreg_paths
 
 import torch
 import numpy as np
-import pyreg.image_sampling as IS
+import mermaid.image_sampling as IS
 
 d = torch.load('test_data_upsample.pt')
 

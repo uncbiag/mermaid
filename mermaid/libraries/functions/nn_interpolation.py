@@ -1,20 +1,20 @@
 from __future__ import absolute_import
-from pyreg.data_wrapper import USE_CUDA, MyTensor, AdaptVal
+from mermaid.data_wrapper import USE_CUDA, MyTensor, AdaptVal
 from cffi import FFI
 
 import sys
 
 import torch
-from pyreg.libraries._ext import my_lib_nn
+from mermaid.libraries._ext import my_lib_nn
 from . import map_scale_utils
 
 ffi = FFI()
 
 if USE_CUDA:
     if sys.version_info >= (3, 0):
-        from pyreg.libraries._ext import nn_interpolation
+        from mermaid.libraries._ext import nn_interpolation
     else:
-        from pyreg.libraries._ext import nn_interpolation
+        from mermaid.libraries._ext import nn_interpolation
 
 def nn_interpolation_fn_sel(input1, input2, output, ndim, device_c, use_cuda=USE_CUDA):
     if use_cuda:

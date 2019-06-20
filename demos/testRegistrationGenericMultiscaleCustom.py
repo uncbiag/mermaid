@@ -19,13 +19,13 @@ import set_pyreg_paths
 import torch
 import numpy as np
 
-import pyreg.example_generation as eg
-import pyreg.module_parameters as pars
-import pyreg.smoother_factory as SF
-from pyreg.data_wrapper import AdaptVal
-import pyreg.multiscale_optimizer as MO
+import mermaid.example_generation as eg
+import mermaid.module_parameters as pars
+import mermaid.smoother_factory as SF
+from mermaid.data_wrapper import AdaptVal
+import mermaid.multiscale_optimizer as MO
 
-import pyreg.load_default_settings as ds
+import mermaid.load_default_settings as ds
 
 # general parameters
 model_name = 'mySVFNet'
@@ -75,7 +75,7 @@ mo = MO.MultiScaleRegistrationOptimizer(sz,spacing,use_map,map_low_res_factor,pa
 
 params['registration_model']['similarity_measure']['type'] = 'mySSD'
 
-import pyreg.similarity_measure_factory as SM
+import mermaid.similarity_measure_factory as SM
 
 class MySSD(SM.SimilarityMeasure):
     def compute_similarity(self,I0,I1):
@@ -84,12 +84,12 @@ class MySSD(SM.SimilarityMeasure):
 
 mo.add_similarity_measure('mySSD', MySSD)
 
-import pyreg.registration_networks as RN
-import pyreg.utils as utils
-import pyreg.image_sampling as IS
-import pyreg.rungekutta_integrators as RK
-import pyreg.forward_models as FM
-import pyreg.regularizer_factory as RF
+import mermaid.registration_networks as RN
+import mermaid.utils as utils
+import mermaid.image_sampling as IS
+import mermaid.rungekutta_integrators as RK
+import mermaid.forward_models as FM
+import mermaid.regularizer_factory as RF
 
 class MySVFNet(RN.RegistrationNet):
     def __init__(self,sz,spacing,params):

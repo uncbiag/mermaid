@@ -2,8 +2,8 @@ from __future__ import print_function
 from builtins import range
 import set_pyreg_paths
 
-import pyreg.custom_pytorch_extensions as ce
-from pyreg.data_wrapper import AdaptVal
+import mermaid.custom_pytorch_extensions as ce
+from mermaid.data_wrapper import AdaptVal
 
 import torch
 import torch.nn as nn
@@ -11,7 +11,7 @@ import torch.nn.functional as F
 
 import matplotlib.pyplot as plt
 
-import pyreg.deep_smoothers as DS
+import mermaid.deep_smoothers as DS
 
 d = torch.load('vsmooth_tst_data.pt')
 

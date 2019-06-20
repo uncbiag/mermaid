@@ -3,10 +3,10 @@ import sys
 
 sys.path.insert(0,os.path.abspath('.'))
 sys.path.insert(0,os.path.abspath('..'))
-sys.path.insert(0,os.path.abspath('../pyreg'))
-sys.path.insert(0,os.path.abspath('../pyreg/libraries'))
+sys.path.insert(0,os.path.abspath('../mermaid'))
+sys.path.insert(0,os.path.abspath('../mermaid/libraries'))
 import matplotlib as matplt
-# from pyreg.config_parser import MATPLOTLIB_AGG
+# from mermaid.config_parser import MATPLOTLIB_AGG
 # if MATPLOTLIB_AGG:
 #     matplt.use('Agg')
 import sys
@@ -16,18 +16,18 @@ from glob import glob
 from functools import reduce
 import set_pyreg_paths
 import torch
-import pyreg.module_parameters as pars
-from pyreg.data_utils import make_dir, get_file_name, sitk_read_img_to_std_tensor, sitk_read_img_to_std_numpy
+import mermaid.module_parameters as pars
+from mermaid.data_utils import make_dir, get_file_name, sitk_read_img_to_std_tensor, sitk_read_img_to_std_numpy
 import random
-from pyreg.utils import apply_affine_transform_to_map_multiNC, get_inverse_affine_param, compute_warped_image_multiNC, \
+from mermaid.utils import apply_affine_transform_to_map_multiNC, get_inverse_affine_param, compute_warped_image_multiNC, \
     update_affine_param
 import matplotlib.pyplot as plt
-import pyreg.simple_interface as SI
-import pyreg.fileio as FIO
-from pyreg.metrics import get_multi_metric
+import mermaid.simple_interface as SI
+import mermaid.fileio as FIO
+from mermaid.metrics import get_multi_metric
 #######################################################
-from pyreg.data_wrapper import AdaptVal
-from pyreg.res_recorder import XlsxRecorder
+from mermaid.data_wrapper import AdaptVal
+from mermaid.res_recorder import XlsxRecorder
 
 """
 ######################################### Section 1. Raw Data Organization  ###############################################

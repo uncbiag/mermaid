@@ -11,10 +11,10 @@ from builtins import range
 import set_pyreg_paths
 import torch
 from torch.nn.parameter import Parameter
-import pyreg.utils as utils
-from pyreg.data_wrapper import AdaptVal
-import pyreg.fileio as fileio
-import pyreg.custom_optimizers as CO
+import mermaid.utils as utils
+from mermaid.data_wrapper import AdaptVal
+import mermaid.fileio as fileio
+import mermaid.custom_optimizers as CO
 
 def invert_map(map,spacing):
     """

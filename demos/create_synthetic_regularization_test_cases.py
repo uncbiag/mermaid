@@ -6,30 +6,30 @@ from builtins import str
 from builtins import range
 
 import set_pyreg_paths
-import pyreg.model_factory as py_mf
+import mermaid.model_factory as py_mf
 import matplotlib as matplt
 
-# from pyreg.config_parser import MATPLOTLIB_AGG
+# from mermaid.config_parser import MATPLOTLIB_AGG
 # if MATPLOTLIB_AGG:
 #     matplt.use('Agg')
 
 import matplotlib.pyplot as plt
 import scipy.ndimage as ndimage
 
-import pyreg.utils as utils
-import pyreg.finite_differences as fd
-import pyreg.custom_pytorch_extensions as ce
-import pyreg.smoother_factory as sf
-import pyreg.deep_smoothers as ds
+import mermaid.utils as utils
+import mermaid.finite_differences as fd
+import mermaid.custom_pytorch_extensions as ce
+import mermaid.smoother_factory as sf
+import mermaid.deep_smoothers as ds
 
-from pyreg.data_wrapper import AdaptVal, MyTensor
+from mermaid.data_wrapper import AdaptVal, MyTensor
 
-import pyreg.fileio as fio
+import mermaid.fileio as fio
 
-import pyreg.rungekutta_integrators as rk
-import pyreg.forward_models as fm
+import mermaid.rungekutta_integrators as rk
+import mermaid.forward_models as fm
 
-import pyreg.module_parameters as pars
+import mermaid.module_parameters as pars
 
 import torch
 

@@ -13,7 +13,7 @@ from torch.autograd import Function
 from torch.nn import Module
 from cffi import FFI
 try:
-    from pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
+    from mermaid.data_wrapper import USE_CUDA, STNTensor, STNVal
 except:
     from mermaid.pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
 
@@ -22,12 +22,12 @@ except:
 
 # if sys.version_info >= (3, 0):
 #     if USE_CUDA:
-#         from pyreg.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
-#     from pyreg.libraries._ext import my_lib_nd
+#         from mermaid.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
+#     from mermaid.libraries._ext import my_lib_nd
 # else:
 #     if USE_CUDA:
-#         from pyreg.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
-#     from pyreg.libraries._ext import my_lib_nd
+#         from mermaid.libraries._ext import my_lib_1D, my_lib_2D, my_lib_3D
+#     from mermaid.libraries._ext import my_lib_nd
 ###########################################################3
 from . import map_scale_utils
 

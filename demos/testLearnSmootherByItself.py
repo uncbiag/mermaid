@@ -1,16 +1,16 @@
 from builtins import str
 from builtins import range
 import set_pyreg_paths
-import pyreg.smoother_factory as SF
+import mermaid.smoother_factory as SF
 
 import torch
 
 import matplotlib.pyplot as plt
 
-import pyreg.simple_interface as si
-import pyreg.fileio as FIO
-import pyreg.utils as utils
-import pyreg.image_sampling as IS
+import mermaid.simple_interface as si
+import mermaid.fileio as FIO
+import mermaid.utils as utils
+import mermaid.image_sampling as IS
 
 im_io = FIO.ImageIO()
 

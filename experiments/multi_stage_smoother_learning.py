@@ -3,15 +3,15 @@ from builtins import str
 from builtins import range
 
 import set_pyreg_paths
-import pyreg.config_parser as cp
+import mermaid.config_parser as cp
 
 # first do the torch imports
 import torch
 import multiprocessing as mp
 
-import pyreg.simple_interface as si
-import pyreg.module_parameters as pars
-from pyreg.data_wrapper import USE_CUDA
+import mermaid.simple_interface as si
+import mermaid.module_parameters as pars
+from mermaid.data_wrapper import USE_CUDA
 
 import glob
 import os

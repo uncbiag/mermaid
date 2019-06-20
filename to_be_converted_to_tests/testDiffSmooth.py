@@ -4,13 +4,13 @@ import set_pyreg_paths
 
 import torch
 from torch.autograd import Variable
-from pyreg.data_wrapper import AdaptVal
+from mermaid.data_wrapper import AdaptVal
 import numpy as np
-import pyreg.module_parameters as MP
-import pyreg.example_generation as eg
-import pyreg.utils as utils
+import mermaid.module_parameters as MP
+import mermaid.example_generation as eg
+import mermaid.utils as utils
 
-import pyreg.smoother_factory as SF
+import mermaid.smoother_factory as SF
 
 import matplotlib.pyplot as plt
 

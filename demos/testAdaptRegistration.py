@@ -3,13 +3,13 @@ import set_pyreg_paths
 
 # first do the torch imports
 import torch
-from pyreg.data_wrapper import AdaptVal, MyTensor
+from mermaid.data_wrapper import AdaptVal, MyTensor
 import numpy as np
 
-import pyreg.example_generation as eg
-import pyreg.module_parameters as pars
-import pyreg.multiscale_optimizer as MO
-import pyreg.smoother_factory as SF
+import mermaid.example_generation as eg
+import mermaid.module_parameters as pars
+import mermaid.multiscale_optimizer as MO
+import mermaid.smoother_factory as SF
 
 params = pars.ParameterDict()
 #params.load_JSON('../test/json/test_svf_image_single_scale_config.json')

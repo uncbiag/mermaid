@@ -8,17 +8,17 @@ import torch.nn as nn
 #os.chdir('../')
 
 sys.path.insert(0,os.path.abspath('..'))
-sys.path.insert(0,os.path.abspath('../pyreg'))
-sys.path.insert(0,os.path.abspath('../pyreg/libraries'))
+sys.path.insert(0,os.path.abspath('../mermaid'))
+sys.path.insert(0,os.path.abspath('../mermaid/libraries'))
 import torch
 import time
-import pyreg.module_parameters as pars
+import mermaid.module_parameters as pars
 import numpy as np
-import pyreg.smoother_factory as SF
-import pyreg.example_generation as eg
-import pyreg.custom_pytorch_extensions_new as ce
-import pyreg.utils as utils
-from pyreg.data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor
+import mermaid.smoother_factory as SF
+import mermaid.example_generation as eg
+import mermaid.custom_pytorch_extensions_new as ce
+import mermaid.utils as utils
+from mermaid.data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor
 import ants
 
 import torch.nn.functional as F

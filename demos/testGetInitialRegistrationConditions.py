@@ -6,8 +6,8 @@ import set_pyreg_paths
 import numpy as np
 
 import torch
-import pyreg.simple_interface as si
-import pyreg.fileio as FIO
+import mermaid.simple_interface as si
+import mermaid.fileio as FIO
 
 im_io = FIO.ImageIO()
 

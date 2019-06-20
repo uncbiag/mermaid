@@ -1,15 +1,15 @@
 from builtins import str
 from builtins import range
 import set_pyreg_paths
-import pyreg.config_parser as cp
+import mermaid.config_parser as cp
 
 # first do the torch imports
 import torch
 import numpy as np
 import multiprocessing as mp
 
-import pyreg.simple_interface as si
-import pyreg.fileio as FIO
+import mermaid.simple_interface as si
+import mermaid.fileio as FIO
 
 
 def get_image_range(im_from,im_to):

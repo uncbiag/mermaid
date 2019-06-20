@@ -7,9 +7,9 @@ import set_pyreg_paths
 import torch
 import numpy as np
 
-import pyreg.simple_interface as si
-import pyreg.fileio as FIO
-import pyreg.visualize_registration_results as vizreg
+import mermaid.simple_interface as si
+import mermaid.fileio as FIO
+import mermaid.visualize_registration_results as vizreg
 
 im_io = FIO.ImageIO()
 

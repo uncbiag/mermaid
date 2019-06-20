@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib
 
-import pyreg.finite_differences as FD
+import mermaid.finite_differences as FD
 
 def get_abbrv_case_descriptor(dir_name,split_keys,abbrv_keys):
 

@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 
 import set_pyreg_paths
 
-import pyreg.simple_interface as SI
-import pyreg.example_generation as EG
-import pyreg.module_parameters as pars
+import mermaid.simple_interface as SI
+import mermaid.example_generation as EG
+import mermaid.module_parameters as pars
 
 # keep track of general parameters
 params = pars.ParameterDict()

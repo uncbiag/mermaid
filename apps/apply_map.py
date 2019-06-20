@@ -8,9 +8,9 @@ from __future__ import print_function
 import set_pyreg_paths
 import torch
 from torch.autograd import Variable
-import pyreg.utils as utils
-from pyreg.data_wrapper import AdaptVal
-import pyreg.fileio as fileio
+import mermaid.utils as utils
+from mermaid.data_wrapper import AdaptVal
+import mermaid.fileio as fileio
 
 def read_image_and_map_and_apply_map(image_filename,map_filename):
     """

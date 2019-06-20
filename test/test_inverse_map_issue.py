@@ -17,12 +17,12 @@ sys.path.append(os.path.realpath("../mermaid"))
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from pyreg.utils import apply_affine_transform_to_map_multiNC, get_inverse_affine_param, update_affine_param
-import pyreg.simple_interface as SI
-import pyreg.fileio as FIO
-import pyreg.utils as pyreg_utils
+from mermaid.utils import apply_affine_transform_to_map_multiNC, get_inverse_affine_param, update_affine_param
+import mermaid.simple_interface as SI
+import mermaid.fileio as FIO
+import mermaid.utils as pyreg_utils
 
-from pyreg.data_wrapper import MyTensor, AdaptVal, USE_CUDA
+from mermaid.data_wrapper import MyTensor, AdaptVal, USE_CUDA
 device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
 
 import imageio

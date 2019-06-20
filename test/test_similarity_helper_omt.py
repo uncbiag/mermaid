@@ -2,11 +2,11 @@ from __future__ import print_function
 import os
 import sys
 
-from pyreg.similarity_helper_omt import OTSimilarityGradient,OTSimilarityHelper
+from mermaid.similarity_helper_omt import OTSimilarityGradient,OTSimilarityHelper
 
 sys.path.insert(0,os.path.abspath('..'))
-sys.path.insert(0,os.path.abspath('../pyreg'))
-sys.path.insert(0,os.path.abspath('../pyreg/libraries'))
+sys.path.insert(0,os.path.abspath('../mermaid'))
+sys.path.insert(0,os.path.abspath('../mermaid/libraries'))
 
 import pylab as pl
 import torch

@@ -3,12 +3,12 @@ import set_pyreg_paths
 # first do the torch imports
 import torch
 import multiprocessing as mp
-import pyreg.simple_interface as si
+import mermaid.simple_interface as si
 import nrrd
 
-import pyreg.load_default_settings
+import mermaid.load_default_settings
 
-import pyreg.fileio as FIO
+import mermaid.fileio as FIO
 
 I0_filenames = ['./data/m1.nii']
 I1_filenames = ['./data/m2.nii']

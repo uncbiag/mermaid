@@ -4,12 +4,12 @@ import os
 import sys
 
 sys.path.insert(0,os.path.abspath('..'))
-sys.path.insert(0,os.path.abspath('../pyreg'))
-sys.path.insert(0,os.path.abspath('../pyreg/libraries'))
+sys.path.insert(0,os.path.abspath('../mermaid'))
+sys.path.insert(0,os.path.abspath('../mermaid/libraries'))
 
 import numpy as np
 import numpy.testing as npt
-import pyreg.utils as utils
+import mermaid.utils as utils
 import torch
 
 from libraries.modules.stn_nd import STN_ND_BCXYZ

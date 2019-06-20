@@ -10,13 +10,13 @@ import os
 import re
 
 import set_pyreg_paths
-import pyreg.fileio as FIO
-import pyreg.module_parameters as pars
-import pyreg.deep_smoothers as deep_smoothers
-import pyreg.deep_networks as dn
-import pyreg.image_sampling as IS
+import mermaid.fileio as FIO
+import mermaid.module_parameters as pars
+import mermaid.deep_smoothers as deep_smoothers
+import mermaid.deep_networks as dn
+import mermaid.image_sampling as IS
 
-from pyreg.data_wrapper import MyTensor, AdaptVal, USE_CUDA
+from mermaid.data_wrapper import MyTensor, AdaptVal, USE_CUDA
 
 device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
 

@@ -9,14 +9,14 @@ from libraries.modules.stn_nd import STN_ND_BCXYZ
 from libraries.functions.stn_nd import STNFunction_ND_BCXYZ
 import numpy as np
 
-import pyreg.example_generation as eg
-import pyreg.utils as utils
+import mermaid.example_generation as eg
+import mermaid.utils as utils
 
 from torch.autograd import gradcheck
 from torch.autograd.gradcheck import *
 from torch.autograd.gradcheck import _differentiable_outputs, _as_tuple
 
-from pyreg.data_wrapper import USE_CUDA, FFTVal,AdaptVal
+from mermaid.data_wrapper import USE_CUDA, FFTVal,AdaptVal
 
 import matplotlib.pyplot as plt
 

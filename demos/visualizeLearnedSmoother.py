@@ -3,10 +3,10 @@ from builtins import range
 import set_pyreg_paths
 import torch
 
-import pyreg.smoother_factory as SF
-import pyreg.deep_smoothers as DS
-import pyreg.utils as utils
-import pyreg.image_sampling as IS
+import mermaid.smoother_factory as SF
+import mermaid.deep_smoothers as DS
+import mermaid.utils as utils
+import mermaid.image_sampling as IS
 
 import numpy as np
 

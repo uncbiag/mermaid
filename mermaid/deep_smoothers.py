@@ -1553,7 +1553,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
     def _compute_weights_from_pre_weights(self, pre_weights):
         # instantiate the extra smoother if weight is larger than 0 and it has not been initialized yet
         if self.deep_network_local_weight_smoothing > 0 and self.deep_network_weight_smoother is None:
-            import pyreg.smoother_factory as sf
+            import mermaid.smoother_factory as sf
             s_m_params = pars.ParameterDict()
             s_m_params['smoother']['type'] = 'gaussian'
             s_m_params['smoother']['gaussian_std'] = self.deep_network_local_weight_smoothing

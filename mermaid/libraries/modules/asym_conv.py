@@ -9,7 +9,7 @@ import os
 sys.path.insert(0,os.path.abspath('.'))
 sys.path.insert(0,os.path.abspath('..'))
 sys.path.insert(0,os.path.abspath('/playpen/zyshen/reg_clean/mermaid'))
-import pyreg.utils as utils
+import mermaid.utils as utils
 
 class AsymConv(Module):
     """

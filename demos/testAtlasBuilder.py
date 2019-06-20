@@ -5,16 +5,16 @@ from __future__ import print_function
 from builtins import str
 from builtins import range
 import matplotlib as matplt
-from pyreg.config_parser import MATPLOTLIB_AGG
+from mermaid.config_parser import MATPLOTLIB_AGG
 if MATPLOTLIB_AGG:
     matplt.use('Agg')
 import set_pyreg_paths
 
 # first do the torch imports
 import torch
-from pyreg.data_wrapper import AdaptVal
-import pyreg.fileio as FIO
-import pyreg.simple_interface as SI
+from mermaid.data_wrapper import AdaptVal
+import mermaid.fileio as FIO
+import mermaid.simple_interface as SI
 
 import matplotlib.pyplot as plt
 import os

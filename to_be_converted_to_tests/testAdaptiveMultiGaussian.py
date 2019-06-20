@@ -4,7 +4,7 @@ from builtins import range
 import set_pyreg_paths
 
 #import testMultiGaussianExtension as ce
-import pyreg.custom_pytorch_extensions as ce
+import mermaid.custom_pytorch_extensions as ce
 
 import torch
 from torch.autograd import Function
@@ -14,7 +14,7 @@ from torch.autograd import gradcheck
 from torch.autograd.gradcheck import *
 from torch.autograd.gradcheck import _differentiable_outputs, _as_tuple
 
-from pyreg.data_wrapper import USE_CUDA, FFTVal,AdaptVal
+from mermaid.data_wrapper import USE_CUDA, FFTVal,AdaptVal
 
 import matplotlib.pyplot as plt
 

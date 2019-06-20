@@ -3,20 +3,20 @@ import sys
 
 sys.path.insert(0,os.path.abspath('.'))
 sys.path.insert(0,os.path.abspath('..'))
-sys.path.insert(0,os.path.abspath('../pyreg'))
-sys.path.insert(0,os.path.abspath('../pyreg/libraries'))
+sys.path.insert(0,os.path.abspath('../mermaid'))
+sys.path.insert(0,os.path.abspath('../mermaid/libraries'))
 import matplotlib as matplt
-from pyreg.config_parser import MATPLOTLIB_AGG
+from mermaid.config_parser import MATPLOTLIB_AGG
 if MATPLOTLIB_AGG:
     matplt.use('Agg')
 import numpy as np
 import torch
 import torch.nn.functional as F
 import random
-from pyreg.utils import apply_affine_transform_to_map_multiNC, get_inverse_affine_param, compute_warped_image_multiNC, \
+from mermaid.utils import apply_affine_transform_to_map_multiNC, get_inverse_affine_param, compute_warped_image_multiNC, \
     update_affine_param, identity_map_multiN
-import pyreg.simple_interface as SI
-import pyreg.fileio as FIO
+import mermaid.simple_interface as SI
+import mermaid.fileio as FIO
 torch.cuda.set_device(3)
     
 def setup_pair_register():
