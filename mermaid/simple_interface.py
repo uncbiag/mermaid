@@ -559,4 +559,7 @@ class RegisterImagePair(object):
             self.opt.register()
 
             if json_config_out_filename is not None:
-                self.params.write_JSON(json_config_out_filename)
+                if type(json_config_out_filename) is tuple:
+                    self.params.write_JSON_and_JSON_comments(json_config_out_filename)
+                else:
+                    self.params.write_JSON(json_config_out_filename)

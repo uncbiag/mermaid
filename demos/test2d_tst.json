@@ -2,7 +2,7 @@
     "model": {
         "deformation": {
             "compute_similarity_measure_at_low_res": false,
-            "map_low_res_factor": 1.0,
+            "map_low_res_factor": null,
             "use_map": true
         },
         "registration_model": {
@@ -76,7 +76,7 @@
             }
         },
         "single_scale": {
-            "nr_of_iterations": 200,
+            "nr_of_iterations": 10,
             "rel_ftol": 1e-07
         },
         "use_step_size_scheduler": true,

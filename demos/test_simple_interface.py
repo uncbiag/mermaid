@@ -69,12 +69,12 @@ else:
     #                    params = 'test2d_tst.json')
 
     si.register_images(I0, I1, spacing, model_name='lddmm_shooting_map',
-                       nr_of_iterations=200,
+                       nr_of_iterations=10,
+                       use_multi_scale=False,
                        visualize_step=10,
                        optimizer_name='sgd',
                        rel_ftol=1e-7,
-
-                       json_config_out_filename='test2d_tst.json',
+                       json_config_out_filename=('test2d_tst.json','test2d_tst_with_comments.json'),
                        params='test2d_tst.json')
 
     #si.register_images(I0, I1, spacing, model_name='svf_vector_momentum_image')
