@@ -106,7 +106,7 @@ class FileIO(with_metaclass(ABCMeta, object)):
             return False
 
     def _convert_itk_vector_to_numpy(self,v):
-        return itk.GetArrayFromVnlVector(v.Get_vnl_vector())
+        return itk.GetArrayFromVnlVector(v.GetVnlVector())
 
     def _convert_itk_matrix_to_numpy(self,M):
         return itk.GetArrayFromVnlMatrix(M.GetVnlMatrix().as_matrix())
