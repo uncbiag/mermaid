@@ -1,9 +1,0 @@
-*~
-**/*.pyc
-**/_ext
-**/build
-**/dist
-**/*.egg-info
-**/.eggs
-**/.ipynb_checkpoints/*
-*.o

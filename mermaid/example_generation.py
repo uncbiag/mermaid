@@ -96,8 +96,8 @@ class CreateRealExampleImages(CreateExample):
     def __init__(self,dim=2,s_path=None,t_path=None):
         super(CreateRealExampleImages, self).__init__(dim)
         if s_path is None:
-            self.s_path = '/playpen/zyshen/reg_clean/mermaid/test_data/brain_slices/ws_slice.nrrd'
-            self.t_path = '/playpen/zyshen/reg_clean/mermaid/test_data/brain_slices/wt_slice.nrrd'
+            self.s_path = '../test_data/brain_slices/ws_slice.nrrd'
+            self.t_path = '../test_data/brain_slices/wt_slice.nrrd'
         else:
             self.s_path = s_path
             self.t_path = t_path
