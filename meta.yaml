@@ -1,0 +1,76 @@
+#
+# This is how to do the build (and some other useful commands)
+#
+# To build requires access to the conda-forge, pytorchm and anaconda channels
+# can be used with --debug flag
+# conda build . -c pytorch -c conda-forge -c anaconda
+#
+# After the pacckage has build, copy it in your local directory (subdirectory osx64, for example).
+# Then index it with this command:
+# conda index /Users/mn/my_local_conda_channel_osx/
+#
+# Once it is indexed it can be installed from there (ideally into a new, empty virtual environment as follows)
+# conda list env
+# conda activate [your_env] or conda create --name my_new_env
+# conda install -vv -c file://Users/mn/my_local_conda_channel_osx/ -c pytorch -c conda-forge -c anaconda mermaid=0.2.0
+# conda list
+#
+# Here are also some descriptions on how to host a private conda repository (as used above)
+# https://stackoverflow.com/questions/35359147/how-can-i-host-my-own-private-conda-repository
+#
+
+{% set name = "mermaid" %}
+{% set version = "0.2.0" %}
+
+package:
+  name: '{{ name|lower }}'
+  version: '{{ version }}'
+
+source:
+  path: .
+
+requirements:
+  build:
+    - python >=3.6
+    - setuptools
+    - pip
+
+  run:
+    - python >=3.6
+    - ipython
+    - future
+    - cython
+    - scikit-image
+    - tabulate
+    - cffi
+    - itk
+    - pytorch
+    - torchvision
+    - pandas
+    - matplotlib
+    - scipy
+    - openpyxl
+    - sphinx
+    - statsmodels
+
+#    - pytorch-fft # [not osx]
+
+
+test:
+  imports:
+
+about:
+  home: https://github.com/uncbiag/mermaid
+  license: BSD License
+  license_family: BSD
+  license_file: LICENSE
+  summary: 'Image registration toolbox in pyTorch'
+  description: 'This image registration toolbox provides various image registration algorithms (mostly non-parametric ones). It is written in pytorch allowing for easy prototyping of new approaches.'
+  doc_url: ''
+  dev_url: ''
+
+extra:
+  recipe-maintainers:
+    - marcniethammer
+    - rkwitt
+
