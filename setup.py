@@ -18,7 +18,7 @@ setup(
                       "tabulate",
                       "cffi",
                       "itk",
-                      "pytorch",
+                      "torch",
                       "torchvision",
                       "pandas",
                       "matplotlib",
