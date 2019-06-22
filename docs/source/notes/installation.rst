@@ -72,7 +72,7 @@ The repository's main folder contains a setup.py file (see `python setup file <h
    cd mermaid
    python setup.py develop
 
-This will install all library links.
+This will install all library links and all missing packages and will allow mermaid imports.
 
 
 Creating the documentation
@@ -92,13 +92,6 @@ This will create the docs in `build/html`.
 Running the code
 ^^^^^^^^^^^^^^^^
 
-.. todo::
-   Not sure if this is still needed. It is not needed with the mermaid conda installation. Test if it is needed when one does the development setup.
-
-The simplest way to start is to look at the two example scripts `testRegistrationGeneric.py` and `testRegistrationGenericMultiscale.py` at the top direcory. To mak sure that they all find the paths to the libraries simply do
-
-.. code::
-
-   import set_pyreg_paths
+The simplest way to start is to look example script `demos/test_simple_interface,py`, or to run the examples from the `jupyter` directory which contains various example jupyter notebooks.
 
    
