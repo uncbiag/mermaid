@@ -4,14 +4,27 @@
    contain the root `toctree` directive.
 
 mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
-============================================================
+==============================================================
+
+*mermaid* is a registration toolbox, which supports various image registration methods. In particular, it focuses on nonparametric registration approaches (including stationary velocity fields and large discplacement diffeomorphic metric mapping models) though simple affine registration is also possible. As it is entirely written in *pyTorch* it allows for rapid prototyping of new image registration approaches and similiarity measures. To keep track of registration parameters it makes use of json configuration files which entirely describe registration algorithms.
+
+*mermaid* was primarily developed by:
+
+  - Marc Niethammer
+  - Zhengyang Shen
+  - Roland Kwitt
+
 
 .. toctree::
    :glob:
    :maxdepth: 1
    :caption: Notes
 
-   notes/*
+   notes/installation.rst
+   notes/parameters.rst
+   notes/simple_example.rst
+   notes/howto_own_registration.rst
+   notes/todos.rst
 
 .. toctree::
    :maxdepth: 1
