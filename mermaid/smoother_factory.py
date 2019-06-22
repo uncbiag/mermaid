@@ -688,7 +688,22 @@ class LocalFourierSmoother(object):
     def associate_parameters_with_module(self,module):
         return set()
 
+    def write_parameters_to_settings(self):
+        pass
 
+    def set_debug_retain_computed_local_weights(self,val=True):
+        pass
+
+    def get_default_multi_gaussian_weights(self):
+        # todo: check, should it really return this?
+        return self.multi_gaussian_weights
+
+    def get_gaussian_stds(self):
+        return self.multi_gaussian_stds
+
+
+    def get_gaussian_weights(self):
+        return self.multi_gaussian_weights
 
 
     def get_custom_optimizer_output_string(self):
@@ -768,7 +783,7 @@ class LocalFourierSmoother(object):
 
     def smooth(self, momentum, weights):
         from . import deep_smoothers as DS
-        weights = torch.clamp((weights), min=1e-6)
+        weights = torch.clamp((weights), min=1e-3)
 
         if self.weighting_type=='sqrt_w_K_sqrt_w':
             sqrt_weights = torch.sqrt(weights)

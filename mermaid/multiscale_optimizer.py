@@ -134,9 +134,9 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
             self.optimizer.set_initial_map(map0, initial_inverse_map)
             # self.optimizer.set_initial_inverse_map(initial_inverse_map)
 
-    def set_weight_map(self,weight_map):
+    def set_initial_weight_map(self,weight_map, freeze_weight=False):
         if self.optimizer is not None:
-            self.optimizer.set_initial_map(weight_map)
+            self.optimizer.set_initial_weight_map(weight_map,freeze_weight=freeze_weight)
 
     def get_initial_map(self):
         """
@@ -570,6 +570,9 @@ class ImageRegistrationOptimizer(Optimizer):
         self.current_epoch = None
         """Can be set externally, so the optimizer knowns in which epoch we are"""
 
+
+        """ the following are settings for saving visualized results"""
+        self.expr_name=''
         self.save_fig_path=None
         self.save_fig=None
         self.save_fig_num =None
@@ -787,7 +790,6 @@ class ImageRegistrationOptimizer(Optimizer):
         :param LSource:
         :return:
         """
-        print(LSource.shape)
         self.LSource = LSource
 
 
@@ -949,6 +951,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self._sgd_split_shared = None # keeps track if the shared states were split or not
         self._sgd_split_individual = None # keeps track if the individual states were split or not
 
+        self.n_scale=None
+        self.history_iter_count = None
+
 
     def write_parameters_to_settings(self):
         if self.model is not None:
@@ -1055,6 +1060,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.n_scale = n_scale
 
 
+    def set_history_iter_count(self,iter_count):
+        self.history_iter_count=iter_count
+
+
     def _create_initial_maps(self):
         if self.useMap:
             # create the identity map [-1,1]^d, since we will use a map-based implementation
@@ -1129,7 +1138,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param map0_inverse: initial inverse map
         :return: n/a
         """
+        if self.mapLowResFactor is not None:
+            sampler = IS.ResampleImage()
+            weight_map, _ = sampler.downsample_image_to_size(weight_map, self.spacing, self.lowResSize[2::], 1,
+                                                            zero_boundary=False)
         self.model.local_weights.data = weight_map
+
         if freeze_weight:
             self.model.mask_local_weight()
 
@@ -1447,7 +1461,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # 2) Compute loss
 
         # first define variables that will be passed to the model and the criterion (for further use)
-        opt_variables = {'iter': self.iter_count,'epoch': self.current_epoch}
+        history_iter_count = self.iter_count if self.history_iter_count is None else self.history_iter_count+self.iter_count
+        opt_variables = {'iter': self.iter_count,'epoch': self.current_epoch,'scale':self.n_scale,'history_iter_count':history_iter_count}
 
         self.rec_IWarped,self.rec_phiWarped,self.rec_phiInverseWarped = model_evaluation.evaluate_model_low_level_interface(model=self.model,
                                                                                                                  I_source=self.ISource,
@@ -1626,7 +1641,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.visualize or self.save_fig:
             visual_param = {}
             visual_param['visualize'] = self.visualize
-            if not self.light_analysis_on:
+            if self.save_fig_path:
                 visual_param['save_fig'] = self.save_fig
                 visual_param['save_fig_path'] = self.save_fig_path
                 visual_param['save_fig_path_byname'] = os.path.join(self.save_fig_path,'byname')
@@ -1653,7 +1668,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                                                    vizImages=vizImage, vizName=vizName, phiWarped=phi_or_warped_image, visual_param=visual_param)
                     else:
                         I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.spline_order, zero_boundary=False)
-                        vizImage = vizImage if len(vizImage)>2 else None
+                        try:
+                            vizImage = vizImage if len(vizImage.shape) > 2 else None
+                        except:
+                            vizImage = vizImage if len(vizImage) > 2 else None
                         LWarped = None
                         if self.LSource is not None  and self.LTarget is not None:
                             LWarped = utils.get_warped_label_map(self.LSource, phi_or_warped_image, self.spacing)
@@ -3448,11 +3466,16 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param save_fig_path:
         :return:
         """
-        self.save_fig_path = os.path.join(save_fig_path, self.expr_name)
+        if len(self.expr_name):
+            self.save_fig_path = os.path.join(save_fig_path, self.expr_name)
+        else:
+            self.save_fig_path = save_fig_path
+        if save_fig_path is not None:
+            self.set_save_fig(True)
 
     def init_recorder(self, task_name):
         self.recorder = XlsxRecorder(task_name, self.save_fig_path)
-        return self.recorder
+        return self.recorder 
 
 
     def set_saving_env(self):
@@ -3615,6 +3638,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # go from lowest to highest scale
         reverseScales = self.scaleFactors[-1::-1]
         reverseIterations = self.scaleIterations[-1::-1]
+        history_iter_count = 0
 
         for en_scale in enumerate(reverseScales):
             print('Optimizing for scale = ' + str(en_scale[1]))
@@ -3676,6 +3700,9 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.ssOpt.set_visualization(self.get_visualization())
             self.ssOpt.set_visualize_step(self.get_visualize_step())
             self.ssOpt.set_light_analysis_on(self.light_analysis_on)
+            self.ssOpt.set_n_scale(en_scale[1])
+            self.ssOpt.set_history_iter_count(history_iter_count)
+
 
             if not self.light_analysis_on:
                 self.ssOpt.set_expr_name(self.get_expr_name())
@@ -3683,7 +3710,6 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 self.ssOpt.set_save_fig_path(self.get_save_fig_path())
                 self.ssOpt.set_save_fig_num(self.get_save_fig_num())
                 self.ssOpt.set_pair_path(self.get_pair_path())
-                self.ssOpt.set_n_scale(en_scale[1])
                 self.ssOpt.set_recorder(self.get_recorder())
                 self.ssOpt.set_save_excel(self.get_save_excel())
                 self.ssOpt.set_source_label(self.get_source_label())
@@ -3731,6 +3757,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self._add_to_history('ss_history',self.ssOpt.get_history())
 
             lastSuccessfulStepSizeTaken = self.ssOpt.get_last_successful_step_size_taken()
+
+            history_iter_count += currentNrOfIteratons
 
             # if we are not at the very last scale, then upsample the parameters
             if currentScaleNumber != nrOfScales - 1:

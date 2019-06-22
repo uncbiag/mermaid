@@ -1328,6 +1328,15 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         """order of the spline for interpolations"""
         self.first_step_velocity = None
 
+        self.use_velocity_mask = EV.use_velocity_mask
+        self.velocity_mask = None
+        if self.use_velocity_mask:
+            img_sz = sz[2:]
+            min_sz = min(img_sz)
+            mask_range = 4 if min_sz > 20 else 3
+            self.velocity_mask = utils.momentum_boundary_weight_mask(sz[2:], spacing, mask_range=mask_range,
+                                                                     smoother_std=0.04,pow=2)
+
 
     def associate_parameters_with_module(self):
         self._shared_states = self._shared_states.union(self.smoother.associate_parameters_with_module(self))
@@ -1603,18 +1612,24 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         :return: returns the map at time tTo
         """
         self.smoother.set_source_image(I0_source)
-
-
+        m = self.m
+        # if self.use_velocity_mask:
+        #     m= self.m
+        #     if EV.use_mermaid_net:
+        #         m = self.m * self.velocity_mask
+        #     else:
+        #         self.m.data = self.m.clamp(min=-2, max=2)
+        #         m = self.m * self.velocity_mask
         if not EV.use_odeint:
             if self.compute_inverse_map:
                 if phi_inv is not None:
-                    mphi1 = self.integrator.solve([self.m, phi, phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                    mphi1 = self.integrator.solve([m, phi, phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
                     return [mphi1[1],mphi1[2]]
                 else:
-                    mphi1 = self.integrator.solve([self.m, phi], self.tFrom, self.tTo, variables_from_optimizer)
+                    mphi1 = self.integrator.solve([m, phi], self.tFrom, self.tTo, variables_from_optimizer)
                     return[mphi1[1],None]
             else:
-                mphi1 = self.integrator.solve([self.m,phi], self.tFrom, self.tTo, variables_from_optimizer)
+                mphi1 = self.integrator.solve([m,phi], self.tFrom, self.tTo, variables_from_optimizer)
                 return mphi1[1]
 
         else:
@@ -1624,7 +1639,7 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
             self.integrator.set_func(func)
             if phi_inv is not None and self.compute_inverse_map:
                 func.set_dim_info([self.dim, self.dim, self.dim])
-                input = torch.cat((self.m, phi, phi_inv),1)
+                input = torch.cat((m, phi, phi_inv),1)
                 output = self.integrator(input)
                 ret_var_list = [output[:,self.dim:self.dim*2,...], output[:,self.dim*2:self.dim*3,...]]
                 return utils.recover_var_list_from_min_normalized_space(ret_var_list, self.spacing,
@@ -1632,7 +1647,7 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
 
             else:
                 func.set_dim_info([self.dim, self.dim])
-                input = torch.cat((self.m, phi), 1)
+                input = torch.cat((m, phi), 1)
                 # output = self.integrator(input)
                 # phi1 =output[:, self.dim:self.dim * 2, ...]
                 # self.m,phi1= utils.recover_var_list_from_min_normalized_space([self.m, phi1], self.spacing,
@@ -1965,12 +1980,14 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
         #     self.smoother_for_forward.import_outside_var(self.smoother.get_gaussian_stds(),self.smoother.get_gaussian_weights()
         #                                                  ,self.smoother.gaussian_fourier_filter_generator,self.smoother.ws.loss)
 
-
         self.id = py_utils.identity_map_multiN(sz, spacing)
         self.id = DW.AdaptVal(torch.from_numpy(self.id))
         self.print_count=0
         self.local_weights_hook = None
         self.m_hook = None
+        self.omt_const=None
+        if EV.use_omt_const:
+            self.omt_const = utils.compute_omt_const(self.gaussian_stds,param= params,dim=self.dim)
 
     def create_single_local_smoother(self,sz,spacing):
         from . import module_parameters as pars
@@ -2065,6 +2082,37 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
 
         print('     {}: before: [{:.7f},{:.7f},{:.7f}]({:.7f}); after: [{:.7f},{:.7f},{:.7f}]({:.7f})'.format(iname, Ib_min,Ib_mean,Ib_max,Ib_std,Ia_min,Ia_mean,Ia_max,Ia_std))
 
+
+    def get_parameter_image_and_name_to_visualize(self,ISource=None):
+        """
+        Creates a magnitude image for the momentum and returns it with name :math:`|m|`
+
+        :return: Returns tuple (m_magnitude_image,name)
+        """
+        name = 'preweight h_0'
+
+        local_adapt_weights_pre = torch.abs(self.local_weights)
+        # if EV.clamp_local_weight:
+        #     self.local_weights.data =self.local_weights.clamp(min=-EV.local_pre_weight_max,max=EV.local_pre_weight_max)
+        # local_adapt_weights_pre = stable_softmax(self.local_weights, dim=1) #torch.abs(self.local_weights)
+        if self.smoother.weighting_type == 'w_K_w':
+            local_adapt_weights_pre = local_adapt_weights_pre / torch.norm(local_adapt_weights_pre, p=None, dim=1,
+                                                                           keepdim=True)
+
+        local_adapt_weights_pre = local_adapt_weights_pre / torch.norm(local_adapt_weights_pre, p=None, dim=1,
+                                                                       keepdim=True)
+        local_adapt_weights = local_adapt_weights_pre#self.embedded_smoother.smooth(local_adapt_weights_pre)
+
+        dim = len(local_adapt_weights.shape) - 2
+        adaptive_smoother_map = local_adapt_weights.detach()
+        if self.smoother.weighting_type == 'w_K_w':
+            adaptive_smoother_map = adaptive_smoother_map ** 2
+        gaussian_stds = self.smoother.multi_gaussian_stds.detach()
+        view_sz = [1] + [len(gaussian_stds)] + [1] * dim
+        gaussian_stds = gaussian_stds.view(*view_sz)
+        smoother_map = adaptive_smoother_map * (gaussian_stds ** 2)
+        par_image = torch.sqrt(torch.sum(smoother_map, 1, keepdim=True))
+        return par_image[:,0],name
 
 
 class AdaptiveSmootherMomentumMapBasicLoss(RegistrationMapLoss):
@@ -2164,6 +2212,8 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
             v = self.smoother.smooth(self.m, None, pars_to_pass_s, variables_from_optimizer,
                                      smooth_to_compute_regularizer_energy=False,
                                      clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
+            if self.use_velocity_mask:
+                v = v*self.velocity_mask
             local_adapt_weights = self.smoother.get_deep_smoother_weights()
 
         else:
@@ -2179,6 +2229,8 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
                 print("no epoch/iter information is provided, set to 0")
                 epoch = 0
                 self.smoother.set_epoch(epoch)
+            if EV.clamp_local_weight:
+                self.local_weights.data =self.local_weights.clamp(min=-EV.local_pre_weight_max,max=EV.local_pre_weight_max)
             local_adapt_weights_pre = stable_softmax(self.local_weights, dim=1)  # torch.abs(self.local_weights)
             #local_adapt_weights_pre =self.local_weights.clamp(min=0.01)
             if self.smoother.weighting_type == 'w_K_w':
@@ -2189,6 +2241,8 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
 
             local_adapt_weights = self.embedded_smoother.smooth(local_adapt_weights_pre)
             v, _ = self.smoother.smooth(self.m, local_adapt_weights)
+            if self.use_velocity_mask:
+                v = v*self.velocity_mask
             self.smoother.reset_penalty()
             self.smoother.compute_penalty(I, local_adapt_weights, local_adapt_weights_pre)
             self.smoother.disable_penalty_computation()
@@ -2303,12 +2357,16 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
         dt = self.integrator.get_dt()
         if EV.use_mermaid_net:
             self.smoother.reset_penalty()
+            m = self.m
+
             # self.debug_distrib(self.m,'m',[i/10. for i in range(-10,12,2)])
             # print("the min mean and max of m is {} {} {}".format(self.m.min().item(),self.m.mean().item(),self.m.max().item()))
 
-            v = self.smoother.smooth(self.m, None, pars_to_pass_s, variables_from_optimizer,
+            v = self.smoother.smooth(m, None, pars_to_pass_s, variables_from_optimizer,
                                      smooth_to_compute_regularizer_energy=False,
                                      clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
+            if self.use_velocity_mask:
+                v = v*self.velocity_mask
             if not EV.use_preweights_advect:
                 local_adapt_weights = self.smoother.get_deep_smoother_weights()
             else:
@@ -2317,7 +2375,9 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
             from .deep_smoothers import stable_softmax
             if variables_from_optimizer is not None:
                 epoch = variables_from_optimizer['iter']
-                self.smoother.set_epoch(epoch//2)
+                history_iter_count = variables_from_optimizer['history_iter_count']
+
+                self.smoother.set_epoch(history_iter_count//2)
                 # if variables_from_optimizer['iter'] < 50:
                 #     self.mask_local_weight()
                 # else:
@@ -2326,16 +2386,23 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
                 print("no epoch/iter information is provided, set to 0")
                 epoch = 0
                 self.smoother.set_epoch(epoch)
-            local_adapt_weights_pre=torch.abs(self.local_weights)
-            #local_adapt_weights_pre = stable_softmax(self.local_weights, dim=1) #torch.abs(self.local_weights)
-            #local_adapt_weights_pre =self.local_weights.clamp(min=0.01)
+            #local_adapt_weights_pre=torch.abs(self.local_weights)
+            if EV.clamp_local_weight:
+                self.local_weights.data =self.local_weights.clamp(min=-EV.local_pre_weight_max,max=EV.local_pre_weight_max)
+            local_adapt_weights_pre = stable_softmax(self.local_weights, dim=1) #torch.abs(self.local_weights)
             if self.smoother.weighting_type=='w_K_w':
                 local_adapt_weights_pre = local_adapt_weights_pre/torch.norm(local_adapt_weights_pre,p=None,dim=1,keepdim=True)
             # from .deep_smoothers import weighted_linear_softnorm
             # local_adapt_weights_pre = weighted_linear_softnorm(self.local_weights, dim=1, weights=self.gaussian_std_weights)
 
             local_adapt_weights = self.embedded_smoother.smooth(local_adapt_weights_pre)
-            v,_ = self.smoother.smooth(self.m,local_adapt_weights)
+            # if self.use_velocity_mask:
+            #     self.m.data = self.m.clamp(min=-2,max=2)
+            #     m = self.m*self.velocity_mask
+            m = self.m
+            v,_ = self.smoother.smooth(m,local_adapt_weights)
+            if self.use_velocity_mask:
+                v = v*self.velocity_mask
             self.smoother.reset_penalty()
             self.smoother.compute_penalty(I,local_adapt_weights,local_adapt_weights_pre)
             self.smoother.disable_penalty_computation()
@@ -2353,18 +2420,20 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
                 if self.update_sm_by_advect:
                     self.integrator.set_pars(pars_to_pass_i)
                     if not self.update_sm_with_interpolation:
-                        vphi1 = self.integrator.solve([self.m, phi,local_adapt_weights], self.tFrom, self.tTo, variables_from_optimizer)
+                        vphi1 = self.integrator.solve([m, phi,local_adapt_weights], self.tFrom, self.tTo, variables_from_optimizer)
                     else:
                         if self.bysingle_int:
-                            vphi1 = self.integrator.solve([self.m, phi,self.id.detach().clone()], self.tFrom, self.tTo, variables_from_optimizer)
+                            vphi1 = self.integrator.solve([m, phi,self.id.detach().clone()], self.tFrom, self.tTo, variables_from_optimizer)
                         else:
                             raise NotImplemented
                 else:
                     self.integrator.set_pars(pars_to_pass_s)
-                    vphi1 = self.integrator.solve([self.m, phi], self.tFrom, self.tTo, variables_from_optimizer)
+                    vphi1 = self.integrator.solve([m, phi], self.tFrom, self.tTo, variables_from_optimizer)
                 return vphi1[1]
         else:
             from . import forward_models_warped as FMW
+            self.f.init_velocity_mask(self.velocity_mask)
+            self.f.init_omt_const(self.omt_const)
 
             if self.update_sm_by_advect:
                 func = FMW.ODEWarpedFunc(self.f, single_param=True, pars=pars_to_pass_i,
@@ -2372,16 +2441,16 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
                 self.integrator.set_func(func)
                 if not self.update_sm_with_interpolation:
                     func.set_dim_info([self.dim, self.dim, self.n_of_gaussians])
-                    input = torch.cat((self.m, phi,local_adapt_weights), 1)
+                    input = torch.cat((m, phi,local_adapt_weights), 1)
                 else:
                     if self.bysingle_int:
                         func.set_dim_info([self.dim, self.dim, self.n_of_gaussians, self.dim])
                         #print("the shape information{}{}{}{}".format(self.m.shape,phi.shape,local_adapt_weights.shape,self.id.shape))
-                        input = torch.cat((self.m, phi, local_adapt_weights, self.id.detach().clone()), 1)
+                        input = torch.cat((m, phi, local_adapt_weights, self.id.detach().clone()), 1)
                         self.f.init_zero_sm_weight(local_adapt_weights.detach())
-                    else:
+                    else:# todo  just make attention this is where we currently use
                         func.set_dim_info([self.dim,self.dim,self.n_of_gaussians])
-                        input = torch.cat((self.m,self.id.detach(),local_adapt_weights),1)
+                        input = torch.cat((m,self.id.detach(),local_adapt_weights),1)
                         self.f.init_zero_sm_weight(local_adapt_weights.detach())
             else:
                 func = FMW.ODEWarpedFunc(self.f, single_param=True, pars=pars_to_pass_s,
@@ -2389,34 +2458,37 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
                 func.set_opt_param(self.smoother.ws)
                 self.integrator.set_func(func)
                 func.set_dim_info([self.dim, self.dim])
-                input = torch.cat((self.m,phi),1)
+                input = torch.cat((m,phi),1)
             #self.f.debug_mode_on=True
             output = self.integrator(input)
             phi1 = output[:,self.dim:self.dim*2,...]
             if self.update_sm_by_advect and self.update_sm_with_interpolation and not self.bysingle_int:
                 phi1 = utils.compute_warped_image_multiNC(phi, phi1, self.spacing, spline_order=1,
                                                           zero_boundary=False)  # todo check the spacing is right here
-            if not EV.use_mermaid_net and self.print_count%40==0:
+            if 'extra_info' in variables_from_optimizer and variables_from_optimizer['extra_info'] is not None:
                 from tools.visual_tools import save_smoother_map,save_momentum,save_velocity
                 import os
-                #f_path = '/playpen/zyshen/reg_clean/mermaid/demos/undertest_kernel_weighting_type_w_K_w/results'
-                f_path = '/playpen/zyshen/debugs/syn_expr_0416/results'
-                os.makedirs(f_path,exist_ok=True)
+                f_path_list =  variables_from_optimizer['extra_info']['saving_folder']
 
                 # here we assume use the preweights to do the computation
-                save_smoother_map(self.embedded_smoother.smooth(local_adapt_weights), self.smoother.multi_gaussian_stds, 'time0_'+str(epoch),os.path.join(f_path,'time0_'+str(epoch)+'_sm_weight.png'))#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-                #print("the min {}, mean {}, max {} of th sm_weight_map_t0 is ".format(sm_weight_map_t0.min().item(),sm_weight_map_t0.mean().item(),sm_weight_map_t0.max().item()))
-                sm_weight_map_t1 = utils.compute_warped_image_multiNC(local_adapt_weights, phi1, self.spacing, 1, zero_boundary=False)
-                m1 = output[:,:self.dim, ...]
-                save_momentum(self.m, 'time0_'+str(epoch),os.path.join(f_path,'time0_'+str(epoch)+'_m.png'))#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-                save_velocity(v, 'time0_'+str(epoch),os.path.join(f_path,'time0_'+str(epoch)+'_v.png'))#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-                sm_weight_map_t1=self.embedded_smoother.smooth(sm_weight_map_t1)
-                v1,_=self.smoother.smooth(m1, sm_weight_map_t1)
-                save_velocity(v1, 'time1_'+str(epoch),os.path.join(f_path,'time1_'+str(epoch)+'_v.png'))#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
+                weights = self.embedded_smoother.smooth(local_adapt_weights_pre)
+                sm_weight_map_t1 = utils.compute_warped_image_multiNC(local_adapt_weights_pre, phi1, self.spacing, 1,
+                                                                      zero_boundary=False)
+                sm_weight_map_t1 = self.embedded_smoother.smooth(sm_weight_map_t1)
+                m1 = output[:, :self.dim, ...]
+                v1, _ = self.smoother.smooth(m1, sm_weight_map_t1)
+                for i, f_path in enumerate(f_path_list):
+                    os.makedirs(f_path, exist_ok=True)
+                    save_smoother_map(weights[i:i+1], self.smoother.multi_gaussian_stds, 'time0_'+str(epoch),os.path.join(f_path,'time0_'+str(epoch)+'_sm_weight.png'),weighting_type='w_K_w')#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
+                    save_smoother_map(local_adapt_weights_pre[i:i+1], self.smoother.multi_gaussian_stds, 'time0_'+str(epoch),os.path.join(f_path,'time0_'+str(epoch)+'_pre_weight.png'),weighting_type='w_K_w')#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
+                    #print("the min {}, mean {}, max {} of th sm_weight_map_t0 is ".format(sm_weight_map_t0.min().item(),sm_weight_map_t0.mean().item(),sm_weight_map_t0.max().item()))
+                    save_momentum(m[i:i+1], 'time0_'+str(epoch),os.path.join(f_path,'time0_'+str(epoch)+'_m.png'))#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
+                    save_velocity(v[i:i+1], 'time0_'+str(epoch),os.path.join(f_path,'time0_'+str(epoch)+'_v.png'))#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
+                    save_velocity(v1[i:i+1], 'time1_'+str(epoch),os.path.join(f_path,'time1_'+str(epoch)+'_v.png'))#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
 
-                save_smoother_map(sm_weight_map_t1, self.smoother.multi_gaussian_stds, 'time1_'+str(epoch),os.path.join(f_path,'time1_'+str(epoch)+'_sm_weight.png'))#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-                torch.save(self.m,os.path.join(f_path,'m.pt'))
-                torch.save(self.local_weights,os.path.join(f_path,'local_weight.pt'))
+                    save_smoother_map(sm_weight_map_t1[i:i+1], self.smoother.multi_gaussian_stds, 'time1_'+str(epoch),os.path.join(f_path,'time1_'+str(epoch)+'_sm_weight.png'),weighting_type='w_K_w')#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
+                    # torch.save(m,os.path.join(f_path,'m.pt'))
+                    # torch.save(self.local_weights,os.path.join(f_path,'local_weight.pt'))
                 #print("the min {}, mean {}, max {} of th sm_weight_map_t1 is ".format(sm_weight_map_t1.min().item(),sm_weight_map_t1.mean().item(),sm_weight_map_t1.max().item()))
             if self.compute_inverse_map:
                 raise ValueError("Not implemented yet")
@@ -2424,7 +2496,7 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
             self.print_count+=1
 
             # self._display_stats_before_after(phi,phi1,'phi')
-            # self._display_stats_before_after(self.m,v[:,:self.dim,...],'m and v')
+            # self._display_stats_before_after(m,v[:,:self.dim,...],'m and v')
             # self._display_stats_before_after(v,output[:,:self.dim,...],'v_in and v_out')
             return phi1
 

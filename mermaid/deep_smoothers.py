@@ -11,13 +11,14 @@ import torch.nn as nn
 import numpy as np
 from .data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
-device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
+device = torch.device("cuda:0" if (USE_CUDA and torch.cuda.is_available()) else "cpu")
 
 from . import finite_differences as fd
 from . import module_parameters as pars
 from . import fileio as fio
 from . import custom_pytorch_extensions as ce
 from . import deep_networks as dn
+from . import external_variable as EV
 from .deep_loss import AdaptiveWeightLoss
 import os
 import matplotlib.pyplot as plt
@@ -1740,7 +1741,7 @@ class DeepSmoothingModel(with_metaclass(ABCMeta,nn.Module)):
                 self.current_penalty += current_penalty
         # multiply the velocity fields by the weights and sum over them
         # this is then the multi-Gaussian output
-        weights = torch.clamp((weights), min=1e-6)
+        weights = torch.clamp((weights), min=1e-3)
         if self.weighting_type=='sqrt_w_K_sqrt_w':
             sqrt_weights = torch.sqrt(weights)
             sqrt_weighted_multi_smooth_v = compute_weighted_multi_smooth_v( momentum=momentum, weights=sqrt_weights, gaussian_stds=self.gaussian_stds,
@@ -1891,6 +1892,8 @@ class GeneralNetworkWeightedSmoothingModel(DeepSmoothingModel):
         # (because the last one is not relu-ed
 
         x = self.network(x_in,iter=iter)
+        if EV.clamp_local_weight:
+            x = x.clamp(min=-EV.local_pre_weight_max,max=EV.local_pre_weight_max)
 
         if self.weighting_type=='sqrt_w_K_sqrt_w' or self.weighting_type=='w_K':
 
@@ -1917,6 +1920,7 @@ class GeneralNetworkWeightedSmoothingModel(DeepSmoothingModel):
                 if not self.use_weighted_linear_softmax:
                     pre_weights = stable_softmax(x, dim=1)
                     pre_weights = x / torch.norm(pre_weights, p=None, dim=1, keepdim=True)
+                    #pre_weights = torch.abs(x)/ torch.norm(x, p=None, dim=1, keepdim=True)
                 else:
                     pre_weights = weighted_linear_softnorm(x, dim=1, weights=global_multi_gaussian_weights)
             else:

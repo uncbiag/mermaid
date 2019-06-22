@@ -23,7 +23,7 @@ from .data_utils import make_dir
 
 dpi=500
 extension= '.png'
-def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visual_param=None, i=0):
+def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visual_param=None, i=0,multi_channel=False):
 
     if (vizImage is not None) and (phiWarped is not None):
         sp_s = 231
@@ -88,7 +88,7 @@ def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visua
         plt.show()
 
 
-def checkerboard_2d(I0,I1,nrOfTiles=8):
+def checkerboard_2d(I0,I1,nrOfTiles=8,multi_channel=False):
     """
     Creates a checkerboard between two images
     
@@ -98,16 +98,22 @@ def checkerboard_2d(I0,I1,nrOfTiles=8):
     :return: returns tiled image
     """
     sz = I0.shape
-    tileSize = int( np.array(sz).min()/nrOfTiles )
+    if not multi_channel:
+        tileSize = int( np.array(sz).min()/nrOfTiles )
+    else:
+        tileSize = int(np.array(sz[:-1]).min()/nrOfTiles)
     nrOfTileXH = int( np.ceil(sz[0]/tileSize)/2+1 )
     nrOfTileYH = int( np.ceil(sz[1]/tileSize)/2+1 )
     cb_grid = np.kron([[1, 0] * nrOfTileYH, [0, 1] * nrOfTileYH] *nrOfTileXH, np.ones((tileSize, tileSize)))
     # now cut it to the same size
     cb_grid=cb_grid[0:sz[0],0:sz[1]]
+    if multi_channel:
+        cb_sz = list(cb_grid.shape) + [1]
+        cb_grid = cb_grid.reshape(*cb_sz)
     cb_image = I0*cb_grid + I1*(1-cb_grid)
     return cb_image
 
-def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_param=None, i=0):
+def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_param=None, i=0,multi_channel=False):
 
     if (vizImage is not None):
         sp_s = 231
@@ -141,7 +147,7 @@ def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_p
     plt.title('warped image')
 
     plt.subplot(sp_c)
-    plt.imshow(checkerboard_2d(utils.t2np(iW),utils.t2np(iT)),cmap='gray')
+    plt.imshow(checkerboard_2d(utils.t2np(iW),utils.t2np(iT),multi_channel=multi_channel),cmap='gray')
     plt.colorbar()
     plt.title('checkerboard')
 
@@ -164,7 +170,7 @@ def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_p
     else:
         plt.show()
 
-def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName, phiWarped, visual_param=None, i=0):
+def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName, phiWarped, visual_param=None, i=0,multi_channel=False):
     if iSL is not None and iTL is not None:
         sp_s = 331
         sp_t = 332
@@ -177,12 +183,18 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
         sp_lw = 339
 
     elif (vizImage is not None) and (phiWarped is not None):
-        sp_s = 231
-        sp_t = 232
-        sp_w = 233
-        sp_c = 234
-        sp_p = 235
-        sp_v = 236
+        # sp_s = 231
+        # sp_t = 232
+        # sp_w = 233
+        # sp_c = 234
+        # sp_p = 235
+        # sp_v = 236
+        sp_s = 241
+        sp_t = 242
+        sp_w = 243
+        sp_c = 245
+        sp_p = 244
+        sp_v = 246
     elif (vizImage is not None):
         sp_s = 231
         sp_t = 232
@@ -202,6 +214,7 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
         sp_c = 224
 
     font = {'size': 10}
+    use_color_bar= False
 
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')
@@ -209,40 +222,45 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
 
     plt.subplot(sp_s).set_axis_off()
     plt.imshow(utils.t2np(iS), cmap='gray')
-    plt.colorbar().ax.tick_params(labelsize=3)
+    if use_color_bar:
+        plt.colorbar().ax.tick_params(labelsize=3)
     plt.title('source image', font)
 
     plt.subplot(sp_t).set_axis_off()
     plt.imshow(utils.t2np(iT), cmap='gray')
-    plt.colorbar().ax.tick_params(labelsize=3)
+    if use_color_bar:
+        plt.colorbar().ax.tick_params(labelsize=3)
     plt.title('target image', font)
 
     plt.subplot(sp_w).set_axis_off()
     plt.imshow(utils.t2np(iW), cmap='gray')
-    plt.colorbar().ax.tick_params(labelsize=3)
+    if use_color_bar:
+        plt.colorbar().ax.tick_params(labelsize=3)
     plt.title('warped image', font)
 
     plt.subplot(sp_c).set_axis_off()
-    plt.imshow(checkerboard_2d(utils.t2np(iW), utils.t2np(iT)), cmap='gray')
-    plt.colorbar().ax.tick_params(labelsize=3)
+    plt.imshow(checkerboard_2d(utils.t2np(iW), utils.t2np(iT),multi_channel=multi_channel), cmap='gray')
+    if use_color_bar:
+        plt.colorbar().ax.tick_params(labelsize=3)
     plt.title('checkerboard', font)
 
     if phiWarped is not None:
         plt.subplot(sp_p).set_axis_off()
-        plt.imshow(utils.t2np(iW),cmap='gray')
+        plt.imshow(utils.t2np(iW))
 
         plt.contour(utils.t2np(phiWarped[0, :, :]), np.linspace(-1, 1, 20), colors='r', linestyles='solid',
                     linewidths=0.5)
         plt.contour(utils.t2np(phiWarped[1, :, :]), np.linspace(-1, 1, 20), colors='r', linestyles='solid',
                     linewidths=0.5)
-
-        plt.colorbar().ax.tick_params(labelsize=3)
-        plt.title('warped image + grid', font)
+        if use_color_bar:
+            plt.colorbar().ax.tick_params(labelsize=3)
+        plt.title('warped + grid', font)
 
     if vizImage is not None:
         plt.subplot(sp_v).set_axis_off()
-        plt.imshow(utils.lift_to_dimension(utils.t2np(vizImage),2), cmap='gray')
-        plt.colorbar().ax.tick_params(labelsize=3)
+        plt.imshow(utils.lift_to_dimension(utils.t2np(vizImage),2))
+        if use_color_bar:
+            plt.colorbar().ax.tick_params(labelsize=3)
         plt.title(vizName, font)
 
 
@@ -271,19 +289,22 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
             plt.clf()
+            #plt.close('all')
     else:
         plt.show()
+        plt.clf()
 
 
-def _show_current_images_2d(iS, iT, iW,iSL, iTL,iWL, iter, vizImage, vizName, phiWarped, visual_param=None, i=0):
+
+def _show_current_images_2d(iS, iT, iW,iSL, iTL,iWL, iter, vizImage, vizName, phiWarped, visual_param=None, i=0,multi_channel=False):
 
     if phiWarped is not None:
-        _show_current_images_2d_map(iS, iT, iW, iSL, iTL, iWL, iter, vizImage, vizName, phiWarped, visual_param, i)
+        _show_current_images_2d_map(iS, iT, iW, iSL, iTL, iWL, iter, vizImage, vizName, phiWarped, visual_param, i,multi_channel)
     else:
-        _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_param, i)
+        _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_param, i,multi_channel)
 
 
-def _show_current_images_3d(iS, iT, iW,iSL, iTL,iWL, iter, vizImage, vizName, phiWarped, visual_param=None, i=0):
+def _show_current_images_3d(iS, iT, iW,iSL, iTL,iWL, iter, vizImage, vizName, phiWarped, visual_param=None, i=0,multi_channel=False):
     if iSL is not None and iTL is not None:
         phiw_a = 3
         if vizImage is None:
@@ -350,11 +371,11 @@ def _show_current_images_3d(iS, iT, iW,iSL, iTL,iWL, iter, vizImage, vizName, ph
         ivtlzc = viewers.ImageViewer3D_Sliced(ax[iTL_a][2], utils.lift_to_dimension(utils.t2np(iTL), 3), 2,
                                               'LTarget Z', True)
         ivwlxc = viewers.ImageViewer3D_Sliced(ax[iWL_a][0], utils.lift_to_dimension(utils.t2np(iWL), 3), 0,
-                                              'LWarpped X', True)
+                                              'LWarped X', True)
         ivwlyc = viewers.ImageViewer3D_Sliced(ax[iWL_a][1], utils.lift_to_dimension(utils.t2np(iWL), 3), 1,
-                                              'LWarpped Y', True)
+                                              'LWarped Y', True)
         ivwlzc = viewers.ImageViewer3D_Sliced(ax[iWL_a][2], utils.lift_to_dimension(utils.t2np(iWL), 3), 2,
-                                              'LWarpped Z', True)
+                                              'LWarped Z', True)
 
     feh = viewers.FigureEventHandler(fig)
 
@@ -463,21 +484,36 @@ def show_current_images(iter, iS, iT, iW,iSL=None, iTL=None, iWL=None, vizImages
     """
 
     dim = iS.ndimension()-2
+    save_fig_num =visual_param['save_fig_num']
+    if save_fig_num==-1:
+        save_fig_num = iS.shape[0]
 
     if visual_param is not None:
         if visual_param['save_fig'] == True:
-            save_fig_num = min(visual_param['save_fig_num'], len(visual_param['pair_path']))
+            save_fig_num = min(save_fig_num, len(visual_param['pair_path']))
             print("num {} of pair would be saved in {}".format(save_fig_num,visual_param['save_fig_path']))
         else:
             save_fig_num = 1
     else:
         save_fig_num = 1
 
+    num_channel = iS.shape[1]
+    multi_channel = num_channel>1
+
+
 
     for i in range(save_fig_num):
-        iSF = iS[i,0,...]
-        iTF = iT[i,0,...]
-        iWF = iW[i,0,...]
+        if not multi_channel:
+            iSF = iS[i,0,...]
+            iTF = iT[i,0,...]
+            iWF = iW[i,0,...]
+        else:
+            iSF = utils.cxyz_to_xyzc(iS)[i]
+            iTF = utils.cxyz_to_xyzc(iT)[i]
+            iWF = utils.cxyz_to_xyzc(iW)[i]
+
+
+
         iSLF = None
         iTLF = None
         iWLF = None
@@ -498,11 +534,11 @@ def show_current_images(iter, iS, iT, iW,iSL=None, iTL=None, iWL=None, vizImages
             iWLF = iWL[i, 0, ...]
 
         if dim==1:
-            _show_current_images_1d(iSF, iTF, iWF, iter, vizImage, vizName, pwF, visual_param, i)
+            _show_current_images_1d(iSF, iTF, iWF, iter, vizImage, vizName, pwF, visual_param, i, multi_channel )
         elif dim==2:
-            _show_current_images_2d(iSF, iTF, iWF,iSLF,iTLF,iWLF, iter, vizImage, vizName, pwF, visual_param, i)
+            _show_current_images_2d(iSF, iTF, iWF,iSLF,iTLF,iWLF, iter, vizImage, vizName, pwF, visual_param, i,multi_channel)
         elif dim==3:
-            _show_current_images_3d(iSF, iTF, iWF, iSLF, iTLF, iWLF, iter, vizImage, vizName, pwF, visual_param, i)
+            _show_current_images_3d(iSF, iTF, iWF, iSLF, iTLF, iWLF, iter, vizImage, vizName, pwF, visual_param, i,multi_channel)
         else:
             raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
 

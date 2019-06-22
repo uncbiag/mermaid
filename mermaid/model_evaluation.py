@@ -1,3 +1,4 @@
+import os
 import torch
 from . import model_factory as MF
 from . import visualize_registration_results as vizReg
@@ -14,7 +15,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
                    map_low_res_factor=None,
                    compute_similarity_measure_at_low_res=None,
                    spline_order=None,
-                   individual_parameters=None,shared_parameters=None,params=None,visualize=True):
+                   individual_parameters=None,shared_parameters=None,params=None,extra_info=None,visualize=True,visual_param=None,given_weight=False):
 
     """
 
@@ -22,7 +23,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
 
     :param ISource_in: source image (BxCxXxYxZ format)
     :param ITarget_in: target image (BxCxXxYxZ format)
-    :param sz: size of the images
+    :param sz: size of the images (BxCxXxYxZ format)
     :param spacing: spacing for the images
     :param model_name: name of the desired model (string)
     :param use_map: if set to True then map-based mode is used
@@ -118,11 +119,17 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
 
     model.set_dictionary_to_pass_to_integrator(dictionary_to_pass_to_integrator)
 
-    model.load_shared_state_dict(shared_parameters)
+    if shared_parameters is not None:
+        model.load_shared_state_dict(shared_parameters)
     model_pars = utils.individual_parameters_to_model_parameters(individual_parameters)
     model.set_individual_registration_parameters(model_pars)
 
-    opt_variables = {'iter': 0, 'epoch': 0}
+    if given_weight:
+        model.m.data = AdaptVal(individual_parameters['m'])
+        if 'local_weights'in individual_parameters and individual_parameters['local_weights'] is not None:
+            model.local_weights.data= AdaptVal(individual_parameters['local_weights'])
+
+    opt_variables = {'iter': 0, 'epoch': 0,'extra_info':extra_info,'history_iter_count':0}
 
     # now let's run the model
 
@@ -156,22 +163,34 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
         phi_or_warped_image = rec_phiWarped
     else:
         phi_or_warped_image = rec_IWarped
+    if visual_param is None:
+        visual_param = {}
+        visual_param['visualize'] = visualize
+        visual_param['save_fig'] = False
+        visual_param['save_fig_num']  =-1
+    else:
+        visual_param['visualize'] = visualize
+        visual_param['pair_path'] = visual_param['pair_name']
+        save_fig_path = visual_param['save_fig_path']
+        visual_param['save_fig_path_byname'] = os.path.join(save_fig_path, 'byname')
+        visual_param['save_fig_path_byiter'] = os.path.join(save_fig_path, 'byiter')
+        visual_param['iter'] = 'scale_' + str(0) + '_iter_' + str(0)
 
-    visual_param = {}
-    visual_param['visualize'] = visualize
-    visual_param['save_fig'] = False
 
     if use_map:
         if compute_similarity_measure_at_low_res:
             I1Warped = utils.compute_warped_image_multiNC(lowResISource, phi_or_warped_image, lowResSpacing, spline_order)
-            vizReg.show_current_images(iter=iter, iS=lowResISource, iT=lowResITarget, iW=I1Warped, vizImages=vizImage, vizName=vizName,
+            if visualize or visual_param['save_fig']:
+                vizReg.show_current_images(iter=iter, iS=lowResISource, iT=lowResITarget, iW=I1Warped, vizImages=vizImage, vizName=vizName,
                                        phiWarped=phi_or_warped_image, visual_param=visual_param)
         else:
             I1Warped = utils.compute_warped_image_multiNC(ISource, phi_or_warped_image, spacing, spline_order)
-            vizReg.show_current_images(iter=iter, iS=ISource, iT=ITarget, iW=I1Warped, vizImages=vizImage, vizName=vizName,
+            if visualize or visual_param['save_fig']:
+                vizReg.show_current_images(iter=iter, iS=ISource, iT=ITarget, iW=I1Warped, vizImages=vizImage, vizName=vizName,
                                        phiWarped=phi_or_warped_image, visual_param=visual_param)
     else:
-        vizReg.show_current_images(iter=iter, iS=ISource, iT=ITarget, iW=phi_or_warped_image, vizImages=vizImage, vizName=vizName, phiWarped=None, visual_param=visual_param)
+        if visualize or visual_param['save_fig']:
+            vizReg.show_current_images(iter=iter, iS=ISource, iT=ITarget, iW=phi_or_warped_image, vizImages=vizImage, vizName=vizName, phiWarped=None, visual_param=visual_param)
 
     dictionary_to_pass_to_smoother = dict()
     if map_low_res_factor is not None:
@@ -185,8 +204,10 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
 
     variables_from_forward_model = model.get_variables_to_transfer_to_loss_function()
     smoother = variables_from_forward_model['smoother']
-    smoother.set_debug_retain_computed_local_weights(True)
-
+    try:
+        smoother.set_debug_retain_computed_local_weights(True)
+    except:
+        pass
     model_pars = model.get_registration_parameters()
     if 'lam' in model_pars:
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(model_pars['lam'], lowResISource, lowResSize,lowResSpacing)
@@ -195,11 +216,21 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
     else:
         raise ValueError('Expected a scalar or a vector momentum in model (use SVF for example)')
 
-    v = smoother.smooth(m, None, dictionary_to_pass_to_smoother)
+    if not given_weight:
+        v = smoother.smooth(m, None, dictionary_to_pass_to_smoother)
+        local_weights = smoother.get_debug_computed_local_weights()
+        local_pre_weights = smoother.get_debug_computed_local_pre_weights()
+    else:
+        v = None
+        local_weights=None
+        local_pre_weights=None
 
-    local_weights = smoother.get_debug_computed_local_weights()
-    local_pre_weights = smoother.get_debug_computed_local_pre_weights()
-    default_multi_gaussian_weights = smoother.get_default_multi_gaussian_weights()
+    try:
+        default_multi_gaussian_weights = smoother.get_default_multi_gaussian_weights()
+        gaussian_stds=smoother.get_gaussian_stds()
+    except:
+        default_multi_gaussian_weights=None
+        gaussian_stds=None
 
     model_dict = dict()
     model_dict['use_map'] = use_map
@@ -210,7 +241,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
     model_dict['local_weights'] = local_weights
     model_dict['local_pre_weights'] = local_pre_weights
     model_dict['default_multi_gaussian_weights'] = default_multi_gaussian_weights
-    model_dict['stds'] = smoother.get_gaussian_stds()
+    model_dict['stds'] =gaussian_stds
     model_dict['model'] = model
     if 'lam' in model_pars:
         model_dict['lam'] = model_pars['lam']

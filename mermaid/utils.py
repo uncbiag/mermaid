@@ -16,6 +16,7 @@ from torch.autograd import Variable
 from .libraries.modules.stn_nd import STN_ND_BCXYZ
 from .data_wrapper import AdaptVal
 from .data_wrapper import MyTensor
+from . import smoother_factory as sf
 from .data_wrapper import USE_CUDA
 
 import numpy as np
@@ -845,6 +846,58 @@ def identity_map(sz,spacing,dtype='float32'):
 
     return idnp
 
+def omt_boundary_weight_mask(img_sz,spacing,mask_range=5,mask_value=5,smoother_std =0.05):
+    """generate a smooth weight mask  for the omt """
+    dim = len(img_sz)
+    mask_sz = [1,1]+ list(img_sz)
+    mask = AdaptVal(torch.ones(*mask_sz))*mask_value
+    if dim ==2:
+        mask[:,:,mask_range:-mask_range,mask_range:-mask_range]=1
+    elif dim==3:
+        mask[:,:,mask_range:-mask_range,mask_range:-mask_range,mask_range:-mask_range ]=1
+    sm = get_single_gaussian_smoother(smoother_std,img_sz,spacing)
+    mask  = sm.smooth(mask)
+    return mask.detach()
+
+
+def momentum_boundary_weight_mask(img_sz,spacing,mask_range=5,smoother_std =0.05,pow=2):
+    """generate a smooth weight mask  for the omt """
+    dim = len(img_sz)
+    mask_sz = [1,1]+ list(img_sz)
+    mask = AdaptVal(torch.zeros(*mask_sz))
+    if dim ==2:
+        mask[:,:,mask_range:-mask_range,mask_range:-mask_range]=1
+    elif dim==3:
+        mask[:,:,mask_range:-mask_range,mask_range:-mask_range,mask_range:-mask_range ]=1
+    sm = get_single_gaussian_smoother(smoother_std,img_sz,spacing)
+    mask  = sm.smooth(mask)
+    if pow ==2:
+        mask = mask**2
+    if pow ==3:
+        mask = mask*mask*mask
+    return mask
+
+def compute_omt_const(stds,param,dim):
+    omt_power = param['forward_model']['smoother']['omt_power']
+    omt_weight_penalty = param['forward_model']['smoother']['omt_weight_penalty']
+    min_std = torch.min(stds)
+    max_std = torch.max(stds)
+    omt_const  = torch.abs(torch.log(max_std/stds))**omt_power
+    omt_const =  omt_const/(torch.abs(torch.log(max_std / min_std)) ** omt_power)
+    omt_const = omt_const*omt_weight_penalty/(EV.reg_factor_in_mermaid*2)
+    sz = [1]+ [len(stds)] +[1]*(dim+1)
+    return omt_const.view(*sz)
+
+
+
+def get_single_gaussian_smoother(gaussian_std,sz,spacing):
+    s_m_params = pars.ParameterDict()
+    s_m_params['smoother']['type'] = 'gaussian'
+    s_m_params['smoother']['gaussian_std'] = gaussian_std
+    s_m = sf.SmootherFactory(sz, spacing).create_smoother(s_m_params)
+    return s_m
+
+
 
 
 def get_warped_label_map(label_map, phi, spacing, sched='nn'):
@@ -867,6 +920,24 @@ def t2np( v ):
     """
 
     return (v.detach()).cpu().numpy()
+
+
+
+def cxyz_to_xyzc( v ):
+    """
+    Takes a torch array and returns it as a numpy array on the cpu
+
+    :param v: torch array
+    :return: numpy array
+    """
+    dim = len(v.shape)-2
+    if dim ==2:
+        v = v.permute(0,2,3,1)
+    if dim ==3:
+        v = v.permute(0,2,3,4,1)
+    return v
+
+
 
 def checkNan(x):
     """"
@@ -898,7 +969,17 @@ def time_warped_function(f):
 
     return __time_warped_function
 
-
+def interoplate_boundary_right(tensor):
+    dim = len(tensor.shape)-2
+    if dim==1:
+        tensor[:,:,-1]= tensor[:,:-2]+ tensor[:,:-2]-tensor[:,:-3]
+    if dim==2:
+        tensor[:, :, -1,:] = tensor[:, :,-2,:] + tensor[:, :,-2,:] - tensor[:, :,-3,:]
+        tensor[:, :, :,-1] = tensor[:, :, :,-2] + tensor[:, :, :,-2] - tensor[:, :, :,-3]
+    if dim==3:
+        tensor[:, :,:, -1,:, :] = tensor[:, :, -2, :] + tensor[:, :, -2, :] - tensor[:, :, -3, :]
+        tensor[:, :,:, :, -1, :] = tensor[:, :, :, -2] + tensor[:, :, :, -2] - tensor[:, :, :, -3]
+        tensor[:, :,:, :, :, -1] = tensor[:, :, :, -2] + tensor[:, :, :, -2] - tensor[:, :, :, -3]
 ##########################################  Adaptive Net ###################################################3
 def space_normal(tensors, std=0.1):
     """

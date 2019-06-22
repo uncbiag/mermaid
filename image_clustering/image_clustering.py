@@ -16,7 +16,7 @@ import mermaid.module_parameters as pars
 
 from mermaid.data_wrapper import MyTensor, AdaptVal, USE_CUDA
 
-device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
+device = torch.device("cuda:0" if (USE_CUDA and torch.cuda.is_available()) else "cpu")
 
 import matplotlib.pyplot as plt
 

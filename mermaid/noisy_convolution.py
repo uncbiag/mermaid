@@ -8,7 +8,7 @@ from torch.nn.modules.utils import _single, _pair, _triple
 
 from .data_wrapper import MyTensor, USE_CUDA
 
-device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
+device = torch.device("cuda:0" if (USE_CUDA and torch.cuda.is_available()) else "cpu")
 
 class NoisyLinear(nn.Module):
     """Applies a noisy linear transformation to the incoming data: :math:`y = (mu_w + sigma_w \cdot epsilon_w)x + mu_b + sigma_b \cdot epsilon_b`
