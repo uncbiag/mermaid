@@ -35,9 +35,6 @@ ffi = FFI()
 
 
 
-
-
-
 class STNFunction_ND_BCXYZ(Module):
     """
    Spatial transform function for 1D, 2D, and 3D. In BCXYZ format (this IS the format used in the current toolbox).
@@ -59,7 +56,21 @@ class STNFunction_ND_BCXYZ(Module):
 
     def forward_stn(self, input1, input2, ndim):
         if ndim==1:
-            raise ValueError("Not implemented")
+            # use 2D interpolation to mimick 1D interpolation
+            # now test this for 1D
+            phi_rs = input2.reshape(list(input2.size()) + [1])
+            input1_rs = input1.reshape(list(input1.size()) + [1])
+
+            phi_rs_size = list(phi_rs.size())
+            phi_rs_size[1] = 2
+
+            phi_rs_ordered = torch.zeros(phi_rs_size,dtype=phi_rs.dtype,device=phi_rs.device)
+            # keep dimension 1 at zero
+            phi_rs_ordered[:, 1, ...] = phi_rs[:, 0, ...]
+
+            output_rs = torch.nn.functional.grid_sample(input1_rs, phi_rs_ordered.permute([0, 2, 3, 1]), mode=self.mode, padding_mode=self.zero_boundary)
+            output = output_rs[:, :, :, 0]
+
         if ndim==2:
             # todo double check, it seems no transpose is need for 2d, already in height width design
             input2_ordered = torch.zeros_like(input2)

@@ -277,6 +277,7 @@ class RegisterImagePair(object):
     def register_images_from_files(self,source_filename,target_filename,model_name,extra_info=None,
                                    lsource_filename=None, ltarget_filename=None,
                                    nr_of_iterations=None,
+                                   learning_rate=None,
                                    similarity_measure_type=None,
                                    similarity_measure_sigma=None,
                                    compute_similarity_measure_at_low_res=None,
@@ -301,6 +302,7 @@ class RegisterImagePair(object):
         :param target_filename: filename for the target image
         :param model_name: name of the desired registration model [string]
         :param nr_of_iterations: nr of iterations
+        :param learning_rate: learning rate of optimizer
         :param similarity_measure_type: type of similarity measure ('ssd' or 'ncc')
         :param similarity_measure_sigma: similarity measures are weighted by 1/sigma^2
         :param compute_similarity_measure_at_low_res: allows computation of similarity measure at lower resolution, specified by map_low_res_factor
@@ -372,6 +374,7 @@ class RegisterImagePair(object):
 
         self.register_images(ISource,ITarget,spacing,model_name,extra_info = extra_info,LSource=LSource,LTarget=LTarget,
                       nr_of_iterations=nr_of_iterations,
+                      learning_rate=learning_rate,
                       similarity_measure_type=similarity_measure_type,
                       similarity_measure_sigma=similarity_measure_sigma,
                       compute_similarity_measure_at_low_res=compute_similarity_measure_at_low_res,
@@ -391,6 +394,7 @@ class RegisterImagePair(object):
 
     def register_images(self,ISource,ITarget,spacing,model_name,extra_info=None,LSource=None, LTarget=None,
                         nr_of_iterations=None,
+                        learning_rate=None,
                         similarity_measure_type=None,
                         similarity_measure_sigma=None,
                         compute_similarity_measure_at_low_res=None,
@@ -416,6 +420,7 @@ class RegisterImagePair(object):
         :param spacing: image spacing [dx,dy,dz]
         :param model_name: name of the desired registration model [string]
         :param nr_of_iterations: nr of iterations
+        :param learning_rate: learning rate of optimizer
         :param similarity_measure_type: type of similarity measure ('ssd' or 'ncc')
         :param similarity_measure_sigma: similarity measures are weighted by 1/sigma^2
         :param compute_similarity_measure_at_low_res: allows computation of similarity measure at lower resolution, specified by map_low_res_factor
@@ -522,14 +527,14 @@ class RegisterImagePair(object):
                 if use_consensus_optimization or use_batch_optimization:
                     raise ValueError('Consensus or batch optimization is not yet supported for multi-scale registration')
                 else:
-                    self.opt = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map)
+                    self.opt = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map, default_learning_rate=learning_rate)
             else:
                 if use_consensus_optimization:
-                    self.opt = MO.SimpleSingleScaleConsensusRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map)
+                    self.opt = MO.SimpleSingleScaleConsensusRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map, default_learning_rate=learning_rate)
                 elif use_batch_optimization:
-                    self.opt = MO.SimpleSingleScaleBatchRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map)
+                    self.opt = MO.SimpleSingleScaleBatchRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map, default_learning_rate=learning_rate)
                 else:
-                    self.opt = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map)
+                    self.opt = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map, default_learning_rate=learning_rate)
 
             if visualize_step is not None:
                 self.opt.get_optimizer().set_visualization(True)
@@ -538,8 +543,9 @@ class RegisterImagePair(object):
                 self.opt.get_optimizer().set_visualization(False)
                 self.opt.get_optimizer().set_visualize_step(visualize_step)
 
-            self.opt.set_light_analysis_on(self.light_analysis_on)
+            #self.opt.get_optimizer().set
 
+            self.opt.set_light_analysis_on(self.light_analysis_on)
 
             self.optimizer_has_been_initialized = True
 

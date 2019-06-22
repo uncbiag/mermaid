@@ -44,7 +44,7 @@ class STN_ND_BCXYZ(Module):
         super(STN_ND_BCXYZ, self).__init__()
         self.spacing = spacing
         """spatial dimension"""
-        if use_compile_version or len(self.spacing)==1:
+        if use_compile_version:
             if use_bilinear:
                 self.f = STNFunction_ND_BCXYZ_Compile(self.spacing,zero_boundary)
             else:

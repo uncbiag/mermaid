@@ -49,7 +49,7 @@
         "gradient_clipping": {
             "clip_display": true,
             "clip_individual_gradient": true,
-            "clip_individual_gradient_value": 1.0158730158730158,
+            "clip_individual_gradient_value": 1.0,
             "clip_shared_gradient": true,
             "clip_shared_gradient_value": 1.0
         },
@@ -62,21 +62,21 @@
         "sgd": {
             "individual": {
                 "dampening": 0.0,
-                "lr": 0.1,
+                "lr": 0.02,
                 "momentum": 0.9,
                 "nesterov": true,
                 "weight_decay": 0.0
             },
             "shared": {
                 "dampening": 0.0,
-                "lr": 0.01,
+                "lr": 0.02,
                 "momentum": 0.9,
                 "nesterov": true,
                 "weight_decay": 0.0
             }
         },
         "single_scale": {
-            "nr_of_iterations": 10,
+            "nr_of_iterations": 50,
             "rel_ftol": 1e-07
         },
         "use_step_size_scheduler": true,
