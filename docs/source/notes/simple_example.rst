@@ -23,9 +23,9 @@ Next let's import some of the *mermaid* modules contained in the *pyreg* directo
 .. code::
 
     import set_pyreg_paths                  # import the required paths
-    import pyreg.example_generation as eg   # load the module to generate examples
-    import pyreg.module_parameters as pars  # load the module to support parameters
-    import pyreg.multiscale_optimizer as MO # load the optimizer module (which also supports single scale optimization)
+    import mermaid.example_generation as eg   # load the module to generate examples
+    import mermaid.module_parameters as pars  # load the module to support parameters
+    import mermaid.multiscale_optimizer as MO # load the optimizer module (which also supports single scale optimization)
 
 
 Now let's choose a model, specify if it uses a map for the solution (i.e., warps the source image via a map

@@ -1,8 +1,8 @@
 Example generation
 ==============================================
 
-.. inheritance-diagram:: pyreg.example_generation
-.. automodule:: pyreg.example_generation
+.. inheritance-diagram:: mermaid.example_generation
+.. automodule:: mermaid.example_generation
 	:members:
 	:undoc-members:
 	   

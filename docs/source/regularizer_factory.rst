@@ -1,8 +1,8 @@
 Regularizer factory
 ==============================================
 
-.. inheritance-diagram:: pyreg.regularizer_factory
-.. automodule:: pyreg.regularizer_factory
+.. inheritance-diagram:: mermaid.regularizer_factory
+.. automodule:: mermaid.regularizer_factory
 	:members:
 	:undoc-members:
 	   

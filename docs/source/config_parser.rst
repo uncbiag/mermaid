@@ -1,7 +1,7 @@
 Config parser
 ==============================================
 
-.. inheritance-diagram:: pyreg.config_parser
-.. automodule:: pyreg.config_parser
+.. inheritance-diagram:: mermaid.config_parser
+.. automodule:: mermaid.config_parser
 	:members:
 	:undoc-members:

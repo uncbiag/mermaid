@@ -1,8 +1,8 @@
 Utilities
 ==============================================
 
-.. inheritance-diagram:: pyreg.utils
-.. automodule:: pyreg.utils
+.. inheritance-diagram:: mermaid.utils
+.. automodule:: mermaid.utils
 	:members:
 	:undoc-members:
 	   

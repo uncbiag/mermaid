@@ -1,7 +1,7 @@
 Noisy convolution
 ==============================================
 
-.. inheritance-diagram:: pyreg.noisy_convolution
-.. automodule:: pyreg.noisy_convolution
+.. inheritance-diagram:: mermaid.noisy_convolution
+.. automodule:: mermaid.noisy_convolution
 	:members:
 	:undoc-members:

@@ -1,8 +1,8 @@
 Parameter module
 ==============================================
 
-.. inheritance-diagram:: pyreg.module_parameters
-.. automodule:: pyreg.module_parameters
+.. inheritance-diagram:: mermaid.module_parameters
+.. automodule:: mermaid.module_parameters
 	:members:
 	:undoc-members:
 	   

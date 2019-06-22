@@ -1,8 +1,8 @@
 Viewers
 ==============================================
 
-.. inheritance-diagram:: pyreg.viewers
-.. automodule:: pyreg.viewers
+.. inheritance-diagram:: mermaid.viewers
+.. automodule:: mermaid.viewers
 	:members:
 	:undoc-members:
 	   

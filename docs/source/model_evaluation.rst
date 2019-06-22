@@ -1,8 +1,8 @@
 Model evaluation
 ==============================================
 
-.. inheritance-diagram:: pyreg.model_evaluation
-.. automodule:: pyreg.model_evaluation
+.. inheritance-diagram:: mermaid.model_evaluation
+.. automodule:: mermaid.model_evaluation
 	:members:
 	:undoc-members:
 	   

@@ -1,7 +1,7 @@
 fileio
 ==============================================
 
-.. inheritance-diagram:: pyreg.fileio
-.. automodule:: pyreg.fileio
+.. inheritance-diagram:: mermaid.fileio
+.. automodule:: mermaid.fileio
 	:members:
 	:undoc-members:

@@ -1,8 +1,7 @@
 Smoother factory
 ==============================================
 
-.. inheritance-diagram:: pyreg.smoother_factory
-.. automodule:: pyreg.smoother_factory
-	:members:
-	:undoc-members:
-	   
+.. inheritance-diagram:: mermaid.smoother_factory
+.. automodule:: mermaid.smoother_factory
+   :members:
+   :undoc-members:

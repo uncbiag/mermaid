@@ -33,7 +33,7 @@ Now, once we have a multi-scale optimizer
 
 .. code::
    
-   import pyreg.multiscale_optimizer as MO
+   import mermaid.multiscale_optimizer as MO
    mo = MO.MultiScaleRegistrationOptimizer(modelName,sz,spacing,useMap,mapLowResFactor,params)
 
 

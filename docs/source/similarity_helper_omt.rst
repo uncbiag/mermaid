@@ -1,7 +1,7 @@
 Similarity helper OMT
 ==============================================
 
-.. inheritance-diagram:: pyreg.similarity_helper_omt
-.. automodule:: pyreg.similarity_helper_omt
+.. inheritance-diagram:: mermaid.similarity_helper_omt
+.. automodule:: mermaid.similarity_helper_omt
 	:members:
 	:undoc-members:

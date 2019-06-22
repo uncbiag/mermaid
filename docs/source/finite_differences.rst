@@ -1,8 +1,8 @@
 Finite differences
 ==============================================
 
-.. inheritance-diagram:: pyreg.finite_differences
-.. automodule:: pyreg.finite_differences
+.. inheritance-diagram:: mermaid.finite_differences
+.. automodule:: mermaid.finite_differences
 	:members:
 	:undoc-members:
 	   

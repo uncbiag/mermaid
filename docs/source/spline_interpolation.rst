@@ -1,7 +1,7 @@
 Spline interpolation
 ==============================================
 
-.. inheritance-diagram:: pyreg.spline_interpolation
-.. automodule:: pyreg.spline_interpolation
+.. inheritance-diagram:: mermaid.spline_interpolation
+.. automodule:: mermaid.spline_interpolation
 	:members:
 	:undoc-members:

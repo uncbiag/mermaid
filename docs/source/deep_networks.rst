@@ -1,7 +1,7 @@
 Deep networks
 ==============================================
 
-.. inheritance-diagram:: pyreg.deep_networks
-.. automodule:: pyreg.deep_networks
+.. inheritance-diagram:: mermaid.deep_networks
+.. automodule:: mermaid.deep_networks
 	:members:
 	:undoc-members:
