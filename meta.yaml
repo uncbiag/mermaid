@@ -6,8 +6,8 @@
 # conda build . -c pytorch -c conda-forge -c anaconda
 #
 # After the pacckage has build, copy it in your local directory (subdirectory osx64, for example).
-# Then index it with this command:
-# conda index /Users/mn/my_local_conda_channel_osx/
+# Then index it with this command (needs to be run for each subdirectory / architecture: noarch, linux-64, osx-64):
+# conda index /Users/mn/my_local_conda_channel_osx/osx-64
 #
 # Once it is indexed it can be installed from there (ideally into a new, empty virtual environment as follows)
 # conda list env
