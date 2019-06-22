@@ -11,8 +11,8 @@ mermaid requirements
 
 *mermaid* is based on the following:
 
-  - python 3
-  - pytorch > 1.0
+  - python >= 3.6
+  - pytorch >= 1.0
 
 It runs on Linux and on OSX. Windows installs might be possible, but have not been tested (hence will likely not work out of the box) and are not officially supported.
     
@@ -31,6 +31,13 @@ It is best to install everything into a conda virtual environment. This can be d
    conda create --name mermaid python=3.7 pip
    conda activate mermaid
 
+If you later want to remove this environment again, this can be done by executing
+
+.. code::
+
+   conda remove --name mermaid --all
+   
+   
 Mermaid installation via conda
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. todo::

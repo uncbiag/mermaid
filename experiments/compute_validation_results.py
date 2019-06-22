@@ -2,7 +2,6 @@ from __future__ import print_function
 from builtins import zip
 from builtins import str
 from builtins import range
-import set_pyreg_paths
 
 # needs to be imported before matplotlib to assure proper plotting
 import mermaid.visualize_registration_results as vizReg

@@ -2,7 +2,6 @@ from __future__ import print_function
 from builtins import str
 from builtins import range
 
-import set_pyreg_paths
 import multiprocessing as mp
 
 # needs to be imported before matplotlib to assure proper plotting

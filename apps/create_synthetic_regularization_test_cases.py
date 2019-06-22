@@ -5,7 +5,6 @@ from future.utils import native_str
 from builtins import str
 from builtins import range
 
-import set_pyreg_paths
 import mermaid.model_factory as py_mf
 import matplotlib as matplt
 

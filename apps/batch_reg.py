@@ -10,7 +10,6 @@ Contributors:
 
 from __future__ import print_function
 from builtins import str
-import set_pyreg_paths
 
 import matplotlib as matplt
 from mermaid.config_parser import MATPLOTLIB_AGG

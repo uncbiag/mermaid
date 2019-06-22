@@ -3,8 +3,6 @@ from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 
-import set_pyreg_paths
-
 import mermaid.simple_interface as SI
 import mermaid.example_generation as EG
 import mermaid.module_parameters as pars

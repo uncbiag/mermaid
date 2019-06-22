@@ -5,7 +5,6 @@ Contributors:
 """
 from __future__ import print_function
 
-import set_pyreg_paths
 import torch
 from torch.autograd import Variable
 import mermaid.utils as utils

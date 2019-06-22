@@ -9,7 +9,6 @@ from torch.utils.data import Dataset, DataLoader
 import os
 import glob
 
-import set_pyreg_paths
 import mermaid.deep_smoothers as deep_smoothers
 import mermaid.fileio as FIO
 import mermaid.module_parameters as pars

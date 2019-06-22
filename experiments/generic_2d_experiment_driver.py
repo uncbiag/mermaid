@@ -4,7 +4,6 @@ from __future__ import absolute_import
 from builtins import str
 from builtins import range
 
-import set_pyreg_paths
 import command_line_execution_tools as ce
 
 import mermaid.module_parameters as pars

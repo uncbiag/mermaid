@@ -4,8 +4,6 @@ from __future__ import absolute_import
 from builtins import str
 from builtins import range
 
-import set_pyreg_paths
-
 import os
 import shutil
 import glob
