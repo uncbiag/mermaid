@@ -78,7 +78,19 @@ This will install all library links and all missing packages and will allow merm
 Creating the documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The documentation is created via `sphinx <http://www.sphinx-doc.org/>`_. To build it first install graphviz (on OSX: `brew install graphviz`). Then execute the following
+The documentation is created via `sphinx <http://www.sphinx-doc.org/>`_. To build it first install graphviz (on OSX: `brew install graphviz` or via conda, see below). If you installed via the developer option (via `setup.py`) you will also need to install *pandoc* (should be auto installed via conda). This can be done by following the instructions `here <https://pypi.org/project/pypandoc/>`_ (pypandoc will be auto installed via `setup.py`) or by installing it manually via conda:
+
+.. code::
+
+   conda install -c conda-forge pandoc
+
+Graphviz can also be installed via conda if desired:
+
+.. code::
+
+   conda install -c anaconda graphviz
+
+Then execute the following to make the documentation
 
 .. code::
 
@@ -92,6 +104,14 @@ This will create the docs in `build/html`.
 Running the code
 ^^^^^^^^^^^^^^^^
 
-The simplest way to start is to look example script `demos/test_simple_interface,py`, or to run the examples from the `jupyter` directory which contains various example jupyter notebooks.
+The simplest way to start is to look example script `demos/test_simple_interface,py`, or to run the examples from the `jupyter` directory which contains various example jupyter notebooks. You can run the jupyter notebooks as follows (should be intalled if you installed via conda or `python setup.py develop` as described above):
+
+.. code::
+
+   cd mermaid
+   cd jupyter
+   jupyter notebook
+
+
 
    

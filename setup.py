@@ -24,6 +24,7 @@ VERSION = '0.2.0'
 REQUIRED = [
     "ipython",
     "jupyter",
+    "ipykernel",
     "pynrrd",
     "future",
     "cython",
@@ -38,6 +39,9 @@ REQUIRED = [
     "scipy",
     "openpyxl",
     "sphinx",
+    "nbsphinx",
+    "pandoc",
+    "pypandoc",
     "statsmodels",
     "numpy"
     # 'requests', 'maya', 'records',

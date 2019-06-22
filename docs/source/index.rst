@@ -19,7 +19,7 @@ mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
    :glob:
    :maxdepth: 1
    :caption: Notes
-
+	     
    notes/installation.rst
    notes/parameters.rst
    notes/simple_example.rst
@@ -28,7 +28,13 @@ mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
 
 .. toctree::
    :maxdepth: 1
-   :caption: Package Reference
+   :caption: Jupyter notebook examples
+
+   jupyter/example_registration.ipynb
+	     
+.. toctree::
+   :maxdepth: 1
+   :caption: Package reference
 
    config_parser
    custom_optimizers

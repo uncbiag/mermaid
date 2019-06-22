@@ -39,6 +39,7 @@ requirements:
     - python >=3.6
     - ipython
     - jupyter
+    - ipykernel
     - future
     - cython
     - scikit-image
@@ -52,6 +53,10 @@ requirements:
     - scipy
     - openpyxl
     - sphinx
+    - nbsphinx
+    - pandoc
+    - pypandoc
+    - graphviz
     - statsmodels
 
 #    - pytorch-fft # [not osx]
