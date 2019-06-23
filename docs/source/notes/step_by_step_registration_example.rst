@@ -33,6 +33,9 @@ Hence we als import numpy
 
   import numpy
 
+mermaid parameters
+^^^^^^^^^^^^^^^^^^
+  
 Registration algorithms tend to have a lot of settings. Starting from the registration model, over the selection and settings
 for the optimizer, to general compute settings (for example, if mermaid should be run on the GPU or CPU).
 All the non-compute settings that affect registration results are automatically kept track inside a parameters structure.
@@ -44,6 +47,9 @@ So let's first create an empty *mermaid* parameter object
   # first we create a parameter structure to keep track of all registration settings
   params = pars.ParameterDict()
 
+Generating registration example data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  
 Now we create some example data (source and target image examples for a two-dimensional square, of size 64x64) and keep track of the generated settings via this parameter object
 
 .. code::
@@ -85,6 +91,9 @@ And for its commented version step_by_step_example_data_with_comments.json:
         }
     }
 
+Performing the registration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    
 Now we are ready to instantiate the registration object from mermaid
 
 .. code::
@@ -280,3 +289,20 @@ These settings are explained in step_by_step_basic_settings_with_comments.json a
             "weight_clipping_value": "Value to which the norm is being clipped"
         }
     }
+
+Running the actual registration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We can now edit the generated json file and modify the desired settings. The most important ones are proably the similiarty measure as well as the settings for the multi-Gaussian smoother. These can then be spefified via keyword *params*, i.e., something like
+
+.. code::
+
+   si.register_images(I0, I1, spacing, model_name='lddmm_shooting_map',
+                       nr_of_iterations=50,
+                       use_multi_scale=False,
+                       visualize_step=10,
+                       optimizer_name='sgd',
+                       learning_rate=0.02,
+                       rel_ftol=1e-7,
+                       json_config_out_filename=('my_used_params.json','my_used_params_with_comments.json'),
+                       params='my_params.json')
