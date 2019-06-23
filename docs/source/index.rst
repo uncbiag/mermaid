@@ -31,42 +31,23 @@ mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
    :caption: Jupyter notebook examples
 
    jupyter/example_registration.ipynb
-	     
+
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Package reference
 
-   config_parser
-   custom_optimizers
-   custom_pytorch_extensions
-   data_wrapper
-   deep_networks
-   deep_smoothers
-   example_generation
-   fileio
-   finite_differences
-   forward_models
-   image_manipulations
-   image_sampling
-   load_default_settings
-   model_evaluation
-   model_factory
-   module_parameters
-   multiscale_optimizer
-   noisy_convolution
-   optimizer_data_loaders
-   registration_networks
-   regularizer_factory
-   rungekutta_integrators
-   similarity_helper_omt
-   similarity_measure_factory
    simple_interface
-   spline_interpolation
-   smoother_factory
-   stn
-   utils
-   viewers
-   visualize_registration_results
+   registration_models
+   similarity_measures
+   basic_numerics
+   optimizers
+   visualization
+   configurations
+   image_io
+   regularization_and_smoothing
+   utilities
+   deep_networks
+   
 
 Indices and tables
 ==================
