@@ -1,0 +1,86 @@
+{
+    "model": {
+        "deformation": {
+            "compute_similarity_measure_at_low_res": false,
+            "map_low_res_factor": 1.0,
+            "use_map": true
+        },
+        "registration_model": {
+            "forward_model": {
+                "adjoin_on": true,
+                "atol": 1e-05,
+                "number_of_time_steps": 20,
+                "rtol": 1e-05,
+                "smoother": {
+                    "multi_gaussian_stds": [
+                        0.05,
+                        0.1,
+                        0.15,
+                        0.2,
+                        0.25
+                    ],
+                    "multi_gaussian_weights": [
+                        0.06666666666666667,
+                        0.13333333333333333,
+                        0.19999999999999998,
+                        0.26666666666666666,
+                        0.3333333333333333
+                    ],
+                    "type": "multiGaussian"
+                },
+                "solver": "rk4"
+            },
+            "loss": {
+                "display_max_displacement": false,
+                "limit_displacement": false,
+                "max_displacement": 0.05
+            },
+            "similarity_measure": {
+                "develop_mod_on": false,
+                "sigma": 0.1,
+                "type": "ssd"
+            },
+            "spline_order": 1,
+            "type": "lddmm_shooting_map",
+            "use_CFL_clamping": true
+        }
+    },
+    "optimizer": {
+        "gradient_clipping": {
+            "clip_display": true,
+            "clip_individual_gradient": false,
+            "clip_individual_gradient_value": 1.0158730158730158,
+            "clip_shared_gradient": true,
+            "clip_shared_gradient_value": 1.0
+        },
+        "name": "sgd",
+        "scheduler": {
+            "factor": 0.5,
+            "patience": 10,
+            "verbose": true
+        },
+        "sgd": {
+            "individual": {
+                "dampening": 0.0,
+                "lr": 0.01,
+                "momentum": 0.9,
+                "nesterov": true,
+                "weight_decay": 0.0
+            },
+            "shared": {
+                "dampening": 0.0,
+                "lr": 0.01,
+                "momentum": 0.9,
+                "nesterov": true,
+                "weight_decay": 0.0
+            }
+        },
+        "single_scale": {
+            "nr_of_iterations": 1,
+            "rel_ftol": 0.0001
+        },
+        "use_step_size_scheduler": true,
+        "weight_clipping_type": "none",
+        "weight_clipping_value": 1.0
+    }
+}

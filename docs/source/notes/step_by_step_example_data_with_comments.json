@@ -1,0 +1,7 @@
+{
+    "square_example_images": {
+        "__doc__": "Controlling the size of a nD cube",
+        "len_l": "Maximum side-length of square",
+        "len_s": "Mimimum side-length of square"
+    }
+}

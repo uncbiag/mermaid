@@ -1,0 +1,78 @@
+{
+    "model": {
+        "deformation": {
+            "compute_similarity_measure_at_low_res": "If set to true map is not upsampled and the entire computations proceeds at low res",
+            "map_low_res_factor": "Set to a value in (0,1) if a map-based solution should be computed at a lower internal resolution (image matching is still at full resolution",
+            "use_map": "use a map for the solution or not True/False"
+        },
+        "registration_model": {
+            "forward_model": {
+                "__doc__": "settings for the forward model",
+                "adjoin_on": "use adjoint optimization",
+                "atol": "absolute error torlance for dopri5",
+                "number_of_time_steps": "Number of time-steps to per unit time-interval integrate the PDE",
+                "rtol": "relative error torlance for dopri5",
+                "smoother": {
+                    "multi_gaussian_stds": "std deviations for the Gaussians",
+                    "multi_gaussian_weights": "weights for the multiple Gaussians",
+                    "type": "type of smoother (diffusion|gaussian|adaptive_gaussian|multiGaussian|adaptive_multiGaussian|gaussianSpatial|adaptiveNet)"
+                },
+                "solver": "ode solver"
+            },
+            "loss": {
+                "__doc__": "settings for the loss function",
+                "display_max_displacement": "displays the current maximal displacement",
+                "limit_displacement": "[True/False] if set to true limits the maximal displacement based on the max_displacement_setting",
+                "max_displacement": "Max displacement penalty added to loss function of limit_displacement set to True"
+            },
+            "similarity_measure": {
+                "develop_mod_on": "developing mode",
+                "sigma": "1/sigma^2 is the weight in front of the similarity measure",
+                "type": "type of similarity measure (ssd/ncc)"
+            },
+            "spline_order": "Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline",
+            "type": "Name of the registration model",
+            "use_CFL_clamping": "If the model uses time integration, CFL clamping is used"
+        }
+    },
+    "optimizer": {
+        "gradient_clipping": {
+            "__doc__": "clipping settings for the gradient for optimization",
+            "clip_display": "If set to True displays if clipping occurred",
+            "clip_individual_gradient": "If set to True, the gradient for the individual parameters will be clipped",
+            "clip_individual_gradient_value": "Value to which the gradient for the individual parameters is clipped",
+            "clip_shared_gradient": "If set to True, the gradient for the shared parameters will be clipped",
+            "clip_shared_gradient_value": "Value to which the gradient for the shared parameters is clipped"
+        },
+        "name": "Optimizer (lbfgs|adam|sgd)",
+        "scheduler": {
+            "__doc__": "parameters for the ReduceLROnPlateau scheduler",
+            "factor": "reduction factor",
+            "patience": "how many steps without reduction before LR is changed",
+            "verbose": "if True prints out changes in learning rate"
+        },
+        "sgd": {
+            "individual": {
+                "dampening": "sgd dampening",
+                "lr": "desired learning rate",
+                "momentum": "sgd momentum",
+                "nesterov": "use Nesterove scheme",
+                "weight_decay": "sgd weight decay"
+            },
+            "shared": {
+                "dampening": "sgd dampening",
+                "lr": "desired learning rate",
+                "momentum": "sgd momentum",
+                "nesterov": "use Nesterove scheme",
+                "weight_decay": "sgd weight decay"
+            }
+        },
+        "single_scale": {
+            "nr_of_iterations": "number of iterations",
+            "rel_ftol": "relative termination tolerance for optimizer"
+        },
+        "use_step_size_scheduler": "If set to True the step sizes are reduced if no progress is made",
+        "weight_clipping_type": "Type of weight clipping that should be used [l1|l2|l1_individual|l2_individual|l1_shared|l2_shared|None]",
+        "weight_clipping_value": "Value to which the norm is being clipped"
+    }
+}
