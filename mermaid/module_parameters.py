@@ -26,10 +26,10 @@ class ParameterDict(object):
 
     def __str__(self):
 
-        return 'ext = ' + self.ext.__str__() + "\n" + \
-            'int = ' + self.int.__str__() + "\n" + \
-            'com = ' + self.com.__str__() + "\n" + \
-            'currentCategoryName = ' + str( self.currentCategoryName) +"\n"
+        return 'ext = ' + "\n" + json.dumps(self.ext, indent=4, sort_keys=True) + "\n" + \
+               'int = ' + "\n" + json.dumps(self.int, indent=4, sort_keys=True) + "\n" + \
+               'com = ' + "\n" + json.dumps(self.com, indent=4, sort_keys=True) + "\n" + \
+               'currentCategoryName = ' + str(self.currentCategoryName) + "\n"
 
     def isempty(self):
         return self.int=={}
