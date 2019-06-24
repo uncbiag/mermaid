@@ -2,30 +2,60 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import os
-from . import module_parameters as pars
+import module_parameters as pars
 import multiprocessing as mp
+
+def find_settings_directory(first_choice,second_choice,settings_name):
+    if first_choice is not None:
+        if os.path.exists(first_choice):
+            first_choice_settings_name = os.path.join(first_choice,settings_name)
+            if os.path.exists(first_choice_settings_name):
+                print('Will read from {}'.format(first_choice_settings_name))
+                return first_choice_settings_name
+
+    if second_choice is not None:
+        if os.path.exists(second_choice):
+            second_choice_settings_name = os.path.join(second_choice,settings_name)
+            if os.path.exists(second_choice_settings_name):
+                print('Will read from {}'.format(second_choice_settings_name))
+                return second_choice_settings_name
+
+    print('Could not find a settings file for {}'.format(settings_name))
+    return None
+
 
 # first define all the configuration filenames
 this_directory = os.path.dirname(__file__)
 # __file__ is the absolute path to the current python file.
 
-_compute_settings_filename = os.path.join(this_directory, r'../settings/compute_settings.json')
-_compute_settings_comments_filename = os.path.join(this_directory, r'../settings/compute_settings_comments.json')
+standard_settings_directory = os.path.join(this_directory, r'../settings')
 
-_baseconf_settings_filename = os.path.join(this_directory, r'../settings/baseconf_settings.json')
-_baseconf_settings_filename_comments = os.path.join(this_directory, r'../settings/baseconf_settings_comments.json')
+home_directory = os.path.expanduser('~')
+putative_local_settings_directory = os.path.join(home_directory,r'.mermaid_settings')
 
-_algconf_settings_filename = os.path.join(this_directory, r'../settings/algconf_settings.json')
-_algconf_settings_filename_comments = os.path.join(this_directory, r'../settings/algconf_settings_comments.json')
+if os.path.exists(putative_local_settings_directory):
+    print('Found local settings directory; will read settings from there as available, otherwise from {}'.format(standard_settings_directory))
+    local_settings_directory = putative_local_settings_directory
+else:
+    local_settings_directory = None
 
-_democonf_settings_filename = os.path.join(this_directory, r'../settings/democonf_settings.json')
-_democonf_settings_filename_comments = os.path.join(this_directory, r'../settings/democonf_settings_comments.json')
+_compute_settings_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'compute_settings.json')
+_compute_settings_comments_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'compute_settings_comments.json')
 
-_datapro_settings_filename = os.path.join(this_directory, r'../settings/datapro_settings.json')
-_datapro_settings_filename_comments = os.path.join(this_directory, r'../settings/datapro_settings_comments.json')
+_baseconf_settings_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'baseconf_settings.json')
+_baseconf_settings_filename_comments = find_settings_directory(local_settings_directory, standard_settings_directory, r'baseconf_settings_comments.json')
 
-_respro_settings_filename = os.path.join(this_directory, r'../settings/respro_settings.json')
-_respro_settings_filename_comments = os.path.join(this_directory, r'../settings/respro_settings_comments.json')
+_algconf_settings_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'algconf_settings.json')
+_algconf_settings_filename_comments = find_settings_directory(local_settings_directory, standard_settings_directory, r'algconf_settings_comments.json')
+
+_democonf_settings_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'democonf_settings.json')
+_democonf_settings_filename_comments = find_settings_directory(local_settings_directory, standard_settings_directory, r'democonf_settings_comments.json')
+
+_datapro_settings_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'datapro_settings.json')
+_datapro_settings_filename_comments = find_settings_directory(local_settings_directory, standard_settings_directory, r'datapro_settings_comments.json')
+
+_respro_settings_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'respro_settings.json')
+_respro_settings_filename_comments = find_settings_directory(local_settings_directory, standard_settings_directory, r'respro_settings_comments.json')
 
 def get_default_compute_settings_filenames():
     return (_compute_settings_filename,_compute_settings_comments_filename)
@@ -65,6 +95,7 @@ def get_baseconf_settings( baseconf_settings_filename = None ):
     if baseconf_settings_filename is not None:
         print( 'Loading baseconf configuration from: ' + baseconf_settings_filename )
         baseconf_params.load_JSON( baseconf_settings_filename )
+        return baseconf_params
     else:
         print( 'Using default baseconf settings from config_parser.py')
 
@@ -88,6 +119,7 @@ def get_democonf_settings( democonf_settings_filename = None ):
     if democonf_settings_filename is not None:
         print( 'Loading democonf configuration from: ' + democonf_settings_filename )
         democonf_params.load_JSON( democonf_settings_filename )
+        return democonf_params
     else:
         print( 'Using default democonf settings from config_parser.py' )
 
@@ -106,6 +138,7 @@ def get_algconf_settings( algconf_settings_filename = None ):
     if algconf_settings_filename is not None:
         print( 'Loading algconf configuration from: ' + algconf_settings_filename )
         algconf_params.load_JSON( algconf_settings_filename )
+        return algconf_params
     else:
         print( 'Using default algconf settings from config_parser.py')
 
@@ -164,6 +197,7 @@ def get_datapro_settings(datapro_settings_filename = None ):
     if datapro_settings_filename is not None:
         print( 'Loading datapro configuration from: ' + datapro_settings_filename )
         datapro_params.load_JSON( datapro_settings_filename )
+        return datapro_params
     else:
         print( 'Using default datapro settings from config_parser.py')
 
@@ -195,6 +229,7 @@ def get_respro_settings(respro_settings_filename = None):
     if respro_settings_filename is not None:
         print( 'Loading respro configuration from: ' + respro_settings_filename )
         respro_params.load_JSON(respro_settings_filename)
+        return respro_params
     else:
         print( 'Using default respro settings from config_parser.py')
 
