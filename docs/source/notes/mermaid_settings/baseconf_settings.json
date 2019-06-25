@@ -1,0 +1,7 @@
+{
+    "baseconf": {
+        "load_default_settings_from_default_setting_files": false,
+        "load_settings_from_file": true,
+        "save_settings_to_file": true
+    }
+}

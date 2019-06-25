@@ -1,0 +1,11 @@
+{
+    "respro": {
+        "__doc__": "settings for the results process",
+        "expr_name": "name of experiment",
+        "save_excel": "save results in excel",
+        "save_fig": "save visualized results",
+        "save_fig_path": "path of saved figures",
+        "visualize": "if set to true intermediate results are visualized",
+        "visualize_step": "Number of iterations between visualization output"
+    }
+}

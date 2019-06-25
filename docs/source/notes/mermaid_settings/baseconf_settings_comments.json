@@ -1,0 +1,8 @@
+{
+    "baseconf": {
+        "__doc__": "determines if settings should be loaded from file and visualization options",
+        "load_default_settings_from_default_setting_files": "if set to True default configuration files (in settings directory) are first loaded",
+        "load_settings_from_file": "if set to True configuration settings are loaded from file",
+        "save_settings_to_file": "if set to True configuration settings are saved to file"
+    }
+}

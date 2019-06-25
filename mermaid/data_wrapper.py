@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import torch
-from .config_parser import CUDA_ON, USE_FLOAT16
+from mermaid.config_parser import CUDA_ON, USE_FLOAT16
 
 # ----------------- global setting ----------------------------------------
 USE_CUDA = torch.cuda.is_available() & CUDA_ON

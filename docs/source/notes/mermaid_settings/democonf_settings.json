@@ -1,0 +1,7 @@
+{
+    "democonf": {
+        "dim": 2,
+        "example_img_len": 128,
+        "use_real_images": false
+    }
+}

@@ -2,10 +2,10 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 import os
-import module_parameters as pars
+import mermaid.module_parameters as pars
 import multiprocessing as mp
 
-def find_settings_directory(first_choice,second_choice,settings_name):
+def _find_settings_directory(first_choice,second_choice,settings_name):
     if first_choice is not None:
         if os.path.exists(first_choice):
             first_choice_settings_name = os.path.join(first_choice,settings_name)
@@ -39,34 +39,54 @@ if os.path.exists(putative_local_settings_directory):
 else:
     local_settings_directory = None
 
-_compute_settings_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'compute_settings.json')
-_compute_settings_comments_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'compute_settings_comments.json')
+_compute_settings_filename = _find_settings_directory(local_settings_directory, standard_settings_directory, r'compute_settings.json')
+_compute_settings_comments_filename = _find_settings_directory(local_settings_directory, standard_settings_directory, r'compute_settings_comments.json')
 
-_baseconf_settings_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'baseconf_settings.json')
-_baseconf_settings_filename_comments = find_settings_directory(local_settings_directory, standard_settings_directory, r'baseconf_settings_comments.json')
+_baseconf_settings_filename = _find_settings_directory(local_settings_directory, standard_settings_directory, r'baseconf_settings.json')
+_baseconf_settings_filename_comments = _find_settings_directory(local_settings_directory, standard_settings_directory, r'baseconf_settings_comments.json')
 
-_algconf_settings_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'algconf_settings.json')
-_algconf_settings_filename_comments = find_settings_directory(local_settings_directory, standard_settings_directory, r'algconf_settings_comments.json')
+_algconf_settings_filename = _find_settings_directory(local_settings_directory, standard_settings_directory, r'algconf_settings.json')
+_algconf_settings_filename_comments = _find_settings_directory(local_settings_directory, standard_settings_directory, r'algconf_settings_comments.json')
 
-_democonf_settings_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'democonf_settings.json')
-_democonf_settings_filename_comments = find_settings_directory(local_settings_directory, standard_settings_directory, r'democonf_settings_comments.json')
+_democonf_settings_filename = _find_settings_directory(local_settings_directory, standard_settings_directory, r'democonf_settings.json')
+_democonf_settings_filename_comments = _find_settings_directory(local_settings_directory, standard_settings_directory, r'democonf_settings_comments.json')
 
-_datapro_settings_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'datapro_settings.json')
-_datapro_settings_filename_comments = find_settings_directory(local_settings_directory, standard_settings_directory, r'datapro_settings_comments.json')
+_datapro_settings_filename = _find_settings_directory(local_settings_directory, standard_settings_directory, r'datapro_settings.json')
+_datapro_settings_filename_comments = _find_settings_directory(local_settings_directory, standard_settings_directory, r'datapro_settings_comments.json')
 
-_respro_settings_filename = find_settings_directory(local_settings_directory, standard_settings_directory, r'respro_settings.json')
-_respro_settings_filename_comments = find_settings_directory(local_settings_directory, standard_settings_directory, r'respro_settings_comments.json')
+_respro_settings_filename = _find_settings_directory(local_settings_directory, standard_settings_directory, r'respro_settings.json')
+_respro_settings_filename_comments = _find_settings_directory(local_settings_directory, standard_settings_directory, r'respro_settings_comments.json')
 
 def get_default_compute_settings_filenames():
+    """
+    Returns the filename string where the compute settings will be read from.
+
+    :return: filename string
+    """
     return (_compute_settings_filename,_compute_settings_comments_filename)
 
 def get_default_baseconf_settings_filenames():
+    """
+    Returns the filename string where the basic configuration will be read from.
+
+    :return: filename string
+    """
     return (_baseconf_settings_filename,_baseconf_settings_filename_comments)
 
 def get_default_democonf_settings_filenames():
+    """
+    Returns the filename string where the configuration for demo datasets will be read from.
+
+    :return: filename string
+    """
     return (_democonf_settings_filename,_democonf_settings_filename_comments)
 
 def get_default_algconf_settings_filenames():
+    """
+    Returns the filename string where the configuration for the registration algorithm will be read from.
+
+    :return: filename string
+    """
     return (_algconf_settings_filename,_algconf_settings_filename_comments)
 
 def get_default_datapro_settings_filenames():
@@ -82,11 +102,24 @@ compute_params.load_JSON(get_default_compute_settings_filenames()[0])
 
 compute_params[('compute',{},'how computations are done')]
 CUDA_ON = compute_params['compute'][('CUDA_ON',False,'Determines if the code should be run on the GPU')]
+"""If set to True CUDA will be used, otherwise it will not be used"""
+
 USE_FLOAT16 = compute_params['compute'][('USE_FLOAT16',False,'if set to True uses half-precision - not recommended')]
+"""If set to True 16 bit computations will be used -- not recommended and not actively supported"""
+
 nr_of_threads = compute_params['compute'][('nr_of_threads',mp.cpu_count(),'set the maximal number of threads')]
+"""Specifies the number of threads"""
+
 MATPLOTLIB_AGG = compute_params['compute'][('MATPLOTLIB_AGG',False,'Determines how matplotlib plots images. Set to True for remote debugging')]
+"""If set to True matplotlib's AGG graphics renderer will be used; this should be set to True if run on a server and to False if visualization are desired as part of an interactive compute session"""
 
 def get_baseconf_settings( baseconf_settings_filename = None ):
+    """
+    Returns the basic configuration settings as a parameter structure.
+
+    :param baseconf_settings_filename: loads the settings from the specified filename, otherwise from the default filename or in the absence of such a file creates default settings from scratch.
+    :return: parameter structure
+    """
 
     # These are the parameters for the general I/O and example cases
     baseconf_params = pars.ParameterDict()
@@ -111,6 +144,12 @@ def get_baseconf_settings( baseconf_settings_filename = None ):
     return baseconf_params
 
 def get_democonf_settings( democonf_settings_filename = None ):
+    """
+    Returns the configuration settings for the demo data as a parameter structure.
+
+    :param democonf_settings_filename: loads the settings from the specified filename, otherwise from the default filename or in the absence of such a file creates default settings from scratch.
+    :return: parameter structure
+    """
 
     # These are the parameters for the general I/O and example cases
     democonf_params = pars.ParameterDict()
@@ -130,6 +169,12 @@ def get_democonf_settings( democonf_settings_filename = None ):
     return democonf_params
 
 def get_algconf_settings( algconf_settings_filename = None ):
+    """
+    Returns the registration algorithm configuration settings as a parameter structure.
+
+    :param algconf_settings_filename: loads the settings from the specified filename, otherwise from the default filename or in the absence of such a file creates default settings from scratch.
+    :return: parameter structure
+    """
 
     # These are the parameters for the general I/O and example cases
     algconf_params = pars.ParameterDict()

@@ -22,6 +22,7 @@ mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
 	     
    notes/installation.rst
    notes/parameters.rst
+   notes/settings.rst
    notes/step_by_step_registration_example.rst
    notes/simple_example.rst
    notes/howto_own_registration.rst

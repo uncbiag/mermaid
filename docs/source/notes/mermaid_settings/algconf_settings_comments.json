@@ -1,0 +1,63 @@
+{
+    "algconf": {
+        "__doc__": "settings for the registration algorithms",
+        "image_smoothing": {
+            "__doc__": "image smoothing settings",
+            "smooth_images": "[True|False]; smoothes the images before registration",
+            "smoother": {
+                "__doc__": "settings for the image smoothing",
+                "gaussian_std": "how much smoothing is done",
+                "type": "['gaussianSpatial'|'gaussian'|'diffusion']"
+            }
+        },
+        "model": {
+            "__doc__": "general model settings",
+            "deformation": {
+                "__doc__": "model describing the desired deformation model",
+                "map_low_res_factor": "Set to a value in (0,1) if a map-based solution should be computed at a lower internal resolution (image matching is still at full resolution",
+                "name": "['svf'|'svf_quasi_momentum'|'lddmm_shooting'|'lddmm_shooting_scalar_momentum'] all with '_map' or '_image' suffix",
+                "use_map": "[True|False] either do computations via a map or directly using the image"
+            },
+            "registration_model": {
+                "__doc__": "general settings for the registration model",
+                "forward_model": {
+                    "__doc__": "Holds the parameters for the forward model",
+                    "number_of_time_steps": "Number of time steps for integration (if applicable)",
+                    "smoother": {
+                        "__doc__": "how the smoothing of velocity fields is done",
+                        "gaussian_std": "standard deviations for smoothing",
+                        "type": "type of smoothing"
+                    }
+                },
+                "similarity_measure": {
+                    "__doc__": "model describing the similarity measure",
+                    "develop_mod": {
+                        "__doc__": "developing mode ",
+                        "smoother": {
+                            "__doc__": "how the smoothing of velocity fields is done ",
+                            "gaussian_std": "standard deviation for smoothing",
+                            "type": "type of smoothing"
+                        }
+                    },
+                    "develop_mod_on": "if true would allow develop settings ",
+                    "sigma": "1/sigma^2 weighting",
+                    "type": "[ssd|ncc]"
+                }
+            }
+        },
+        "optimizer": {
+            "__doc__": "optimizer settings",
+            "multi_scale": {
+                "__doc__": "multi scale settings",
+                "scale_factors": "how images are scaled",
+                "scale_iterations": "number of iterations per scale",
+                "use_multiscale": "use multi-scale optimizer"
+            },
+            "name": "name of the optimizer: [lbfgs_ls|adam]",
+            "single_scale": {
+                "__doc__": "single scale settings",
+                "nr_of_iterations": "number of iterations"
+            }
+        }
+    }
+}

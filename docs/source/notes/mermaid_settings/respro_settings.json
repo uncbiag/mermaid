@@ -1,0 +1,10 @@
+{
+    "respro": {
+        "expr_name": "reg",
+        "save_excel": true,
+        "save_fig": false,
+        "save_fig_path": "../data/saved_results",
+        "visualize": true,
+        "visualize_step": 5
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "democonf": {
+        "__doc__": "settings for demo images/examples",
+        "dim": "Spatial dimension for demo examples 1/2/3",
+        "example_img_len": "side length of image cube for example",
+        "use_real_images": "if set to true using real and otherwise synthetic images"
+    }
+}

@@ -1,0 +1,9 @@
+{
+    "compute": {
+        "CUDA_ON": "Determines if the code should be run on the GPU",
+        "MATPLOTLIB_AGG": "Determines how matplotlib plots images. Set to True for remote debugging",
+        "USE_FLOAT16": "if set to True uses half-precision - not recommended",
+        "__doc__": "how computations are done",
+        "nr_of_threads": "set the maximal number of threads"
+    }
+}
