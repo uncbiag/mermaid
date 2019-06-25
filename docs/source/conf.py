@@ -127,6 +127,7 @@ html_static_path = ['_static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'mermaiddoc'
 
+html_logo = 'tentative-mermaid-logo.png'
 
 # -- Options for LaTeX output ---------------------------------------------
 
