@@ -1161,28 +1161,28 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         else:
             return None
 
-    def add_similarity_measure(self, simName, simMeasure):
+    def add_similarity_measure(self, sim_name, sim_measure):
         """
         Adds a custom similarity measure.
 
-        :param simName: name of the similarity measure (string)
-        :param simMeasure: similarity measure itself (class object that can be instantiated)
+        :param sim_name: name of the similarity measure (string)
+        :param sim_measure: similarity measure itself (class object that can be instantiated)
         """
-        self.criterion.add_similarity_measure(simName, simMeasure)
-        self.params['model']['registration_model']['similarity_measure']['type'] = (simName, 'was customized; needs to be expplicitly instantiated, cannot be loaded')
+        self.criterion.add_similarity_measure(sim_name, sim_measure)
+        self.params['model']['registration_model']['similarity_measure']['type'] = (sim_name, 'was customized; needs to be expplicitly instantiated, cannot be loaded')
 
-    def add_model(self, modelName, modelNetworkClass, modelLossClass, useMap, modelDescription='custom model'):
+    def add_model(self, model_name, model_network_class, model_loss_class, use_map, model_description='custom model'):
         """
         Adds a custom model and its loss function
 
-        :param modelName: name of the model to be added (string)
-        :param modelNetworkClass: registration model itself (class object that can be instantiated)
-        :param modelLossClass: registration loss (class object that can be instantiated)
-        :param useMap: True/False: specifies if model uses a map or not
-        :param modelDescription: optional model description
+        :param model_name: name of the model to be added (string)
+        :param model_network_class: registration model itself (class object that can be instantiated)
+        :param model_loss_class: registration loss (class object that can be instantiated)
+        :param use_map: True/False: specifies if model uses a map or not
+        :param model_description: optional model description
         """
-        self.mf.add_model(modelName, modelNetworkClass, modelLossClass, useMap, modelDescription)
-        self.params['model']['registration_model']['type'] = (modelName, 'was customized; needs to be explicitly instantiated, cannot be loaded')
+        self.mf.add_model(model_name, model_network_class, model_loss_class, use_map, model_description)
+        self.params['model']['registration_model']['type'] = (model_name, 'was customized; needs to be explicitly instantiated, cannot be loaded')
 
     def set_model_state_dict(self,sd):
         """
@@ -3471,17 +3471,19 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                         if not os.path.exists(save_folder):
                             os.makedirs(save_folder)
 
-    def add_model(self, add_model_name, add_model_networkClass, add_model_lossClass):
+    def add_model(self, add_model_name, add_model_networkClass, add_model_lossClass, use_map):
         """
         Adds a custom model to be optimized over
 
         :param add_model_name: name of the model (string)
         :param add_model_networkClass: network model itself (as an object that can be instantiated)
         :param add_model_lossClass: loss of the model (as an object that can be instantiated)
+        :param use_map: if set to true, model using a map, otherwise direcly works with the image
         """
         self.add_model_name = add_model_name
         self.add_model_networkClass = add_model_networkClass
         self.add_model_lossClass = add_model_lossClass
+        self.add_model_use_map = use_map
 
     def set_scale_factors(self, scaleFactors):
         """
@@ -3653,7 +3655,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             if ((self.add_model_name is not None) and
                     (self.add_model_networkClass is not None) and
                     (self.add_model_lossClass is not None)):
-                self.ssOpt.add_model(self.add_model_name, self.add_model_networkClass, self.add_model_lossClass)
+                self.ssOpt.add_model(self.add_model_name, self.add_model_networkClass, self.add_model_lossClass, use_map=self.add_model_use_map)
 
             # now set the actual model we want to solve
             self.ssOpt.set_model(self.model_name)
