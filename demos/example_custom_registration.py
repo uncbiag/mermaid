@@ -1,4 +1,8 @@
 """
+
+Custom registration example
+===========================
+
 This is a test implementation to see how we can use mermaid to implement a custom registration model and a custom
 similarity measure.
 

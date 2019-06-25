@@ -46,6 +46,8 @@ def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visua
         sp_t = 132
         sp_w = 133
 
+    plt.clf()
+
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')
     plt.style.use('bmh')
@@ -120,6 +122,8 @@ def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_p
         sp_t = 222
         sp_w = 223
         sp_c = 224
+
+    plt.clf()
 
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')
@@ -202,6 +206,8 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
         sp_c = 224
 
     font = {'size': 10}
+
+    plt.clf()
 
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')
@@ -309,6 +315,8 @@ def _show_current_images_3d(iS, iT, iW,iSL, iTL,iWL, iter, vizImage, vizName, ph
         vizi_a = 3
     else:
         fig, ax = plt.subplots(3,3)
+
+    plt.clf()
 
     plt.suptitle('Iteration = ' + str(iter))
     plt.setp(plt.gcf(), 'facecolor', 'white')

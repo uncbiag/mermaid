@@ -1,3 +1,11 @@
+"""
+
+Minimal registration example
+============================
+
+This example script is a very minimialistic example for using mermaid.
+"""
+
 # first do the torch imports
 import torch
 from mermaid.data_wrapper import AdaptVal

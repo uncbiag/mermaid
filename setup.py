@@ -40,6 +40,7 @@ REQUIRED = [
     "openpyxl",
     "sphinx",
     "nbsphinx",
+    "sphinx-gallery",
     "pandoc",
     "pypandoc",
     "statsmodels",

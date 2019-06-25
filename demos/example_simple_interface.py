@@ -1,3 +1,11 @@
+"""
+
+Simple registration interface example
+=====================================
+
+This script shows how to use mermaid's simple registration interface.
+"""
+
 from __future__ import print_function
 
 import numpy as np
@@ -103,6 +111,8 @@ else:
     #                    similarity_measure_type='omt')
 
     h = si.get_history()
+
+    plt.clf()
 
     e_p, = plt.plot(h['energy'], label='energy')
     s_p, = plt.plot(h['similarity_energy'], label='similarity_energy')

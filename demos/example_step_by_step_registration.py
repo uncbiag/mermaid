@@ -1,3 +1,12 @@
+"""
+
+Step-by-step registration example
+=================================
+
+This example script walks through a mermaid registration example step by step.
+"""
+
+
 # before we start let's import some mermaid libraries
 
 # first the simple registration interface (which provides basic, easy to use registration functionality)

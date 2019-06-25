@@ -27,7 +27,8 @@ mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
    notes/simple_example.rst
    notes/howto_own_registration.rst
    notes/todos.rst
-
+   example_gallery.rst
+   
 .. toctree::
    :maxdepth: 1
    :caption: Jupyter notebook examples

@@ -54,6 +54,7 @@ requirements:
     - openpyxl
     - sphinx
     - nbsphinx
+    - sphinx-gallery
     - pandoc
     - pypandoc
     - graphviz
