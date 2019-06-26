@@ -62,14 +62,14 @@
         "sgd": {
             "individual": {
                 "dampening": 0.0,
-                "lr": 0.02,
+                "lr": 0.1,
                 "momentum": 0.9,
                 "nesterov": true,
                 "weight_decay": 0.0
             },
             "shared": {
                 "dampening": 0.0,
-                "lr": 0.02,
+                "lr": 0.1,
                 "momentum": 0.9,
                 "nesterov": true,
                 "weight_decay": 0.0
