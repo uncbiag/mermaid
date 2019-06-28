@@ -233,12 +233,12 @@ class RHSLibrary(object):
         :param v: Velocity fields (this will be one velocity field per momentum)  BxCxXxYxZ
         :return rhsm: Returns the RHS of the EPDiff equations involved  BxCxXxYxZ
         """
-        if self.use_neumann_BC_for_map:
-            fdc = self.fdt # use zero Neumann boundary conditions
-        else:
-            fdc = self.fdt_le # do linear extrapolation
+        # if self.use_neumann_BC_for_map:
+        #     fdc = self.fdt # use zero Neumann boundary conditions
+        # else:
+        #     fdc = self.fdt_le # do linear extrapolation
 
-        #fdc = self.fdt
+        fdc = self.fdt
         if self.dim == 1:
             dxc_mv0 = -fdc.dXc(m*v[:,0:1])
             dxc_v = -fdc.dXc(v)
@@ -595,97 +595,6 @@ class EPDiffMap(ForwardModel):
             new_m = self.rhs.rhs_epdiff_multiNC(m,v)
             new_phi = self.rhs.rhs_advect_map_multiNC(phi,v)
             ret_val= [new_m, new_phi]
-        return ret_val
-
-
-
-class AdvectAdaptMap(ForwardModel):
-    """
-    Forward model for the EPDiff equation. State is the momentum, m, and the transform, :math:`\\phi`
-    (mapping the source image to the target image).
-    :math:`(m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
-
-    :math:`v=Km`
-
-    :math:`\\phi_t+D\\phi v=0`
-    """
-
-    def __init__(self, sz, spacing, smoother, params=None):
-        super(AdvectAdaptMap, self).__init__(sz, spacing, params)
-        from . import module_parameters as pars
-        from . import smoother_factory as sf
-        """If True then computes the inverse map on the fly for a map-based solution"""
-
-        self.smoother = smoother
-        self.update_sm_weight=None
-        self.updata_m = None
-        self.debug_mode_on = False
-        s_m_params = pars.ParameterDict()
-        s_m_params['smoother']['type'] = 'gaussian'
-        s_m_params['smoother']['gaussian_std'] =self.params['smoother']['deep_smoother']['deep_network_local_weight_smoothing']
-        self.embedded_smoother  = sf.SmootherFactory(sz[2:], spacing).create_smoother(
-            s_m_params)
-
-        """ if only take the first step penalty as the total penalty, otherwise accumluate the penalty"""
-    def debug_nan(self, input, t,name=''):
-        x = utils.checkNan([input])
-        if np.sum(x):
-            # print(input[0])
-            print("find nan at {} step, {} with number {}".format(t,name,x[0]))
-
-            raise ValueError("nan error")
-    def init_zero_sm_weight(self,sm_weight):
-        self.update_sm_weight = torch.zeros_like(sm_weight).detach()
-    def init_zero_m(self,m):
-        self.update_m = torch.zeros_like(m).detach()
-
-
-
-    def debug_distrib(self,var,name):
-        var = var.detach().cpu().numpy()
-        density,_= np.histogram(var,[-100,-10,-1,0,1,10,100],density=True)
-        print("{} distri:{}".format(name,density))
-
-
-    def f(self, t, x, u, pars=None, variables_from_optimizer=None):
-        """
-        Function to be integrated, i.e., right hand side of the EPDiff equation:
-        :math:`-(div(m_1v),...,div(m_dv))^T-(Dv)^Tm'
-
-        :math:`-D\\phi v`
-
-        :param t: time (ignored; not time-dependent)
-        :param x: state, here the image, vector momentum, m, and the map, :math:`\\phi`
-        :param u: ignored, no external input
-        :param pars: ignored (does not expect any additional inputs)
-        :param variables_from_optimizer: variables that can be passed from the optimizer
-        :return: right hand side [m,phi]
-        """
-
-        # assume x[0] is m and x[1] is phi for the state
-        m = x[0]
-        m=m.clamp(max=1., min=-1.)
-        phi = x[1]
-        sm_weight = x[2]
-        new_sm_weight = utils.compute_warped_image_multiNC(sm_weight, phi, self.spacing, 1,
-                                                           zero_boundary=False)
-        new_sm_weight = self.embedded_smoother.smooth(new_sm_weight)
-        v = self.smoother.smooth(m, new_sm_weight)
-        new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
-        new_sm_weight = self.update_sm_weight.detach()
-        new_m = self.update_m.detach()
-        ret_val = [new_m, new_phi, new_sm_weight]
-        return_val_name = ['new_m', 'new_phi', 'new_sm_weight']
-
-
-        if self.debug_mode_on:
-            toshows = [m, v,phi]+ret_val if sm_weight is None else  [m, v,phi]+ret_val +[sm_weight]
-            name = ['m', 'v','phi']+return_val_name if sm_weight is None else ['m', 'v','phi']+return_val_name +['sm_weight']
-            for i, toshow in enumerate(toshows):
-                print('t{},{} min, mean,max {} {} {}'.format(t, name[i], toshow.min().item(), toshow.mean().item(),
-                                                             toshow.max().item()))
-                self.debug_distrib(toshow, name[i])
-                self.debug_nan(toshow,t,name[i])
         return ret_val
 
 

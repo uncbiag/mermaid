@@ -56,9 +56,9 @@ class AvailableModels(object):
                                          RN.SVFQuasiMomentumImageLoss, False,
                                          'EXPERIMENTAL: Image-based SVF version which estimates velcocity based on a smoothed vetor field'),
 
-            'lddmm_adapt_smoother_map': (RN.LDDMMAdaptiveSmootherMomentumMapNet,RN.LDDMMAdaptiveSmootherMomentumMapLoss,True,"Region specific diffemorphic mapping"),
-            'svf_adapt_smoother_map': (RN.SVFVectorAdaptiveSmootherMomentumMapNet,RN.SVFVectorAdaptiveSmootherMomentumMapLoss,True,"Region specfic registration with vSVF"),
-            'one_step_map': (RN.OneStepMapNet, RN.OneStepMapLoss, True, 'directly optimize the displacement')
+            'lddmm_adapt_smoother_map': (RN.LDDMMAdaptiveSmootherMomentumMapNet,RN.LDDMMAdaptiveSmootherMomentumMapLoss,True,"map-based shooting-based Region specific diffemorphic mapping, with a spatio-temporal regularizer"),
+            'svf_adapt_smoother_map': (RN.SVFVectorAdaptiveSmootherMomentumMapNet,RN.SVFVectorAdaptiveSmootherMomentumMapLoss,True,"map-based shooting-based vSVF, with a spatio regularizer"),
+            'one_step_map': (RN.OneStepMapNet, RN.OneStepMapLoss, True, 'map based displacement field')
         }
         """dictionary defining all the models"""
 

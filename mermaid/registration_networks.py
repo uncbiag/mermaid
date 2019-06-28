@@ -48,8 +48,8 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
     def __init__(self, sz, spacing, params):
         """
         Constructor
-        
-        :param sz: image size (BxCxXxYxZ format) 
+
+        :param sz: image size (BxCxXxYxZ format)
         :param spacing: spatial spacing, e.g., [0.1,0.1,0.2]
         :param params: ParameterDict() object to hold general parameters
         """
@@ -96,11 +96,11 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
 
     def get_variables_to_transfer_to_loss_function(self):
         """
-        This is a function that can be overwritten by models to allow to return variables which are also 
+        This is a function that can be overwritten by models to allow to return variables which are also
         needed for the computation of the loss function. Returns None by default, but can for example be used
         to pass parameters or smoothers which are needed for the model itself and its loss. By convention
         these variables should be returned as a dictionary.
-        :return: 
+        :return:
         """
         return None
 
@@ -108,7 +108,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
         """
         Can be overwritten by a method to allow for additional optimizer output (on top of the energy values)
 
-        :return: 
+        :return:
         """
         return ''
 
@@ -124,7 +124,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
     @abstractmethod
     def create_registration_parameters(self):
         """
-        Abstract method to create the registration parameters over which should be optimized. They need to be of type torch Parameter() 
+        Abstract method to create the registration parameters over which should be optimized. They need to be of type torch Parameter()
         """
         pass
 
@@ -145,8 +145,8 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
     def get_registration_parameters(self):
         """
         Abstract method to return the registration parameters
-        
-        :return: returns the registration parameters 
+
+        :return: returns the registration parameters
         """
         cs = list(self.named_parameters())
         params = collections.OrderedDict()
@@ -251,10 +251,10 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
     def set_registration_parameters(self, pars, sz, spacing):
         """
         Abstract method to set the registration parameters externally. This can for example be useful when the optimizer should be initialized at a specific value
-        
+
         :param pars: dictionary of registration parameters
-        :param sz: size of the image the parameter corresponds to 
-        :param spacing: spacing of the image the parameter corresponds to 
+        :param sz: size of the image the parameter corresponds to
+        :param spacing: spacing of the image the parameter corresponds to
         """
 
         self._load_state_dict_individual_or_shared(pars)
@@ -310,19 +310,19 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
 
     def downsample_registration_parameters(self, desiredSz):
         """
-        Method to downsample the registration parameters spatially to a desired size. Should be overwritten by a derived class. 
-        
+        Method to downsample the registration parameters spatially to a desired size. Should be overwritten by a derived class.
+
         :param desiredSz: desired size in XxZxZ format, e.g., [50,100,40]
-        :return: should return a tuple (downsampled_image,downsampled_spacing) 
+        :return: should return a tuple (downsampled_image,downsampled_spacing)
         """
         raise NotImplementedError
 
     def upsample_registration_parameters(self, desiredSz):
         """
-        Method to upsample the registration parameters spatially to a desired size. Should be overwritten by a derived class. 
+        Method to upsample the registration parameters spatially to a desired size. Should be overwritten by a derived class.
 
         :param desiredSz: desired size in XxZxZ format, e.g., [50,100,40]
-        :return: should return a tuple (upsampled_image,upsampled_spacing) 
+        :return: should return a tuple (upsampled_image,upsampled_spacing)
         """
         raise NotImplementedError
 
@@ -330,7 +330,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
 #todo: this would then also allow for optimization over it
     def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
-        Convenience function to specify an image that should be visualized including its caption. 
+        Convenience function to specify an image that should be visualized including its caption.
         This will typically be related to the parameter of a model. This method should be overwritten by a derived class
 
         :param ISource: (optional) source image as this is part of the initial condition for some parameterizations
@@ -354,7 +354,7 @@ class RegistrationNetDisplacement(RegistrationNet):
         """
         Constructor
 
-        :param sz: image size (BxCxXxYxZ format) 
+        :param sz: image size (BxCxXxYxZ format)
         :param spacing: spatial spacing, e.g., [0.1,0.1,0.2]
         :param params: ParameterDict() object to hold general parameters
         """
@@ -368,16 +368,16 @@ class RegistrationNetDisplacement(RegistrationNet):
     def create_registration_parameters(self):
         """
         Creates the displacement field that is being optimized over
-    
-        :return: displacement field parameter 
+
+        :return: displacement field parameter
         """
         return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
     def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
         Returns the displacement field parameter magnitude image and a name
-    
-        :return: Returns the tuple (displacement_magnitude_image,name) 
+
+        :return: Returns the tuple (displacement_magnitude_image,name)
         """
         name = '|d|'
         par_image = ((self.d[:, ...] ** 2).sum(1)) ** 0.5  # assume BxCxXxYxZ format
@@ -387,8 +387,8 @@ class RegistrationNetDisplacement(RegistrationNet):
     def upsample_registration_parameters(self, desiredSz):
         """
         Upsamples the displacement field to a desired size
-    
-        :param desiredSz: desired size of the upsampled displacement field 
+
+        :param desiredSz: desired size of the upsampled displacement field
         :return: returns a tuple (upsampled_state,upsampled_spacing)
         """
         sampler = IS.ResampleImage()
@@ -402,8 +402,8 @@ class RegistrationNetDisplacement(RegistrationNet):
     def downsample_registration_parameters(self, desiredSz):
         """
         Downsamples the displacement field to a desired size
-    
-        :param desiredSz: desired size of the downsampled displacement field 
+
+        :param desiredSz: desired size of the downsampled displacement field
         :return: returns a tuple (downsampled_state,downsampled_spacing)
         """
         sampler = IS.ResampleImage()
@@ -433,7 +433,7 @@ class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
         """
         Constructor
 
-        :param sz: image size (BxCxXxYxZ format) 
+        :param sz: image size (BxCxXxYxZ format)
         :param spacing: spatial spacing, e.g., [0.1,0.1,0.2]
         :param params: ParameterDict() object to hold general parameters
         """
@@ -513,16 +513,16 @@ class SVFNet(RegistrationNetTimeIntegration):
     def create_registration_parameters(self):
         """
         Creates the velocity field that is being optimized over
-        
-        :return: velocity field parameter 
+
+        :return: velocity field parameter
         """
         return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
 
     def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
         Returns the velocity field parameter magnitude image and a name
-        
-        :return: Returns the tuple (velocity_magnitude_image,name) 
+
+        :return: Returns the tuple (velocity_magnitude_image,name)
         """
         name = '|v|'
         par_image = ((self.v[:,...]**2).sum(1))**0.5 # assume BxCxXxYxZ format
@@ -531,8 +531,8 @@ class SVFNet(RegistrationNetTimeIntegration):
     def upsample_registration_parameters(self, desiredSz):
         """
         Upsamples the velocity field to a desired size
-        
-        :param desiredSz: desired size of the upsampled velocity field 
+
+        :param desiredSz: desired size of the upsampled velocity field
         :return: returns a tuple (upsampled_state,upsampled_spacing)
         """
         sampler = IS.ResampleImage()
@@ -546,7 +546,7 @@ class SVFNet(RegistrationNetTimeIntegration):
         """
         Downsamples the velocity field to a desired size
 
-        :param desiredSz: desired size of the downsampled velocity field 
+        :param desiredSz: desired size of the downsampled velocity field
         :return: returns a tuple (downsampled_image,downsampled_spacing)
         """
         sampler = IS.ResampleImage()
@@ -564,7 +564,7 @@ class SVFImageNet(SVFNet):
     def create_integrator(self):
         """
         Creates an integrator for the advection equation of the image
-        
+
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
@@ -2079,17 +2079,16 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
                 # nomalize preweight, todo replace this with stable  _project_weights_to_min
                 local_adapt_weights_pre = local_adapt_weights_pre / torch.norm(local_adapt_weights_pre, p=None, dim=1,
                                                                                keepdim=True)
-            # from .deep_smoothers import weighted_linear_softnorm
-            # local_adapt_weights_pre = weighted_linear_softnorm(self.local_weights, dim=1, weights=self.gaussian_std_weights)
-            # smooth preweight to get weight
             local_adapt_weights = self.embedded_smoother.smooth(local_adapt_weights_pre)
-            v, _ = self.smoother.smooth(self.m, local_adapt_weights)
+            pars_to_pass_s = utils.combine_dict({'w': local_adapt_weights}, default_dic)
+            v, _ = self.smoother.smooth(self.m, None, pars_to_pass_s, variables_from_optimizer,
+                                        smooth_to_compute_regularizer_energy=False,
+                                        clampCFL_dt=self._use_CFL_clamping_if_desired(dt), multi_output=True)
             if self.use_velocity_mask:
                 v = v*self.velocity_mask
             self.smoother.reset_penalty()
             self.smoother.compute_penalty(I, local_adapt_weights, local_adapt_weights_pre)
             self.smoother.disable_penalty_computation()
-        # print("the min and max of the local adapt weights is {} {}".format(local_adapt_weights.min(),local_adapt_weights.max()))
         pars_to_pass_i = utils.combine_dict({'I': I.detach()}, self._get_default_dictionary_to_pass_to_integrator())
         # todo to see if the detach would influence the result
         self.initial_velocity = v
@@ -2111,13 +2110,6 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
                 input = torch.cat((v, phi), 1)
                 output = self.integrator(input)
                 phi1 = output[:, self.dim:self.dim * 2, ...]
-
-            # if not self.get_preweight_from_network and self.print_count % 20 == 0:
-            #     from tools.visual_tools import save_smoother_map
-            #     # here we assume use the preweights to do the computation
-            #     save_smoother_map(local_adapt_weights, self.smoother.multi_gaussian_stds,
-            #                       'time_' + str(epoch), None)  # ,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-            #     # print("the min {}, mean {}, max {} of th sm_weight_map_t0 is ".format(local_adapt_weights.min().item(),local_adapt_weights.mean().item(),local_adapt_weights.max().item()))
             if self.compute_inverse_map:
                 raise ValueError("Not implemented yet")
             self.print_count += 1
