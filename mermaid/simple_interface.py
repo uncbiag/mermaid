@@ -12,11 +12,12 @@ from . import module_parameters as pars
 from . import model_factory as MF
 from . import fileio
 import numpy as np
-from . import utils
 
 import torch
+import torch.nn
 
 from .data_wrapper import AdaptVal
+
 
 class RegisterImagePair(object):
 
@@ -69,14 +70,12 @@ class RegisterImagePair(object):
         self.par_respro=par_respro
         self.task_name = task_name
 
-
     def get_opt(self):
         return self.opt
 
     def set_opt(self,opt):
         self.opt= opt
         self.optimizer_has_been_initialized=True
-
 
     def _set_analysis(self, mo, extra_info):
 
@@ -110,12 +109,13 @@ class RegisterImagePair(object):
     def set_recorder(self, recorder):
         self.recorder = recorder
 
-    def print_available_models(self):
+    @staticmethod
+    def print_available_models():
         MF.AvailableModels().print_available_models()
 
-    def get_available_models(self):
+    @staticmethod
+    def get_available_models():
         return MF.AvailableModels().get_models()
-
 
     def get_history(self):
         """
@@ -150,7 +150,6 @@ class RegisterImagePair(object):
             return self.opt.get_warped_image()
         else:
             return None
-
 
     def get_warped_label(self):
         """
@@ -247,7 +246,7 @@ class RegisterImagePair(object):
                 val = p[key]
                 if torch.is_tensor(val):
                     val.zero_()
-                elif type(val)==torch.nn.parameter.Parameter or type(val)==torch.Tensor:
+                elif type(val) == torch.nn.parameter.Parameter or type(val)==torch.Tensor:
                     val.data.zero_()
 
     def set_model_parameters(self,p):
@@ -392,7 +391,7 @@ class RegisterImagePair(object):
                       compute_inverse_map=compute_inverse_map,
                       params=params)
 
-    def register_images(self,ISource,ITarget,spacing,model_name,extra_info=None,LSource=None, LTarget=None,
+    def register_images(self, ISource, ITarget, spacing, model_name, extra_info=None, LSource=None, LTarget=None,
                         nr_of_iterations=None,
                         learning_rate=None,
                         similarity_measure_type=None,
@@ -410,7 +409,8 @@ class RegisterImagePair(object):
                         resume_from_last_checkpoint=False,
                         optimizer_name=None,
                         compute_inverse_map=False,
-                        params=None):
+                        params=None,
+                        recording_step=None):
         """
         Registers two images. Only ISource, ITarget, spacing, and model_name need to be specified.
         Default values will be used for all of the values that are not explicitly specified.
@@ -437,6 +437,7 @@ class RegisterImagePair(object):
         :param optimizer_name: name of the optimizer lbfgs_ls|adam|sgd
         :param compute_inverse_map: for map-based models that inverse map can optionally be computed
         :param params: parameter structure to pass settings or filename to load the settings from file.
+        :param recording_step: set tracking of all intermediate results in history each n-th step
         :return: n/a
         """
 
@@ -468,15 +469,15 @@ class RegisterImagePair(object):
 
         if params is None:
             self.params = pars.ParameterDict()
-        elif type(params)==pars.ParameterDict:
+        elif type(params) == pars.ParameterDict:
             self.params = params
-        elif type(params)==type('acharacter'):
+        elif type(params) == type('acharacter'):
             self.params = pars.ParameterDict()
             self.params.load_JSON(params)
         else:
-            raise ValueError('Unknown parameter format: ' + str( type(params)))
+            raise ValueError('Unknown parameter format: ' + str(type(params)))
 
-        if use_batch_optimization or type(ISource)==torch.Tensor:
+        if use_batch_optimization or type(ISource) == torch.Tensor:
             self.ISource = ISource
             self.ITarget = ITarget
         else:
@@ -527,14 +528,38 @@ class RegisterImagePair(object):
                 if use_consensus_optimization or use_batch_optimization:
                     raise ValueError('Consensus or batch optimization is not yet supported for multi-scale registration')
                 else:
-                    self.opt = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map, default_learning_rate=learning_rate)
+                    self.opt = MO.SimpleMultiScaleRegistration(self.ISource,
+                                                               self.ITarget,
+                                                               self.spacing,
+                                                               self.sz,
+                                                               self.params,
+                                                               compute_inverse_map=compute_inverse_map,
+                                                               default_learning_rate=learning_rate)
             else:
                 if use_consensus_optimization:
-                    self.opt = MO.SimpleSingleScaleConsensusRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map, default_learning_rate=learning_rate)
+                    self.opt = MO.SimpleSingleScaleConsensusRegistration(self.ISource,
+                                                                         self.ITarget,
+                                                                         self.spacing,
+                                                                         self.sz,
+                                                                         self.params,
+                                                                         compute_inverse_map=compute_inverse_map,
+                                                                         default_learning_rate=learning_rate)
                 elif use_batch_optimization:
-                    self.opt = MO.SimpleSingleScaleBatchRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map, default_learning_rate=learning_rate)
+                    self.opt = MO.SimpleSingleScaleBatchRegistration(self.ISource,
+                                                                     self.ITarget,
+                                                                     self.spacing,
+                                                                     self.sz,
+                                                                     self.params,
+                                                                     compute_inverse_map=compute_inverse_map,
+                                                                     default_learning_rate=learning_rate)
                 else:
-                    self.opt = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map, default_learning_rate=learning_rate)
+                    self.opt = MO.SimpleSingleScaleRegistration(self.ISource,
+                                                                self.ITarget,
+                                                                self.spacing,
+                                                                self.sz,
+                                                                self.params,
+                                                                compute_inverse_map=compute_inverse_map,
+                                                                default_learning_rate=learning_rate)
 
             if visualize_step is not None:
                 self.opt.get_optimizer().set_visualization(True)
@@ -543,7 +568,8 @@ class RegisterImagePair(object):
                 self.opt.get_optimizer().set_visualization(False)
                 self.opt.get_optimizer().set_visualize_step(visualize_step)
 
-            #self.opt.get_optimizer().set
+            if recording_step is not None:
+                self.opt.get_optimizer().set_recording_step(recording_step)
 
             self.opt.set_light_analysis_on(self.light_analysis_on)
 
@@ -553,7 +579,7 @@ class RegisterImagePair(object):
                 self.set_model_parameters(self.delayed_model_parameters)
 
             if self.delayed_initial_map_still_to_be_set:
-                self.set_initial_map(self.delayed_initial_map,initial_inverse_map=self.delayed_initial_inverse_map)
+                self.set_initial_map(self.delayed_initial_map, initial_inverse_map=self.delayed_initial_inverse_map)
 
             if not self.light_analysis_on and use_multi_scale:
                 LSource = AdaptVal(torch.from_numpy(LSource)) if not type(LSource) == torch.Tensor else LSource

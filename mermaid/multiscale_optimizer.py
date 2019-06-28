@@ -31,6 +31,8 @@ from . import model_evaluation
 from collections import defaultdict
 from future.utils import with_metaclass
 
+from termcolor import colored, cprint
+
 # add some convenience functionality
 class SimpleRegistration(with_metaclass(ABCMeta, object)):
     """
@@ -232,7 +234,7 @@ class SimpleSingleScaleRegistration(SimpleRegistration):
         :return: n/a
         """
         self.optimizer.set_light_analysis_on(self.light_analysis_on)
-        self.optimizer.register(self.ISource,self.ITarget)
+        self.optimizer.register(self.ISource, self.ITarget)
 
 
 class SimpleSingleScaleConsensusRegistration(SimpleRegistration):
@@ -250,7 +252,7 @@ class SimpleSingleScaleConsensusRegistration(SimpleRegistration):
         :return: n/a
         """
         self.optimizer.set_light_analysis_on(self.light_analysis_on)
-        self.optimizer.register(self.ISource,self.ITarget)
+        self.optimizer.register(self.ISource, self.ITarget)
 
 
 class SimpleSingleScaleBatchRegistration(SimpleRegistration):
@@ -267,7 +269,7 @@ class SimpleSingleScaleBatchRegistration(SimpleRegistration):
         :return: n/a
         """
         self.optimizer.set_light_analysis_on(self.light_analysis_on)
-        self.optimizer.register(self.ISource,self.ITarget)
+        self.optimizer.register(self.ISource, self.ITarget)
 
 
 class SimpleMultiScaleRegistration(SimpleRegistration):
@@ -285,7 +287,6 @@ class SimpleMultiScaleRegistration(SimpleRegistration):
         """
         self.optimizer.set_light_analysis_on(self.light_analysis_on)
         self.optimizer.register(self.ISource,self.ITarget)
-
 
 
 class Optimizer(with_metaclass(ABCMeta, object)):
@@ -410,7 +411,6 @@ class Optimizer(with_metaclass(ABCMeta, object)):
         :return: n/a
         """
         self.last_successful_step_size_taken=lr
-
 
     def get_last_successful_step_size_taken(self):
         """
@@ -568,7 +568,7 @@ class ImageRegistrationOptimizer(Optimizer):
         self.nrOfIterations = None
         """the maximum number of iterations for the optimizer"""
         self.current_epoch = None
-        """Can be set externally, so the optimizer knowns in which epoch we are"""
+        """Can be set externally, so the optimizer knows in which epoch we are"""
 
         self.save_fig_path=None
         self.save_fig=None
@@ -580,6 +580,13 @@ class ImageRegistrationOptimizer(Optimizer):
         self.light_analysis_on = None
         self.limit_max_batch = -1
 
+        self.recording_step = None
+        """sets the step-size for recording all intermediate results to the history"""
+
+    def set_recording_step(self, step):
+        assert step > 0, 'Recording step needs to be larger than 0'
+        self.recording_step = step
+        self.history['recording'] = []
 
     def set_current_epoch(self,current_epoch):
         self.current_epoch = current_epoch
@@ -725,7 +732,7 @@ class ImageRegistrationOptimizer(Optimizer):
         return self.pair_path
 
 
-    def register(self,ISource,ITarget):
+    def register(self, ISource, ITarget):
         """
         Registers the source to the target image
         :param ISource: source image
@@ -855,6 +862,7 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         self.optimizer_params = opt_params
 
+
 class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     """
     Optimizer operating on a single scale. Typically this will be the full image resolution.
@@ -867,7 +875,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
     def __init__(self, sz, spacing, useMap, mapLowResFactor, params, compute_inverse_map=False, default_learning_rate=None):
         super(SingleScaleRegistrationOptimizer, self).__init__(sz, spacing, useMap, mapLowResFactor, params,compute_inverse_map=compute_inverse_map, default_learning_rate=default_learning_rate)
 
-        if (self.mapLowResFactor is not None ):
+        if self.mapLowResFactor is not None:
             # computes model at a lower resolution than the image similarity
             if self.compute_similarity_measure_at_low_res:
                 self.mf = MF.ModelFactory(self.lowResSize, self.lowResSpacing, self.lowResSize, self.lowResSpacing )
@@ -914,7 +922,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         max_extent = max(extent)
 
         clip_params = c_params[('gradient_clipping',{},'clipping settings for the gradient for optimization')]
-        self.clip_display = clip_params[('clip_display',True,'If set to True displays if clipping occurred')]
+        self.clip_display = clip_params[('clip_display', True, 'If set to True displays if clipping occurred')]
         self.clip_individual_gradient = clip_params[('clip_individual_gradient',False,'If set to True, the gradient for the individual parameters will be clipped')]
         self.clip_individual_gradient_value = clip_params[('clip_individual_gradient_value',max_extent,'Value to which the gradient for the individual parameters is clipped')]
         self.clip_shared_gradient = clip_params[('clip_shared_gradient', True, 'If set to True, the gradient for the shared parameters will be clipped')] # todo recover the clip gradient,or it may cause unstable
@@ -1089,7 +1097,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                                                                     1, zero_boundary=False)
                     self.lowResInitialInverseMap = AdaptVal(lowres_inverse_id)
 
-
     def set_model(self, modelName):
         """
         Sets the model that should be solved
@@ -1103,7 +1110,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         print(self.model)
 
         self._create_initial_maps()
-
 
     def set_initial_map(self,map0,map0_inverse=None):
         """
@@ -1119,8 +1125,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         if self.initialMap is not None:
             # was already set, so let's modify it
             self._create_initial_maps()
-
-
 
     def set_initial_weight_map(self,weight_map,freeze_weight=False):
         """
@@ -1440,7 +1444,6 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         return self.nrOfIterations
 
-
     def _closure(self):
         self.optimizer_instance.zero_grad()
         # 1) Forward pass: Compute predicted y by passing x to the model
@@ -1449,21 +1452,22 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # first define variables that will be passed to the model and the criterion (for further use)
         opt_variables = {'iter': self.iter_count,'epoch': self.current_epoch}
 
-        self.rec_IWarped,self.rec_phiWarped,self.rec_phiInverseWarped = model_evaluation.evaluate_model_low_level_interface(model=self.model,
-                                                                                                                 I_source=self.ISource,
-                                                                                                                 opt_variables=opt_variables,
-                                                                                                                 use_map=self.useMap,
-                                                                                                                 initial_map=self.initialMap,
-                                                                                                                 compute_inverse_map=self.compute_inverse_map,
-                                                                                                                 initial_inverse_map=self.initialInverseMap,
-                                                                                                                 map_low_res_factor=self.mapLowResFactor,
-                                                                                                                 sampler=self.sampler,
-                                                                                                                 low_res_spacing=self.lowResSpacing,
-                                                                                                                 spline_order=self.spline_order,
-                                                                                                                 low_res_I_source=self.lowResISource,
-                                                                                                                 low_res_initial_map=self.lowResInitialMap,
-                                                                                                                 low_res_initial_inverse_map=self.lowResInitialInverseMap,
-                                                                                                                 compute_similarity_measure_at_low_res=self.compute_similarity_measure_at_low_res)
+        self.rec_IWarped, self.rec_phiWarped, self.rec_phiInverseWarped = model_evaluation.evaluate_model_low_level_interface(
+            model=self.model,
+            I_source=self.ISource,
+            opt_variables=opt_variables,
+            use_map=self.useMap,
+            initial_map=self.initialMap,
+            compute_inverse_map=self.compute_inverse_map,
+            initial_inverse_map=self.initialInverseMap,
+            map_low_res_factor=self.mapLowResFactor,
+            sampler=self.sampler,
+            low_res_spacing=self.lowResSpacing,
+            spline_order=self.spline_order,
+            low_res_I_source=self.lowResISource,
+            low_res_initial_map=self.lowResInitialMap,
+            low_res_initial_inverse_map=self.lowResInitialInverseMap,
+            compute_similarity_measure_at_low_res=self.compute_similarity_measure_at_low_res)
 
         # compute the respective losses
         if self.useMap:
@@ -1516,12 +1520,12 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self.rec_regEnergy = reg_energy
         self.rec_opt_par_loss_energy = opt_par_loss_energy
 
-        #if self.useMap:
+        # if self.useMap:
         #
         #    if self.iter_count % 1 == 0:
         #        self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
         #            self.identityMap, self.rec_phiWarped, self.ISource, self.ITarget, self.lowResISource, self.model.get_variables_to_transfer_to_loss_function())
-        #else:
+        # else:
         #    if self.iter_count % 1 == 0:
         #        self.rec_energy, self.rec_similarityEnergy, self.rec_regEnergy = self.criterion.get_energy(
         #            self.rec_IWarped, self.ISource, self.ITarget, self.model.get_variables_to_transfer_to_loss_function())
@@ -1547,11 +1551,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         cur_energy = utils.t2np(energy.float())
         # energy analysis
 
-        self._add_to_history('iter',self.iter_count)
-        self._add_to_history('energy',cur_energy[0])
-        self._add_to_history('similarity_energy',utils.t2np(similarityEnergy.float())[0])
-        self._add_to_history('regularization_energy',utils.t2np(regEnergy.float()))
-        self._add_to_history('opt_par_energy',utils.t2np(opt_par_energy.float())[0])
+        self._add_to_history('iter', self.iter_count)
+        self._add_to_history('energy', cur_energy[0])
+        self._add_to_history('similarity_energy', utils.t2np(similarityEnergy.float())[0])
+        self._add_to_history('regularization_energy', utils.t2np(regEnergy.float()))
+        self._add_to_history('opt_par_energy', utils.t2np(opt_par_energy.float())[0])
 
         if custom_optimizer_output_values is not None:
             for key in custom_optimizer_output_values:
@@ -1559,120 +1563,214 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         if self.last_energy is not None:
 
-            # relative function toleranc: |f(xi)-f(xi+1)|/(1+|f(xi)|)
+            # relative function tolerance: |f(xi)-f(xi+1)|/(1+|f(xi)|)
             self.rel_f = abs(self.last_energy - cur_energy) / (1 + abs(cur_energy))
-            self._add_to_history('relF',self.rel_f[0])
+            self._add_to_history('relF', self.rel_f[0])
 
             if self.show_iteration_output:
-                print('Iter {iter:5d}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF={relF} {cos}'
-                      .format(iter=self.iter_count,
-                              energy=cur_energy,
-                              similarityE=utils.t2np(similarityEnergy.float()),
-                              regE=utils.t2np(regEnergy.float()),
-                              optParE=utils.t2np(opt_par_energy.float()),
-                              relF=self.rel_f,
-                              cos=custom_optimizer_output_string))
-                print('   / image: E={energy}, simE={similarityE}, regE={regE}'
-                      .format(energy=cur_energy/current_batch_size,
-                              similarityE=utils.t2np(similarityEnergy.float())/current_batch_size,
-                              regE=utils.t2np(regEnergy.float())/current_batch_size))
+                cprint('{iter:5d}-Tot: E={energy:08.4f} | simE={similarityE:08.4f} | regE={regE:08.4f} | optParE={optParE:08.4f} | relF={relF:08.4f} | {cos}'
+                       .format(iter=self.iter_count,
+                               energy=utils.get_scalar(cur_energy),
+                               similarityE=utils.get_scalar(utils.t2np(similarityEnergy.float())),
+                               regE=utils.get_scalar(utils.t2np(regEnergy.float())),
+                               optParE=utils.get_scalar(utils.t2np(opt_par_energy.float())),
+                               relF=utils.get_scalar(self.rel_f),
+                               cos=custom_optimizer_output_string), 'red')
+                cprint('{iter:5d}-Img: E={energy:08.4f} | simE={similarityE:08.4f} | regE={regE:08.4f} |'
+                       .format(iter=self.iter_count,
+                               energy=utils.get_scalar(cur_energy) / current_batch_size,
+                               similarityE=utils.get_scalar(utils.t2np(similarityEnergy.float())) / current_batch_size,
+                               regE=utils.get_scalar(utils.t2np(regEnergy.float())) / current_batch_size), 'blue')
 
             # check if relative convergence tolerance is reached
             if self.rel_f < self.rel_ftol:
                 if self.show_iteration_output:
                     print('Reached relative function tolerance of = ' + str(self.rel_ftol))
-                reached_tolerance =  True
+                reached_tolerance = True
 
         else:
-            self._add_to_history('relF',None)
+            self._add_to_history('relF', None)
             if self.show_iteration_output:
-                print('Iter {iter:5d}: E={energy}, simE={similarityE}, regE={regE}, optParE={optParE}, relF=n/a {cos}'
+                cprint('{iter:5d}-Tot: E={energy:08.4f} | simE={similarityE:08.4f} | regE={regE:08.4f} | optParE={optParE:08.4f} | relF=  n/a    | {cos}'
                       .format(iter=self.iter_count,
-                              energy=cur_energy,
-                              similarityE=utils.t2np(similarityEnergy.float()),
-                              regE=utils.t2np(regEnergy.float()),
-                              optParE=utils.t2np(opt_par_energy.float()),
-                              cos=custom_optimizer_output_string))
-                print('   / image: E={energy}, simE={similarityE}, regE={regE}'
-                      .format(energy=cur_energy/current_batch_size,
-                              similarityE=utils.t2np(similarityEnergy.float())/current_batch_size,
-                              regE=utils.t2np(regEnergy.float())/current_batch_size))
+                              energy=utils.get_scalar(cur_energy),
+                              similarityE=utils.get_scalar(utils.t2np(similarityEnergy.float())),
+                              regE=utils.get_scalar(utils.t2np(regEnergy.float())),
+                              optParE=utils.get_scalar(utils.t2np(opt_par_energy.float())),
+                              cos=custom_optimizer_output_string), 'red')
+                cprint('{iter:5d}-Img: E={energy:08.4f} | simE={similarityE:08.4f} | regE={regE:08.4f} |'
+                      .format(iter=self.iter_count,
+                              energy=utils.get_scalar(cur_energy)/current_batch_size,
+                              similarityE=utils.get_scalar(utils.t2np(similarityEnergy.float()))/current_batch_size,
+                              regE=utils.get_scalar(utils.t2np(regEnergy.float()))/current_batch_size),'blue')
 
-
+        iter_count = self.iter_count
         self.last_energy = cur_energy
-        iter = self.iter_count
 
-        # performance analysis
-
-        if self.useMap and not self.light_analysis_on and self.save_excel:
-            if self.LSource is not None:
-                if iter % 4 == 0.:
+        if self.recording_step is not None:
+            if iter_count % self.recording_step == 0 or iter_count == 0:
+                if self.useMap:
                     if self.compute_similarity_measure_at_low_res:
-                        LSource_warped = utils.get_warped_label_map(self.lowResLSource, phi_or_warped_image, self.spacing)
-                        LTarget = self.lowResLTarget
-
+                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource,
+                                                                      phi_or_warped_image,
+                                                                      self.lowResSpacing,
+                                                                      self.spline_order,
+                                                                      zero_boundary=False)
+                        lowResLWarped = utils.get_warped_label_map(self.lowResLSource,
+                                                                   phi_or_warped_image,
+                                                                   self.spacing)
+                        self.history['recording'].append({
+                            'iter': iter_count,
+                            'iS': utils.t2np(self.ISource),
+                            'iT': utils.t2np(self.ITarget),
+                            'iW': utils.t2np(I1Warped),
+                            'iSL': utils.t2np(self.lowResLSource) if self.lowResLSource is not None else None,
+                            'iTL': utils.t2np(self.lowResLTarget) if self.lowResLTarget is not None else None,
+                            'iWL': utils.t2np(lowResLWarped) if self.lowResLWarped is not None else None,
+                            'phiWarped': utils.t2np(phi_or_warped_image)
+                        })
                     else:
-                        LSource_warped = utils.get_warped_label_map(self.LSource, phi_or_warped_image, self.spacing)
-                        LTarget = self.get_target_label()
-                    metric_results_dic = get_multi_metric(LSource_warped, LTarget, eval_label_list=None, rm_bg=False)
-                    self.recorder.set_batch_based_env(self.get_pair_path(),self.get_batch_id())
-                    info = {}
-                    info['label_info'] = metric_results_dic['label_list']
-                    info['iter_info'] = 'scale_' + str(self.n_scale) + '_iter_' + str(self.iter_count)
-                    self.recorder.saving_results(sched='batch', results=metric_results_dic['multi_metric_res'],  info=info,averaged_results=metric_results_dic['batch_avg_res'])
-                    self.recorder.saving_results(sched='buffer', results=metric_results_dic['label_avg_res'],  info=info,averaged_results=None)
+                        I1Warped = utils.compute_warped_image_multiNC(self.ISource,
+                                                                      phi_or_warped_image,
+                                                                      self.spacing,
+                                                                      self.spline_order,
+                                                                      zero_boundary=False)
+                        LWarped = None
+                        if self.LSource is not None and self.LTarget is not None:
+                            LWarped = utils.get_warped_label_map(self.LSource,
+                                                                 phi_or_warped_image,
+                                                                 self.spacing)
+                        self.history['recording'].append({
+                            'iter': iter_count,
+                            'iS': utils.t2np(self.ISource),
+                            'iT': utils.t2np(self.ITarget),
+                            'iW': utils.t2np(I1Warped),
+                            'iSL': utils.t2np(self.LSource) if self.LSource is not None else None,
+                            'iTL': utils.t2np(self.LTarget) if self.LTarget is not None else None,
+                            'iWL': utils.t2np(LWarped) if LWarped is not None else None,
+                            'phiWarped': utils.t2np(phi_or_warped_image)
+                        })
+                else:
+                    self.history['recording'].append({
+                        'iter': iter_count,
+                        'iS': utils.t2np(self.ISource),
+                        'iT': utils.t2np(self.ITarget),
+                        'iW': utils.t2np(phi_or_warped_image)
+                    })
 
-        # result visualization
+        # if self.useMap and not self.light_analysis_on and self.save_excel:
+        #     if self.LSource is not None:
+        #         if iter_count % 4 == 0.:
+        #             if self.compute_similarity_measure_at_low_res:
+        #                 LSource_warped = utils.get_warped_label_map(self.lowResLSource,
+        #                                                             phi_or_warped_image,
+        #                                                             self.spacing)
+        #                 LTarget = self.lowResLTarget
+        #
+        #             else:
+        #                 LSource_warped = utils.get_warped_label_map(self.LSource,
+        #                                                             phi_or_warped_image,
+        #                                                             self.spacing)
+        #                 LTarget = self.get_target_label()
+        #             metric_results_dic = get_multi_metric(LSource_warped, LTarget, eval_label_list=None, rm_bg=False)
+        #             self.recorder.set_batch_based_env(self.get_pair_path(),self.get_batch_id())
+        #             info = dict()
+        #             info['label_info'] = metric_results_dic['label_list']
+        #             info['iter_info'] = 'scale_' + str(self.n_scale) + '_iter_' + str(self.iter_count)
+        #             self.recorder.saving_results(sched='batch',
+        #                                          results=metric_results_dic['multi_metric_res'],
+        #                                          info=info, averaged_results=metric_results_dic['batch_avg_res'])
+        #             self.recorder.saving_results(sched='buffer',
+        #                                          results=metric_results_dic['label_avg_res'],
+        #                                          info=info, averaged_results=None)
+
+        # visualization - self.visualize is True if visualization steps are set
         if self.visualize or self.save_fig:
             visual_param = {}
             visual_param['visualize'] = self.visualize
             if not self.light_analysis_on:
                 visual_param['save_fig'] = self.save_fig
                 visual_param['save_fig_path'] = self.save_fig_path
-                visual_param['save_fig_path_byname'] = os.path.join(self.save_fig_path,'byname')
-                visual_param['save_fig_path_byiter'] = os.path.join(self.save_fig_path,'byiter')
+                visual_param['save_fig_path_byname'] = os.path.join(self.save_fig_path, 'byname')
+                visual_param['save_fig_path_byiter'] = os.path.join(self.save_fig_path, 'byiter')
                 visual_param['save_fig_num'] = self.save_fig_num
                 visual_param['pair_path'] = self.pair_path
                 visual_param['iter'] = 'scale_'+str(self.n_scale) + '_iter_' + str(self.iter_count)
             else:
                 visual_param['save_fig'] = False
 
-            if self.visualize_step and (iter % self.visualize_step == 0) or (iter==self.nrOfIterations-1) or force_visualization:
+            if self.visualize_step and (iter_count % self.visualize_step == 0) or (iter_count == self.nrOfIterations-1) or force_visualization:
                 was_visualized = True
                 if self.useMap and self.mapLowResFactor is not None:
                     vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.lowResISource)
                 else:
                     vizImage, vizName = self.model.get_parameter_image_and_name_to_visualize(self.ISource)
+
                 if self.useMap:
                     if self.compute_similarity_measure_at_low_res:
-                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource, phi_or_warped_image, self.lowResSpacing, self.spline_order,zero_boundary=False)
-                        lowResLWarped = utils.get_warped_label_map(self.lowResLSource, phi_or_warped_image,
-                                                                    self.spacing)
-                        vizReg.show_current_images(iter=iter, iS=self.lowResISource, iT=self.lowResITarget, iW=I1Warped,
-                                                   iSL=self.lowResLSource,iTL=self.lowResLTarget,iWL=lowResLWarped,
-                                                   vizImages=vizImage, vizName=vizName, phiWarped=phi_or_warped_image, visual_param=visual_param)
+                        I1Warped = utils.compute_warped_image_multiNC(self.lowResISource,
+                                                                      phi_or_warped_image,
+                                                                      self.lowResSpacing,
+                                                                      self.spline_order,
+                                                                      zero_boundary=False)
+                        lowResLWarped = utils.get_warped_label_map(self.lowResLSource,
+                                                                   phi_or_warped_image,
+                                                                   self.spacing)
+                        vizReg.show_current_images(iter=iter_count,
+                                                   iS=self.lowResISource,
+                                                   iT=self.lowResITarget,
+                                                   iW=I1Warped,
+                                                   iSL=self.lowResLSource,
+                                                   iTL=self.lowResLTarget,
+                                                   iWL=lowResLWarped,
+                                                   vizImages=vizImage,
+                                                   vizName=vizName,
+                                                   phiWarped=phi_or_warped_image,
+                                                   visual_param=visual_param)
+
                     else:
-                        I1Warped = utils.compute_warped_image_multiNC(self.ISource, phi_or_warped_image, self.spacing, self.spline_order, zero_boundary=False)
+                        I1Warped = utils.compute_warped_image_multiNC(self.ISource,
+                                                                      phi_or_warped_image,
+                                                                      self.spacing,
+                                                                      self.spline_order,
+                                                                      zero_boundary=False)
                         vizImage = vizImage if len(vizImage)>2 else None
                         LWarped = None
                         if self.LSource is not None  and self.LTarget is not None:
-                            LWarped = utils.get_warped_label_map(self.LSource, phi_or_warped_image, self.spacing)
-                        vizReg.show_current_images(iter=iter, iS=self.ISource, iT=self.ITarget, iW=I1Warped, iSL=self.LSource, iTL=self.LTarget, iWL=LWarped,
-                                                   vizImages=vizImage, vizName=vizName, phiWarped=phi_or_warped_image, visual_param=visual_param)
+                            LWarped = utils.get_warped_label_map(self.LSource,
+                                                                 phi_or_warped_image,
+                                                                 self.spacing)
+
+                        vizReg.show_current_images(iter=iter_count,
+                                                   iS=self.ISource,
+                                                   iT=self.ITarget,
+                                                   iW=I1Warped,
+                                                   iSL=self.LSource,
+                                                   iTL=self.LTarget,
+                                                   iWL=LWarped,
+                                                   vizImages=vizImage,
+                                                   vizName=vizName,
+                                                   phiWarped=phi_or_warped_image,
+                                                   visual_param=visual_param)
                 else:
-                    vizReg.show_current_images(iter=iter, iS=self.ISource, iT=self.ITarget, iW=phi_or_warped_image, vizImages=vizImage, vizName=vizName, phiWarped=None, visual_param=visual_param)
+                    vizReg.show_current_images(iter=iter_count,
+                                               iS=self.ISource,
+                                               iT=self.ITarget,
+                                               iW=phi_or_warped_image,
+                                               vizImages=vizImage,
+                                               vizName=vizName,
+                                               phiWarped=None,
+                                               visual_param=visual_param)
 
-                if 0 :#iter==self.nrOfIterations-1:
-                    self._debugging_saving_intermid_img(self.ISource, append='source')
-                    self._debugging_saving_intermid_img(self.LSource, is_label_map=True,append='source')
-                    self._debugging_saving_intermid_img(self.ITarget, append='target')
-                    self._debugging_saving_intermid_img(self.LTarget, is_label_map=True, append='target')
-                    self._debugging_saving_intermid_img(I1Warped,append='warpped')
-                    self._debugging_saving_intermid_img(LWarped, is_label_map=True,append='warpped')
+                # if 0 :#iter==self.nrOfIterations-1:
+                #     self._debugging_saving_intermid_img(self.ISource, append='source')
+                #     self._debugging_saving_intermid_img(self.LSource, is_label_map=True,append='source')
+                #     self._debugging_saving_intermid_img(self.ITarget, append='target')
+                #     self._debugging_saving_intermid_img(self.LTarget, is_label_map=True, append='target')
+                #     self._debugging_saving_intermid_img(I1Warped,append='warpped')
+                #     self._debugging_saving_intermid_imgLWarped, is_label_map=True,append='warpped')
 
-
-        return reached_tolerance,was_visualized
-
+        return reached_tolerance, was_visualized
 
     def _debugging_saving_intermid_img(self,img=None,is_label_map=False, append=''):
         folder_path = os.path.join(self.save_fig_path,'debugging')
@@ -2233,9 +2331,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             if self.use_step_size_scheduler and self.scheduler is None:
                 self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer_instance, 'min',
-                                                                       verbose=self.scheduler_verbose,
-                                                                       factor=self.scheduler_factor,
-                                                                       patience=self.scheduler_patience)
+                                                                            verbose=self.scheduler_verbose,
+                                                                            factor=self.scheduler_factor,
+                                                                            patience=self.scheduler_patience)
 
         self.iter_count = 0
         for iter in range(self.nrOfIterations):
@@ -2272,12 +2370,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             else:
                 vis_arg = self.rec_IWarped
 
-            tolerance_reached,was_visualized = self.analysis(self.rec_energy, self.rec_similarityEnergy,
-                                              self.rec_regEnergy, self.rec_opt_par_loss_energy,
-                                              vis_arg,
-                                              self.rec_custom_optimizer_output_string,
-                                              self.rec_custom_optimizer_output_values)
-
+            tolerance_reached, was_visualized = self.analysis(self.rec_energy, self.rec_similarityEnergy,
+                                                              self.rec_regEnergy, self.rec_opt_par_loss_energy,
+                                                              vis_arg,
+                                                              self.rec_custom_optimizer_output_string,
+                                                              self.rec_custom_optimizer_output_values)
 
             if tolerance_reached or could_not_find_successful_step:
                 if tolerance_reached:
@@ -2296,7 +2393,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.iter_count = iter+1
 
         if self.show_iteration_output:
-            print(('time:', time.time() - start))
+            cprint('-->Elapsed time {:.5f}[s]'.format(time.time() - start),  'green')
 
 
 class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
@@ -2722,7 +2819,7 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
 
                 if self.visualize:
-                    if i==0:
+                    if i == 0:
                         # to avoid excessive graphical output
                         self.ssOpt.turn_visualization_on()
                     else:
@@ -3393,7 +3490,6 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """Single scale optimizer"""
         self.params['optimizer'][('multi_scale', {}, 'multi scale settings')]
 
-
     def write_parameters_to_settings(self):
         if self.ssOpt is not None:
             self.ssOpt.write_parameters_to_settings()
@@ -3416,7 +3512,6 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         self.model_name = modelName
 
-
     def set_initial_map(self, map0, map0_inverse=None):
         """
         Sets the initial map (overwrites the default identity map)
@@ -3427,12 +3522,10 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.initialMap = map0
             self.initialInverseMap = map0_inverse
 
-
     def set_initial_weight_map(self,weight_map,freeze_weight=False):
         if self.ssOpt is None:
             self.weight_map = weight_map
             self.freeze_weight = freeze_weight
-
 
     def set_pair_path(self,pair_paths):
         # f = lambda name: os.path.split(name)

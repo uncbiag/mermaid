@@ -39,6 +39,7 @@ except ImportError:
 def my_hasnan(x):
     return (x != x).any()
 
+
 def create_symlink_with_correct_ext(sf,tf):
     abs_s = os.path.abspath(sf)
     ext_s = os.path.splitext(abs_s)[1]
@@ -71,6 +72,7 @@ def combine_dict(d1,d2):
     d.update(d2)
     return d
 
+
 def get_parameter_list_from_parameter_dict(pd):
     """
     Takes a dictionary which contains key value pairs for model parameters and converts it into a list of parameters that can
@@ -83,6 +85,7 @@ def get_parameter_list_from_parameter_dict(pd):
     for key in pd:
         pl.append(pd[key])
     return pl
+
 
 def get_parameter_list_and_par_to_name_dict_from_parameter_dict(pd):
     """
@@ -98,6 +101,7 @@ def get_parameter_list_and_par_to_name_dict_from_parameter_dict(pd):
         pl.append(pd[key])
         par_to_name_dict[pd[key]] = key
     return pl,par_to_name_dict
+
 
 def remove_infs_from_variable(v):
     # 32 - bit floating point: torch.FloatTensor, torch.cuda.FloatTensor
@@ -846,7 +850,6 @@ def identity_map(sz,spacing,dtype='float32'):
     return idnp
 
 
-
 def get_warped_label_map(label_map, phi, spacing, sched='nn'):
     if sched == 'nn':
         warped_label_map = get_nn_interpolation(label_map, phi, spacing)
@@ -858,7 +861,7 @@ def get_warped_label_map(label_map, phi, spacing, sched='nn'):
     return warped_label_map
 
 
-def t2np( v ):
+def t2np(v):
     """
     Takes a torch array and returns it as a numpy array on the cpu
 
@@ -867,6 +870,14 @@ def t2np( v ):
     """
 
     return (v.detach()).cpu().numpy()
+
+
+def get_scalar(v):
+    if isinstance(v, float):
+        return v
+    elif isinstance(v, np.ndarray) and v.size == 1:
+        return float(v)
+
 
 def checkNan(x):
     """"
