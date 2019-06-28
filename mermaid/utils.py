@@ -545,7 +545,7 @@ def create_vector_parameter(nr_of_elements):
     """
     return Parameter(MyTensor(nr_of_elements).normal_(0.,1e-7))
 
-def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
+def create_ND_vector_field_parameter_multiN(sz, nrOfI=1,get_field_from_external_network=False):
     """
     Create vector field torch Parameter of given size
 
@@ -556,14 +556,14 @@ def create_ND_vector_field_parameter_multiN(sz, nrOfI=1):
     dim = len(sz)
     csz = np.array(sz) # just to make sure it is a numpy array
     csz = np.array([nrOfI,dim]+list(csz))
-    if EV.use_mermaid_net:
+    if get_field_from_external_network:
         tmp = MyTensor(*(csz.tolist())).normal_(0.,1e-7)
         tmp.requires_grad = True
     else:
         tmp = Parameter(MyTensor(*(csz.tolist())).normal_(0.,1e-7))
     return tmp
 
-def create_local_filter_weights_parameter_multiN(sz,gaussian_std_weights, nrOfI=1,sched='w_K_w' ):
+def create_local_filter_weights_parameter_multiN(sz,gaussian_std_weights, nrOfI=1,sched='w_K_w',get_preweight_from_network=False):
     """
     Create vector field torch Parameter of given size
 
@@ -582,7 +582,7 @@ def create_local_filter_weights_parameter_multiN(sz,gaussian_std_weights, nrOfI=
         weights[:, g, ...] = gaussian_std_weights[g]
     tmp = AdaptVal(weights)
 
-    if EV.use_mermaid_net:
+    if get_preweight_from_network:
         tmp.requires_grad = True
     else:
         tmp = Parameter(tmp)
@@ -765,33 +765,33 @@ def centered_identity_map(sz, spacing, dtype='float32'):
 #         raise ValueError('Only dimensions 1-3 are currently supported for the centered identity map')
 # 
 #     return idnp
+#
+# def tranfrom_var_list_into_min_normalized_space(var_list,spacing,do_transform=True):
+#     if do_transform:
+#         min_spacing = np.min(spacing)
+#         spacing_ratio =min_spacing/spacing
+#         dim = spacing.size
+#         spacing_ratio_t = AdaptVal(torch.Tensor(spacing_ratio))
+#         sp_sz = [1]+[dim] +[1]*dim
+#         spacing_ratio_t = spacing_ratio_t.view(*sp_sz)
+#         new_var_list = [var*spacing_ratio_t if var is not None else None for var in var_list]
+#     else:
+#         new_var_list = var_list
+#     return new_var_list
 
-def tranfrom_var_list_into_min_normalized_space(var_list,spacing,do_transform=True):
-    if do_transform:
-        min_spacing = np.min(spacing)
-        spacing_ratio =min_spacing/spacing
-        dim = spacing.size
-        spacing_ratio_t = AdaptVal(torch.Tensor(spacing_ratio))
-        sp_sz = [1]+[dim] +[1]*dim
-        spacing_ratio_t = spacing_ratio_t.view(*sp_sz)
-        new_var_list = [var*spacing_ratio_t if var is not None else None for var in var_list]
-    else:
-        new_var_list = var_list
-    return new_var_list
-
-def recover_var_list_from_min_normalized_space(var_list,spacing,do_transform=True):
-    if do_transform:
-        min_spacing = np.min(spacing)
-        spacing_ratio =spacing/min_spacing
-        dim = spacing.size
-        spacing_ratio_t = AdaptVal(torch.Tensor(spacing_ratio))
-        sp_sz = [1]+[dim] +[1]*dim
-        spacing_ratio_t = spacing_ratio_t.view(*sp_sz)
-        new_var_list = [var*spacing_ratio_t if var is not None else None for var in var_list]
-    else:
-        new_var_list = var_list
-    return new_var_list
-
+# def recover_var_list_from_min_normalized_space(var_list,spacing,do_transform=True):
+#     if do_transform:
+#         min_spacing = np.min(spacing)
+#         spacing_ratio =spacing/min_spacing
+#         dim = spacing.size
+#         spacing_ratio_t = AdaptVal(torch.Tensor(spacing_ratio))
+#         sp_sz = [1]+[dim] +[1]*dim
+#         spacing_ratio_t = spacing_ratio_t.view(*sp_sz)
+#         new_var_list = [var*spacing_ratio_t if var is not None else None for var in var_list]
+#     else:
+#         new_var_list = var_list
+#     return new_var_list
+#
 
 
 

@@ -4,9 +4,8 @@ update_sm_by_advect = False
 update_sm_with_interpolation =False
 bysingle_int = False
 debug_mode_on = False
-turn_on_accer_mode =True
+turn_on_accer_mode =False
 use_velocity_mask =False
-use_omt_const = False
 clamp_local_weight=False
 local_pre_weight_max=1.5
 try:
@@ -17,4 +16,4 @@ except:
     pass
 print("use_mermaid_net:{}".format(use_mermaid_net))
 print("reg_factor_in_mermaid:{}".format(reg_factor_in_mermaid))
-use_odeint = True
+use_odeint = False

@@ -27,7 +27,7 @@ from mermaid.data_wrapper import AdaptVal, MyTensor
 import mermaid.fileio as fio
 
 import mermaid.rungekutta_integrators as rk
-import mermaid.forward_models as fm
+import mermaid.forward_models_multi_channel as fm
 
 import mermaid.module_parameters as pars
 

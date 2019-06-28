@@ -22,12 +22,10 @@ import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 
+from mermaid.deep_smoothers import stable_softmax
 from . import rungekutta_integrators as RK
-from . import external_variable as EV
-if not EV.turn_on_accer_mode:
-    from . import forward_models as FM
-else:
-    from . import forward_models_multi_channel as FM
+
+from . import forward_models_multi_channel as FM
 from .data_wrapper import AdaptVal
 from . import regularizer_factory as RF
 from . import similarity_measure_factory as SM
@@ -69,11 +67,10 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
         """the number of images, i.e., the batch size B"""
         self.nrOfChannels = int(sz[1])
         """the number of image channels, i.e., C"""
-
         self._shared_states = set()
         """shared states"""
         self. dim = len(spacing)
-
+        """ dimension of the image"""
         self._default_dictionary_to_pass_to_integrator = dict()
 
     def _get_default_dictionary_to_pass_to_integrator(self):
@@ -449,6 +446,8 @@ class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
 
         self.use_CFL_clamping = self.params[('use_CFL_clamping', True, 'If the model uses time integration, CFL clamping is used')]
         """If the model uses time integration, then CFL clamping is used"""
+        self.env = params[('env', {},"env settings, typically are specificed by the external package, including the mode for solver or for smoother")]
+        """settings for the task environment of the solver or smoother"""
 
     def _use_CFL_clamping_if_desired(self,cfl_dt):
         if self.use_CFL_clamping:
@@ -570,8 +569,8 @@ class SVFImageNet(SVFNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         pars_to_pass = utils.combine_dict({'v': self.v}, self._get_default_dictionary_to_pass_to_integrator())
-
-        if not EV.use_odeint:
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
+        if not self.use_odeint:
             advection = FM.AdvectImage(self.sz, self.spacing)
             return RK.RK4(advection.f, advection.u, pars_to_pass, cparams)
         else:
@@ -587,7 +586,7 @@ class SVFImageNet(SVFNet):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the image at the final time (tTo)
         """
-        if not EV.use_odeint:
+        if not self.use_odeint:
             I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
             return I1[0]
         else:
@@ -681,8 +680,8 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         pars_to_pass = utils.combine_dict({'v': self.v}, self._get_default_dictionary_to_pass_to_integrator())
-
-        if not EV.use_odeint:
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
+        if not self.use_odeint:
             advection = FM.AdvectImage(self.sz, self.spacing)
             return RK.RK4(advection.f, advection.u, pars_to_pass, cparams)
         else:
@@ -703,7 +702,7 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
         self.smoother.smooth(self.m, self.v, pars_to_pass, variables_from_optimizer,
                              smooth_to_compute_regularizer_energy=False,
                              clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
-        if not EV.use_odeint:
+        if not self.use_odeint:
             I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
             return I1[0]
         else:
@@ -753,6 +752,9 @@ class RegistrationLoss(with_metaclass(ABCMeta, nn.Module)):
         """the similarity measure itself"""
 
         self._default_dictionary_to_pass_to_smoother = dict()
+        self.env = params[('env', {}, "env settings, typically are specificed by the external package, including the mode for solver or for smoother")]
+        """settings for the task environment of the solver or smoother"""
+        self.reg_factor = self.env[('reg_factor',1.0,"regularzation factor")]
 
 
     def set_dictionary_to_pass_to_smoother(self, d):
@@ -823,6 +825,7 @@ class RegistrationImageLoss(RegistrationLoss):
 
     def __init__(self,sz_sim,spacing_sim,sz_model,spacing_model,params):
         super(RegistrationImageLoss, self).__init__(sz_sim,spacing_sim,sz_model,spacing_model,params)
+
 
     def get_energy(self, I1_warped, I0_source, I1_target, variables_from_forward_model=None, variables_from_optimizer=None):
         """
@@ -970,7 +973,7 @@ class SVFImageLoss(RegistrationImageLoss):
         :return: returns the regularization energy
         """
 
-        return self.regularizer.compute_regularizer_multiN(self.v)
+        return self.regularizer.compute_regularizer_multiN(self.v)*self.reg_factor
 
 
 class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
@@ -1019,7 +1022,7 @@ class SVFQuasiMomentumImageLoss(RegistrationImageLoss):
         m = self.m
         pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
         v = self.smoother.smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
-        return self.regularizer.compute_regularizer_multiN(v) + self.smoother.get_penalty()
+        return self.regularizer.compute_regularizer_multiN(v)*self.reg_factor + self.smoother.get_penalty()
 
 class SVFMapNet(SVFNet):
     """
@@ -1038,7 +1041,9 @@ class SVFMapNet(SVFNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         pars_to_pass = utils.combine_dict({'v': self.v}, self._get_default_dictionary_to_pass_to_integrator())
-        if not EV.use_odeint:
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
+
+        if not self.use_odeint:
             advectionMap = FM.AdvectMap( self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map )
             return RK.RK4(advectionMap.f, advectionMap.u, pars_to_pass, cparams)
         else:
@@ -1057,7 +1062,7 @@ class SVFMapNet(SVFNet):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the map at time tTo
         """
-        if not EV.use_odeint:
+        if not self.use_odeint:
             if self.compute_inverse_map:
                 if phi_inv is not None:
                     phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
@@ -1144,7 +1149,7 @@ class DiffusionMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
 
-        return self.regularizer.compute_regularizer_multiN(self.d)
+        return self.regularizer.compute_regularizer_multiN(self.d)*self.reg_factor
 
 class TotalVariationMapLoss(RegistrationMapLoss):
     """
@@ -1172,7 +1177,7 @@ class TotalVariationMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
 
-        return self.regularizer.compute_regularizer_multiN(self.d)
+        return self.regularizer.compute_regularizer_multiN(self.d)*self.reg_factor
 
 class CurvatureMapLoss(RegistrationMapLoss):
     """
@@ -1200,7 +1205,7 @@ class CurvatureMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
 
-        return self.regularizer.compute_regularizer_multiN(self.d)
+        return self.regularizer.compute_regularizer_multiN(self.d)*self.reg_factor
 
 class AffineMapNet(RegistrationNet):
     """
@@ -1298,42 +1303,37 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
     """
     def __init__(self,sz,spacing,params):
         super(ShootingVectorMomentumNet, self).__init__(sz, spacing, params)
+        self.get_momentum_from_external_network = self.env[('get_momentum_from_external_network', False,"use external network to predict momentum, notice that the momentum network is not built in this package")]
         self.m = self.create_registration_parameters()
         cparams = params[('forward_model', {}, 'settings for the forward model')]
 
         self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+
         """smoother"""
         # mn: added this check
-        if cparams.has_key(['smoother_for_forward']):
-            self.smoother_for_forward = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams,cparams['smoother_for_forward']['type'])
-        else:
-            self.smoother_for_forward = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams,cparams['smoother']['type'])
-
-        if not EV.use_mermaid_net:
-            self.smoother = self.smoother_for_forward
-        """ smoother for forward term"""
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams,cparams['smoother']['type'])
         print("the param of smoother is {}".format(self.smoother))
-        print("the param of the smoother_for_forward is {}".format(self.smoother_for_forward))
-        if not EV.use_mermaid_net:
+        if not self.get_momentum_from_external_network:
             self._shared_states = self._shared_states.union(self.smoother.associate_parameters_with_module(self))
         """registers the smoother parameters so gbgithat they are optimized over if applicable"""
 
-        if params['forward_model']['smoother']['type'] == 'adaptiveNet':
-            self.add_module('mod_smoother', self.smoother.smoother)
-        """vector momentum"""
         self.integrator = self.create_integrator()
         """integrator to solve EPDiff variant"""
 
         self.spline_order = params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
         """order of the spline for interpolations"""
-        self.first_step_velocity = None
+        self.initial_velocity = None
+        """ the velocity field at t0, saved during map computation and used during loss computation"""
+        self.sparams =params[('shooting_vector_momentum', {}, 'settings for shooting vector momentum methods')]
+        """ settings for the vector momentum related methods"""
 
-        self.use_velocity_mask = EV.use_velocity_mask
+        self.use_velocity_mask = self.sparams[('use_velocity_mask_on_boundary', False, 'a mask to force boundary velocity be zero, the value of the mask is from 0-1')]
         self.velocity_mask = None
+        """ a continuous image-size float tensor mask, to force zero velocity at the boundary"""
         if self.use_velocity_mask:
             img_sz = sz[2:]
             min_sz = min(img_sz)
-            mask_range = 4 if min_sz > 20 else 3
+            mask_range = 4 if min_sz > 20 else 3 #control the width of the zero region at the boundary
             self.velocity_mask = utils.momentum_boundary_weight_mask(sz[2:], spacing, mask_range=mask_range,
                                                                      smoother_std=0.04,pow=2)
 
@@ -1353,8 +1353,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
     def get_variables_to_transfer_to_loss_function(self):
         d = dict()
         d['smoother'] = self.smoother
-        d['smoother_for_forward'] = self.smoother_for_forward
-        d['first_step_velocity'] = self.first_step_velocity
+        d['initial_velocity'] = self.initial_velocity
         return d
 
     def create_registration_parameters(self):
@@ -1363,7 +1362,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
 
         :return: Returns the vector momentum parameter
         """
-        return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages)
+        return utils.create_ND_vector_field_parameter_multiN(self.sz[2::], self.nrOfImages,self.get_momentum_from_external_network)
 
     def get_parameter_image_and_name_to_visualize(self,ISource=None):
         """
@@ -1418,7 +1417,9 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        if not EV.use_odeint:
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
+
+        if not self.use_odeint:
             epdiffImage = FM.EPDiffImage( self.sz, self.spacing, self.smoother, cparams )
             return RK.RK4(epdiffImage.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
         else:
@@ -1433,7 +1434,7 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: returns the image at time tTo
         """
-        if not EV.use_odeint:
+        if not self.use_odeint:
             mI1 = self.integrator.solve([self.m,I], self.tFrom, self.tTo, variables_from_optimizer)
             return mI1[1]
         else:
@@ -1458,12 +1459,7 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
         super(LDDMMShootingVectorMomentumImageLoss, self).__init__(sz_sim,spacing_sim,sz_model,spacing_model,params)
         self.m = m
         """momentum"""
-        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
-            cparams = params[('similarity_measure',{},'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::],self.spacing_model).create_smoother(cparams)
-            """smoother to convert from momentum to velocity"""
-        else:
-            self.develop_smoother = None
+
 
     def compute_regularization_energy(self, I0_source, variables_from_forward_model, variables_from_optimizer=None):
         """
@@ -1474,13 +1470,11 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
         :return: regularization energy
         """
         m = self.m
-        if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth(m)
-        else:
-            pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
+        pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
+        v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
+
+        reg = (v * m).sum() * self.spacing_model.prod()*self.reg_factor + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
@@ -1498,8 +1492,10 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
 
-        if not EV.use_odeint:
+
+        if not self.use_odeint:
 
             advection = FM.AdvectImage(self.sz, self.spacing)
             return RK.RK4(advection.f, advection.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
@@ -1521,7 +1517,7 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
                                  smooth_to_compute_regularizer_energy=False,
                                  clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
-        if not EV.use_odeint:
+        if not self.use_odeint:
 
             self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
             I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
@@ -1564,13 +1560,9 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
         :return: returns the regularization energy
         """
         m = self.m
-        if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth(m)
-        else:
-            pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
-
-        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
+        pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
+        v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
+        reg = (v * m).sum() * self.spacing_model.prod()*self.reg_factor + variables_from_forward_model['smoother'].get_penalty()
 
         return reg
 
@@ -1591,8 +1583,9 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
 
-        if not EV.use_odeint:
+        if not self.use_odeint:
             epdiffMap = FM.EPDiffMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
             return RK.RK4(epdiffMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
         else:
@@ -1615,12 +1608,12 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         m = self.m
         # if self.use_velocity_mask:
         #     m= self.m
-        #     if EV.use_mermaid_net:
+        #     if self.get_momentum_from_external_network:
         #         m = self.m * self.velocity_mask
         #     else:
         #         self.m.data = self.m.clamp(min=-2, max=2)
         #         m = self.m * self.velocity_mask
-        if not EV.use_odeint:
+        if not self.use_odeint:
             if self.compute_inverse_map:
                 if phi_inv is not None:
                     mphi1 = self.integrator.solve([m, phi, phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
@@ -1642,33 +1635,16 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
                 input = torch.cat((m, phi, phi_inv),1)
                 output = self.integrator(input)
                 ret_var_list = [output[:,self.dim:self.dim*2,...], output[:,self.dim*2:self.dim*3,...]]
-                return utils.recover_var_list_from_min_normalized_space(ret_var_list, self.spacing,
-                                                                        EV.turn_on_accer_mode)
+                return ret_var_list
 
             else:
                 func.set_dim_info([self.dim, self.dim])
                 input = torch.cat((m, phi), 1)
-                # output = self.integrator(input)
-                # phi1 =output[:, self.dim:self.dim * 2, ...]
-                # self.m,phi1= utils.recover_var_list_from_min_normalized_space([self.m, phi1], self.spacing,
-                #                                                   EV.turn_on_accer_mode)
-                # #
-                # # ############################################3
+
                 #integrator = utils.time_warped_function(self.integrator)
-                #
                 integrator = self.integrator
                 output = integrator(input)
                 phi1 = output[:,self.dim:self.dim*2,...]
- 
-                #m, phi1 =output[:, :self.dim , ...],output[:, self.dim:self.dim * 2, ...]
-                # func_o.set_dim_info([self.dim, self.dim])
-                # integrator.set_func(func_o)
-                # output_o = integrator(input)
-                # m_o, phi1_o =output_o[:, :self.dim, ...],output[:, self.dim:self.dim * 2, ...]
-                #phi1 = output[:,self.dim:self.dim*2,...]
-                #print("the diff between m, phi is {} ,{}".format(torch.abs(m-m_o).sum(),torch.abs(phi1-phi1_o).sum()))
-
-
                 if self.compute_inverse_map:
                     return [phi1, None]
                 else:
@@ -1689,14 +1665,7 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         self.m = m
         """vector momentum"""
 
-        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
-            cparams = params[('similarity_measure',{},'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
-            """smoother to obtain the velocity field from the momentum field"""
-            self.use_net = True if cparams['smoother']['type'] == 'adaptiveNet' else False
-        else:
-            self.develop_smoother = None
-            self.use_net = False
+
 
     def compute_regularization_energy(self, I0_source, variables_from_forward_model, variables_from_optimizer=None):
         """
@@ -1708,14 +1677,9 @@ class LDDMMShootingVectorMomentumMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
         m = self.m
-
-        if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth(m)
-        else:
-            pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
-
-        reg = torch.clamp((v * m),min=0.).sum() * self.spacing_model.prod()*EV.reg_factor_in_mermaid + variables_from_forward_model['smoother'].get_penalty()
+        pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
+        v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
+        reg = torch.clamp((v * m),min=0.).sum() * self.spacing_model.prod()*self.reg_factor + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
@@ -1730,14 +1694,13 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
 
     def create_integrator(self):
         """
-        Creates an integrator integrating the scalar momentum conservation law and an advection equation for the image
-
+        Creates an integrator integrating the vector momentum conservation law and an advection equation for the map
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
 
-        if not EV.use_odeint:
-
+        if not self.use_odeint:
             advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
             return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
         else:
@@ -1747,8 +1710,7 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
-        Solved the scalar momentum forward equation and returns the map at time tTo
-
+        Solved the vector momentum forward equation and returns the map at time tTo
         :param phi: initial map
         :param I0_source: not used
         :param phi_inv: initial inverse map
@@ -1761,9 +1723,9 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer,
                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
-        self.first_step_velocity = v
+        self.initial_velocity = v
 
-        if not EV.use_odeint:
+        if not self.use_odeint:
             self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
             if self.compute_inverse_map:
                 if phi_inv is not None:
@@ -1804,12 +1766,7 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
         self.load_velocity_from_forward_model = params[('load_velocity_from_forward_model', False, 'load_velocity_from_forward_model')]
         self.m = m
         """vector momentum"""
-        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
-            cparams = params[('similarity_measure',{},'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
-            """smoother to go from momentum to velocity"""
-        else:
-            self.develop_smoother = None
+
 
     def compute_regularization_energy(self, I0_source,variables_from_forward_model, variables_from_optimizer=None):
         """
@@ -1822,135 +1779,16 @@ class SVFVectorMomentumMapLoss(RegistrationMapLoss):
         """
         m = self.m
         if not self.load_velocity_from_forward_model:
-            if self.develop_smoother is not None:
-                v = self.develop_smoother.smooth(m)
-            else:
-                pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-                v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
+            pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
+            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
         else:
-            v = variables_from_forward_model['first_step_velocity']
-        reg = torch.clamp((v * m),min=0.).sum() * self.spacing_model.prod()/1.*EV.reg_factor_in_mermaid + variables_from_forward_model['smoother'].get_penalty()
+            v = variables_from_forward_model['initial_velocity']
+        reg = torch.clamp((v * m),min=0.).sum() * self.spacing_model.prod()/1.*self.reg_factor + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 
 
 
-
-
-
-##################################################################################################3
-
-
-class CVFVectorMomentumMapNet(ShootingVectorMomentumNet):
-    """
-    Specialization for map-based vector-momentum where the map itself is advected
-    """
-
-    def __init__(self, sz, spacing, params, compute_inverse_map=False):
-        self.compute_inverse_map = compute_inverse_map
-        """If set to True the inverse map is computed on the fly"""
-        super(CVFVectorMomentumMapNet, self).__init__(sz, spacing, params)
-
-
-    def create_integrator(self):
-        """
-        Creates an integrator for Burger + advection equation for the map
-
-        :return: returns this integrator
-        """
-        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-
-        if not EV.use_odeint:
-            bgadvMap = FM.BGAdvMap(self.sz, self.spacing, self.smoother_for_forward, cparams,
-                                     compute_inverse_map=self.compute_inverse_map)
-            return RK.RK4(bgadvMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
-        else:
-            self.f = FM.BGAdvMap(self.sz, self.spacing, self.smoother_for_forward, cparams,
-                                     compute_inverse_map=self.compute_inverse_map)
-            return ODE.ODEBlock(cparams)
-
-    def forward(self, phi, I0_source,  phi_inv=None, variables_from_optimizer=None):
-        """
-        Solves EPDiff + advection equation forward and returns the map at time tTo
-
-        :param phi: initial condition for the map
-        :param I0_source: not used
-        :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
-        :return: returns the map at time tTo
-        """
-
-        pars_to_pass_s = utils.combine_dict({'I': I0_source}, self._get_default_dictionary_to_pass_to_integrator())
-        dt = self.integrator.get_dt()
-        v = self.smoother.smooth(self.m, None, pars_to_pass_s, variables_from_optimizer,
-                                 smooth_to_compute_regularizer_energy=False,
-                                 clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
-        pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
-        self.first_step_velocity = v
-        if not EV.use_odeint:
-            self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
-            if self.compute_inverse_map:
-                raise ValueError("Not implemented yet")
-            else:
-                vphi1 = self.integrator.solve([v, phi], self.tFrom, self.tTo, variables_from_optimizer)
-                return vphi1[1]
-        else:
-            from . import forward_models_warped as FMW
-            func = FMW.ODEWarpedFunc(self.f, single_param=True, pars =pars_to_pass_i, variables_from_optimizer=variables_from_optimizer)
-            self.integrator.set_func(func)
-            func.set_dim_info([self.dim,self.dim])
-            input = torch.cat((v, phi), 1)
-            output = self.integrator(input)
-            phi1 = output[:,self.dim:self.dim*2,...]
-            if self.compute_inverse_map:
-                raise ValueError("Not implemented yet")
-            return phi1
-
-
-class CVFVectorMomentumMapLoss(RegistrationMapLoss):
-    """
-    Specialization of the loss for map-based vector momumentum. Image similarity is computed based on warping the source
-    image with the advected map.
-    """
-
-    def __init__(self, m, sz_sim, spacing_sim, sz_model, spacing_model, params):
-        super(CVFVectorMomentumMapLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
-        self.load_velocity_from_forward_model = params[('load_velocity_from_forward_model', False, 'load_velocity_from_forward_model')]
-
-        self.m = m
-        """vector momentum"""
-
-        if params['similarity_measure'][('develop_mod_on', False, 'developing mode')]:
-            cparams = params[('similarity_measure', {}, 'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
-            """smoother to obtain the velocity field from the momentum field"""
-        else:
-            self.develop_smoother = None
-            self.use_net = False
-
-    def compute_regularization_energy(self, I0_source, variables_from_forward_model, variables_from_optimizer=None):
-        """
-        Commputes the regularization energy from the initial vector momentum
-
-        :param I0_source: not used
-        :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
-        :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
-        :return: returns the regularization energy
-        """
-        m = self.m
-        if not self.load_velocity_from_forward_model:
-            if self.develop_smoother is not None:
-                v = self.develop_smoother.smooth(m)
-            else:
-                pars_to_pass = utils.combine_dict({'I': I0_source}, self._get_default_dictionary_to_pass_to_smoother())
-                v = variables_from_forward_model['smoother'].smooth(m, None, pars_to_pass, variables_from_optimizer,
-                                                                    smooth_to_compute_regularizer_energy=True)
-        else:
-            v = variables_from_forward_model['first_step_velocity']
-
-        batch_size = self.m.size()[0]
-        reg = torch.clamp((v * m), min=0.).sum() * self.spacing_model.prod() / 1.*EV.reg_factor_in_mermaid + variables_from_forward_model[
-            'smoother'].get_penalty()
-        return reg
 
 
 
@@ -1965,14 +1803,16 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
         from . import data_wrapper as DW
         self.compute_inverse_map = compute_inverse_map
         """If set to True the inverse map is computed on the fly"""
-        self.update_sm_by_advect=EV.update_sm_by_advect
-        self.update_sm_with_interpolation = EV.update_sm_with_interpolation
-        self.bysingle_int = EV.bysingle_int
-
+        self.adp_params = self.sparams[('adapt_model',{},"settings for adaptive smoothers")]
+        self.compute_on_initial_map = self.adp_params[('compute_on_initial_map',False,"true:  compute the map based on initial map, false: compute the map based on id map first, then interp with the initial map")]
+        self.clamp_local_weight = self.adp_params[('clamp_local_weight',True,"true:clamp the local weight")]
+        self.local_pre_weight_max = self.adp_params[('local_pre_weight_max',2,"clamp the value from -value to value")]
+        self.use_predefined_weight = self.adp_params[('use_predefined_weight',False,"use predefined weight for adapt smoother")]
         super(AdaptiveSmootherMomentumMapBasicNet, self).__init__(sz, spacing, params)
-        self.gaussian_std_weights = self.smoother_for_forward.multi_gaussian_weights
-        self.gaussian_stds = self.smoother_for_forward.multi_gaussian_stds
-        if not EV.use_mermaid_net:
+        self.gaussian_std_weights = self.smoother.multi_gaussian_weights
+        self.gaussian_stds = self.smoother.multi_gaussian_stds
+        self.get_preweight_from_network = self.sparams[('get_preweight_from_network',False,'deploy network to predict preweights of the smoothers')]
+        if not self.get_preweight_from_network:
             self.local_weights = self.create_local_filter_weights_parameters()
             self.create_single_local_smoother(sz, spacing)
         # TODO if optimize the stds and global weights, should not comment the following and asscociate std weights into parameters
@@ -1985,9 +1825,6 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
         self.print_count=0
         self.local_weights_hook = None
         self.m_hook = None
-        self.omt_const=None
-        if EV.use_omt_const:
-            self.omt_const = utils.compute_omt_const(self.gaussian_stds,param= params,dim=self.dim)
 
     def create_single_local_smoother(self,sz,spacing):
         from . import module_parameters as pars
@@ -2009,8 +1846,8 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
 
         :return: Returns the vector momentum parameter
         """
-        weight_type = self.smoother_for_forward.weighting_type
-        return utils.create_local_filter_weights_parameter_multiN(self.sz[2::],self.gaussian_std_weights, self.nrOfImages,weight_type)
+        weight_type = self.smoother.weighting_type
+        return utils.create_local_filter_weights_parameter_multiN(self.sz[2::],self.gaussian_std_weights, self.nrOfImages,weight_type,self.get_preweight_from_network)
 
 
 
@@ -2083,25 +1920,29 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
         print('     {}: before: [{:.7f},{:.7f},{:.7f}]({:.7f}); after: [{:.7f},{:.7f},{:.7f}]({:.7f})'.format(iname, Ib_min,Ib_mean,Ib_max,Ib_std,Ia_min,Ia_mean,Ia_max,Ia_std))
 
 
-    def get_parameter_image_and_name_to_visualize(self,ISource=None):
+    def get_parameter_image_and_name_to_visualize(self,ISource=None,use_softmax=False,output_preweight=True):
         """
         Creates a magnitude image for the momentum and returns it with name :math:`|m|`
 
         :return: Returns tuple (m_magnitude_image,name)
         """
-        name = 'preweight h_0'
 
-        local_adapt_weights_pre = torch.abs(self.local_weights)
-        # if EV.clamp_local_weight:
-        #     self.local_weights.data =self.local_weights.clamp(min=-EV.local_pre_weight_max,max=EV.local_pre_weight_max)
-        # local_adapt_weights_pre = stable_softmax(self.local_weights, dim=1) #torch.abs(self.local_weights)
+        # if self.clamp_local_weight:
+        #     self.local_weights.data =self.local_weights.clamp(min=-self.local_pre_weight_max,max=self.local_pre_weight_max)
+        if use_softmax:
+            local_adapt_weights_pre = stable_softmax(self.local_weights, dim=1) #torch.abs(self.local_weights)
+        else:
+            local_adapt_weights_pre = torch.abs(self.local_weights)
         if self.smoother.weighting_type == 'w_K_w':
             local_adapt_weights_pre = local_adapt_weights_pre / torch.norm(local_adapt_weights_pre, p=None, dim=1,
-                                                                           keepdim=True)
-
-        local_adapt_weights_pre = local_adapt_weights_pre / torch.norm(local_adapt_weights_pre, p=None, dim=1,
                                                                        keepdim=True)
-        local_adapt_weights = local_adapt_weights_pre#self.embedded_smoother.smooth(local_adapt_weights_pre)
+        if output_preweight:
+            local_adapt_weights = local_adapt_weights_pre
+            name = 'preweight h_0'
+
+        else:
+            local_adapt_weights = self.embedded_smoother.smooth(local_adapt_weights_pre)
+            name = 'weight w_0'
 
         dim = len(local_adapt_weights.shape) - 2
         adaptive_smoother_map = local_adapt_weights.detach()
@@ -2143,12 +1984,9 @@ class AdaptiveSmootherMomentumMapBasicLoss(RegistrationMapLoss):
             v = smoother.smooth(m, None, pars_to_pass, variables_from_optimizer,
                                                                 smooth_to_compute_regularizer_energy=True)
         else:
-            v = variables_from_forward_model['first_step_velocity']
-
-        batch_size = self.m.size()[0]
-        reg = torch.clamp((v * m), min=0.).sum() * self.spacing_model.prod() / 1.*EV.reg_factor_in_mermaid +smoother.get_penalty()
-        return reg #todo should be reg here
-
+            v = variables_from_forward_model['initial_velocity']
+        reg = torch.clamp((v * m), min=0.).sum() * self.spacing_model.prod()*self.reg_factor +smoother.get_penalty()
+        return reg
 
 
 
@@ -2175,7 +2013,9 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        if not EV.use_odeint:
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
+
+        if not self.use_odeint:
             raise NotImplemented
         else:
             self.f =FM.AdvectMap(self.sz, self.spacing,cparams)
@@ -2197,7 +2037,7 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
 
         default_dic = self._get_default_dictionary_to_pass_to_integrator()
         """ this will be used to do the first step velcity computation, to get the local_adapt_weights"""
-        if EV.use_mermaid_net:
+        if self.get_preweight_from_network:
             I = utils.compute_warped_image_multiNC(default_dic['I0_full'], phi, self.spacing, 1, zero_boundary=True)
         else:
             # TODO the optimization version not support orignal image input yet, need to be fixed
@@ -2205,19 +2045,16 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
 
         pars_to_pass_s = utils.combine_dict({'I': I.detach()}, default_dic)
         dt = self.integrator.get_dt()
-        if EV.use_mermaid_net:
+        # there are three typical adaptive model, 1. learnt the preweight from the network 2. optimize the preweight 3. predefine the preweight
+        if self.get_preweight_from_network:
             self.smoother.reset_penalty()
-            # print("the min mean and max of m is {} {} {}".format(self.m.min().item(),self.m.mean().item(),self.m.max().item()))
-
             v = self.smoother.smooth(self.m, None, pars_to_pass_s, variables_from_optimizer,
                                      smooth_to_compute_regularizer_energy=False,
                                      clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
             if self.use_velocity_mask:
                 v = v*self.velocity_mask
-            local_adapt_weights = self.smoother.get_deep_smoother_weights()
 
         else:
-            from .deep_smoothers import stable_softmax
             if variables_from_optimizer is not None:
                 epoch = variables_from_optimizer['iter']
                 self.smoother.set_epoch(epoch // 2)
@@ -2229,16 +2066,22 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
                 print("no epoch/iter information is provided, set to 0")
                 epoch = 0
                 self.smoother.set_epoch(epoch)
-            if EV.clamp_local_weight:
-                self.local_weights.data =self.local_weights.clamp(min=-EV.local_pre_weight_max,max=EV.local_pre_weight_max)
-            local_adapt_weights_pre = stable_softmax(self.local_weights, dim=1)  # torch.abs(self.local_weights)
-            #local_adapt_weights_pre =self.local_weights.clamp(min=0.01)
+            if self.clamp_local_weight:
+                self.local_weights.data =self.local_weights.clamp(min=-self.local_pre_weight_max,max=self.local_pre_weight_max)
+            if not self.use_predefined_weight:
+                # we deploy a softmax before getting the optimized preweight
+                local_adapt_weights_pre = stable_softmax(self.local_weights, dim=1)  # torch.abs(self.local_weights)
+            else:
+                # we use abs before getting the predefine preweight
+                local_adapt_weights_pre = torch.abs(self.local_weights)
+                #local_adapt_weights_pre =local_adapt_weights_pre.clamp(min=0.01)
             if self.smoother.weighting_type == 'w_K_w':
+                # nomalize preweight, todo replace this with stable  _project_weights_to_min
                 local_adapt_weights_pre = local_adapt_weights_pre / torch.norm(local_adapt_weights_pre, p=None, dim=1,
                                                                                keepdim=True)
             # from .deep_smoothers import weighted_linear_softnorm
             # local_adapt_weights_pre = weighted_linear_softnorm(self.local_weights, dim=1, weights=self.gaussian_std_weights)
-
+            # smooth preweight to get weight
             local_adapt_weights = self.embedded_smoother.smooth(local_adapt_weights_pre)
             v, _ = self.smoother.smooth(self.m, local_adapt_weights)
             if self.use_velocity_mask:
@@ -2249,8 +2092,8 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
         # print("the min and max of the local adapt weights is {} {}".format(local_adapt_weights.min(),local_adapt_weights.max()))
         pars_to_pass_i = utils.combine_dict({'I': I.detach()}, self._get_default_dictionary_to_pass_to_integrator())
         # todo to see if the detach would influence the result
-        self.first_step_velocity = v
-        if not EV.use_odeint:
+        self.initial_velocity = v
+        if not self.use_odeint:
             raise ValueError("Not implemented yet")
 
         else:
@@ -2269,21 +2112,15 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
                 output = self.integrator(input)
                 phi1 = output[:, self.dim:self.dim * 2, ...]
 
-
-            if not EV.use_mermaid_net and self.print_count % 20 == 0:
-                from tools.visual_tools import save_smoother_map
-                # here we assume use the preweights to do the computation
-                save_smoother_map(local_adapt_weights, self.smoother.multi_gaussian_stds,
-                                  'time_' + str(epoch), None)  # ,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-                # print("the min {}, mean {}, max {} of th sm_weight_map_t0 is ".format(local_adapt_weights.min().item(),local_adapt_weights.mean().item(),local_adapt_weights.max().item()))
+            # if not self.get_preweight_from_network and self.print_count % 20 == 0:
+            #     from tools.visual_tools import save_smoother_map
+            #     # here we assume use the preweights to do the computation
+            #     save_smoother_map(local_adapt_weights, self.smoother.multi_gaussian_stds,
+            #                       'time_' + str(epoch), None)  # ,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
+            #     # print("the min {}, mean {}, max {} of th sm_weight_map_t0 is ".format(local_adapt_weights.min().item(),local_adapt_weights.mean().item(),local_adapt_weights.max().item()))
             if self.compute_inverse_map:
                 raise ValueError("Not implemented yet")
-
             self.print_count += 1
-
-            # self._display_stats_before_after(phi,phi1,'phi')
-            # self._display_stats_before_after(self.m,v[:,:self.dim,...],'m and v')
-            # self._display_stats_before_after(v,output[:,:self.dim,...],'v_in and v_out')
             return phi1
 
 class SVFVectorAdaptiveSmootherMomentumMapLoss(AdaptiveSmootherMomentumMapBasicLoss):
@@ -2310,6 +2147,9 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
 
     def __init__(self, sz, spacing, params, compute_inverse_map=False):
         super(LDDMMAdaptiveSmootherMomentumMapNet, self).__init__( sz, spacing, params, compute_inverse_map)
+        self.update_sm_by_advect = self.adp_params[('update_sm_by_advect', True, "true: advect smoother parameter for each time step  false: deploy network to predict smoother params at each time step")]
+        self.update_sm_with_interpolation = self.adp_params[('update_sm_with_interpolation', True,"true: during advection, interpolate the smoother params with current map  false: compute the smoother params by advection equation")]
+        self.addition_smoother = self.env[('addition_smoother','localAdaptive','using torchdiffeq package as the ode solver')]
 
 
 
@@ -2320,8 +2160,13 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        smoother = self.smoother_for_forward if self.update_sm_by_advect else self.smoother
-        if not EV.use_odeint:
+        if self.update_sm_by_advect:
+            smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams,self.addition_smoother)
+        else:
+            smoother = self.smoother
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
+
+        if not self.use_odeint:
             epdiffApt = FM.EPDiffAdaptMap(self.sz, self.spacing, smoother, cparams,
                                      compute_inverse_map=self.compute_inverse_map,update_sm_by_advect=self.update_sm_by_advect,
                                           update_sm_with_interpolation=self.update_sm_with_interpolation)
@@ -2329,7 +2174,7 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
         else:
             self.f = FM.EPDiffAdaptMap(self.sz, self.spacing, smoother, cparams,
                                      compute_inverse_map=self.compute_inverse_map,update_sm_by_advect=self.update_sm_by_advect,
-                                       update_sm_with_interpolation=self.update_sm_with_interpolation,bysingle_int=self.bysingle_int)
+                                       update_sm_with_interpolation=self.update_sm_with_interpolation,compute_on_initial_map=self.compute_on_initial_map)
             return ODE.ODEBlock(cparams)
 
 
@@ -2347,32 +2192,25 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
 
         default_dic =  self._get_default_dictionary_to_pass_to_integrator()
         """ this will be used to do the first step velcity computation, to get the local_adapt_weights"""
-        if EV.use_mermaid_net:
+        if self.get_preweight_from_network:
             I = utils.compute_warped_image_multiNC(default_dic['I0_full'], phi, self.spacing, 1, zero_boundary=True)
         else:
             #TODO the optimization version not support orignal image input yet, need to be fixed
             I = utils.compute_warped_image_multiNC(default_dic['I0'], phi, self.spacing, 1, zero_boundary=True)
 
-        pars_to_pass_s = utils.combine_dict({'I': I.detach()}, default_dic)
         dt = self.integrator.get_dt()
-        if EV.use_mermaid_net:
+        # there are three typical adaptive model, 1. learnt the preweight from the network 2. optimize the preweight 3. predefine the preweight
+        if self.get_preweight_from_network:
+            pars_to_pass_s = utils.combine_dict({'I': I.detach()}, default_dic)
             self.smoother.reset_penalty()
             m = self.m
-
-            # self.debug_distrib(self.m,'m',[i/10. for i in range(-10,12,2)])
-            # print("the min mean and max of m is {} {} {}".format(self.m.min().item(),self.m.mean().item(),self.m.max().item()))
-
             v = self.smoother.smooth(m, None, pars_to_pass_s, variables_from_optimizer,
                                      smooth_to_compute_regularizer_energy=False,
                                      clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
             if self.use_velocity_mask:
                 v = v*self.velocity_mask
-            if not EV.use_preweights_advect:
-                local_adapt_weights = self.smoother.get_deep_smoother_weights()
-            else:
-                local_adapt_weights = self.smoother.get_deep_smoother_preweights()
+            local_adapt_weights_pre = self.smoother.get_deep_smoother_preweights()
         else:
-            from .deep_smoothers import stable_softmax
             if variables_from_optimizer is not None:
                 epoch = variables_from_optimizer['iter']
                 history_iter_count = variables_from_optimizer['history_iter_count']
@@ -2386,118 +2224,86 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
                 print("no epoch/iter information is provided, set to 0")
                 epoch = 0
                 self.smoother.set_epoch(epoch)
-            #local_adapt_weights_pre=torch.abs(self.local_weights)
-            if EV.clamp_local_weight:
-                self.local_weights.data =self.local_weights.clamp(min=-EV.local_pre_weight_max,max=EV.local_pre_weight_max)
-            local_adapt_weights_pre = stable_softmax(self.local_weights, dim=1) #torch.abs(self.local_weights)
+            if self.clamp_local_weight:
+                self.local_weights.data =self.local_weights.clamp(min=-self.local_pre_weight_max,max=self.local_pre_weight_max)
+            if not self.use_predefined_weight:
+                # we deploy a softmax before getting the optimized preweight
+                local_adapt_weights_pre = stable_softmax(self.local_weights, dim=1)  # torch.abs(self.local_weights)
+            else:
+                # we use abs before getting the predefine preweight
+                local_adapt_weights_pre = torch.abs(self.local_weights)
+
             if self.smoother.weighting_type=='w_K_w':
+                # todo replace this with stable  _project_weights_to_min
                 local_adapt_weights_pre = local_adapt_weights_pre/torch.norm(local_adapt_weights_pre,p=None,dim=1,keepdim=True)
-            # from .deep_smoothers import weighted_linear_softnorm
-            # local_adapt_weights_pre = weighted_linear_softnorm(self.local_weights, dim=1, weights=self.gaussian_std_weights)
 
             local_adapt_weights = self.embedded_smoother.smooth(local_adapt_weights_pre)
-            # if self.use_velocity_mask:
-            #     self.m.data = self.m.clamp(min=-2,max=2)
-            #     m = self.m*self.velocity_mask
             m = self.m
-            v,_ = self.smoother.smooth(m,local_adapt_weights)
+            pars_to_pass_s = utils.combine_dict({'w': local_adapt_weights}, default_dic)
+            v,_ = self.smoother.smooth(m, None, pars_to_pass_s, variables_from_optimizer,
+                                     smooth_to_compute_regularizer_energy=False,
+                                     clampCFL_dt=self._use_CFL_clamping_if_desired(dt),multi_output=True)
+
             if self.use_velocity_mask:
                 v = v*self.velocity_mask
             self.smoother.reset_penalty()
             self.smoother.compute_penalty(I,local_adapt_weights,local_adapt_weights_pre)
             self.smoother.disable_penalty_computation()
-            if EV.use_preweights_advect:
-                local_adapt_weights = local_adapt_weights_pre
-        #print("the min and max of the local adapt weights is {} {}".format(local_adapt_weights.min(),local_adapt_weights.max()))
-        #pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
-        pars_to_pass_i = utils.combine_dict({'I': I.detach()}, self._get_default_dictionary_to_pass_to_integrator())
-        # todo to see if the detach would influence the result
-        self.first_step_velocity = v
-        if not EV.use_odeint:
+            # to advect the preweight
+        self.initial_velocity = v
+        if not self.use_odeint:
             if self.compute_inverse_map:
                 raise ValueError("Not implemented yet")
             else:
+                self.integrator.set_pars(pars_to_pass_s)
                 if self.update_sm_by_advect:
-                    self.integrator.set_pars(pars_to_pass_i)
                     if not self.update_sm_with_interpolation:
-                        vphi1 = self.integrator.solve([m, phi,local_adapt_weights], self.tFrom, self.tTo, variables_from_optimizer)
+                        vphi1 = self.integrator.solve([m, phi,local_adapt_weights_pre], self.tFrom, self.tTo, variables_from_optimizer)
                     else:
-                        if self.bysingle_int:
-                            vphi1 = self.integrator.solve([m, phi,self.id.detach().clone()], self.tFrom, self.tTo, variables_from_optimizer)
+                        if self.compute_on_initial_map:
+                            vphi1 = self.integrator.solve([m, phi, local_adapt_weights_pre, self.id.detach().clone()], self.tFrom, self.tTo, variables_from_optimizer)
                         else:
-                            raise NotImplemented
+                            phi1 = self.integrator.solve([m,self.id.detach(),local_adapt_weights_pre],
+                                                          self.tFrom, self.tTo, variables_from_optimizer)
+                            vphi1 = utils.compute_warped_image_multiNC(phi, phi1, self.spacing, spline_order=1,
+                                                                      zero_boundary=False)
                 else:
-                    self.integrator.set_pars(pars_to_pass_s)
                     vphi1 = self.integrator.solve([m, phi], self.tFrom, self.tTo, variables_from_optimizer)
                 return vphi1[1]
         else:
             from . import forward_models_warped as FMW
             self.f.init_velocity_mask(self.velocity_mask)
-            self.f.init_omt_const(self.omt_const)
-
+            func = FMW.ODEWarpedFunc(self.f, single_param=True, pars=pars_to_pass_s,
+                                     variables_from_optimizer=variables_from_optimizer)
             if self.update_sm_by_advect:
-                func = FMW.ODEWarpedFunc(self.f, single_param=True, pars=pars_to_pass_i,
-                                         variables_from_optimizer=variables_from_optimizer)
                 self.integrator.set_func(func)
                 if not self.update_sm_with_interpolation:
                     func.set_dim_info([self.dim, self.dim, self.n_of_gaussians])
-                    input = torch.cat((m, phi,local_adapt_weights), 1)
+                    input = torch.cat((m, phi,local_adapt_weights_pre), 1)
                 else:
-                    if self.bysingle_int:
+                    if self.compute_on_initial_map:
                         func.set_dim_info([self.dim, self.dim, self.n_of_gaussians, self.dim])
-                        #print("the shape information{}{}{}{}".format(self.m.shape,phi.shape,local_adapt_weights.shape,self.id.shape))
-                        input = torch.cat((m, phi, local_adapt_weights, self.id.detach().clone()), 1)
-                        self.f.init_zero_sm_weight(local_adapt_weights.detach())
-                    else:# todo  just make attention this is where we currently use
+                        input = torch.cat((m, phi, local_adapt_weights_pre, self.id.detach().clone()), 1)
+                        self.f.init_zero_sm_weight(local_adapt_weights_pre.detach())
+                    else:# todo  just make attention this is what we currently use
                         func.set_dim_info([self.dim,self.dim,self.n_of_gaussians])
-                        input = torch.cat((m,self.id.detach(),local_adapt_weights),1)
-                        self.f.init_zero_sm_weight(local_adapt_weights.detach())
+                        input = torch.cat((m,self.id.detach(),local_adapt_weights_pre),1)
+                        self.f.init_zero_sm_weight(local_adapt_weights_pre.detach())
             else:
-                func = FMW.ODEWarpedFunc(self.f, single_param=True, pars=pars_to_pass_s,
-                                         variables_from_optimizer=variables_from_optimizer)
                 func.set_opt_param(self.smoother.ws)
                 self.integrator.set_func(func)
                 func.set_dim_info([self.dim, self.dim])
                 input = torch.cat((m,phi),1)
-            #self.f.debug_mode_on=True
+
             output = self.integrator(input)
             phi1 = output[:,self.dim:self.dim*2,...]
-            if self.update_sm_by_advect and self.update_sm_with_interpolation and not self.bysingle_int:
+            if self.update_sm_by_advect and self.update_sm_with_interpolation and not self.compute_on_initial_map:
                 phi1 = utils.compute_warped_image_multiNC(phi, phi1, self.spacing, spline_order=1,
                                                           zero_boundary=False)  # todo check the spacing is right here
-            if 'extra_info' in variables_from_optimizer and variables_from_optimizer['extra_info'] is not None:
-                from tools.visual_tools import save_smoother_map,save_momentum,save_velocity
-                import os
-                f_path_list =  variables_from_optimizer['extra_info']['saving_folder']
-
-                # here we assume use the preweights to do the computation
-                weights = self.embedded_smoother.smooth(local_adapt_weights_pre)
-                sm_weight_map_t1 = utils.compute_warped_image_multiNC(local_adapt_weights_pre, phi1, self.spacing, 1,
-                                                                      zero_boundary=False)
-                sm_weight_map_t1 = self.embedded_smoother.smooth(sm_weight_map_t1)
-                m1 = output[:, :self.dim, ...]
-                v1, _ = self.smoother.smooth(m1, sm_weight_map_t1)
-                for i, f_path in enumerate(f_path_list):
-                    os.makedirs(f_path, exist_ok=True)
-                    save_smoother_map(weights[i:i+1], self.smoother.multi_gaussian_stds, 'time0_'+str(epoch),os.path.join(f_path,'time0_'+str(epoch)+'_sm_weight.png'),weighting_type='w_K_w')#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-                    save_smoother_map(local_adapt_weights_pre[i:i+1], self.smoother.multi_gaussian_stds, 'time0_'+str(epoch),os.path.join(f_path,'time0_'+str(epoch)+'_pre_weight.png'),weighting_type='w_K_w')#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-                    #print("the min {}, mean {}, max {} of th sm_weight_map_t0 is ".format(sm_weight_map_t0.min().item(),sm_weight_map_t0.mean().item(),sm_weight_map_t0.max().item()))
-                    save_momentum(m[i:i+1], 'time0_'+str(epoch),os.path.join(f_path,'time0_'+str(epoch)+'_m.png'))#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-                    save_velocity(v[i:i+1], 'time0_'+str(epoch),os.path.join(f_path,'time0_'+str(epoch)+'_v.png'))#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-                    save_velocity(v1[i:i+1], 'time1_'+str(epoch),os.path.join(f_path,'time1_'+str(epoch)+'_v.png'))#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-
-                    save_smoother_map(sm_weight_map_t1[i:i+1], self.smoother.multi_gaussian_stds, 'time1_'+str(epoch),os.path.join(f_path,'time1_'+str(epoch)+'_sm_weight.png'),weighting_type='w_K_w')#,os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-                    # torch.save(m,os.path.join(f_path,'m.pt'))
-                    # torch.save(self.local_weights,os.path.join(f_path,'local_weight.pt'))
-                #print("the min {}, mean {}, max {} of th sm_weight_map_t1 is ".format(sm_weight_map_t1.min().item(),sm_weight_map_t1.mean().item(),sm_weight_map_t1.max().item()))
             if self.compute_inverse_map:
                 raise ValueError("Not implemented yet")
 
             self.print_count+=1
-
-            # self._display_stats_before_after(phi,phi1,'phi')
-            # self._display_stats_before_after(m,v[:,:self.dim,...],'m and v')
-            # self._display_stats_before_after(v,output[:,:self.dim,...],'v_in and v_out')
             return phi1
 
 
@@ -2586,124 +2392,13 @@ class OneStepMapLoss(RegistrationMapLoss):
         """
         m = self.m
 
-        if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth(m)
-        else:
-            pars_to_pass = utils.combine_dict({'I': I0_source}, self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m, None, pars_to_pass, variables_from_optimizer,
+        pars_to_pass = utils.combine_dict({'I': I0_source}, self._get_default_dictionary_to_pass_to_smoother())
+        v = variables_from_forward_model['smoother'].smooth(m, None, pars_to_pass, variables_from_optimizer,
                                                                 smooth_to_compute_regularizer_energy=True)
-
-        batch_size = self.m.size()[0]
-        reg = torch.clamp((v * m), min=0.).sum() * self.spacing_model.prod() / 1.*EV.reg_factor_in_mermaid + variables_from_forward_model[
+        reg = torch.clamp((v * m), min=0.).sum() * self.spacing_model.prod()*self.reg_factor + variables_from_forward_model[
             'smoother'].get_penalty()
         return reg
 
-
-
-class ToReNameNet(ShootingVectorMomentumNet):
-    """
-    Specialization of scalar-momentum LDDMM to SVF image-based matching
-    """
-
-    def __init__(self, sz, spacing, params, compute_inverse_map=False):
-        self.compute_inverse_map = compute_inverse_map
-        """If set to True the inverse map is computed on the fly"""
-        super(ToReNameNet, self).__init__(sz, spacing, params)
-
-    def create_integrator(self):
-        """
-        Creates an integrator integrating the scalar momentum conservation law and an advection equation for the image
-
-        :return: returns this integrator
-        """
-        cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-
-        if not EV.use_odeint:
-
-            advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-            return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
-        else:
-            self.f = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-            return ODE.ODEBlock(cparams)
-
-    def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
-        """
-        Solved the scalar momentum forward equation and returns the map at time tTo
-
-        :param phi: initial map
-        :param I0_source: not used
-        :param phi_inv: initial inverse map
-        :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
-        :return: image at time tTo
-        """
-
-        pars_to_pass_s = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_integrator())
-        dt = self.integrator.get_dt()
-        v = self.smoother.smooth(self.m,None,pars_to_pass_s,variables_from_optimizer,
-                                 smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
-        pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
-
-        if not EV.use_odeint:
-            self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
-
-            if self.compute_inverse_map:
-                if phi_inv is not None:
-                    phi1 = self.integrator.solve([phi,phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
-                    return (phi1[0],phi1[1])
-                else:
-                    phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-                    return (phi1[0],None)
-            else:
-                phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
-                return phi1[0]
-        else:
-            from . import forward_models_warped as FMW
-            func = FMW.ODEWarpedFunc(self.f, single_param=False, pars=pars_to_pass_i,
-                                     variables_from_optimizer=variables_from_optimizer)
-            self.integrator.set_func(func)
-            func.set_dim_info([self.dim,self.dim])
-            input = torch.cat((v, phi), 1)
-            output = self.integrator(input)
-            phi1 = output[:,self.dim:self.dim*2,...]
-            if self.compute_inverse_map:
-                raise ValueError("Not implemented yet")
-            return phi1
-
-class ToReNameLoss(RegistrationMapLoss):
-    """
-    Specialization of the loss to scalar-momentum LDDMM on images
-    """
-
-    def __init__(self, m, sz_sim, spacing_sim, sz_model, spacing_model, params):
-        super(ToReNameLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
-        self.m = m
-        """vector momentum"""
-        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
-            cparams = params[('similarity_measure',{},'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
-            """smoother to go from momentum to velocity"""
-        else:
-            self.develop_smoother = None
-
-    def compute_regularization_energy(self, I0_source,variables_from_forward_model, variables_from_optimizer=None):
-        """
-        Computes the regularization energy from the initial vector momentum as obtained from the scalar momentum
-
-        :param I0_source: source image
-        :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
-        :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
-        :return: returns the regularization energy
-        """
-        m = self.m
-
-        if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth(m)
-        else:
-            pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
-
-        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
-        return reg
 
 
 ###################################################################################################
@@ -2820,8 +2515,9 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
 
-        if not EV.use_odeint:
+        if not self.use_odeint:
 
             advection = FM.AdvectImage(self.sz, self.spacing)
             return RK.RK4(advection.f, advection.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
@@ -2844,7 +2540,7 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
         v = self.smoother.smooth(m,None,pars_to_pass_s,variables_from_optimizer,
                                  smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
-        if not EV.use_odeint:
+        if not self.use_odeint:
 
             self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
             I1 = self.integrator.solve([I], self.tFrom, self.tTo, variables_from_optimizer)
@@ -2888,13 +2584,10 @@ class SVFScalarMomentumImageLoss(RegistrationImageLoss):
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz_model, self.spacing_model)
 
-        if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth(m)
-        else:
-            pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer,smooth_to_compute_regularizer_energy=True)
+        pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
+        v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer,smooth_to_compute_regularizer_energy=True)
 
-        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod()*self.reg_factor + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 
@@ -2912,8 +2605,9 @@ class LDDMMShootingScalarMomentumImageNet(ShootingScalarMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
 
-        if not EV.use_odeint:
+        if not self.use_odeint:
             epdiffScalarMomentumImage =FM.EPDiffScalarMomentumImage( self.sz, self.spacing, self.smoother, cparams )
             return RK.RK4(epdiffScalarMomentumImage.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
         else:
@@ -2928,7 +2622,7 @@ class LDDMMShootingScalarMomentumImageNet(ShootingScalarMomentumNet):
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
         :return: image at time tTo
         """
-        if not EV.use_odeint:
+        if not self.use_odeint:
             lamI1 = self.integrator.solve([self.lam,I], self.tFrom, self.tTo, variables_from_optimizer)
             return lamI1[1]
         else:
@@ -2969,13 +2663,10 @@ class LDDMMShootingScalarMomentumImageLoss(RegistrationImageLoss):
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz_model, self.spacing_model)
 
-        if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth(m)
-        else:
-            pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
+        pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
+        v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
+        reg = (v * m).sum() * self.spacing_model.prod()*self.reg_factor + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 
@@ -2996,7 +2687,9 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        if not EV.use_odeint:
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
+
+        if not self.use_odeint:
             epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
             return RK.RK4(epdiffScalarMomentumMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
         else:
@@ -3015,7 +2708,7 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
         :return: returns the map at time tTo
         """
         self.smoother.set_source_image(I0_source)
-        if not EV.use_odeint:
+        if not self.use_odeint:
             if self.compute_inverse_map:
                 if phi_inv is not None:
                     lamIphi1 = self.integrator.solve([self.lam,I0_source, phi, phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
@@ -3074,13 +2767,11 @@ class LDDMMShootingScalarMomentumMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz_model, self.spacing_model)
-        if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth(m)
-        else:
-            pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
 
-        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
+        pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
+        v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
+
+        reg = (v * m).sum() * self.spacing_model.prod()*self.reg_factor + variables_from_forward_model['smoother'].get_penalty()
         return reg
 
 class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
@@ -3100,8 +2791,9 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
 
-        if not EV.use_odeint:
+        if not self.use_odeint:
 
             advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
             return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
@@ -3124,7 +2816,7 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         v = self.smoother.smooth(m,None,pars_to_pass_s,variables_from_optimizer,
                              smooth_to_compute_regularizer_energy=False, clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v':v},self._get_default_dictionary_to_pass_to_integrator())
-        if not EV.use_odeint:
+        if not self.use_odeint:
             self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
             if self.compute_inverse_map:
                 if phi_inv is not None:
@@ -3184,11 +2876,7 @@ class SVFScalarMomentumMapLoss(RegistrationMapLoss):
         :return: returns the regularization energy
         """
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(self.lam, I0_source, self.sz_model, self.spacing_model)
-        if self.develop_smoother is not None:
-            v = self.develop_smoother.smooth(m)
-        else:
-            pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
-            v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
-
-        reg = (v * m).sum() * self.spacing_model.prod() + variables_from_forward_model['smoother'].get_penalty()
+        pars_to_pass = utils.combine_dict({'I':I0_source},self._get_default_dictionary_to_pass_to_smoother())
+        v = variables_from_forward_model['smoother'].smooth(m,None,pars_to_pass,variables_from_optimizer, smooth_to_compute_regularizer_energy=True)
+        reg = (v * m).sum() * self.spacing_model.prod()*self.reg_factor + variables_from_forward_model['smoother'].get_penalty()
         return reg
