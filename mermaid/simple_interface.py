@@ -50,6 +50,7 @@ class RegisterImagePair(object):
 
         self.delayed_initial_map = None
         self.delayed_initial_map_still_to_be_set = False
+        self.delayed_initial_weight_map_still_to_be_set= False
 
         self.optimizer_has_been_initialized = False
 
@@ -80,24 +81,29 @@ class RegisterImagePair(object):
 
     def _set_analysis(self, mo, extra_info):
 
-        expr_name = self.par_respro['respro']['expr_name']
-        save_fig = self.par_respro['respro']['save_fig']
-        save_fig_num = self.par_respro['respro']['save_fig_num']
-        save_fig_path = self.par_respro['respro']['save_fig_path']
-        save_excel = self.par_respro['respro']['save_excel']
+        # expr_name = self.par_respro['respro']['expr_name']
+        # save_fig = self.par_respro['respro']['save_fig']
+        # save_fig_num = self.par_respro['respro']['save_fig_num']
+        # save_fig_path = self.par_respro['respro']['save_fig_path']
+        # save_excel = self.par_respro['respro']['save_excel']
+        expr_name = extra_info['expr_name']
+        visualize = extra_info['visualize']
+        save_fig = extra_info['save_fig']
+        save_fig_path = extra_info['save_fig_path']
+        save_fig_num = extra_info['save_fig_num']
+        save_excel = extra_info['save_excel']
+        pair_name = extra_info['pair_name']
+        batch_id = extra_info['batch_id']
         mo.set_expr_name(expr_name)
         mo.set_save_fig(save_fig)
         mo.set_save_fig_path(save_fig_path)
         mo.set_save_fig_num(save_fig_num)
         mo.set_save_excel(save_excel)
-        pair_name = extra_info['pair_name']
-        batch_id = extra_info['batch_id']
-        visualize = self.par_respro['respro']['visualize']
         mo.set_visualization(visualize)
         mo.set_pair_path(pair_name)
         mo.set_batch_id(batch_id)
 
-        if self.recorder is None:
+        if save_excel and self.recorder is None:
             self.recorder = mo.init_recorder(expr_name)
             print("the recorder initialized")
         else:
@@ -202,6 +208,24 @@ class RegisterImagePair(object):
             self.delayed_initial_map_still_to_be_set = True
             self.delayed_initial_map = map0
             self.delayed_initial_inverse_map = initial_inverse_map
+
+    def set_weight_map(self,init_weight,freeze_weight=False):
+        """
+        Sets the map that will be used as initial condition. By default this is the identity, but this can be
+        overwritten with this method to for example allow concatenating multiple transforms.
+
+        :param map0: initial map
+        :param initial_inverse_map: inverse initial map; if this is not set, the inverse map cannot be computed on the fly
+        :return:  n/a
+        """
+
+        if self.opt is not None:
+            self.opt.set_initial_weight_map(init_weight, freeze_weight=freeze_weight)
+            self.delayed_initial_map_still_to_be_set = False
+        else:
+            self.delayed_initial_weight_map_still_to_be_set = True
+            self.delayed_initial_weight_map = init_weight
+            self.delay_initial_weight_freeze_weight = freeze_weight
 
     def get_initial_map(self):
         """
@@ -429,6 +453,7 @@ class RegisterImagePair(object):
         :param smoother_type: type of smoother (e.g., 'gaussian' or 'multiGaussian')
         :param json_config_out_filename: output file name for the used configuration.
         :param visualize_step: step at which the solution is visualized; if set to None, no visualizations will be created
+        :param save_visualize_folder_path: folder path for saving visualized image
         :param use_multi_scale: if set to True a multi-scale solver will be used
         :param use_consensus_optimization: if set to True, consensus optimization is used (i.e., independently optimized batches with the contraint that shared parameters are the same)
         :param use_batch_optimization: if set to True, batch optimization is used (i.e., optimization done w/ mini batches)
@@ -536,6 +561,7 @@ class RegisterImagePair(object):
                 else:
                     self.opt = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map, default_learning_rate=learning_rate)
 
+                    self.opt = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params, compute_inverse_map=compute_inverse_map)
             if visualize_step is not None:
                 self.opt.get_optimizer().set_visualization(True)
                 self.opt.get_optimizer().set_visualize_step(visualize_step)
@@ -544,6 +570,7 @@ class RegisterImagePair(object):
                 self.opt.get_optimizer().set_visualize_step(visualize_step)
 
             #self.opt.get_optimizer().set
+
 
             self.opt.set_light_analysis_on(self.light_analysis_on)
 
@@ -554,12 +581,15 @@ class RegisterImagePair(object):
 
             if self.delayed_initial_map_still_to_be_set:
                 self.set_initial_map(self.delayed_initial_map,initial_inverse_map=self.delayed_initial_inverse_map)
+            if self.delayed_initial_weight_map_still_to_be_set:
+                self.set_weight_map(self.delayed_initial_weight_map, self.delay_initial_weight_freeze_weight)
 
             if not self.light_analysis_on and use_multi_scale:
-                LSource = AdaptVal(torch.from_numpy(LSource)) if not type(LSource) == torch.Tensor else LSource
-                LTarget = AdaptVal(torch.from_numpy(LTarget)) if not type(LTarget) == torch.Tensor else LTarget
-                self.opt.optimizer.set_source_label( AdaptVal(torch.from_numpy(LSource)))
-                self.opt.optimizer.set_target_label( AdaptVal(torch.from_numpy(LTarget)))
+                if LSource is not None and LTarget is not None:
+                    LSource = AdaptVal(torch.from_numpy(LSource)) if not type(LSource) == torch.Tensor else LSource
+                    LTarget = AdaptVal(torch.from_numpy(LTarget)) if not type(LTarget) == torch.Tensor else LTarget
+                    self.opt.optimizer.set_source_label( AdaptVal(torch.from_numpy(LSource)))
+                    self.opt.optimizer.set_target_label( AdaptVal(torch.from_numpy(LTarget)))
                 self._set_analysis(self.opt.optimizer,extra_info)
 
             self.opt.register()

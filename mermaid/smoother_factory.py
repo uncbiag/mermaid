@@ -210,7 +210,7 @@ class Smoother(with_metaclass(ABCMeta, object)):
 
 
 
-    def smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
+    def smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None,multi_output=False):
         """
         Smoothes a vector field of dimension BxCxXxYxZ,
 
@@ -226,14 +226,18 @@ class Smoother(with_metaclass(ABCMeta, object)):
         """
         sz = v.size()
         self.batch_size = sz[0]
+        if not multi_output:
+            if vout is not None:
+                Sv = vout
+            else:
+                Sv = MyTensor(v.size()).zero_()
 
-        if vout is not None:
-            Sv = vout
+            Sv[:] = self.apply_smooth(v,vout,pars,variables_from_optimizer, smooth_to_compute_regularizer_energy, clampCFL_dt)    # here must use :, very important !!!!
+            return Sv
         else:
-            Sv = MyTensor(v.size()).zero_()
+            output = self.apply_smooth(v,vout,pars,variables_from_optimizer, smooth_to_compute_regularizer_energy, clampCFL_dt)
+            return output
 
-        Sv[:] = self.apply_smooth(v,vout,pars,variables_from_optimizer, smooth_to_compute_regularizer_energy, clampCFL_dt)    # here must use :, very important !!!!
-        return Sv
 
 
 class DiffusionSmoother(Smoother):
@@ -655,164 +659,6 @@ class MultiGaussianFourierSmoother(GaussianFourierSmoother):
                 self.FFilter += cFilter
 
 
-
-class LocalFourierSmoother(object):
-    """
-    Performs multi Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
-    than spatial Gaussian smoothing on the CPU in large dimensions.
-    
-    the local fourier smoother is designed for  optimization version, in this case, only local fouier smoother need to be used,
-    but currently, not support global std, weights optimization
-    Besides, it can be jointly used with deep smoother, in this case, we  would call import_outside_var during the init to share the vars with the
-    deep smoother
-    """
-
-    def __init__(self, sz, spacing, params):
-        super(LocalFourierSmoother, self).__init__()
-        self.sz = sz
-        self.spacing = spacing
-        self.dim = len(spacing)
-        self.params = params
-        self.multi_gaussian_stds = AdaptVal(torch.from_numpy(np.array(params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')],dtype='float32')))
-        self.multi_gaussian_weights = AdaptVal(torch.from_numpy(np.array(params[('multi_gaussian_weights', [0.05, 0.1, 0.15, 0.2, 0.25], 'weights for the Gaussians std')],dtype='float32')))
-        self.nr_of_gaussians = len(self.multi_gaussian_stds)
-        self.weighting_type = params['deep_smoother'][('weighting_type','sqrt_w_K_sqrt_w','Type of weighting: w_K|w_K_w|sqrt_w_K_sqrt_w')]
-        self.gaussian_fourier_filter_generator=ce.GaussianFourierFilterGenerator(self.sz, self.spacing, nr_of_slots=self.nr_of_gaussians)
-        self.gaussian_fourier_filter_generator.get_gaussian_filters(self.multi_gaussian_stds)
-        self.loss = AdaptiveWeightLoss(self.nr_of_gaussians, self.multi_gaussian_stds, self.dim, spacing, sz, omt_power=None,params=params)
-        self.accumulate_the_penalty = False
-        self.compute_the_penalty= False
-        self.current_penalty=0.
-
-
-    def associate_parameters_with_module(self,module):
-        return set()
-
-
-
-
-    def get_custom_optimizer_output_string(self):
-        output_str = ""
-        output_str += ", smooth(penalty)= " + np.array_str(self.current_penalty.detach().cpu().numpy(),precision=3)
-
-        return output_str
-
-    def get_custom_optimizer_output_values(self):
-        return {'smoother_stds': self.multi_gaussian_stds.detach().cpu().numpy().copy(),
-                'smoother_weights': self.multi_gaussian_weights.detach().cpu().numpy().copy(),
-                'smoother_penalty': self.current_penalty.detach().cpu().numpy().copy()}
-
-
-
-
-
-    def import_outside_var(self,multi_gaussian_stds,multi_gaussian_weights,gaussian_fourier_filter_generator,loss):
-        """ this function is to deal with situation  like the optimization of the multi-gaussian-stds , multi-gaussian_weight,
-                        here also take the  gaussian_fourier_filter_generator, loss  as the input to reduce the head cost,
-                        this function only need to be called once at the init
-        :param multi_gaussian_stds:
-        :param multi_gaussian_weights:
-        :param weighting_type:
-        :param gaussian_fourier_filter_generator:
-        :param loss:
-        :return:
-        """
-        self.multi_gaussian_stds = multi_gaussian_stds
-        self.multi_gaussian_weights = multi_gaussian_weights
-        self.gaussian_fourier_filter_generator = gaussian_fourier_filter_generator
-        self.loss =loss
-
-    def enable_accumulated_penalty(self):
-        self.accumulate_the_penalty = True
-    def enable_penalty_computation(self):
-        self.compute_the_penalty = True
-    def disable_penalty_computation(self):
-        self.compute_the_penalty = False
-
-    def reset_penalty(self):
-        self.current_penalty=0.
-        self.compute_the_penalty= True
-
-    def get_nr_of_gaussians(self):
-        return self.nr_of_gaussians
-    def debugging(self, input, t):
-        x = utils.checkNan(input)
-        if np.sum(x):
-            print(input[0])
-            print(input[1])
-            print("flag m: {}, ".format(x[0]))
-            print("flag smooth_m: {},".format(x[1]))
-            raise ValueError("nan error")
-
-    def get_penalty(self):
-        return self.current_penalty
-
-
-    def set_epoch(self,epoch):
-        self.epoch = epoch
-
-    def compute_penalty(self, I,weights,pre_weights,input_to_pre_weights=None):
-
-        if self.compute_the_penalty:
-            # todo if the accumluate penalty need to be considered, here should need an accumulated term
-            self.loss.epoch = self.epoch
-            current_penalty,_,_,_,_ = self.loss._compute_penalty_from_weights_preweights_and_input_to_preweights(I=I,weights=weights,
-                                                                                                                 pre_weights=pre_weights,
-                                                                                                                 input_to_preweights=input_to_pre_weights,
-                                                                                                                global_multi_gaussian_weights=self.multi_gaussian_weights)
-            if not self.accumulate_the_penalty:
-                self.current_penalty = current_penalty
-            else:
-                self.current_penalty += current_penalty
-
-
-    def smooth(self, momentum, weights):
-        from . import deep_smoothers as DS
-        weights = torch.clamp((weights), min=1e-6)
-
-        if self.weighting_type=='sqrt_w_K_sqrt_w':
-            sqrt_weights = torch.sqrt(weights)
-            sqrt_weighted_multi_smooth_v = DS.compute_weighted_multi_smooth_v( momentum=momentum, weights=sqrt_weights, gaussian_stds=self.multi_gaussian_stds,
-                                                                   gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator )
-            extra_ret = sqrt_weighted_multi_smooth_v
-            if EV.debug_mode_on:
-                pass #self.debugging([sqrt_weights,sqrt_weighted_multi_smooth_v],0)
-        elif self.weighting_type=='w_K_w':
-            # now create the weighted multi-smooth-v
-            weighted_multi_smooth_v = DS.compute_weighted_multi_smooth_v( momentum=momentum, weights=weights, gaussian_stds=self.multi_gaussian_stds,
-                                                                       gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator )
-            extra_ret = weighted_multi_smooth_v
-        elif self.weighting_type=='w_K':
-            # todo: check if we can do a more generic datatype conversion than using .float()
-            multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(momentum,
-                                                                     gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
-                                                                     sigma=self.multi_gaussian_stds,
-                                                                     compute_std_gradients=False)
-            extra_ret = multi_smooth_v
-        else:
-            raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
-        sz_m = momentum.size()
-        ret = AdaptVal(MyTensor(*sz_m))
-
-        for n in range(self.dim):
-            if self.weighting_type=='sqrt_w_K_sqrt_w':
-                # sqrt_weighted_multi-smooth_v should be:  batch x K x dim x X x Y x ...
-                # roc should be: batch x multi_v x X x Y
-                roc = sqrt_weighted_multi_smooth_v[:, :, n, ...]
-                yc = torch.sum(roc * sqrt_weights, dim=1)
-            elif self.weighting_type=='w_K_w':
-                # roc should be: batch x multi_v x X x Y
-                roc = weighted_multi_smooth_v[:, :, n, ...]
-                yc = torch.sum(roc*weights,dim=1)
-            elif self.weighting_type=='w_K':
-                # roc should be: batch x multi_v x X x Y
-                roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
-                yc = torch.sum(roc * weights, dim=1)
-            else:
-                raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
-
-            ret[:, n, ...] = yc # ret is: batch x channels x X x Y
-        return ret, extra_ret
 
 def _compute_omt_penalty_for_weight_vectors(weights,multi_gaussian_stds,omt_power=2.0,use_log_transform=False):
 
@@ -1608,52 +1454,174 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
             return smoothed_v
 
 
-
-class AdaptiveSmoother(Smoother):
+class LocalFourierSmoother(Smoother):
     """
-    Performs Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
+    Performs multi Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
     than spatial Gaussian smoothing on the CPU in large dimensions.
+
+    the local fourier smoother is designed for  optimization version, in this case, only local fouier smoother need to be used,
+    but currently, not support global std, weights optimization
+    Besides, it can be jointly used with deep smoother, in this case, we  would call import_outside_var during the init to share the vars with the
+    deep smoother
     """
 
     def __init__(self, sz, spacing, params):
-        super(AdaptiveSmoother, self).__init__(sz, spacing, params)
-        """standard deviation of Gaussian"""
-        self.net_sched = params[('net_sched', 'm_fixed', 'std for the Gaussian')]
-        self.sz = sz
-        self.spacing = spacing
-        self.FFilter = None
-        self.moving, self.target = params['input']
-        inputs ={}
-        inputs['s'] = self.moving
-        inputs['t'] = self.target
-        self.smoother = utils.AdpSmoother(inputs, len(sz))
-        utils.init_weights(self.smoother, init_type='normal')
-        if USE_CUDA:
-           self.smoother = self.smoother.cuda()
-        #self.sm_filter = utils.nn.Conv2d(2, 2, 3, 1, padding=1,groups=2, bias=False).cuda()
-
-        """filter in Fourier domain"""
-
-    def adaptive_smooth(self, m, phi, using_map=True):
-        """
-        EXPERIMENTAL: DO NOT YET USE! #todo: fix this
-
-        :param m:
-        :param phi:
-        :param using_map:
-        :return:
-        """
-        if using_map:
-            I = utils.compute_warped_image_multiNC(self.moving, phi, self.spacing,spline_order=1)
-        else:
-            I = None
-        v = self.smoother(m, I.detach())
-        return v
+        super(LocalFourierSmoother, self).__init__( sz, spacing, params)
+        self.multi_gaussian_stds = AdaptVal(torch.from_numpy(
+            np.array(params[('multi_gaussian_stds', [0.05, 0.1, 0.15, 0.2, 0.25], 'std deviations for the Gaussians')],
+                     dtype='float32')))
+        self.multi_gaussian_weights = AdaptVal(torch.from_numpy(
+            np.array(params[('multi_gaussian_weights', [0.05, 0.1, 0.15, 0.2, 0.25], 'weights for the Gaussians std')],
+                     dtype='float32')))
+        self.nr_of_gaussians = len(self.multi_gaussian_stds)
+        self.weighting_type = params['deep_smoother'][
+            ('weighting_type', 'sqrt_w_K_sqrt_w', 'Type of weighting: w_K|w_K_w|sqrt_w_K_sqrt_w')]
+        self.gaussian_fourier_filter_generator = ce.GaussianFourierFilterGenerator(self.sz, self.spacing,
+                                                                                   nr_of_slots=self.nr_of_gaussians)
+        self.gaussian_fourier_filter_generator.get_gaussian_filters(self.multi_gaussian_stds)
+        self.loss = AdaptiveWeightLoss(self.nr_of_gaussians, self.multi_gaussian_stds, self.dim, spacing, sz,
+                                       omt_power=None, params=params)
+        self.accumulate_the_penalty = False
+        self.compute_the_penalty = False
+        self.current_penalty = 0.
 
 
-    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
+    def set_debug_retain_computed_local_weights(self, val=True):
         pass
 
+    def get_default_multi_gaussian_weights(self):
+        return self.multi_gaussian_weights
+
+    def get_gaussian_stds(self):
+        return self.multi_gaussian_stds
+
+    def get_gaussian_weights(self):
+        return self.multi_gaussian_weights
+
+    def get_custom_optimizer_output_string(self):
+        output_str = ""
+        output_str += ", smooth(penalty)= " + np.array_str(self.current_penalty.detach().cpu().numpy(), precision=3)
+
+        return output_str
+
+    def get_custom_optimizer_output_values(self):
+        return {'smoother_stds': self.multi_gaussian_stds.detach().cpu().numpy().copy(),
+                'smoother_weights': self.multi_gaussian_weights.detach().cpu().numpy().copy(),
+                'smoother_penalty': self.current_penalty.detach().cpu().numpy().copy()}
+
+    def import_outside_var(self, multi_gaussian_stds, multi_gaussian_weights, gaussian_fourier_filter_generator, loss):
+        """ this function is to deal with situation  like the optimization of the multi-gaussian-stds , multi-gaussian_weight,
+                        here also take the  gaussian_fourier_filter_generator, loss  as the input to reduce the head cost,
+                        this function only need to be called once at the init
+        :param multi_gaussian_stds:
+        :param multi_gaussian_weights:
+        :param weighting_type:
+        :param gaussian_fourier_filter_generator:
+        :param loss:
+        :return:
+        """
+        self.multi_gaussian_stds = multi_gaussian_stds
+        self.multi_gaussian_weights = multi_gaussian_weights
+        self.gaussian_fourier_filter_generator = gaussian_fourier_filter_generator
+        self.loss = loss
+
+    def enable_accumulated_penalty(self):
+        self.accumulate_the_penalty = True
+
+    def enable_penalty_computation(self):
+        self.compute_the_penalty = True
+
+    def disable_penalty_computation(self):
+        self.compute_the_penalty = False
+
+    def reset_penalty(self):
+        self.current_penalty = 0.
+        self.compute_the_penalty = True
+
+    def get_nr_of_gaussians(self):
+        return self.nr_of_gaussians
+
+    def debugging(self, input, t):
+        x = utils.checkNan(input)
+        if np.sum(x):
+            print(input[0])
+            print(input[1])
+            print("flag m: {}, ".format(x[0]))
+            print("flag smooth_m: {},".format(x[1]))
+            raise ValueError("nan error")
+
+    def get_penalty(self):
+        return self.current_penalty
+
+    def set_epoch(self, epoch):
+        self.epoch = epoch
+
+    def compute_penalty(self, I, weights, pre_weights, input_to_pre_weights=None):
+
+        if self.compute_the_penalty:
+            # todo if the accumluate penalty need to be considered, here should need an accumulated term
+            self.loss.epoch = self.epoch
+            current_penalty, _, _, _, _ = self.loss._compute_penalty_from_weights_preweights_and_input_to_preweights(
+                I=I, weights=weights,
+                pre_weights=pre_weights,
+                input_to_preweights=input_to_pre_weights,
+                global_multi_gaussian_weights=self.multi_gaussian_weights)
+            if not self.accumulate_the_penalty:
+                self.current_penalty = current_penalty
+            else:
+                self.current_penalty += current_penalty
+
+    def apply_smooth(self, v, vout=None, pars=dict(), variables_from_optimizer=None, smooth_to_compute_regularizer_energy=False, clampCFL_dt=None):
+        from . import deep_smoothers as DS
+        momentum = v
+        weights=pars['w']
+        weights = torch.clamp((weights), min=1e-3)
+
+        if self.weighting_type == 'sqrt_w_K_sqrt_w':
+            sqrt_weights = torch.sqrt(weights)
+            sqrt_weighted_multi_smooth_v = DS.compute_weighted_multi_smooth_v(momentum=momentum, weights=sqrt_weights,
+                                                                              gaussian_stds=self.multi_gaussian_stds,
+                                                                              gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator)
+            extra_ret = sqrt_weighted_multi_smooth_v
+            # if EV.debug_mode_on:
+            #     pass #self.debugging([sqrt_weights,sqrt_weighted_multi_smooth_v],0)
+        elif self.weighting_type == 'w_K_w':
+            # now create the weighted multi-smooth-v
+            weighted_multi_smooth_v = DS.compute_weighted_multi_smooth_v(momentum=momentum, weights=weights,
+                                                                         gaussian_stds=self.multi_gaussian_stds,
+                                                                         gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator)
+            extra_ret = weighted_multi_smooth_v
+        elif self.weighting_type == 'w_K':
+            # todo: check if we can do a more generic datatype conversion than using .float()
+            multi_smooth_v = ce.fourier_set_of_gaussian_convolutions(momentum,
+                                                                     gaussian_fourier_filter_generator=self.gaussian_fourier_filter_generator,
+                                                                     sigma=self.multi_gaussian_stds,
+                                                                     compute_std_gradients=False)
+            extra_ret = multi_smooth_v
+        else:
+            raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
+        sz_m = momentum.size()
+        ret = AdaptVal(MyTensor(*sz_m))
+
+        for n in range(self.dim):
+            if self.weighting_type == 'sqrt_w_K_sqrt_w':
+                # sqrt_weighted_multi-smooth_v should be:  batch x K x dim x X x Y x ...
+                # roc should be: batch x multi_v x X x Y
+                roc = sqrt_weighted_multi_smooth_v[:, :, n, ...]
+                yc = torch.sum(roc * sqrt_weights, dim=1)
+            elif self.weighting_type == 'w_K_w':
+                # roc should be: batch x multi_v x X x Y
+                roc = weighted_multi_smooth_v[:, :, n, ...]
+                yc = torch.sum(roc * weights, dim=1)
+            elif self.weighting_type == 'w_K':
+                # roc should be: batch x multi_v x X x Y
+                roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
+                yc = torch.sum(roc * weights, dim=1)
+            else:
+                raise ValueError('Unknown weighting_type: {}'.format(self.weighting_type))
+
+            ret[:, n, ...] = yc  # ret is: batch x channels x X x Y
+        return ret, extra_ret
 
 def _print_smoothers(smoothers):
     print('\nKnown smoothers are:')
@@ -1674,7 +1642,6 @@ class AvailableSmoothers(object):
             'adaptive_multiGaussian': (AdaptiveMultiGaussianFourierSmoother, 'Adaptive multi Gaussian smoothing in the Fourier domain w/ optimization over weights and stds'),
             'learned_multiGaussianCombination': (LearnedMultiGaussianCombinationFourierSmoother, 'Experimental learned smoother'),
             'gaussianSpatial': (GaussianSpatialSmoother, 'Gaussian smoothing in the spatial domain'),
-            'adaptiveNet': (AdaptiveSmoother,'Epxerimental learned smoother'),
             'localAdaptive':(LocalFourierSmoother,'Experimental local smoother')
         }
         """dictionary defining all the smoothers"""

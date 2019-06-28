@@ -184,7 +184,7 @@ class RHSLibrary(object):
         :return rhsphi: Returns the RHS of the advection equations involved  BxCxXxYxZ
         """
 
-        fdc = self.fdt_le # use zero Neumann boundary conditions
+        fdc = self.fdt_le # use order boundary conditions (interpolation)
 
         if self.dim==1:
             dxc_phi = -fdc.dXc(phi)
@@ -201,92 +201,6 @@ class RHSLibrary(object):
         else:
             raise ValueError('Only supported up to dimension 3')
         return rhsphi
-
-
-
-
-
-    def rhs_burger_map_multiNC(self, v,speed_factor=1.):
-        '''
-        based on burger equation flow a set of N velocity (for N velocity). Expected format here, is
-        BxCxXxYxZ, where B is the number of images/maps (batch size), C, the number of channels
-        per (here the spatial dimension for the map coordinate functions),
-        and X, Y, Z are the spatial coordinates (X only in 1D; X,Y only in 2D)
-
-
-        :math:`-D\\v v`
-
-        :param v: Velocity fields (this will be one velocity field per map) BxCxXxYxZ
-        :return: Returns the RHS of the burger equations involved BxCxXxYxZ
-        '''
-        sz = v.size()
-        rhs_ret = self._rhs_burger_map_call(v,speed_factor=speed_factor)
-        return rhs_ret
-
-    def _rhs_burger_map_call(self,v,speed_factor):
-        """
-
-        :param v: Velocity fields (this will be one velocity field per map)  BxCxXxYxZ
-        :return rhsv: Returns the RHS of the burger equations involved  BxCxXxYxZ
-        """
-
-        if self.use_neumann_BC_for_map:
-            fdc = self.fdt # use zero Neumann boundary conditions
-        else:
-            fdc = self.fdt_le # do linear extrapolation
-
-        if self.dim==1:
-            dxc_v = -fdc.dXc(v)
-            rhsv= dxc_v * v[:,0:1]*speed_factor
-        elif self.dim==2:
-            dxc_v = -fdc.dXc(v)
-            dyc_v = -fdc.dYc(v)
-            rhsv =  (v[:,0:1]*dxc_v + v[:,1:2]*dyc_v) * speed_factor
-        elif self.dim==3:
-            dxc_v = -fdc.dXc(v)
-            dyc_v = -fdc.dYc(v)
-            dzc_v = -fdc.dZc(v)
-            rhsv = (v[:, 0:1] * dxc_v + v[:, 1:2] * dyc_v + v[:,2:3]*dzc_v) * speed_factor
-        else:
-            raise ValueError('Only supported up to dimension 3')
-        return rhsv
-
-
-
-    def _rhs_burger_map_upwind_call(self,v,rhsv,speed_factor):
-        """
-        ToDo, the implementation of the conservation form is incorrect
-        :param v: Velocity fields (this will be one velocity field per map)  BxCxXxYxZ
-        :return rhsv: Returns the RHS of the burger equations involved  BxCxXxYxZ
-        """
-        v_pos_logical = (v > 0).float()
-        v_neg_logical = (v <= 0).float()
-        if self.use_neumann_BC_for_map:
-            fdc = self.fdt # use zero Neumann boundary conditions
-        else:
-            fdc = self.fdt_le # do linear extrapolation
-
-        if self.dim==1:
-            rhsv[:]=- ( fdc.dXb(v[:,0:1])*v[:,0:1]*v_pos_logical[:,0:1] + fdc.dXf(v[:,0:1])*v[:,0:1]*v_neg_logical[:,0:1])
-        elif self.dim==2:
-            dxb_v = -fdc.dXb(v)
-            dyb_v = -fdc.dYb(v)
-            dxf_v = -fdc.dXf(v)
-            dyf_v = -fdc.dYf(v)
-            rhsv[:]= dxb_v*v[:,0:1]*v_pos_logical[:,0:1] + dxf_v*v[:,0:1]*v_neg_logical[:,0:1]\
-                     + dyb_v*v[:,1:2]*v_pos_logical[:,1:2] + dyf_v*v[:,1:2]*v_neg_logical[:,1:2]
-        elif self.dim==3:
-            dxb_v = -fdc.dXb(v)
-            dyb_v = -fdc.dYb(v)
-            dzb_v = -fdc.dZb(v)
-            dxf_v = -fdc.dXf(v)
-            dyf_v = -fdc.dYf(v)
-            dzf_v = -fdc.dZf(v)
-            rhsv[:]= dxb_v*v[:,0:1]*v_pos_logical[:,0:1] + dxf_v*v[:,0:1]*v_neg_logical[:,0:1]\
-                              + dyb_v*v[:,1:2]*v_pos_logical[:,1:2] + dyf_v*v[:,1:2]*v_neg_logical[:,1:2]\
-                              + dzb_v*v[:,2:3]*v_pos_logical[:,2,...] + dzf_v*v[:,2:3]*v_neg_logical[:,2:3]
-        else:
-            raise ValueError('Only supported up to dimension 3')
 
 
 
@@ -323,7 +237,6 @@ class RHSLibrary(object):
             fdc = self.fdt # use zero Neumann boundary conditions
         else:
             fdc = self.fdt_le # do linear extrapolation
-
 
         #fdc = self.fdt
         if self.dim == 1:
@@ -411,30 +324,22 @@ class RHSLibrary(object):
         ret_var = torch.empty_like(rhs)
         # ret_var, rhs should batch x dim x X x Yx ..
         dim = m.shape[1]
-        n_smoother = w.shape[1]
-
         sz = [m.shape[0]]+[1]+list(m.shape[1:]) # batchx1xdimx X x Y
         m = m.view(*sz)
         m_sm_wm = m* sm_wm
-        sm_m_sm_wm = smoother.smooth(m_sm_wm) # batchx Kxdim x X xY...
+        m_sm_wm = m_sm_wm.sum(dim=2)
+        sm_m_sm_wm = smoother.smooth(m_sm_wm)  # batchx K x X xY...
         dxc_w = fdc.dXc(w)
         dc_w_list = [dxc_w]
-        if dim==2 or dim==3:
+        if dim == 2 or dim == 3:
             dyc_w = fdc.dYc(w)
             dc_w_list.append(dyc_w)
-        if dim==3:
-            dzc_w = fdc.dZc(w) # batch x K x X xY ...
+        if dim == 3:
+            dzc_w = fdc.dZc(w)  # batch x K x X xY ...
             dc_w_list.append(dzc_w)
         for i in range(dim):
-            ret_var[:,i] = rhs[:,i]+(sm_m_sm_wm[:,:,i]* dc_w_list[i]).sum(1)
-        ######################
-        # for i in range(dim):
-        #     res = smoother.smooth(m_sm_wm[:,0,i:i+1])[:,0]*dxc_w[:,i]
-        #     for j in range(1,n_smoother):
-        #       res += smoother.smooth(m_sm_wm[:,0,i:i+1])[:,0]*dxc_w[:,i]
-        #     ret_var[:,i] = rhs[:,i] +res
+            ret_var[:, i] = rhs[:, i] + (sm_m_sm_wm* dc_w_list[i]).sum(1)
 
-        ########################
         return ret_var
 
 
@@ -584,92 +489,6 @@ class AdvectImage(ForwardModel):
 
 
 
-class BGAdvMap(ForwardModel):
-    """
-    Forward model for the EPDiff equation. State is the momentum, m, and the transform, :math:`\\phi`
-    (mapping the source image to the target image).
-    :math:
-    u = Ku
-    \\phi_t = -u \\phi_x
-    u_t = -u u_x`
-    """
-
-    def __init__(self, sz, spacing, smoother, params=None, compute_inverse_map=False):
-        super(BGAdvMap, self).__init__(sz, spacing, params)
-        self.compute_inverse_map = compute_inverse_map
-        """If True then computes the inverse map on the fly for a map-based solution"""
-
-        self.smoother = smoother
-        self.speed_nest_factor = 1.
-        self.use_net = True if self.params['smoother']['type'] == 'adaptiveNet' else False
-
-
-    def debugging(self, input, t):
-        x = utils.checkNan(input)
-        if np.sum(x):
-            print("find nan at {} step".format(t))
-            print("flag m: {}, ".format(x[0]))
-            print("flag v: {},".format(x[1]))
-            print("flag phi: {},".format(x[2]))
-            print("flag new_m: {},".format(x[3]))
-            print("flag new_phi: {},".format(x[4]))
-            raise ValueError("nan error")
-    def _compute_speed_factor(self,sched,t):
-        """
-        ToDo design time related speed change ratio
-        :param sched:
-        :param t:
-        :return:
-        """
-        pass
-
-    def u(self, t, pars, variables_from_optimizer=None):
-        """
-        External input, to hold the velocity field
-
-        :param t: time (ignored; not time-dependent)
-        :param pars: assumes an n-D velocity field is passed as the only input argument
-        :param variables_from_optimizer: variables that can be passed from the optimizer
-        :return: Simply returns this velocity field
-        """
-        return pars['v']
-
-    def f(self, t, x, u, pars=None, variables_from_optimizer=None):
-        """
-        Function to be integrated, i.e., right hand side of the EPDiff equation:
-        :math:`-D\\v v*speed_factor`
-
-        :math:`-D\\phi v*speed_factor`
-
-        :param t: time (ignored; not time-dependent)
-        :param x: state, here the image, velocity field, v, and the map, :math:`\\phi`
-        :param u: ignored, no external input
-        :param pars: ignored (does not expect any additional inputs)
-        :param variables_from_optimizer: variables that can be passed from the optimizer
-        :return: right hand side [v,phi]
-        """
-
-        # assume x[0] is m and x[1] is phi for the state
-        v = x[0]
-        phi = x[1]
-
-        if int(t*10)%1==0 and t>0:
-            v=self.smoother.smooth(v, None, None, variables_from_optimizer)
-
-        if self.compute_inverse_map:
-            raise ValueError(" TO DO the inverse of the CVF is NotImplemented")
-
-        # print('max(|v|) = ' + str( v.abs().max() ))
-
-        if self.compute_inverse_map:
-            raise ValueError(" TO DO the inverse of the CVF is NotImplemented")
-        else:
-            ret_val = [self.rhs.rhs_burger_map_multiNC(v,self.speed_nest_factor), self.rhs.rhs_advect_map_multiNC(phi, v*self.speed_nest_factor)]
-            #ret_val = [self.rhs.rhs_advect_map_multiNC(v,v,True), self.rhs.rhs_advect_map_multiNC(phi, v*self.speed_nest_factor)]
-        return ret_val
-
-
-
 
 
 
@@ -755,6 +574,7 @@ class EPDiffMap(ForwardModel):
 
         # assume x[0] is m and x[1] is phi for the state
         m = x[0]
+        m = m.clamp(max=1., min=-1.)
         phi = x[1]
 
         if self.compute_inverse_map:
@@ -775,8 +595,6 @@ class EPDiffMap(ForwardModel):
             new_m = self.rhs.rhs_epdiff_multiNC(m,v)
             new_phi = self.rhs.rhs_advect_map_multiNC(phi,v)
             ret_val= [new_m, new_phi]
-            #print("debugging22, abs_sum v{}, and new_m {},new_phi {}".format(torch.sum(torch.abs(v)), torch.sum(torch.abs(new_m)),torch.sum(torch.abs(new_phi))))
-        #self.debugging([m, v, phi, new_val[0], new_val[1]], t)
         return ret_val
 
 
@@ -851,28 +669,13 @@ class AdvectAdaptMap(ForwardModel):
         sm_weight = x[2]
         new_sm_weight = utils.compute_warped_image_multiNC(sm_weight, phi, self.spacing, 1,
                                                            zero_boundary=False)
-        if EV.use_preweights_advect:
-            new_sm_weight = self.embedded_smoother.smooth(new_sm_weight)
+        new_sm_weight = self.embedded_smoother.smooth(new_sm_weight)
         v = self.smoother.smooth(m, new_sm_weight)
-
-
-        # print('t{},m min, mean,max {} {} {}'.format(t,m.min().item(),m.mean().item(),m.max().item()))
-        # #################################
-        # from tools.visual_tools import save_smoother_map, plot_2d_img
-        # # save_smoother_map(new_sm_weight, self.smoother.gaussian_stds, t.item(),
-        # #                   '/playpen/zyshen/debugs/visual_sm')
-        # plot_2d_img(m[0, 0, :, 40, :], 'm' + str(t.item()), '/playpen/zyshen/debugs/visual_m')
-        #
-        # ###############################
-
         new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
         new_sm_weight = self.update_sm_weight.detach()
         new_m = self.update_m.detach()
         ret_val = [new_m, new_phi, new_sm_weight]
         return_val_name = ['new_m', 'new_phi', 'new_sm_weight']
-
-
-
 
 
         if self.debug_mode_on:
@@ -900,7 +703,7 @@ class EPDiffAdaptMap(ForwardModel):
     :math:`\\phi_t+D\\phi v=0`
     """
 
-    def __init__(self, sz, spacing, smoother, params=None, compute_inverse_map=False, update_sm_by_advect= True, update_sm_with_interpolation=True,bysingle_int=True):
+    def __init__(self, sz, spacing, smoother, params=None, compute_inverse_map=False, update_sm_by_advect= True, update_sm_with_interpolation=True,compute_on_initial_map=True):
         super(EPDiffAdaptMap, self).__init__(sz, spacing, params)
         from . import module_parameters as pars
         from . import smoother_factory as sf
@@ -911,8 +714,9 @@ class EPDiffAdaptMap(ForwardModel):
         self.update_sm_by_advect = update_sm_by_advect
         self.use_the_first_step_penalty = True
         self.update_sm_with_interpolation = update_sm_with_interpolation
-        self.bysingle_int=bysingle_int
+        self.compute_on_initial_map=compute_on_initial_map
         self.update_sm_weight=None
+        self.velocity_mask = None
         self.debug_mode_on = False
         s_m_params = pars.ParameterDict()
         s_m_params['smoother']['type'] = 'gaussian'
@@ -930,6 +734,11 @@ class EPDiffAdaptMap(ForwardModel):
             raise ValueError("nan error")
     def init_zero_sm_weight(self,sm_weight):
         self.update_sm_weight = torch.zeros_like(sm_weight).detach()
+
+
+    def init_velocity_mask(self,velocity_mask):
+        self.velocity_mask = velocity_mask
+
 
 
 
@@ -962,40 +771,39 @@ class EPDiffAdaptMap(ForwardModel):
         sm_weight = None
         if self.update_sm_by_advect:
             if not self.update_sm_with_interpolation:
-                sm_weight = x[2]
-                v, extra_ret = self.smoother.smooth(m, sm_weight)
+                sm_weight_pre = x[2]
+                sm_weight = self.embedded_smoother.smooth(sm_weight_pre)
+
+                v, extra_ret = self.smoother.smooth(m, None, {'w':sm_weight},multi_output=True)
+                if self.velocity_mask is not None:
+                    v = v* self.velocity_mask
                 new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
-                new_sm_weight =  self.rhs.rhs_advect_map_multiNC(sm_weight, v)
-                if not EV.use_fixed_wkw_equation:
-                    new_m = self.rhs.rhs_epdiff_multiNC(m, v)
-                else:
-                    new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m, v, new_sm_weight, extra_ret,
+                new_sm_weight_pre =  self.rhs.rhs_advect_map_multiNC(sm_weight_pre, v)
+                new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m, v, new_sm_weight_pre, extra_ret,
                                                                   self.embedded_smoother)
 
-                ret_val = [new_m, new_phi,new_sm_weight]
+                ret_val = [new_m, new_phi,new_sm_weight_pre]
                 return_val_name  =['new_m','new_phi','new_sm_weight']
             else:
-                if self.bysingle_int:
+                if self.compute_on_initial_map:
                     sm_weight = x[2]
                     sm_phi = x[3]
                     new_sm_weight = utils.compute_warped_image_multiNC(sm_weight, sm_phi, self.spacing, 1,
                                                                     zero_boundary=False)
-                    pre_weight = None
-                    if EV.use_preweights_advect:
-                        pre_weight = sm_weight
-                        new_sm_weight = self.embedded_smoother.smooth(new_sm_weight)
+                    pre_weight = sm_weight
+                    new_sm_weight = self.embedded_smoother.smooth(new_sm_weight)
                     #print('t{},m min, mean,max {} {} {}'.format(t,m.min().item(),m.mean().item(),m.max().item()))
-                    v,extra_ret = self.smoother.smooth(m, new_sm_weight)
-                    if not EV.use_fixed_wkw_equation:
-                        new_m = self.rhs.rhs_epdiff_multiNC(m, v)
-                    else:
-                        new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,pre_weight,extra_ret,self.embedded_smoother)
+                    v,extra_ret = self.smoother.smooth(m,None,{'w': new_sm_weight},multi_output=True)
+                    if self.velocity_mask is not None:
+                        v = v * self.velocity_mask
+
+                    new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,pre_weight,extra_ret,self.embedded_smoother)
                     new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
                     new_sm_phi = self.rhs.rhs_advect_map_multiNC(sm_phi, v)
                     new_sm_weight = self.update_sm_weight.detach()
                     ret_val = [new_m, new_phi,new_sm_weight,new_sm_phi]
                     return_val_name = ['new_m', 'new_phi', 'new_sm_weight','new_sm_phi']
-                else:
+                else: #todo  just attention here is what we currently used
                     sm_weight = x[2]
                     new_sm_weight = utils.compute_warped_image_multiNC(sm_weight, phi, self.spacing, 1,
                                                                        zero_boundary=False)
@@ -1005,8 +813,8 @@ class EPDiffAdaptMap(ForwardModel):
                     #                                                                  w_norm.mean().item(),
                     #                                                                  w_norm.max().item()))
                     # ######################################################
-                    if EV.use_preweights_advect:
-                        new_sm_weight = self.embedded_smoother.smooth(new_sm_weight)
+                    pre_weight = sm_weight
+                    new_sm_weight = self.embedded_smoother.smooth(new_sm_weight)
 
                     # ######################################################
                     # w_norm = torch.norm(new_sm_weight, p=None, dim=1, keepdim=True)
@@ -1019,7 +827,10 @@ class EPDiffAdaptMap(ForwardModel):
                     # ######################################################
 
 
-                    v, extra_ret = self.smoother.smooth(m, new_sm_weight)
+                    v, extra_ret = self.smoother.smooth(m, None,{'w':new_sm_weight}, multi_output=True)
+
+                    if self.velocity_mask is not None:
+                        v = v * self.velocity_mask
 
                     # #################################
                     # from tools.visual_tools import save_smoother_map, plot_2d_img
@@ -1031,10 +842,8 @@ class EPDiffAdaptMap(ForwardModel):
                     # plot_2d_img(m[0, 0, :, 40, :], 'm' + str(t.item()), '/playpen/zyshen/debugs/visual_m')
                     # ###############################
 
-                    if not EV.use_fixed_wkw_equation:
-                        new_m = self.rhs.rhs_epdiff_multiNC(m, v)
-                    else:
-                        new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,new_sm_weight,extra_ret,self.embedded_smoother)
+
+                    new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,pre_weight,extra_ret,self.embedded_smoother)
                     new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
                     new_sm_weight = self.update_sm_weight.detach()
                     ret_val = [new_m, new_phi, new_sm_weight]
@@ -1050,12 +859,12 @@ class EPDiffAdaptMap(ForwardModel):
             I = utils.compute_warped_image_multiNC(pars['I0'], phi, self.spacing, 1,zero_boundary=True)
             pars['I'] = I.detach()  # TODO  check whether I should be detached here
             v = self.smoother.smooth(m, None, pars, variables_from_optimizer)
+            if self.velocity_mask is not None:
+                v = v * self.velocity_mask
             new_m = self.rhs.rhs_epdiff_multiNC(m, v)
             new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)
             ret_val = [new_m, new_phi]
             return_val_name =['new_m','new_phi']
-
-
 
 
         if self.debug_mode_on:

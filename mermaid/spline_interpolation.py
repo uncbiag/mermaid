@@ -14,7 +14,7 @@ from .data_wrapper import MyTensor
 from .data_wrapper import MyLongTensor
 from .data_wrapper import AdaptVal, USE_CUDA
 
-device = torch.device("cuda:0" if (torch.cuda.is_available() and USE_CUDA) else "cpu")
+device = torch.device("cuda:0" if (USE_CUDA and torch.cuda.is_available()) else "cpu")
 
 class SplineInterpolation_ND_BCXYZ(Module):
     """

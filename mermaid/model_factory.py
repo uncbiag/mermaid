@@ -55,17 +55,10 @@ class AvailableModels(object):
             'svf_quasi_momentum_image': (RN.SVFQuasiMomentumImageNet,
                                          RN.SVFQuasiMomentumImageLoss, False,
                                          'EXPERIMENTAL: Image-based SVF version which estimates velcocity based on a smoothed vetor field'),
-            'to_rename_map': (RN.ToReNameNet,
-                                         RN.ToReNameLoss, True,
-                                         'EXPERIMENTAL: test on learning smoother network'),
-            'lddmm_adapt_smoother_map': (RN.LDDMMAdaptiveSmootherMomentumMapNet,RN.LDDMMAdaptiveSmootherMomentumMapLoss,True,"EXPERIMENT: test"
-                                                                                                                             "on th learning smoother lddmm"),
-            'svf_adapt_smoother_map': (RN.SVFVectorAdaptiveSmootherMomentumMapNet,RN.SVFVectorAdaptiveSmootherMomentumMapLoss,True,"EXPERIMENT: test"
-                                                                                                                             "on th learning smoother svf"),
-            'cvf_vector_momentum_map': (RN.CVFVectorMomentumMapNet,
-                                        RN.CVFVectorMomentumMapLoss, True,
-                                        'EXPERIMENTAL: map-based constant velocity field using the vector momentum'),
-            'one_step_map': (RN.OneStepMapNet, RN.OneStepMapLoss, True, 'EXPERIMENTAL: one-step map based velocity registration')
+
+            'lddmm_adapt_smoother_map': (RN.LDDMMAdaptiveSmootherMomentumMapNet,RN.LDDMMAdaptiveSmootherMomentumMapLoss,True,"Region specific diffemorphic mapping"),
+            'svf_adapt_smoother_map': (RN.SVFVectorAdaptiveSmootherMomentumMapNet,RN.SVFVectorAdaptiveSmootherMomentumMapLoss,True,"Region specfic registration with vSVF"),
+            'one_step_map': (RN.OneStepMapNet, RN.OneStepMapLoss, True, 'directly optimize the displacement')
         }
         """dictionary defining all the models"""
 
@@ -152,6 +145,9 @@ class ModelFactory(object):
 
         cparams = params[('registration_model',{},'specifies the registration model')]
         cparams['type']= (modelName,'Name of the registration model')
+        external_env = params[('env', {},"env settings, typically are specificed by the external package, including the mode for solver or for smoother")]
+        """settings for the task environment of the solver or smoother"""
+        get_momentum_from_external_network = external_env[('get_momentum_from_external_network', False,"use external network to predict momentum, notice that the momentum network is not built in this package")]
 
         if modelName in self.models:
 
@@ -162,7 +158,7 @@ class ModelFactory(object):
             else:
                 print('Using ' + modelName + ' model')
                 model = self.models[modelName][0](self.sz_model, self.spacing_model, cparams)
-            if EV.use_mermaid_net:
+            if get_momentum_from_external_network:
                 loss = self.models[modelName][1](model.m, self.sz_sim, self.spacing_sim, self.sz_model,
                                                  self.spacing_model, cparams)
             else:

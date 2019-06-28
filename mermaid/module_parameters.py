@@ -57,7 +57,7 @@ class ParameterDict(object):
         self.write_JSON(fileNames[0])
         self.write_JSON_comments(fileNames[1])
 
-    def write_JSON(self, fileName):
+    def write_JSON(self, fileName,save_int=True):
         """
         Writes the JSON configuration to a file
         
@@ -67,7 +67,12 @@ class ParameterDict(object):
         with open(fileName, 'w') as outfile:
             if self.printSettings:
                 print('Writing parameter file = ' + fileName )
-            json.dump(self.int, outfile, indent=4, sort_keys=True)
+            if save_int:
+                json.dump(self.int, outfile, indent=4, sort_keys=True)
+            else:
+                json.dump(self.ext, outfile, indent=4, sort_keys=True)
+
+
 
     def write_JSON_comments(self, fileNameComments):
         """

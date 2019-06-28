@@ -8,7 +8,7 @@ from builtins import range
 from builtins import object
 from abc import ABCMeta, abstractmethod
 import torch
-from .data_wrapper import AdaptVal
+from .data_wrapper import AdaptVal,USE_CUDA
 from .data_wrapper import MyTensor
 from . import utils
 from math import floor
@@ -427,7 +427,10 @@ class LNCCSimilarity(SimilarityMeasure):
         self.num_scale = len(self.kernel)
         self.kernel_sz = [[k for _ in range(self.dim)] for k in self.kernel]
         self.step = [[max(int((ksz + 1) * self.stride[scale_id]),1) for ksz in self.kernel_sz[scale_id]] for scale_id in range(self.num_scale)]
-        self.filter = [torch.ones([1, 1] + self.kernel_sz[scale_id]).cuda() for scale_id in range(self.num_scale)]
+        if USE_CUDA:
+            self.filter = [torch.ones([1, 1] + self.kernel_sz[scale_id]).cuda() for scale_id in range(self.num_scale)]
+        else:
+            self.filter = [torch.ones([1, 1] + self.kernel_sz[scale_id]) for scale_id in range(self.num_scale)]
         if self.dim==1:
             self.conv= F.conv1d
         elif self.dim ==2:
