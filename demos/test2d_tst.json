@@ -41,13 +41,13 @@
                 "type": "ncc"
             },
             "spline_order": 1,
-            "type": "lddmm_shooting_map",
+            "type": "svf_scalar_momentum_map",
             "use_CFL_clamping": true
         }
     },
     "optimizer": {
         "gradient_clipping": {
-            "clip_display": true,
+            "clip_display": false,
             "clip_individual_gradient": true,
             "clip_individual_gradient_value": 1.0,
             "clip_shared_gradient": true,
@@ -76,7 +76,7 @@
             }
         },
         "single_scale": {
-            "nr_of_iterations": 50,
+            "nr_of_iterations": 100,
             "rel_ftol": 1e-07
         },
         "use_step_size_scheduler": true,

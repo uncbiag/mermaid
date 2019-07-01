@@ -22,7 +22,7 @@ Simple registration interface example
 # Mermaid can be a rather complex registration package.
 # Hence it provides various convenience functions to make registration reasonably easy.
 # One of them is a simple registration interface that allows setting the most popular parameters.
-# But it also allows passing through all the advanced registration paramers as desired.
+# But it also allows passing through all the advanced registration parameters as desired.
 #
 
 ##############################
@@ -56,7 +56,7 @@ import mermaid.module_parameters as pars
 # We first generate a parameter object to hold settings
 params = pars.ParameterDict()
 
-# We select if we want to create synhetic image pairs or would prefer a real image pair
+# We select if we want to create synthetic image pairs or would prefer a real image pair
 use_synthetic_test_case = True
 
 # Desired dimension (mermaid supports 1D, 2D, and 3D registration)
@@ -67,9 +67,9 @@ add_noise_to_bg = True
 
 # and now create it
 if use_synthetic_test_case:
-    len = 64
+    length = 64
     # size of the desired images: (sz)^dim
-    szEx = np.tile( len, dim )         
+    szEx = np.tile(length, dim )
     # create a default image size with two sample squares
     I0,I1,spacing= EG.CreateSquares(dim,add_noise_to_bg).create_image_pair(szEx,params) 
 else:
@@ -104,16 +104,18 @@ si.print_available_models()
 # iteration for example, this allows writing out a fresh settings template which can then be edited.
 #
 
+si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
+                   nr_of_iterations=100,
+                   use_multi_scale=False,
+                   visualize_step=5,
+                   optimizer_name='sgd',
+                   learning_rate=0.1,
+                   rel_ftol=1e-7,
+                   json_config_out_filename=('test2d_tst.json', 'test2d_tst_with_comments.json'),
+                   params='test2d_tst.json',
+                   recording_step=1)
 
-si.register_images(I0, I1, spacing, model_name='lddmm_shooting_map',
-                       nr_of_iterations=50,
-                       use_multi_scale=False,
-                       visualize_step=10,
-                       optimizer_name='sgd',
-                       learning_rate=0.1,
-                       rel_ftol=1e-7,
-                       json_config_out_filename=('test2d_tst.json','test2d_tst_with_comments.json'),
-                       params='test2d_tst.json')
+
 
 ############################
 # Plotting some results
@@ -126,12 +128,8 @@ si.register_images(I0, I1, spacing, model_name='lddmm_shooting_map',
 h = si.get_history()
 
 plt.clf()
-
 e_p, = plt.plot(h['energy'], label='energy')
 s_p, = plt.plot(h['similarity_energy'], label='similarity_energy')
 r_p, = plt.plot(h['regularization_energy'], label='regularization_energy')
 plt.legend(handles=[e_p,s_p,r_p])
 plt.show()
-
-
-

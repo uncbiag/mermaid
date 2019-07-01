@@ -215,7 +215,6 @@ class FourierConvolution(nn.Module):
         self.fftn = sel_fftn(self.dim)
         self.ifftn = sel_ifftn(self.dim)
 
-
     def forward(self, input):
         """
         Performs the Fourier-based filtering
@@ -240,8 +239,6 @@ class FourierConvolution(nn.Module):
         conv_ouput_real = self.ifftn(f_conv, self.dim,onesided=True,signal_sizes=input.shape[2::])
         result = conv_ouput_real
         return FFTVal(result, ini=-1)
-
-
 
 
 def fourier_convolution(input, complex_fourier_filter):

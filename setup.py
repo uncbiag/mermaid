@@ -44,7 +44,8 @@ REQUIRED = [
     "pandoc",
     "pypandoc",
     "statsmodels",
-    "numpy"
+    "numpy",
+    "termcolor"
     # 'requests', 'maya', 'records',
 ]
 
