@@ -52,9 +52,6 @@ class AdaptiveWeightLoss(with_metaclass(ABCMeta,nn.Module)):
         self.preweight_input_range_weight_penalty = params[('preweight_input_range_weight_penalty', 1.0,
                                                             'Penalty for the input to the preweight computation; weights should be between 0 and 1. If they are not they get quadratically penalized; use this with weighted_linear_softmax only.')]
 
-        cparams = params[('deep_smoother', {})]
-        self.params = cparams
-
         self.weighting_type = self.params[
             ('weighting_type', 'sqrt_w_K_sqrt_w', 'Type of weighting: w_K|w_K_w|sqrt_w_K_sqrt_w')]
         admissible_weighting_types = ['w_K', 'w_K_w', 'sqrt_w_K_sqrt_w']

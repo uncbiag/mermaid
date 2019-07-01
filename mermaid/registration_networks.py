@@ -448,6 +448,8 @@ class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
         """If the model uses time integration, then CFL clamping is used"""
         self.env = params[('env', {},"env settings, typically are specificed by the external package, including the mode for solver or for smoother")]
         """settings for the task environment of the solver or smoother"""
+        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
+
 
     def _use_CFL_clamping_if_desired(self,cfl_dt):
         if self.use_CFL_clamping:
@@ -569,7 +571,6 @@ class SVFImageNet(SVFNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         pars_to_pass = utils.combine_dict({'v': self.v}, self._get_default_dictionary_to_pass_to_integrator())
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
         if not self.use_odeint:
             advection = FM.AdvectImage(self.sz, self.spacing)
             return RK.RK4(advection.f, advection.u, pars_to_pass, cparams)
@@ -680,7 +681,6 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         pars_to_pass = utils.combine_dict({'v': self.v}, self._get_default_dictionary_to_pass_to_integrator())
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
         if not self.use_odeint:
             advection = FM.AdvectImage(self.sz, self.spacing)
             return RK.RK4(advection.f, advection.u, pars_to_pass, cparams)
@@ -1041,7 +1041,6 @@ class SVFMapNet(SVFNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         pars_to_pass = utils.combine_dict({'v': self.v}, self._get_default_dictionary_to_pass_to_integrator())
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
 
         if not self.use_odeint:
             advectionMap = FM.AdvectMap( self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map )
@@ -1317,7 +1316,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
             self._shared_states = self._shared_states.union(self.smoother.associate_parameters_with_module(self))
         """registers the smoother parameters so gbgithat they are optimized over if applicable"""
 
-        self.integrator = self.create_integrator()
+        self.integrator = None
         """integrator to solve EPDiff variant"""
 
         self.spline_order = params[('spline_order', 1, 'Spline interpolation order; 1 is linear interpolation (default); 3 is cubic spline')]
@@ -1409,6 +1408,8 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
     """
     def __init__(self,sz,spacing,params):
         super(LDDMMShootingVectorMomentumImageNet, self).__init__(sz,spacing,params)
+        self.integrator = self.create_integrator()
+        """integrator to solve EPDiff variant"""
 
     def create_integrator(self):
         """
@@ -1417,7 +1418,6 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
 
         if not self.use_odeint:
             epdiffImage = FM.EPDiffImage( self.sz, self.spacing, self.smoother, cparams )
@@ -1484,6 +1484,8 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
 
     def __init__(self, sz, spacing, params):
         super(SVFVectorMomentumImageNet, self).__init__(sz, spacing, params)
+        self.integrator = self.create_integrator()
+        """integrator to solve EPDiff variant"""
 
     def create_integrator(self):
         """
@@ -1492,8 +1494,6 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
-
 
         if not self.use_odeint:
 
@@ -1543,12 +1543,7 @@ class SVFVectorMomentumImageLoss(RegistrationImageLoss):
         super(SVFVectorMomentumImageLoss, self).__init__(sz_sim, spacing_sim, sz_model, spacing_model, params)
         self.m = m
         """vector momentum"""
-        if params['similarity_measure'][('develop_mod_on',False,'developing mode')]:
-            cparams = params[('similarity_measure',{},'settings for the similarity ')]
-            self.develop_smoother = SF.SmootherFactory(self.sz_model[2::], self.spacing_model).create_smoother(cparams)
-            """smoother to go from momentum to velocity"""
-        else:
-            self.develop_smoother = None
+
 
     def compute_regularization_energy(self, I0_source, variables_from_forward_model, variables_from_optimizer=None):
         """
@@ -1575,6 +1570,8 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         self.compute_inverse_map = compute_inverse_map
         """If set to True the inverse map is computed on the fly"""
         super(LDDMMShootingVectorMomentumMapNet, self).__init__(sz,spacing,params)
+        self.integrator = self.create_integrator()
+        """integrator to solve EPDiff variant"""
 
     def create_integrator(self):
         """
@@ -1583,8 +1580,6 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
-
         if not self.use_odeint:
             epdiffMap = FM.EPDiffMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
             return RK.RK4(epdiffMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
@@ -1691,6 +1686,8 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         self.compute_inverse_map = compute_inverse_map
         """If set to True the inverse map is computed on the fly"""
         super(SVFVectorMomentumMapNet, self).__init__(sz, spacing, params)
+        self.integrator = self.create_integrator()
+        """integrator to solve EPDiff variant"""
 
     def create_integrator(self):
         """
@@ -1698,7 +1695,6 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
 
         if not self.use_odeint:
             advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
@@ -1803,12 +1799,12 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
         from . import data_wrapper as DW
         self.compute_inverse_map = compute_inverse_map
         """If set to True the inverse map is computed on the fly"""
+        super(AdaptiveSmootherMomentumMapBasicNet, self).__init__(sz, spacing, params)
         self.adp_params = self.sparams[('adapt_model',{},"settings for adaptive smoothers")]
         self.compute_on_initial_map = self.adp_params[('compute_on_initial_map',False,"true:  compute the map based on initial map, false: compute the map based on id map first, then interp with the initial map")]
         self.clamp_local_weight = self.adp_params[('clamp_local_weight',True,"true:clamp the local weight")]
         self.local_pre_weight_max = self.adp_params[('local_pre_weight_max',2,"clamp the value from -value to value")]
         self.use_predefined_weight = self.adp_params[('use_predefined_weight',False,"use predefined weight for adapt smoother")]
-        super(AdaptiveSmootherMomentumMapBasicNet, self).__init__(sz, spacing, params)
         self.gaussian_std_weights = self.smoother.multi_gaussian_weights
         self.gaussian_stds = self.smoother.multi_gaussian_stds
         self.get_preweight_from_network = self.sparams[('get_preweight_from_network',False,'deploy network to predict preweights of the smoothers')]
@@ -1825,6 +1821,7 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
         self.print_count=0
         self.local_weights_hook = None
         self.m_hook = None
+
 
     def create_single_local_smoother(self,sz,spacing):
         from . import module_parameters as pars
@@ -2005,6 +2002,8 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
         self.compute_inverse_map = compute_inverse_map
         """If set to True the inverse map is computed on the fly"""
         super(SVFVectorAdaptiveSmootherMomentumMapNet, self).__init__(sz, spacing, params,compute_inverse_map)
+        self.integrator = self.create_integrator()
+        """integrator to solve EPDiff variant"""
 
     def create_integrator(self):
         """
@@ -2013,8 +2012,6 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
-
         if not self.use_odeint:
             raise NotImplemented
         else:
@@ -2142,7 +2139,8 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
         self.update_sm_by_advect = self.adp_params[('update_sm_by_advect', True, "true: advect smoother parameter for each time step  false: deploy network to predict smoother params at each time step")]
         self.update_sm_with_interpolation = self.adp_params[('update_sm_with_interpolation', True,"true: during advection, interpolate the smoother params with current map  false: compute the smoother params by advection equation")]
         self.addition_smoother = self.env[('addition_smoother','localAdaptive','using torchdiffeq package as the ode solver')]
-
+        self.integrator = self.create_integrator()
+        """integrator to solve EPDiff variant"""
 
 
     def create_integrator(self):
@@ -2156,8 +2154,6 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
             smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams,self.addition_smoother)
         else:
             smoother = self.smoother
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
-
         if not self.use_odeint:
             epdiffApt = FM.EPDiffAdaptMap(self.sz, self.spacing, smoother, cparams,
                                      compute_inverse_map=self.compute_inverse_map,update_sm_by_advect=self.update_sm_by_advect,
@@ -2325,6 +2321,8 @@ class OneStepMapNet(ShootingVectorMomentumNet):
         super(OneStepMapNet, self).__init__(sz, spacing, params)
         self.identity_map = AdaptVal(torch.from_numpy(utils.identity_map_multiN(sz,spacing)))
         self.spacing = spacing
+        self.integrator = self.create_integrator()
+        """integrator to solve EPDiff variant"""
 
     def create_integrator(self):
         """
@@ -2507,8 +2505,6 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
-
         if not self.use_odeint:
 
             advection = FM.AdvectImage(self.sz, self.spacing)
@@ -2597,8 +2593,6 @@ class LDDMMShootingScalarMomentumImageNet(ShootingScalarMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
-
         if not self.use_odeint:
             epdiffScalarMomentumImage =FM.EPDiffScalarMomentumImage( self.sz, self.spacing, self.smoother, cparams )
             return RK.RK4(epdiffScalarMomentumImage.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
@@ -2679,8 +2673,6 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
-
         if not self.use_odeint:
             epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap( self.sz, self.spacing, self.smoother, cparams, compute_inverse_map=self.compute_inverse_map )
             return RK.RK4(epdiffScalarMomentumMap.f, None, self._get_default_dictionary_to_pass_to_integrator(), cparams)
@@ -2783,8 +2775,6 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        self.use_odeint = self.env[('use_odeint',True,'using torchdiffeq package as the ode solver')]
-
         if not self.use_odeint:
 
             advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)

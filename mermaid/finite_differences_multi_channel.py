@@ -35,8 +35,8 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         self.spacing = np.ones(self.dim)
         """spacing"""
         self.bcNeumannZero = bcNeumannZero  # if false then linear interpolation
-        self.order_smooth =True
-        self.strict_bcNeumannZero = False
+        self.bclinearInterp =True
+        self.bcDirichletZero = False
         """should Neumann boundary conditions be used? (otherwise linear extrapolation)"""
         if spacing.size == 1:
             self.spacing[0] = spacing[0]
@@ -60,7 +60,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in x direction using backward differences
         """
         res= (I-self.xm(I))*(1./self.spacing[0])
-        if self.strict_bcNeumannZero:
+        if self.bcDirichletZero:
             return self.zero_x_boundary(res)
         else:
             return res
@@ -74,7 +74,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in x direction using forward differences
         """
         res= (self.xp(I)-I)*(1./self.spacing[0])
-        if self.strict_bcNeumannZero:
+        if self.bcDirichletZero:
             return self.zero_x_boundary(res)
         else:
             return res
@@ -88,7 +88,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in x direction using central differences
         """
         res= (self.xp(I)-self.xm(I))*(0.5/self.spacing[0])
-        if self.strict_bcNeumannZero:
+        if self.bcDirichletZero:
             return self.zero_x_boundary(res)
         else:
             return res
@@ -102,7 +102,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the second derivative in x direction
         """
         res= (self.xp(I)-I-I+self.xm(I))*(1/(self.spacing[0]**2))
-        if self.strict_bcNeumannZero:
+        if self.bcDirichletZero:
             return self.zero_x_boundary(res)
         else:
             return res
@@ -115,7 +115,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in y direction using backward differences
         """
         res= (I-self.ym(I))*(1./self.spacing[1])
-        if self.strict_bcNeumannZero:
+        if self.bcDirichletZero:
             return self.zero_y_boundary(res)
         else:
             return res
@@ -128,7 +128,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in y direction using forward differences
         """
         res= (self.yp(I)-I)*(1./self.spacing[1])
-        if self.strict_bcNeumannZero:
+        if self.bcDirichletZero:
             return self.zero_y_boundary(res)
         else:
             return res
@@ -141,7 +141,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in y direction using central differences
         """
         res= (self.yp(I)-self.ym(I))*(0.5/self.spacing[1])
-        if self.strict_bcNeumannZero:
+        if self.bcDirichletZero:
             return self.zero_y_boundary(res)
         else:
             return res
@@ -156,7 +156,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the second derivative in the y direction
         """
         res= (self.yp(I)-I-I+self.ym(I))*(1/(self.spacing[1]**2))
-        if self.strict_bcNeumannZero:
+        if self.bcDirichletZero:
             return self.zero_y_boundary(res)
         else:
             return res
@@ -169,7 +169,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in the z direction using backward differences
         """
         res= (I - self.zm(I))*(1./self.spacing[2])
-        if self.strict_bcNeumannZero:
+        if self.bcDirichletZero:
             return self.zero_z_boundary(res)
         else:
             return res
@@ -182,7 +182,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in the z direction using forward differences
         """
         res= (self.zp(I)-I)*(1./self.spacing[2])
-        if self.strict_bcNeumannZero:
+        if self.bcDirichletZero:
             return self.zero_z_boundary(res)
         else:
             return res
@@ -195,7 +195,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in the z direction using central differences
         """
         res= (self.zp(I)-self.zm(I))*(0.5/self.spacing[2])
-        if self.strict_bcNeumannZero:
+        if self.bcDirichletZero:
             return self.zero_z_boundary(res)
         else:
             return res
@@ -210,7 +210,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the second derivative in the z direction 
         """
         res= (self.zp(I)-I-I+self.zm(I))*(1/(self.spacing[2]**2))
-        if self.strict_bcNeumannZero:
+        if self.bcDirichletZero:
             return self.zero_z_boundary(res)
         else:
             return res
@@ -395,25 +395,25 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
             rxp[:,:,0:-1] = I[:,:,1:]
             if self.bcNeumannZero:
                 rxp[:,:,-1] = I[:,:,-1]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rxp[:,:,-1] = 2*I[:,:,-1]-I[:,:,-2]
         elif ndim == 2+2:
             rxp[:,:,0:-1,:] = I[:,:,1:,:]
             if self.bcNeumannZero:
                 rxp[:,:,-1,:] = I[:,:,-1,:]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rxp[:,:,-1,:] = 2*I[:,:,-1,:]-I[:,:,-2,:]
         elif ndim == 3+2:
             rxp[:,:,0:-1,:,:] = I[:,:,1:,:,:]
             if self.bcNeumannZero:
                 rxp[:,:,-1,:,:] = I[:,:,-1,:,:]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rxp[:,:,-1,:,:] = 2*I[:,:,-1,:,:]-I[:,:,-2,:,:]
         elif ndim == 4+2:
             rxp[:,:,:,0:-1,:,:] = I[:,:,:,1:,:,:]
             if self.bcNeumannZero:
                 rxp[:,:,:,-1,:,:] = I[:,:,:,-1,:,:]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rxp[:,:,:,-1,:,:] = 2*I[:,:,:,-1,:,:]-I[:,:,:,-2,:,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
@@ -438,25 +438,25 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
             rxm[:,:,1:] = I[:,:,0:-1]
             if self.bcNeumannZero:
                 rxm[:,:,0] = I[:,:,0]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rxm[:,:,0] = 2*I[:,:,0]-I[:,:,1]
         elif ndim == 2+2:
             rxm[:,:,1:,:] = I[:,:,0:-1,:]
             if self.bcNeumannZero:
                 rxm[:,:,0,:] = I[:,:,0,:]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rxm[:,:,0,:] = 2*I[:,:,0,:]-I[:,:,1,:]
         elif ndim == 3+2:
             rxm[:,:,1:,:,:] = I[:,:,0:-1,:,:]
             if self.bcNeumannZero:
                 rxm[:,:,0,:,:] = I[:,:,0,:,:]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rxm[:,:,0,:,:] = 2*I[:,:,0,:,:]-I[:,:,1,:,:]
         elif ndim == 4+2:
             rxm[:,:,:,1:,:,:] = I[:,:,:,0:-1,:,:]
             if self.bcNeumannZero:
                 rxm[:,:,:,0,:,:] = I[:,:,:,0,:,:]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rxm[:,:,:,0,:,:] = 2*I[:,:,:,0,:,:]-I[:,:,:,1,:,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
@@ -482,19 +482,19 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
             ryp[:,:,:,0:-1] = I[:,:,:,1:]
             if self.bcNeumannZero:
                 ryp[:,:,:,-1] = I[:,:,:,-1]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 ryp[:,:,:,-1] = 2*I[:,:,:,-1]-I[:,:,:,-2]
         elif ndim == 3+2:
             ryp[:,:,:,0:-1,:] = I[:,:,:,1:,:]
             if self.bcNeumannZero:
                 ryp[:,:,:,-1,:] = I[:,:,:,-1,:]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 ryp[:,:,:,-1,:] = 2*I[:,:,:,-1,:]-I[:,:,:,-2,:]
         elif ndim == 4+2:
             ryp[:,:,:,:,0:-1,:] = I[:,:,:,:,1:,:]
             if self.bcNeumannZero:
                 ryp[:,:,:,:,-1,:] = I[:,:,:,:,-1,:]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 ryp[:,:,:,:,-1,:] = 2*I[:,:,:,:,-1,:]-I[:,:,:,:,-2,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
@@ -522,19 +522,19 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
             rym[:,:,:,1:] = I[:,:,:,0:-1]
             if self.bcNeumannZero:
                 rym[:,:,:,0] = I[:,:,:,0]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rym[:,:,:,0] = 2*I[:,:,:,0]-I[:,:,:,1]
         elif ndim == 3+2:
             rym[:,:,:,1:,:] = I[:,:,:,0:-1,:]
             if self.bcNeumannZero:
                 rym[:,:,:,0,:] = I[:,:,:,0,:]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rym[:,:,:,0,:] = 2*I[:,:,:,0,:]-I[:,:,:,1,:]
         elif ndim == 4+2:
             rym[:,:,:,:,1:,:] = I[:,:,:,:,0:-1,:]
             if self.bcNeumannZero:
                 rym[:,:,:,:,0,:] = I[:,:,:,:,0,:]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rym[:,:,:,:,0,:] = 2*I[:,:,:,:,0,:]-I[:,:,:,:,1,:]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
@@ -560,13 +560,13 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
             rzp[:,:,:,:,0:-1] = I[:,:,:,:,1:]
             if self.bcNeumannZero:
                 rzp[:,:,:,:,-1] = I[:,:,:,:,-1]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rzp[:,:,:,:,-1] = 2*I[:,:,:,:,-1]-I[:,:,:,:,-2]
         elif ndim == 4+2:
             rzp[:,:,:,:,:,0:-1] = I[:,:,:,:,:,1:]
             if self.bcNeumannZero:
                 rzp[:,:,:,:,:,-1] = I[:,:,:,:,:,-1]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rzp[:,:,:,:,:,-1] = 2*I[:,:,:,:,:,-1]-I[:,:,:,:,:,-2]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
@@ -592,13 +592,13 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
             rzm[:,:,:,:,1:] = I[:,:,:,:,0:-1]
             if self.bcNeumannZero:
                 rzm[:,:,:,:,0] = I[:,:,:,:,0]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rzm[:,:,:,:,0] = 2*I[:,:,:,:,0]-I[:,:,:,:,1]
         elif ndim == 4 + 2:
             rzm[:, :, :, :,:, 1:] = I[:, :, :, :,:, 0:-1]
             if self.bcNeumannZero:
                 rzm[:, :, :, :, :,0] = I[:, :, :, :,:, 0]
-            elif self.order_smooth:
+            elif self.bclinearInterp:
                 rzm[:, :, :, :, :,0] = 2 * I[:, :, :, :,:, 0] - I[:, :, :, :,:, 1]
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
