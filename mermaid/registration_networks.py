@@ -2201,9 +2201,9 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
         else:
             if variables_from_optimizer is not None:
                 epoch = variables_from_optimizer['iter']
-                history_iter_count = variables_from_optimizer['history_iter_count']
+                over_scale_iter_count = variables_from_optimizer['over_scale_iter_count']
 
-                self.smoother.set_epoch(history_iter_count//2)
+                self.smoother.set_epoch(over_scale_iter_count//2)
                 # if variables_from_optimizer['iter'] < 50:
                 #     self.mask_local_weight()
                 # else:

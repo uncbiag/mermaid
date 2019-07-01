@@ -956,6 +956,8 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         self._sgd_name_to_model_par = None # allows mapping from name to model parameter
         self._sgd_split_shared = None # keeps track if the shared states were split or not
         self._sgd_split_individual = None # keeps track if the individual states were split or not
+        self.over_scale_iter_count = None #accumulated iter count over different scales
+        self.n_scale = None #the index of  current scale, torename and document  todo
 
 
     def write_parameters_to_settings(self):
@@ -1061,6 +1063,9 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :return:
         """
         self.n_scale = n_scale
+
+    def set_over_scale_iter_count(self, iter_count):
+        self.over_scale_iter_count = iter_count
 
 
     def _create_initial_maps(self):
@@ -1450,7 +1455,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # 2) Compute loss
 
         # first define variables that will be passed to the model and the criterion (for further use)
-        opt_variables = {'iter': self.iter_count,'epoch': self.current_epoch}
+
+        over_scale_iter_count = self.iter_count if self.over_scale_iter_count is None else self.over_scale_iter_count + self.iter_count
+        opt_variables = {'iter': self.iter_count, 'epoch': self.current_epoch, 'scale': self.n_scale,
+                         'over_scale_iter_count': over_scale_iter_count}
 
         self.rec_IWarped, self.rec_phiWarped, self.rec_phiInverseWarped = model_evaluation.evaluate_model_low_level_interface(
             model=self.model,
@@ -3710,6 +3718,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         # go from lowest to highest scale
         reverseScales = self.scaleFactors[-1::-1]
         reverseIterations = self.scaleIterations[-1::-1]
+        over_scale_iter_count = 0
 
         for en_scale in enumerate(reverseScales):
             print('Optimizing for scale = ' + str(en_scale[1]))
@@ -3771,6 +3780,8 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.ssOpt.set_visualization(self.get_visualization())
             self.ssOpt.set_visualize_step(self.get_visualize_step())
             self.ssOpt.set_light_analysis_on(self.light_analysis_on)
+            self.ssOpt.set_n_scale(en_scale[1])
+            self.ssOpt.set_over_scale_iter_count(over_scale_iter_count)
 
             if not self.light_analysis_on:
                 self.ssOpt.set_expr_name(self.get_expr_name())
@@ -3826,6 +3837,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self._add_to_history('ss_history',self.ssOpt.get_history())
 
             lastSuccessfulStepSizeTaken = self.ssOpt.get_last_successful_step_size_taken()
+            over_scale_iter_count += currentNrOfIteratons
 
             # if we are not at the very last scale, then upsample the parameters
             if currentScaleNumber != nrOfScales - 1:

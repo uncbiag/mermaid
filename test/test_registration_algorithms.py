@@ -1,31 +1,12 @@
 # Runs various registration algorithms
 
 # start with the setup
-
+import importlib.util
 import os
 import sys
-
-sys.path.insert(0,os.path.abspath('..'))
-sys.path.insert(0,os.path.abspath('../mermaid'))
-sys.path.insert(0,os.path.abspath('../mermaid/libraries'))
-
 import unittest
-import imp
 
-try:
-    imp.find_module('HtmlTestRunner')
-    foundHTMLTestRunner = True
-    import HtmlTestRunner
-except ImportError:
-    foundHTMLTestRunner = False
-
-# done with all the setup
-
-# testing code starts here
-
-# first do the torch imports
 import torch
-from torch.autograd import Variable
 from mermaid.data_wrapper import AdaptVal
 import numpy as np
 import numpy.testing as npt
@@ -34,6 +15,17 @@ import mermaid.example_generation as eg
 import mermaid.module_parameters as pars
 import mermaid.multiscale_optimizer as MO
 import mermaid.smoother_factory as SF
+
+sys.path.insert(0,os.path.abspath('..'))
+sys.path.insert(0,os.path.abspath('../mermaid'))
+sys.path.insert(0,os.path.abspath('../mermaid/libraries'))
+
+try:
+    importlib.util.find_spec('HtmlTestRunner')
+    foundHTMLTestRunner = True
+    import HtmlTestRunner
+except ImportError:
+    foundHTMLTestRunner = False
 
 # test it
 

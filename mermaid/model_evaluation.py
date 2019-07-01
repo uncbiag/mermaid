@@ -129,7 +129,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
         if 'local_weights'in individual_parameters and individual_parameters['local_weights'] is not None:
             model.local_weights.data= AdaptVal(individual_parameters['local_weights'])
 
-    opt_variables = {'iter': 0, 'epoch': 0,'extra_info':extra_info,'history_iter_count':0}
+    opt_variables = {'iter': 0, 'epoch': 0,'extra_info':extra_info,'over_scale_iter_count':0}
 
     # now let's run the model
 
