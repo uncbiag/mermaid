@@ -18,7 +18,6 @@ from . import module_parameters as pars
 from . import fileio as fio
 from . import custom_pytorch_extensions as ce
 from . import deep_networks as dn
-from . import external_variable as EV
 from .deep_loss import AdaptiveWeightLoss
 import os
 import matplotlib.pyplot as plt

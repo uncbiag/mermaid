@@ -23,8 +23,6 @@ import numpy as np
 from . import finite_differences as fd
 import torch.nn as nn
 import torch.nn.init as init
-from . import external_variable as EV
-
 from . import module_parameters as pars
 
 from .spline_interpolation import SplineInterpolation_ND_BCXYZ
@@ -881,16 +879,16 @@ def momentum_boundary_weight_mask(img_sz,spacing,mask_range=5,smoother_std =0.05
         mask = mask*mask*mask
     return mask
 
-def compute_omt_const(stds,param,dim):
-    omt_power = param['forward_model']['smoother']['omt_power']
-    omt_weight_penalty = param['forward_model']['smoother']['omt_weight_penalty']
-    min_std = torch.min(stds)
-    max_std = torch.max(stds)
-    omt_const  = torch.abs(torch.log(max_std/stds))**omt_power
-    omt_const =  omt_const/(torch.abs(torch.log(max_std / min_std)) ** omt_power)
-    omt_const = omt_const*omt_weight_penalty/(EV.reg_factor_in_mermaid*2)
-    sz = [1]+ [len(stds)] +[1]*(dim+1)
-    return omt_const.view(*sz)
+# def compute_omt_const(stds,param,dim):
+#     omt_power = param['forward_model']['smoother']['omt_power']
+#     omt_weight_penalty = param['forward_model']['smoother']['omt_weight_penalty']
+#     min_std = torch.min(stds)
+#     max_std = torch.max(stds)
+#     omt_const  = torch.abs(torch.log(max_std/stds))**omt_power
+#     omt_const =  omt_const/(torch.abs(torch.log(max_std / min_std)) ** omt_power)
+#     omt_const = omt_const*omt_weight_penalty/(EV.reg_factor_in_mermaid*2)
+#     sz = [1]+ [len(stds)] +[1]*(dim+1)
+#     return omt_const.view(*sz)
 
 
 

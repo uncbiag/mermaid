@@ -16,7 +16,6 @@ from torch.autograd import Function
 import numpy as np
 from torch.autograd import gradcheck
 from .data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor
-from . import external_variable as EV
 # if USE_CUDA:
 #     import pytorch_fft.fft as fft
 

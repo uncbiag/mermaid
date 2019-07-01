@@ -16,7 +16,6 @@ import numpy as np
 import numpy.testing as npt
 
 from .data_wrapper import USE_CUDA, MyTensor, AdaptVal
-from . import external_variable as EV
 from . import finite_differences as fd
 from . import utils
 from . import custom_pytorch_extensions as ce

@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 from builtins import object
 from . import registration_networks as RN
-from . import external_variable as EV
 
 def _print_models(models):
     print('\nKnown registration models are:')

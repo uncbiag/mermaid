@@ -31,7 +31,6 @@ from . import utils
 from .data_wrapper import MyTensor
 from future.utils import with_metaclass
 import torch.nn as nn
-from . import external_variable as EV
 import torch
 class RHSLibrary(object):
     """
