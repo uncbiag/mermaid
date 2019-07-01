@@ -35,7 +35,7 @@ except ImportError:
     print('WARNING: nn_interpolation could not be imported (only supported in CUDA at the moment), some functionality may not be available.')
 
 
-def my_hasnan(x):
+def my_hasnan(x): 
     return (x != x).any()
 
 
