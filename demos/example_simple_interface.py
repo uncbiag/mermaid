@@ -71,10 +71,10 @@ if use_synthetic_test_case:
     # size of the desired images: (sz)^dim
     szEx = np.tile(length, dim )
     # create a default image size with two sample squares
-    I0,I1,spacing= EG.CreateSquares(dim,add_noise_to_bg).create_image_pair(szEx,params) 
+    I0, I1, spacing = EG.CreateSquares(dim,add_noise_to_bg).create_image_pair(szEx, params)
 else:
     # return a real image example
-    I0,I1,spacing = EG.CreateRealExampleImages(dim).create_image_pair() # create a default image size with two sample squares
+    I0, I1, spacing = EG.CreateRealExampleImages(dim).create_image_pair() # create a default image size with two sample squares
 
 ##################################
 # Creating the registration algorithm
@@ -98,11 +98,10 @@ si.print_available_models()
 # Here, we use a shooting-based LDDMM algorithm which works directly with transformation maps.
 # The simple interface allows setting various registration settings.
 #
-# Of note, we read in a parameter file (``test2d_tst.json``) to parameterize the registration algorithm and
+# Of note, we read in a parameter file (``test2d_tst.json``) to parametrize the registration algorithm and
 # write out the used parameters (after the run) into the same file as well as into a file with comments explaining
 # all the parameter settings. If ``params`` is not specified default settings will be used. By running for one
 # iteration for example, this allows writing out a fresh settings template which can then be edited.
-#
 
 si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
                    nr_of_iterations=100,
@@ -113,7 +112,7 @@ si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
                    rel_ftol=1e-7,
                    json_config_out_filename=('test2d_tst.json', 'test2d_tst_with_comments.json'),
                    params='test2d_tst.json',
-                   recording_step=1)
+                   recording_step=None)
 
 
 
@@ -122,7 +121,7 @@ si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
 # ^^^^^^^^^^^^^^^^^^^^^
 #
 # We can query the energies over the iterations. Note that this code need to be modified for a multi-scale solution as
-# energies will be returned at each scale
+# energies will be returned at each scale.
 #
 
 h = si.get_history()

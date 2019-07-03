@@ -274,7 +274,7 @@ sphinx_gallery_conf = {
      'examples_dirs': ['../../demos', '../../jupyter'],   # path to your example scripts
      'filename_pattern': '/example_',
      # directory where function granular galleries are stored
-     'backreferences_dir'  : False,
+     'backreferences_dir': False,
      'ignore_pattern': r'__init__\.py',
      'gallery_dirs': ['auto_demos', 'auto_jupyter']  # path where to save gallery generated examples
 }
@@ -354,10 +354,9 @@ html_theme_path = ['_themes',]
 # documentation.
 #
 # html_theme_options = {}
-#html_theme_options = {
-#    "rightsidebar": "true",
-#    "relbarbgcolor": "black"
-#}
+html_theme_options = {
+   'logo_only' : True
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -370,7 +369,7 @@ html_static_path = ['_static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'mermaiddoc'
 
-html_logo = 'tentative-mermaid-logo.png'
+html_logo = 'mermaid-logo.png'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -423,6 +422,9 @@ texinfo_documents = [
     (master_doc, 'mermaid', u'mermaid Documentation',
      author, 'mermaid', 'Image registration via automatic differentiation', 'Miscellaneous'),
 ]
+
+autosectionlabel_prefix_document = True
+
 
 
 def setup(app):

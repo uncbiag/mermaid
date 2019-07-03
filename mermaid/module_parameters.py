@@ -9,8 +9,9 @@ from __future__ import print_function
 # from builtins import object
 import json
 
+
 class ParameterDict(object):
-    def __init__(self,initDict=None,printSettings=True):
+    def __init__(self, initDict=None, printSettings=True):
         if initDict is not None:
             if type(initDict)==type(self):
                 self.ext = initDict.ext

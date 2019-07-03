@@ -67,7 +67,7 @@ class RegisterImagePair(object):
     def set_light_analysis_on(self, light_analysis_on):
         self.light_analysis_on =light_analysis_on
 
-    def init_analysis_params(self,par_respro, task_name):
+    def init_analysis_params(self, par_respro, task_name):
         self.par_respro=par_respro
         self.task_name = task_name
 
@@ -607,7 +607,7 @@ class RegisterImagePair(object):
                 LTarget = AdaptVal(torch.from_numpy(LTarget)) if not type(LTarget) == torch.Tensor else LTarget
                 self.opt.optimizer.set_source_label( AdaptVal(torch.from_numpy(LSource)))
                 self.opt.optimizer.set_target_label( AdaptVal(torch.from_numpy(LTarget)))
-                self._set_analysis(self.opt.optimizer,extra_info)
+                self._set_analysis(self.opt.optimizer, extra_info)
 
             self.opt.register()
 

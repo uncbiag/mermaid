@@ -399,7 +399,7 @@ class Optimizer(with_metaclass(ABCMeta, object)):
         :return: n/a
         """
         if key not in self.history:
-            self.history[key]=[value]
+            self.history[key] = [value]
         else:
             self.history[key].append(value)
 
@@ -420,8 +420,7 @@ class Optimizer(with_metaclass(ABCMeta, object)):
         return self.last_successful_step_size_taken
 
     def set_rel_ftol(self, rel_ftol):
-        """
-        Sets the relative termination tolerance: |f(x_i)-f(x_{i-1})|/f(x_i)<tol
+        """Sets the relative termination tolerance: :math:`|f(x_i)-f(x_{i-1})|/f(x_i)<tol`
         
         :param rel_ftol: relative termination tolerance for optimizer
         """

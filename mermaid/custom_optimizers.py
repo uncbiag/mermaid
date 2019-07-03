@@ -1,7 +1,7 @@
 """
-This package includes an lBFGS optimizer which supports different types of line-search, in particular backtracking, which is
-important for the image registration implementations. This implementation is available in the torch git repository
-(but not yet available in the standard release -- as of July 2017)
+This package includes an lBFGS optimizer which supports different types of line-search, in particular backtracking,
+which is important for the image registration implementations. This implementation is available in the torch git
+repository (but not yet available in the standard release -- as of July 2017).
 
 .. todo::
     Add support for multiple parameter groups.
@@ -25,6 +25,7 @@ from .data_wrapper import AdaptVal
 
 class LBFGS_LS(Optimizer):
     """Implements L-BFGS algorithm.
+
     .. warning::
         This optimizer doesn't support per-parameter options and parameter groups (there can be only one).
     .. warning::
@@ -33,6 +34,7 @@ class LBFGS_LS(Optimizer):
         This is a very memory intensive optimizer (it requires additional
         ``param_bytes * (history_size + 1)`` bytes). If it doesn't fit in memory
         try reducing the history size, or use a different algorithm.
+
     Arguments:
         lr (float): learning rate (default: 1)
         max_iter (int): maximal number of iterations per optimization step
@@ -92,9 +94,9 @@ class LBFGS_LS(Optimizer):
 
     def step(self, closure):
         """Performs a single optimization step.
+
         Arguments:
-            closure (callable): A closure that reevaluates the model
-                and returns the loss.
+            closure (callable): A closure that reevaluates the model and returns the loss.
         """
         assert len(self.param_groups) == 1
 

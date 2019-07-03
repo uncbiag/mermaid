@@ -13,19 +13,21 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from future.utils import with_metaclass
 
+
 def _create_some_test_data():
     a = np.sin(np.linspace(0, np.pi, 20))
     b = np.sin(np.linspace(0, np.pi*5, 20))
     data = np.outer(a, b)[..., np.newaxis] * a
     return data
 
+
 def _print_debug(str, flag=False):
     if flag:
         print(str)
 
+
 class FigureEventHandler(object):
-    """
-    Class to implement general event handling for matplotlib figures.
+    """Class to implement general event handling for matplotlib figures.
     In particular this class allows for easy event handling within different subplots.
     """
 
@@ -217,6 +219,7 @@ class ImageViewer(with_metaclass(ABCMeta, object)):
         """
         pass
 
+
 class ImageViewer3D(with_metaclass(ABCMeta, ImageViewer)):
     """
     Abstract class for a 3D image viewer.
@@ -285,6 +288,7 @@ class ImageViewer3D(with_metaclass(ABCMeta, ImageViewer)):
                 self.next_slice()
 
         self.display_title()
+
 
 class ImageViewer3D_Sliced(ImageViewer3D):
     """

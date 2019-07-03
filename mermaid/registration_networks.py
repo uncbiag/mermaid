@@ -1,18 +1,18 @@
 """
 Defines different registration methods as pyTorch networks.
 Currently implemented:
-    * SVFImageNet: image-based stationary velocity field
-    * SVFMapNet: map-based stationary velocity field
-    * SVFQuasiMomentumImageNet: EXPERIMENTAL (not working yet): SVF which is parameterized by a momentum
-    * SVFScalarMomentumImageNet: image-based SVF using the scalar-momentum parameterization
-    * SVFScalarMomentumMapNet: map-based SVF using the scalar-momentum parameterization
-    * SVFVectorMomentumImageNet: image-based SVF using the vector-momentum parameterization
-    * SVFVectorMomentumMapNet: map-based SVF using the vector-momentum parameterization
-    * CVFVectorMomentumMapNet: map-based CVF using the vector-momentum parameterization
-    * LDDMMShootingVectorMomentumImageNet: image-based LDDMM using the vector-momentum parameterization
-    * LDDMMShootingVectorMomentumMapNet: map-based LDDMM using the vector-momentum parameterization
-    * LDDMMShootingScalarMomentumImageNet: image-based LDDMM using the scalar-momentum parameterization
-    * LDDMMShootingScalarMomentumMapNet: map-based LDDMM using the scalar-momentum parameterization
+* SVFImageNet: image-based stationary velocity field
+* SVFMapNet: map-based stationary velocity field
+* SVFQuasiMomentumImageNet: EXPERIMENTAL (not working yet): SVF which is parameterized by a momentum
+* SVFScalarMomentumImageNet: image-based SVF using the scalar-momentum parameterization
+* SVFScalarMomentumMapNet: map-based SVF using the scalar-momentum parameterization
+* SVFVectorMomentumImageNet: image-based SVF using the vector-momentum parameterization
+* SVFVectorMomentumMapNet: map-based SVF using the vector-momentum parameterization
+* CVFVectorMomentumMapNet: map-based CVF using the vector-momentum parameterization
+* LDDMMShootingVectorMomentumImageNet: image-based LDDMM using the vector-momentum parameterization
+* LDDMMShootingVectorMomentumMapNet: map-based LDDMM using the vector-momentum parameterization
+* LDDMMShootingScalarMomentumImageNet: image-based LDDMM using the scalar-momentum parameterization
+* LDDMMShootingScalarMomentumMapNet: map-based LDDMM using the scalar-momentum parameterization
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -39,6 +39,7 @@ import collections
 
 from abc import ABCMeta, abstractmethod
 from future.utils import with_metaclass
+
 
 class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
     """

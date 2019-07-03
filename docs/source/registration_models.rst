@@ -9,7 +9,7 @@ This section describes the most important registration modules of *mermaid*. The
 - implement the different regisration models (see :ref:`registration-networks-label`)
 
 .. contents::
-  
+
 .. _model-factory-label:
 
 Model factory
@@ -23,31 +23,31 @@ The model factory provides convenience functionality to instantiate different re
 	:undoc-members:
 
 .. _forward-models-label:
-	   
+
 Forward models
 ^^^^^^^^^^^^^^
 
 The forward models are implementations of the dynamic equations for the registration models.
 
-.. inheritance-diagram:: mermaid.forward_models
-.. automodule:: mermaid.forward_models
+.. inheritance-diagram:: mermaid.forward_models_warped
+.. automodule:: mermaid.forward_models_warped
 	:members:
 	:undoc-members:
 
 .. _model-evaluation-label:
-	   
+
 Model evaluation
 ^^^^^^^^^^^^^^^^
 
-Given registration parameters the model evaluation module allows to evaluate a given model. I.e., it performs setup and integration of the forward models. This can also be used to easily combine the forward models with deep learning approaches.
+Given registration parameters the model evaluation module allows to evaluate a given model.
+That is, it performs setup and integration of the forward models. This can also be used to easily combine the forward models with deep learning approaches.
 
-.. inheritance-diagram:: mermaid.model_evaluation
 .. automodule:: mermaid.model_evaluation
 	:members:
 	:undoc-members:
 
 .. _registration-networks-label:
-	   
+
 Registration networks
 ^^^^^^^^^^^^^^^^^^^^^
 

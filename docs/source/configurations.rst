@@ -1,7 +1,10 @@
+.. _configurations:
+
 Configurations
 ==============
 
-*mermaid* makes use of various configurations to parameterize the registration algorithms and how computations are performed (e.g., CPU or GPU).
+*mermaid* makes use of various configurations to parametrize the registration algorithms and how
+computations are performed (e.g., CPU or GPU).
 
 .. contents::
 
@@ -10,7 +13,6 @@ Configurations
 Config parser
 ^^^^^^^^^^^^^
 
-.. inheritance-diagram:: mermaid.config_parser
 .. automodule:: mermaid.config_parser
 	:members:
 	:undoc-members:
@@ -20,7 +22,6 @@ Config parser
 Load default settings
 ^^^^^^^^^^^^^^^^^^^^^
 
-.. inheritance-diagram:: mermaid.load_default_settings
 .. automodule:: mermaid.load_default_settings
 	:members:
 	:undoc-members:

@@ -10,6 +10,7 @@ from .data_wrapper import MyTensor, USE_CUDA
 
 device = torch.device("cuda:0" if (USE_CUDA and torch.cuda.is_available()) else "cpu")
 
+
 class NoisyLinear(nn.Module):
     """Applies a noisy linear transformation to the incoming data: :math:`y = (mu_w + sigma_w \cdot epsilon_w)x + mu_b + sigma_b \cdot epsilon_b`
     More details can be found in the paper `ZZ` _ .
@@ -18,14 +19,17 @@ class NoisyLinear(nn.Module):
         out_features: size of each output sample
         bias: If set to False, the layer will not learn an additive bias. Default: True
         factorised: whether or not to use factorised noise. Default: True
-        std_init: initialization constant for standard deviation component of weights. If None,
+        std_init: initialization constant for standard deviation component of weights. If None, \
             defaults to 0.017 for independent and 0.4 for factorised. Default: None
+
     Shape:
-        - Input: :math:`(N, in\_features)`
-        - Output: :math:`(N, out\_features)`
+        - Input: (N, in_features)
+        - Output:(N, out_features)
+
     Attributes:
         weight: the learnable weights of the module of shape (out_features x in_features)
         bias:   the learnable bias of the module of shape (out_features)
+
     Examples::
         >>> m = nn.NoisyLinear(20, 30)
         >>> input = autograd.Variable(torch.randn(128, 20))
@@ -92,6 +96,7 @@ class NoisyLinear(nn.Module):
         return self.__class__.__name__ + ' (' \
                + str(self.in_features) + ' -> ' \
                + str(self.out_features) + ')'
+
 
 class NoisyLayer(nn.Module):
     def __init__(self, std_init=None, start_reducing_from_iter=25):

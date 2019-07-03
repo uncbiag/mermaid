@@ -8,6 +8,7 @@ from .data_wrapper import USE_CUDA
 from . import utils
 from . import module_parameters as pars
 
+
 def evaluate_model(ISource_in,ITarget_in,sz,spacing,
                    model_name=None,
                    use_map=None,
@@ -37,7 +38,6 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
     :param visualize: if set to True results will be visualized
 
     :return: returns a tuple (I_warped,phi,phi_inverse,model_dictionary), here I_warped = I_source\circ\phi, and phi_inverse is the inverse of phi; model_dictionary contains various intermediate results
-
     """
 
     ISource = AdaptVal(ISource_in)
@@ -150,9 +150,8 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
         low_res_initial_inverse_map=lowResIdentityMap,
         compute_similarity_measure_at_low_res=compute_similarity_measure_at_low_res)
 
-
     if use_map:
-        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing, spline_order,zero_boundary=True)
+        rec_IWarped = utils.compute_warped_image_multiNC(ISource, rec_phiWarped, spacing, spline_order, zero_boundary=True)
 
     if use_map and map_low_res_factor is not None:
         vizImage, vizName = model.get_parameter_image_and_name_to_visualize(lowResISource)
@@ -175,7 +174,6 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
         visual_param['save_fig_path_byname'] = os.path.join(save_fig_path, 'byname')
         visual_param['save_fig_path_byiter'] = os.path.join(save_fig_path, 'byiter')
         visual_param['iter'] = 'scale_' + str(0) + '_iter_' + str(0)
-
 
     if use_map:
         if compute_similarity_measure_at_low_res:
@@ -279,10 +277,10 @@ def evaluate_model_low_level_interface(model,I_source,opt_variables=None,use_map
     :param low_res_initial_map: low resolution version of the initial map
     :param low_res_initial_inverse_map: low resolution version of the initial inverse map
     :param compute_similarity_measure_at_low_res: if set to True the similarity measure is also evaluated at low resolution (otherwise at full resolution)
-    :return: returns a tuple (I_warped,phi,phi_inverse), here I_warped = I_source\circ\phi, and phi_inverse is the inverse of phi; \
+
+    :return: returns a tuple (I_warped,phi,phi_inverse), here I_warped = I_source\circ\phi, and phi_inverse is the inverse of phi
 
     IMPORTANT: note that \phi is the map that maps from source to target image; I_warped is None for map_based solution, phi is None for image-based solution; phi_inverse is None if inverse is not computed
-
     """
 
     # do some checks to make sure everything is properly defined

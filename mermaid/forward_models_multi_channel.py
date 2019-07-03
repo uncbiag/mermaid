@@ -32,6 +32,8 @@ from .data_wrapper import MyTensor
 from future.utils import with_metaclass
 import torch.nn as nn
 import torch
+
+
 class RHSLibrary(object):
     """
     Convenience class to quickly generate various right hand sides (RHSs) of popular partial differential 

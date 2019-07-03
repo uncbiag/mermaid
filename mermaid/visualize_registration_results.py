@@ -199,13 +199,13 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
         sp_c = 245
         sp_p = 244
         sp_v = 246
-    elif (vizImage is not None):
+    elif vizImage is not None:
         sp_s = 231
         sp_t = 232
         sp_w = 233
         sp_c = 234
         sp_v = 235
-    elif (phiWarped is not None):
+    elif phiWarped is not None:
         sp_s = 231
         sp_t = 232
         sp_w = 233
@@ -218,7 +218,7 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
         sp_c = 224
 
     font = {'size': 10}
-    use_color_bar= False
+    use_color_bar = False
 
     plt.clf()
 
@@ -252,7 +252,7 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
 
     if phiWarped is not None:
         plt.subplot(sp_p).set_axis_off()
-        plt.imshow(utils.t2np(iW))
+        plt.imshow(utils.t2np(iW), cmap='gray')
 
         plt.contour(utils.t2np(phiWarped[0, :, :]), np.linspace(-1, 1, 20), colors='r', linestyles='solid',
                     linewidths=0.5)
@@ -269,7 +269,6 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
             plt.colorbar().ax.tick_params(labelsize=3)
         plt.title(vizName, font)
 
-
     if iSL is not None and iTL is not None:
         plt.subplot(sp_ls).set_axis_off()
         plt.imshow(utils.t2np(iSL), cmap='gray')
@@ -283,7 +282,6 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
         plt.imshow(utils.t2np(iWL), cmap='gray')
         plt.title('Warped Label', font)
 
-
     if visual_param is not None:
         if i==0 and visual_param['visualize']:
             plt.show()
@@ -295,12 +293,9 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byname'], file_name),visual_param['iter']+extension), dpi=dpi)
             plt.savefig(join_p(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']), file_name+extension), dpi=dpi)
             plt.clf()
-            #plt.close('all')
     else:
         plt.show()
         plt.clf()
-
-
 
 def _show_current_images_2d(iS, iT, iW,iSL, iTL,iWL, iter, vizImage, vizName, phiWarped, visual_param=None, i=0,multi_channel=False):
 
@@ -470,36 +465,33 @@ def _show_current_images_3d(iS, iT, iW,iSL, iTL,iWL, iter, vizImage, vizName, ph
         plt.show()
 
 
-def show_current_images(iter, iS, iT, iW,iSL=None, iTL=None, iWL=None, vizImages=None, vizName=None, phiWarped=None, visual_param=None):
-    """
-    Visualizes the current images during registration
+def show_current_images(iter, iS, iT, iW, iSL=None, iTL=None, iWL=None, vizImages=None, vizName=None, phiWarped=None, visual_param=None):
+    """Visualizes the current images during registration.
     
     :param iter: iteration number 
     :param iS: source image BxCxXxYxZ (only displays B=0,C=0)
     :param iT: target image BxCxXxYxZ (only displays B=0,C=0)
     :param iW: warped image BxCxXxYxZ (only displays B=0,C=0)
-    :param vizImage: custom visualization image XxYxZ
+    :param iSL: source image label map BxCxXxYxZ (only displays B=0,C=0)
+    :param iTL: target image label map BxCxXxYxZ (only displays B=0,C=0)
+    :param iWL: warped image label map BxCxXxYxZ (only displays B=0,C=0)
+    :param vizImages: custom visualization image XxYxZ
     :param vizName: name for this image
     :param phiWarped: warped map BxdimxXxYxZ (only displays B=0)
-    """
-    """
-    Show current 2D registration results in relation to the source and target images
-    :param iter: iteration number
-    :param iS: source image
-    :param iT: target image
-    :param iW: current warped image
-    :return: no return arguments
+    :param visual_param: visualization parameters
     """
 
     dim = iS.ndimension()-2
-    save_fig_num =visual_param['save_fig_num']
+    save_fig_num = -1
+    if save_fig_num in visual_param:
+        save_fig_num = visual_param['save_fig_num']
     if save_fig_num==-1:
         save_fig_num = iS.shape[0]
 
     if visual_param is not None:
         if visual_param['save_fig'] == True:
             save_fig_num = min(save_fig_num, len(visual_param['pair_path']))
-            print("num {} of pair would be saved in {}".format(save_fig_num,visual_param['save_fig_path']))
+            print("num {} of pair would be saved in {}".format(save_fig_num, visual_param['save_fig_path']))
         else:
             save_fig_num = 1
     else:
@@ -507,8 +499,6 @@ def show_current_images(iter, iS, iT, iW,iSL=None, iTL=None, iWL=None, vizImages
 
     num_channel = iS.shape[1]
     multi_channel = num_channel>1
-
-
 
     for i in range(save_fig_num):
         if not multi_channel:
@@ -519,8 +509,6 @@ def show_current_images(iter, iS, iT, iW,iSL=None, iTL=None, iWL=None, vizImages
             iSF = utils.cxyz_to_xyzc(iS)[i]
             iTF = utils.cxyz_to_xyzc(iT)[i]
             iWF = utils.cxyz_to_xyzc(iW)[i]
-
-
 
         iSLF = None
         iTLF = None
@@ -542,13 +530,13 @@ def show_current_images(iter, iS, iT, iW,iSL=None, iTL=None, iWL=None, vizImages
             iWLF = iWL[i, 0, ...]
 
         if dim==1:
-            _show_current_images_1d(iSF, iTF, iWF, iter, vizImage, vizName, pwF, visual_param, i, multi_channel )
+            _show_current_images_1d(iSF, iTF, iWF, iter, vizImage, vizName, pwF, visual_param, i, multi_channel)
         elif dim==2:
-            _show_current_images_2d(iSF, iTF, iWF,iSLF,iTLF,iWLF, iter, vizImage, vizName, pwF, visual_param, i,multi_channel)
+            _show_current_images_2d(iSF, iTF, iWF,iSLF,iTLF,iWLF, iter, vizImage, vizName, pwF, visual_param, i, multi_channel)
         elif dim==3:
-            _show_current_images_3d(iSF, iTF, iWF, iSLF, iTLF, iWLF, iter, vizImage, vizName, pwF, visual_param, i,multi_channel)
+            _show_current_images_3d(iSF, iTF, iWF, iSLF, iTLF, iWLF, iter, vizImage, vizName, pwF, visual_param, i, multi_channel)
         else:
-            raise ValueError( 'Debug output only supported in 1D and 3D at the moment')
+            raise ValueError('Debug output only supported in 1D and 3D at the moment')
 
         '''
         plt.show(block=False)

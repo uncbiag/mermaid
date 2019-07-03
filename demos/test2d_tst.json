@@ -5,7 +5,14 @@
             "map_low_res_factor": null,
             "use_map": true
         },
+        "env": {
+            "get_momentum_from_external_network": false
+        },
         "registration_model": {
+            "env": {
+                "reg_factor": 1.0,
+                "use_odeint": true
+            },
             "forward_model": {
                 "adjoin_on": true,
                 "atol": 1e-05,

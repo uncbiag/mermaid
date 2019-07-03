@@ -15,10 +15,10 @@ from numpy import log
 from numpy import shape as numpy_shape
 from . import forward_models_multi_channel as FM
 
+
 class OTSimilarityHelper(Function):
+    """Implements the pytorch function of optimal mass transport.
     """
-                   Implements the pytorch function of optimal mass transport
-                   """
     @staticmethod
     def forward(ctx, phi,I0,I1,multiplier0,multiplier1,spacing,nr_iterations_sinkhorn,std_sink):
         shape = numpy_shape(AdaptVal(I0).detach().cpu().numpy())
@@ -43,8 +43,9 @@ class OTSimilarityHelper(Function):
 
 
 class OTSimilarityGradient(object):
-    """
-    Computes a regularized optimal transport distance between two densities.
+    """Computes a regularized optimal transport distance between two densities.
+
+    Formally:
     :math:`sim = W^2/(\\sigma^2)`
     """
 
@@ -64,7 +65,6 @@ class OTSimilarityGradient(object):
 
         for i in range(self.dim):
             self.gibbs.append(self.build_kernel_matrix_gradient(self.shape[i], self.std_dev))
-
 
     def my_dot(self, a, b):
         """
@@ -90,12 +90,12 @@ class OTSimilarityGradient(object):
         return result
 
     def build_kernel_matrix(self, length, std):
+        """Computation of the gaussian kernel.
+
+        :param length: length of the vector
+        :param std: standard deviation of the gaussian kernel
+        :return: :math:`\\exp(-|x_i - x_j|^2/\\sigma^2)`
         """
-               Computation of the gaussian kernel
-               :param length: length of the vector
-               :param std: standard deviation of the gaussian kernel
-               :return: exp(-|x_i - x_j|^2/std**2)
-               """
         x = torch.linspace(0, 1, length)
         x_col = x.unsqueeze(1)
         y_lin = x.unsqueeze(0)
@@ -103,12 +103,12 @@ class OTSimilarityGradient(object):
         return torch.exp(-torch.div(c, std ** 2))
 
     def build_kernel_matrix_gradient(self, length, std):
+        """Computation of the gaussian first derivative kernel multiplied by :math:`1/2\\sigma^2`
+
+        :param length: length of the vector
+        :param std: standard deviation of the gaussian kernel
+        :return: :math:`(x_i - x_j) \\exp(-|x_i - x_j|^2/\\sigma^2)`
         """
-                       Computation of the gaussian first derivative kernel multiplied by 1/2*std**2
-                       :param length: length of the vector
-                       :param std: standard deviation of the gaussian kernel
-                       :return: (x_j - x_i) * exp(-|x_i - x_j|^2/std**2)
-                       """
         x = torch.linspace(0, 1, length)
         x_col = x.unsqueeze(1)
         y_lin = x.unsqueeze(0)
@@ -148,10 +148,9 @@ class OTSimilarityGradient(object):
 
         return temp
 
-
     def kernel_multiplication_gradient_helper(self, multiplier, choice_kernel):
-        """
-       Computes the multiplication of a d-dimensional vector (d = 1,2 or 3) with the (derivative along a given axis) gaussian kernel and given by the choice_kernel function (give the axis)
+        """Computes the multiplication of a d-dimensional vector (d = 1,2 or 3) with the
+        (derivative along a given axis) gaussian kernel and given by the choice_kernel function (give the axis).
 
        :param multiplier: the vector
        :param choice_kernel: the choice function that outputs the index in the kernel list.
@@ -182,8 +181,7 @@ class OTSimilarityGradient(object):
         return temp
 
     def set_choice_kernel_gibbs(self, i, offset):
-        """
-       Set the choice of the kernels for the computation of the gradient
+        """Set the choice of the kernels for the computation of the gradient.
 
        :param i: the (python) index of the dimension
        :param offset: the dimension

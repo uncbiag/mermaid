@@ -18,9 +18,9 @@ import torch.nn.functional as F
 import numpy as np
 from future.utils import with_metaclass
 
+
 class SimilarityMeasure(with_metaclass(ABCMeta, object)):
-    """
-    Abstract base class for a similarity measure
+    """Abstract base class for a similarity measure.
     """
 
     def __init__(self, spacing, params):
@@ -331,8 +331,8 @@ class NCCNegativeSimilarity(SimilarityMeasure):
         return AdaptVal((ncc)/self.sigma**2)
 
 class LNCCSimilarity(SimilarityMeasure):
-    """
-    This is an generalized lncc, we implement multi-scale ( means resolution) multi kernel( means size of neighborhood) LNCC
+    """This is an generalized LNCC; we implement multi-scale (means resolution)
+    multi kernel (means size of neighborhood) LNCC.
 
     :param: resol_bound : type list,  resol_bound[0]> resol_bound[1] >... resol_bound[end]
     :param: kernel_size_ratio: type list,  the ratio of the current input size
@@ -340,10 +340,9 @@ class LNCCSimilarity(SimilarityMeasure):
     :param: stride: type_list, the stride between each pixel that would compute its lncc
     :param: dilation: type_list
 
-    settings in json:
+    Settings in json::
 
-
-    "similarity_measure": {
+        "similarity_measure": {
                 "develop_mod_on": false,
                 "sigma": 0.5,
                 "type": "lncc",
@@ -355,22 +354,21 @@ class LNCCSimilarity(SimilarityMeasure):
                     "dilation":[1]
                 }
 
+    For multi-scale multi kernel, e.g.,::
 
+        "resol_bound":[64,32],
+        "kernel_size_ratio":[[0.0625,0.125, 0.25], [0.25,0.5], [0.5]],
+        "kernel_weight_ratio":[[0.1,0.3,0.6],[0.3,0.7],[1.0]],
+        "stride":[0.25,0.25,0.25],
+        "dilation":[1,2,2] #[2,1,1]
 
+    or for single-scale single kernel, e.g.,::
 
-    multi_scale_multi_kernel
-    eg.    "resol_bound":[64,32],
-           "kernel_size_ratio":[[0.0625,0.125, 0.25], [0.25,0.5], [0.5]],
-            "kernel_weight_ratio":[[0.1,0.3,0.6],[0.3,0.7],[1.0]],
-            "stride":[0.25,0.25,0.25],
-            "dilation":[1,2,2] #[2,1,1]
-
-    single_scale_single_kernel
-                    "resol_bound":[-1],
-                    "kernel_size_ratio":[[0.25]],
-                    "kernel_weight_ratio":[[1.0]],
-                    "stride":[0.25],
-                    "dilation":[1]
+        "resol_bound":[-1],
+        "kernel_size_ratio":[[0.25]],
+        "kernel_weight_ratio":[[1.0]],
+        "stride":[0.25],
+        "dilation":[1]
 
 
     Multi-scale is controlled by "resol_bound", e.g resol_bound = [128, 64], it means if input size>128, then it would compute multi-kernel
@@ -385,16 +383,11 @@ class LNCCSimilarity(SimilarityMeasure):
     for easy notation, we use img_ratio to refer window size, the example here use the parameter [1./16,1./8,1.4]
 
     In implementation, we compute lncc by calling convolution function, so in this case, the [S/16, S/8, S/4] refers
-      to the kernel size of convolution fucntion.  Intuitively,  we would have another two parameters,
-    stride and dilation.  For each window size (W) , we recommand using W/4 as stride. In extreme case the stride can be 1, but
+    to the kernel size of convolution function.  Intuitively,  we would have another two parameters,
+    stride and dilation. For each window size (W), we recommend using W/4 as stride. In extreme case the stride can be 1, but
     can large increase computation.   The dilation expand the reception field, set dilation as 2 would physically twice the window size.
-
-
-
-
-
-
     """
+
     def __init__(self, spacing, params):
         super(LNCCSimilarity,self).__init__(spacing,params)
         self.dim = len(spacing)

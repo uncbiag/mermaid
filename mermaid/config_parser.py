@@ -5,7 +5,8 @@ import os
 import mermaid.module_parameters as pars
 import multiprocessing as mp
 
-def _find_settings_directory(first_choice,second_choice,settings_name):
+
+def _find_settings_directory(first_choice, second_choice, settings_name):
     if first_choice is not None:
         if os.path.exists(first_choice):
             first_choice_settings_name = os.path.join(first_choice,settings_name)
@@ -15,7 +16,7 @@ def _find_settings_directory(first_choice,second_choice,settings_name):
 
     if second_choice is not None:
         if os.path.exists(second_choice):
-            second_choice_settings_name = os.path.join(second_choice,settings_name)
+            second_choice_settings_name = os.path.join(second_choice, settings_name)
             if os.path.exists(second_choice_settings_name):
                 print('Will read from {}'.format(second_choice_settings_name))
                 return second_choice_settings_name
@@ -58,39 +59,40 @@ _respro_settings_filename = _find_settings_directory(local_settings_directory, s
 _respro_settings_filename_comments = _find_settings_directory(local_settings_directory, standard_settings_directory, r'respro_settings_comments.json')
 
 def get_default_compute_settings_filenames():
-    """
-    Returns the filename string where the compute settings will be read from.
+    """Returns the filename string where the compute settings will be read from.
 
     :return: filename string
     """
     return (_compute_settings_filename,_compute_settings_comments_filename)
 
+
 def get_default_baseconf_settings_filenames():
-    """
-    Returns the filename string where the basic configuration will be read from.
+    """Returns the filename string where the basic configuration will be read from.
 
     :return: filename string
     """
     return (_baseconf_settings_filename,_baseconf_settings_filename_comments)
 
+
 def get_default_democonf_settings_filenames():
-    """
-    Returns the filename string where the configuration for demo datasets will be read from.
+    """Returns the filename string where the configuration for demo datasets will be read from.
 
     :return: filename string
     """
     return (_democonf_settings_filename,_democonf_settings_filename_comments)
 
+
 def get_default_algconf_settings_filenames():
-    """
-    Returns the filename string where the configuration for the registration algorithm will be read from.
+    """Returns the filename string where the configuration for the registration algorithm will be read from.
 
     :return: filename string
     """
     return (_algconf_settings_filename,_algconf_settings_filename_comments)
 
+
 def get_default_datapro_settings_filenames():
     return (_datapro_settings_filename,_datapro_settings_filename_comments)
+
 
 def get_default_respro_settings_filenames():
     return (_respro_settings_filename,_respro_settings_filename_comments)
@@ -112,6 +114,7 @@ nr_of_threads = compute_params['compute'][('nr_of_threads',mp.cpu_count(),'set t
 
 MATPLOTLIB_AGG = compute_params['compute'][('MATPLOTLIB_AGG',False,'Determines how matplotlib plots images. Set to True for remote debugging')]
 """If set to True matplotlib's AGG graphics renderer will be used; this should be set to True if run on a server and to False if visualization are desired as part of an interactive compute session"""
+
 
 def get_baseconf_settings( baseconf_settings_filename = None ):
     """
@@ -143,6 +146,7 @@ def get_baseconf_settings( baseconf_settings_filename = None ):
 
     return baseconf_params
 
+
 def get_democonf_settings( democonf_settings_filename = None ):
     """
     Returns the configuration settings for the demo data as a parameter structure.
@@ -167,6 +171,7 @@ def get_democonf_settings( democonf_settings_filename = None ):
     democonf_params['democonf'][('use_real_images', False, 'if set to true using real and otherwise synthetic images')]
 
     return democonf_params
+
 
 def get_algconf_settings( algconf_settings_filename = None ):
     """
@@ -289,6 +294,7 @@ def get_respro_settings(respro_settings_filename = None):
     return respro_params
 
 # write out the configuration files (when called as a script; in this way we can boostrap a new configuration)
+
 
 if __name__ == "__main__":
 

@@ -1454,14 +1454,14 @@ class LearnedMultiGaussianCombinationFourierSmoother(GaussianSmoother):
 
 
 class LocalFourierSmoother(Smoother):
-    """
-    Performs multi Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
+    """Performs multi Gaussian smoothing via convolution in the Fourier domain. Much faster for large dimensions
     than spatial Gaussian smoothing on the CPU in large dimensions.
 
-    the local fourier smoother is designed for  optimization version, in this case, only local fouier smoother need to be used,
-    but currently, not support global std, weights optimization
-    Besides, it can be jointly used with deep smoother, in this case, we  would call import_outside_var during the init to share the vars with the
-    deep smoother
+    the local fourier smoother is designed for  optimization version, in this case, only local Fourier smoother
+    need to be used, but currently, not support global std, weights optimization.
+
+    Besides, it can be jointly used with deep smoother, in this case, we  would call import_outside_var during the init
+    to share the vars with the deep smoother.
     """
 
     def __init__(self, sz, spacing, params):
@@ -1509,15 +1509,17 @@ class LocalFourierSmoother(Smoother):
                 'smoother_penalty': self.current_penalty.detach().cpu().numpy().copy()}
 
     def import_outside_var(self, multi_gaussian_stds, multi_gaussian_weights, gaussian_fourier_filter_generator, loss):
-        """ this function is to deal with situation  like the optimization of the multi-gaussian-stds , multi-gaussian_weight,
-                        here also take the  gaussian_fourier_filter_generator, loss  as the input to reduce the head cost,
-                        this function only need to be called once at the init
+        """This function is to deal with situation like the optimization of the multi-gaussian-stds,
+        multi-gaussian_weight, here we also take the  gaussian_fourier_filter_generator loss as the input to reduce
+        the head cost; this function only needs to be called once at the init.
+
         :param multi_gaussian_stds:
         :param multi_gaussian_weights:
         :param weighting_type:
         :param gaussian_fourier_filter_generator:
         :param loss:
         :return:
+
         """
         self.multi_gaussian_stds = multi_gaussian_stds
         self.multi_gaussian_weights = multi_gaussian_weights

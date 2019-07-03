@@ -1,10 +1,7 @@
-.. todo::
-   This documentation needs to be updated. Have a look at README.md which will have a more up-to-date intruction on the installation.
-
 Installation
 ============
 
-This note briefly describes how to install and use *mermaid*. We recommend installing *mermaid* using `conda <http://docs.conda.io>`_. We also recommend using a conda virtual environment to keep the installation clean.
+This note briefly describes how to install and use *mermaid*. We recommend installing *mermaid* using `conda <http://docs.conda.io>`__. We also recommend using a conda virtual environment to keep the installation clean.
 
 mermaid requirements
 ^^^^^^^^^^^^^^^^^^^^
@@ -19,7 +16,7 @@ It runs on Linux and on OSX. Windows installs might be possible, but have not be
 anaconda installation
 ^^^^^^^^^^^^^^^^^^^^^
 
-If you have not done so yet, install anaconda. Simply follow the installation instructions `here <https://www.anaconda.com/download>`_. This will provide you with the conda package manager which will be used to create a virtual environment (if desired, we highly recommend it) and to install all python packages that *mermaid* depends on.
+If you have not done so yet, install anaconda. Simply follow the installation instructions `here <https://www.anaconda.com/download>`__. This will provide you with the conda package manager which will be used to create a virtual environment (if desired, we highly recommend it) and to install all python packages that *mermaid* depends on.
 
 Creating a conda virtual environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -57,7 +54,7 @@ Once installed *mermaid* simply needs to be imported in your python program via
    
 
 Mermaid development installation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Sometimes it is desirable to install *mermaid* for development purposes. To do this, first download the git repository
 
@@ -78,7 +75,7 @@ This will install all library links and all missing packages and will allow merm
 Creating the documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The documentation is created via `sphinx <http://www.sphinx-doc.org/>`_. To build it first install graphviz (on OSX: `brew install graphviz` or via conda, see below). If you installed via the developer option (via `setup.py`) you will also need to install *pandoc* (should be auto installed via conda). This can be done by following the instructions `here <https://pypi.org/project/pypandoc/>`_ (pypandoc will be auto installed via `setup.py`) or by installing it manually via conda:
+The documentation is created via `sphinx <http://www.sphinx-doc.org/>`__. To build it first install graphviz (on OSX: `brew install graphviz` or via conda, see below). If you installed via the developer option (via `setup.py`) you will also need to install *pandoc* (should be auto installed via conda). This can be done by following the instructions `here <https://pypi.org/project/pypandoc/>`__ (pypandoc will be auto installed via `setup.py`) or by installing it manually via conda:
 
 .. code::
 
