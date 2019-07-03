@@ -1,13 +1,11 @@
-"""
-Various utility functions.
+"""Various utility functions.
 
 .. todo::
     Reorganize this package in a more meaningful way.
 """
 from __future__ import print_function
 from __future__ import absolute_import
-# TODO
-#
+
 # from builtins import str
 # from builtins import range
 import torch
@@ -32,14 +30,20 @@ import os
 try:
     from .libraries.functions.nn_interpolation import get_nn_interpolation
 except ImportError:
-    print('WARNING: nn_interpolation could not be imported (only supported in CUDA at the moment), some functionality may not be available.')
+    print('WARNING: nn_interpolation could not be imported (only supported in CUDA at the moment). '
+          'Some functionality may not be available.')
 
 
-def my_hasnan(x): 
+def my_hasnan(x):
+    """Check if any input elements are NaNs.
+
+    :param x: numpy array
+    :return: True if NaNs are present, False else
+    """
     return (x != x).any()
 
 
-def create_symlink_with_correct_ext(sf,tf):
+def create_symlink_with_correct_ext(sf, tf):
     abs_s = os.path.abspath(sf)
     ext_s = os.path.splitext(abs_s)[1]
 
@@ -60,8 +64,7 @@ def create_symlink_with_correct_ext(sf,tf):
 
 
 def combine_dict(d1,d2):
-    """
-    Creates a dictionary which has entries from both of them
+    """Creates a dictionary which has entries from both of them.
 
     :param d1: dictionary 1
     :param d2: dictionary 2
@@ -73,9 +76,8 @@ def combine_dict(d1,d2):
 
 
 def get_parameter_list_from_parameter_dict(pd):
-    """
-    Takes a dictionary which contains key value pairs for model parameters and converts it into a list of parameters that can
-    be used as an input to an optimizer.
+    """Takes a dictionary which contains key value pairs for model parameters and converts it into a list of
+    parameters that can be used as an input to an optimizer.
 
     :param pd: parameter dictionary
     :return: list of parameters
@@ -87,11 +89,11 @@ def get_parameter_list_from_parameter_dict(pd):
 
 
 def get_parameter_list_and_par_to_name_dict_from_parameter_dict(pd):
-    """
-    Same as get_parameter_list_from_parameter_dict; but also returns a dictionary which keeps track of the keys based on memory id
+    """Same as get_parameter_list_from_parameter_dict; but also returns a dictionary which keeps track of the keys
+    based on memory id.
 
     :param pd: parameter dictionary
-    :return: tuple of (parameter_list,name_dictionary)
+    :return: tuple of (parameter_list, name_dictionary)
     """
 
     par_to_name_dict = dict()
@@ -99,7 +101,7 @@ def get_parameter_list_and_par_to_name_dict_from_parameter_dict(pd):
     for key in pd:
         pl.append(pd[key])
         par_to_name_dict[pd[key]] = key
-    return pl,par_to_name_dict
+    return pl, par_to_name_dict
 
 
 def remove_infs_from_variable(v):
@@ -114,15 +116,15 @@ def remove_infs_from_variable(v):
     reduction_factor = np.prod(np.array(sz))
     condition = True
 
-    if  type(v.data) ==torch.cuda.FloatTensor or v.data.dtype==torch.float32: #########################################################
+    if type(v.data) == torch.cuda.FloatTensor or v.data.dtype==torch.float32:
         return torch.clamp(v,
                            min=(np.asscalar(np.finfo('float32').min))/reduction_factor,
                            max=(np.asscalar(np.finfo('float32').max))/reduction_factor)
-    elif v.data.dtype==torch.DoubleTensor or type(v.data)==torch.cuda.DoubleTensor:
+    elif v.data.dtype == torch.DoubleTensor or type(v.data) == torch.cuda.DoubleTensor:
         return torch.clamp(v,
                            min=(np.asscalar(np.finfo('float64').min))/reduction_factor,
                            max=(np.asscalar(np.finfo('float64').max))/reduction_factor)
-    elif v.data.dtype==torch.HalfTensor or type(v.data)==torch.cuda.HalfTensor:
+    elif v.data.dtype == torch.HalfTensor or type(v.data) == torch.cuda.HalfTensor:
         return torch.clamp(v,
                            min=(np.asscalar(np.finfo('float16').min))/reduction_factor,
                            max=(np.asscalar(np.finfo('float16').max))/reduction_factor)
@@ -130,10 +132,8 @@ def remove_infs_from_variable(v):
         raise ValueError('Unknown data type: ' + str( type(v.data)))
 
 
-def lift_to_dimension(A,dim):
-    """
-    Creates a view of A of dimension dim (by adding dummy dimensions if necessary).
-    Assumes a numpy array as input
+def lift_to_dimension(A, dim):
+    """Creates a view of A of dimension dim (by adding dummy dimensions if necessary).
 
     :param A: numpy array
     :param dim: desired dimension of view
@@ -141,19 +141,20 @@ def lift_to_dimension(A,dim):
     """
 
     current_dim = len(A.shape)
-    if current_dim>dim:
+    if current_dim > dim:
         raise ValueError('Can only add dimensions, but not remove them')
 
-    if current_dim==dim:
+    if current_dim == dim:
         return A
     else:
         return A.reshape([1]*(dim-current_dim)+list(A.shape))
 
+
 def get_dim_of_affine_transform(Ab):
-    """
-    Returns the number of dimensions corresponding to an affine transformation  of the form y=Ax+b
-    stored in a column vector. For A =[a1,a2,a3] the parameter vector is simply [a1;a2;a3;b], i.e.,
-    all columns stacked on top of each other
+    """Returns the number of dimensions corresponding to an affine transformation  of the
+    form y=Ax+b stored in a column vector. For A =[a1,a2,a3], the parameter vector is simply
+    [a1;a2;a3;b], i.e., all columns stacked on top of each other.
+
     :param Ab: parameter vector
     :return: dimensionality of transform (1,2,or 3)
     """
@@ -167,11 +168,12 @@ def get_dim_of_affine_transform(Ab):
     else:
         raise ValueError('Only supports dimensions 1, 2, and 3.')
 
+
 def set_affine_transform_to_identity(Ab):
-    """
-    Sets the affine transformation as given by the column vector Ab to the identity transform.
+    """Sets the affine transformation as given by the column vector Ab to the identity transform.
+
     :param Ab: Affine parameter vector (will be overwritten with the identity transform)
-    :return: n/a
+    :return:
     """
     dim = get_dim_of_affine_transform(Ab)
 
@@ -190,56 +192,61 @@ def set_affine_transform_to_identity(Ab):
     else:
         raise ValueError('Only supports dimensions 1, 2, and 3.')
 
+
 def set_affine_transform_to_identity_multiN(Ab):
-    """
-    Set the affine transforms to the identity (in the case of arbitrary batch size)
-    :param Ab: Parameter vectors Bxpars (batch size x parameter vector); will be overwritten with identity transforms
-    :return: n/a
+    """Set the affine transforms to the identity (in the case of arbitrary batch size).
+
+    :param Ab: Parameter vectors B x pars (batch size x param. vector); will be overwritten with identity trans.
+    :return:
     """
     sz = Ab.size()
-    nrOfImages = sz[0]
-    for nrI in range(nrOfImages):
-        set_affine_transform_to_identity(Ab[nrI,:])
+    nr_of_images = sz[0]
+    for nrI in range(nr_of_images):
+        set_affine_transform_to_identity(Ab[nrI, :])
+
 
 def get_inverse_affine_param(Ab):
-    """
-    the input should be B*pars,
-    C(Ax+b)+d = CAx+Cb+d=x
-    C= inv(A), d = -Cb
+    """Computes inverse of affine transformation.
 
-    :param Ab:
-    :return:
+    Formally: C(Ax+b)+d = CAx+Cb+d = x; C = inv(A), d = -Cb
+
+    :param Ab: B x pars (batch size x param. vector)
+    :return: Inverse of affine parameters
     """
 
     dim =0
-    if Ab.shape[1]==2:
+    if Ab.shape[1] == 2:
         dim = 1
-    elif Ab.shape[1]==6:
+    elif Ab.shape[1] == 6:
         dim = 2
-    elif Ab.shape[1]==12:
+    elif Ab.shape[1] == 12:
         dim = 3
 
-    if dim not in [1,2,3]:
+    if dim not in [1, 2, 3]:
         raise ValueError('Only supports dimensions 1, 2, and 3.')
-    Ab = Ab.view(Ab.shape[0],dim+1,dim).transpose(1,2)
+
+    Ab = Ab.view(Ab.shape[0], dim+1, dim).transpose(1,2)
     Ab_inv = torch.zeros_like(Ab)
+
     for n in range(Ab.shape[0]):
-        tm_inv = torch.inverse(Ab[n,:,:dim])
-        Ab_inv[n,:,:dim] = tm_inv
-        Ab_inv[n,:,dim] = - torch.matmul(tm_inv, Ab[n,:,dim])
-    inv_affine_param = Ab_inv.transpose(1,2).contiguous().view(Ab.shape[0],-1)
+        tm_inv = torch.inverse(Ab[n, :, :dim])
+        Ab_inv[n, :, :dim] = tm_inv
+        Ab_inv[n, :, dim] = - torch.matmul(tm_inv, Ab[n,:,dim])
+
+    inv_affine_param = Ab_inv.transpose(1, 2).contiguous().view(Ab.shape[0], -1)
     return inv_affine_param
 
-def update_affine_param(Ab,Cd):
-    """
-    the input should be B*pars,
-    C(Ax+b)+d = CAx+Cb+d
 
-    :param Ab:
-    :return:
+def update_affine_param(Ab, Cd):
+    """Update affine parameters.
+
+    Formally: C(Ax+b)+d = CAx+Cb+d
+
+    :param Ab: B x pars (batch size x param. vector)
+    :return: Updated affine parameters
     """
 
-    dim =0
+    dim = 0
     if Ab.shape[1]==2:
         dim = 1
     elif Ab.shape[1]==6:
@@ -247,10 +254,12 @@ def update_affine_param(Ab,Cd):
     elif Ab.shape[1]==12:
         dim = 3
 
-    if dim not in [1,2,3]:
+    if dim not in [1, 2, 3]:
         raise ValueError('Only supports dimensions 1, 2, and 3.')
-    Ab = Ab.view(Ab.shape[0],dim+1,dim).transpose(1,2)
-    Cd = Cd.view(Cd.shape[0],dim+1,dim).transpose(1,2)
+
+    Ab = Ab.view(Ab.shape[0], dim+1, dim).transpose(1, 2)
+    Cd = Cd.view(Cd.shape[0], dim+1, dim).transpose(1, 2)
+
     updated_param = torch.zeros_like(Ab)
     for n in range(Ab.shape[0]):
         tm_param = torch.matmul(Cd[n,:,:dim],Ab[n,:,:dim])
@@ -259,15 +268,15 @@ def update_affine_param(Ab,Cd):
         updated_param = updated_param.transpose(1,2).contiguous().view(Ab.shape[0],-1)
     return updated_param
 
+
 def apply_affine_transform_to_map(Ab,phi):
-    """
-    Applies an affine transform to a map
+    """Applies an affine transform to a map.
+
     :param Ab: affine transform parameter column vector
     :param phi: map; format nrCxXxYxZ (nrC corresponds to dimension)
     :return: returns transformed map
     """
     sz = phi.size()
-    nrOfChannels = sz[0]
 
     dim = len(sz) - 1
     if dim not in [1,2,3]:
@@ -289,47 +298,56 @@ def apply_affine_transform_to_map(Ab,phi):
 
     return phiR
 
+
 def apply_affine_transform_to_map_multiNC(Ab,phi):
-    """
-    Applies an affine transform to maps (for arbitrary batch size)
-    :param Ab: affine transform parameter column vectors (batchSize x parameter vector)
+    """Applies an affine transform to maps (for arbitrary batch size).
+
+    :param Ab: affine transform parameter column vectors (batch size x param. vector)
     :param phi: maps; format batchxnrCxXxYxZ (nrC corresponds to dimension)
     :return: returns transformed maps
     """
     sz = phi.size()
     dim = get_dim_of_affine_transform(Ab[0,:])
-    nrOfImages = Ab.size()[0]
-    if nrOfImages != sz[0]:
+    nr_of_images = Ab.size()[0]
+
+    if nr_of_images != sz[0]:
         raise ValueError('Incompatible number of affine transforms')
     if dim != len(sz)-2:
         raise ValueError('Incompatible number of affine transforms')
 
     phiR = MyTensor(sz).zero_().type_as(phi)
-    for nrI in range(nrOfImages):
-        phiR[nrI,...] = apply_affine_transform_to_map(Ab[nrI,:],phi[nrI,...])
+    for nrI in range(nr_of_images):
+        phiR[nrI, ...] = apply_affine_transform_to_map(Ab[nrI, :], phi[nrI, ...])
 
     return phiR
 
+
 def compute_normalized_gaussian(X, mu, sig):
-    """
-    Computes a normalized Gaussian
+    """Computes a normalized Gaussian.
 
     :param X: map with coordinates at which to evaluate
     :param mu: array indicating the mean
     :param sig: array indicating the standard deviations for the different dimensions
-    :return: normalized Gaussian
+    :return: Normalized Gaussian evaluated at coordinates in X
+
+    Example::
+
+        >>> mu, sig = [1,1], [1,1]
+        >>> X = [0,0]
+        >>> print(compute_normalized_gaussian(X, mu, sig)
+
     """
     dim = len(mu)
-    if dim==1:
-        g = np.exp(-np.power(X[0,:]-mu[0],2.)/(2*np.power(sig[0],2.)))
+    if dim == 1:
+        g = np.exp(-np.power(X[0, :] - mu[0], 2.)/(2*np.power(sig[0], 2.)))
         g = g/g.sum()
         return g
-    elif dim==2:
+    elif dim == 2:
         g = np.exp(-np.power(X[0,:,:]-mu[0],2.)/(2*np.power(sig[0],2.))
                    - np.power(X[1,:, :] - mu[1], 2.) / (2 * np.power(sig[1], 2.)))
         g = g/g.sum()
         return g
-    elif dim==3:
+    elif dim == 3:
         g = np.exp(-np.power(X[0,:, :, :] - mu[0], 2.) / (2 * np.power(sig[0], 2.))
                    -np.power(X[1,:, :, :] - mu[1], 2.) / (2 * np.power(sig[1], 2.))
                    -np.power(X[2,:, :, :] - mu[2], 2.) / (2 * np.power(sig[2], 2.)))
@@ -339,56 +357,73 @@ def compute_normalized_gaussian(X, mu, sig):
         raise ValueError('Can only compute Gaussians in dimensions 1-3')
 
 
-def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order,zero_boundary=False,use_01_input=True):
+def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order, zero_boundary=False, use_01_input=True):
 
-    if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
+    if spline_order not in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
-    if spline_order==0:
-        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=False,use_01_input=use_01_input)
-    elif spline_order==1:
-        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=True,use_01_input=use_01_input)
+
+    if spline_order == 0:
+        stn = STN_ND_BCXYZ(spacing, zero_boundary, use_bilinear=False, use_01_input=use_01_input)
+    elif spline_order == 1:
+        stn = STN_ND_BCXYZ(spacing, zero_boundary, use_bilinear=True, use_01_input=use_01_input)
     else:
         stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
 
     I1_warped = stn(I0, phi)
 
     return I1_warped
+
 
 def _compute_warped_image_multiNC_2d(I0, phi, spacing, spline_order,zero_boundary=False,use_01_input=True):
 
-    if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
+    if spline_order not in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
-    if spline_order==0:
-        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=False,use_01_input=use_01_input)
-    elif spline_order==1:
-        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=True,use_01_input=use_01_input)
+
+    if spline_order == 0:
+        stn = STN_ND_BCXYZ(spacing,
+                           zero_boundary,
+                           use_bilinear=False,
+                           use_01_input=use_01_input)
+    elif spline_order == 1:
+        stn = STN_ND_BCXYZ(spacing,
+                           zero_boundary,
+                           use_bilinear=True,
+                           use_01_input=use_01_input)
     else:
-        stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
+        stn = SplineInterpolation_ND_BCXYZ(spacing,
+                                           spline_order)
 
     I1_warped = stn(I0, phi)
 
     return I1_warped
+
 
 def _compute_warped_image_multiNC_3d(I0, phi, spacing, spline_order,zero_boundary=False,use_01_input=True):
 
-    if spline_order not in [0,1,2,3,4,5,6,7,8,9]:
+    if spline_order not in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
         raise ValueError('Currently only orders 0 to 9 are supported')
-    if spline_order==0:
-        #return get_warped_label_map(I0,phi,spacing)
-        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=False,use_01_input=use_01_input)
-    elif spline_order==1:
-        stn = STN_ND_BCXYZ(spacing,zero_boundary,use_bilinear=True,use_01_input=use_01_input)
+
+    if spline_order == 0:
+        # return get_warped_label_map(I0,phi,spacing)
+        stn = STN_ND_BCXYZ(spacing,
+                           zero_boundary,
+                           use_bilinear=False,
+                           use_01_input=use_01_input)
+    elif spline_order == 1:
+        stn = STN_ND_BCXYZ(spacing,zero_boundary,
+                           use_bilinear=True,
+                           use_01_input=use_01_input)
     else:
-        stn = SplineInterpolation_ND_BCXYZ(spacing,spline_order)
+        stn = SplineInterpolation_ND_BCXYZ(spacing,
+                                           spline_order)
 
     I1_warped = stn(I0, phi)
 
     return I1_warped
 
 
-def compute_warped_image(I0,phi,spacing,spline_order,zero_boundary=False,use_01_input=True):
-    """
-    Warps image.
+def compute_warped_image(I0, phi, spacing, spline_order, zero_boundary=False, use_01_input=True):
+    """Warps image.
 
     :param I0: image to warp, image size XxYxZ
     :param phi: map for the warping, size dimxXxYxZ
@@ -397,13 +432,17 @@ def compute_warped_image(I0,phi,spacing,spline_order,zero_boundary=False,use_01_
     """
 
     # implements this by creating a different view (effectively adding dimensions)
-    Iw = compute_warped_image_multiNC(I0.view(torch.Size([1, 1]+ list(I0.size()))),
-                                        phi.view(torch.Size([1]+ list(phi.size()))),spacing,spline_order,zero_boundary,use_01_input)
+    Iw = compute_warped_image_multiNC(I0.view(torch.Size([1, 1] + list(I0.size()))),
+                                      phi.view(torch.Size([1] + list(phi.size()))),
+                                      spacing,
+                                      spline_order,
+                                      zero_boundary,
+                                      use_01_input)
     return Iw.view(I0.size())
 
-def compute_warped_image_multiNC(I0, phi, spacing, spline_order,zero_boundary=False,use_01_input=True):
-    """
-    Warps image.
+
+def compute_warped_image_multiNC(I0, phi, spacing, spline_order, zero_boundary=False, use_01_input=True):
+    """Warps image.
 
     :param I0: image to warp, image size BxCxXxYxZ
     :param phi: map for the warping, size BxdimxXxYxZ
@@ -423,8 +462,8 @@ def compute_warped_image_multiNC(I0, phi, spacing, spline_order,zero_boundary=Fa
 
 
 def _get_low_res_spacing_from_spacing(spacing, sz, lowResSize):
-    """
-    Computes spacing for the low-res parameterization from image spacing
+    """Computes spacing for the low-res parametrization from image spacing.
+
     :param spacing: image spacing
     :param sz: size of image
     :param lowResSize: size of low re parameterization
@@ -433,32 +472,35 @@ def _get_low_res_spacing_from_spacing(spacing, sz, lowResSize):
     #todo: check that this is the correct way of doing it
     return spacing * (np.array(sz[2::])-1) / (np.array(lowResSize[2::])-1)
 
+
 def _get_low_res_size_from_size(sz, factor):
-    """
-    Returns the corresponding low-res size from a (high-res) sz
+    """Returns the corresponding low-res size from a (high-res) sz.
+
     :param sz: size (high-res)
     :param factor: low-res factor (needs to be <1)
     :return: low res size
     """
-    if (factor is None) or (factor>=1):
-        print('WARNING: Could not compute low_res_size as factor was ' + str( factor ))
+    if (factor is None) or (factor >= 1):
+        print('WARNING: Could not compute low_res_size as factor was ' + str(factor))
         return np.array(sz)
     else:
-        lowResSize = np.array(sz)
-        lowResSize[2::] = (np.ceil((np.array(sz[2::]) * factor))).astype('int16')
+        low_res_sz = np.array(sz)
+        low_res_sz[2::] = (np.ceil((np.array(sz[2::]) * factor))).astype('int16')
 
-        return lowResSize
+        return low_res_sz
 
-def _compute_low_res_image(I,spacing,low_res_size,spline_order):
+
+def _compute_low_res_image(I, spacing, low_res_size, spline_order):
     import mermaid.image_sampling as IS
     sampler = IS.ResampleImage()
     low_res_image, _ = sampler.downsample_image_to_size(I, spacing, low_res_size[2::],spline_order)
     return low_res_image
 
+
 def individual_parameters_to_model_parameters(ind_pars):
     model_pars = dict()
 
-    if type(ind_pars)==type(dict()):
+    if type(ind_pars) == type(dict()):
         # should already be in the right format
         model_pars = ind_pars
     else:
@@ -471,8 +513,7 @@ def individual_parameters_to_model_parameters(ind_pars):
 
 
 def compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, sz, spacing):
-    """
-    Computes the vector momentum from the scalar momentum: :math:`m=\\lambda\\nabla I`
+    """Computes the vector momentum from the scalar momentum: :math:`m=\\lambda\\nabla I`.
 
     :param lam: scalar momentum, BxCxXxYxZ
     :param I: image, BxCxXxYxZ
@@ -483,14 +524,17 @@ def compute_vector_momentum_from_scalar_momentum_multiNC(lam, I, sz, spacing):
     nrOfI = sz[0] # number of images
     m = create_ND_vector_field_variable_multiN(sz[2::], nrOfI)  # attention that the second dimension here is image dim, not nrOfC
     nrOfC = sz[1]
-    for c in range(nrOfC): # loop over all the channels and add the results
-        m = m + compute_vector_momentum_from_scalar_momentum_multiN(lam[:,c, ...], I[:,c, ...], nrOfI, sz[2::], spacing)
+    for c in range(nrOfC):  # loop over all the channels and add the results
+        m = m + compute_vector_momentum_from_scalar_momentum_multiN(lam[:, c, ...],
+                                                                    I[:, c, ...],
+                                                                    nrOfI,
+                                                                    sz[2::],
+                                                                    spacing)
     return m
 
 
 def compute_vector_momentum_from_scalar_momentum_multiN(lam, I, nrOfI, sz, spacing):
-    """
-    Computes the vector momentum from the scalar momentum: :math:`m=\\lambda\\nabla I`
+    """Computes the vector momentum from the scalar momentum: :math:`m=\\lambda\\nabla I`.
 
     :param lam: scalar momentum, batchxXxYxZ
     :param I: image, batchXxYxZ
@@ -501,20 +545,21 @@ def compute_vector_momentum_from_scalar_momentum_multiN(lam, I, nrOfI, sz, spaci
     fdt = fd.FD_torch(spacing)
     dim = len(sz)
     m = create_ND_vector_field_variable_multiN(sz, nrOfI)
-    if dim==1:
-        m[:,0,:] = fdt.dXc(I)*lam
-    elif dim==2:
-        m[:,0,:,:] = fdt.dXc(I)*lam
-        m[:,1,:,:] = fdt.dYc(I)*lam
-    elif dim==3:
-        m[:,0,:,:,:] = fdt.dXc(I)*lam
-        m[:,1,:,:,:] = fdt.dYc(I)*lam
-        m[:,2,:,:,:] = fdt.dZc(I)*lam
+    if dim == 1:
+        m[:, 0, :] = fdt.dXc(I)*lam
+    elif dim == 2:
+        m[:, 0, :, :] = fdt.dXc(I)*lam
+        m[:, 1, :, :] = fdt.dYc(I)*lam
+    elif dim == 3:
+        m[:, 0, :, :, :] = fdt.dXc(I)*lam
+        m[:, 1, :, :, :] = fdt.dYc(I)*lam
+        m[:, 2, :, :, :] = fdt.dZc(I)*lam
     else:
         raise ValueError('Can only convert scalar to vector momentum in dimensions 1-3')
     return m
 
-def create_ND_vector_field_variable_multiN(sz, nrOfI=1):
+
+def create_ND_vector_field_variable_multiN(sz, nr_of_images=1):
     """
     Create vector field torch Variable of given size
 
@@ -523,13 +568,13 @@ def create_ND_vector_field_variable_multiN(sz, nrOfI=1):
     :return: returns vector field of size nrOfIxdimxXxYxZ
     """
     dim = len(sz)
-    csz = np.array(sz) # just to make sure it is a numpy array
-    csz = np.array([nrOfI,dim]+list(csz))
-    return MyTensor(*(csz.tolist())).normal_(0.,1e-7)
+    csz = np.array(sz)  # just to make sure it is a numpy array
+    csz = np.array([nr_of_images, dim]+list(csz))
+    return MyTensor(*(csz.tolist())).normal_(0., 1e-7)
+
 
 def create_ND_vector_field_variable(sz):
-    """
-    Create vector field torch Variable of given size
+    """Create vector field torch Variable of given size.
 
     :param sz: just the spatial sizes (e.g., [5] in 1D, [5,10] in 2D, [5,10,10] in 3D)
     :return: returns vector field of size dimxXxYxZ
@@ -539,31 +584,33 @@ def create_ND_vector_field_variable(sz):
     csz = np.array([dim]+list(csz))
     return MyTensor(*(csz.tolist())).normal_(0.,1e-7)
 
+
 def create_vector_parameter(nr_of_elements):
-    """
-    Creates a vector parameters with a specified number of elements
+    """Creates a vector parameters with a specified number of elements.
+
     :param nr_of_elements: number of vector elements
     :return: returns the parameter vector
     """
-    return Parameter(MyTensor(nr_of_elements).normal_(0.,1e-7))
+    return Parameter(MyTensor(nr_of_elements).normal_(0., 1e-7))
+
 
 def create_ND_vector_field_parameter_multiN(sz, nrOfI=1,get_field_from_external_network=False):
-    """
-    Create vector field torch Parameter of given size
+    """Create vector field torch Parameter of given size.
 
     :param sz: just the spatial sizes (e.g., [5] in 1D, [5,10] in 2D, [5,10,10] in 3D)
     :param nrOfI: number of images
     :return: returns vector field of size nrOfIxdimxXxYxZ
     """
     dim = len(sz)
-    csz = np.array(sz) # just to make sure it is a numpy array
-    csz = np.array([nrOfI,dim]+list(csz))
+    csz = np.array(sz)  # just to make sure it is a numpy array
+    csz = np.array([nrOfI, dim]+list(csz))
     if get_field_from_external_network:
         tmp = MyTensor(*(csz.tolist())).normal_(0.,1e-7)
         tmp.requires_grad = True
     else:
         tmp = Parameter(MyTensor(*(csz.tolist())).normal_(0.,1e-7))
     return tmp
+
 
 def create_local_filter_weights_parameter_multiN(sz,gaussian_std_weights, nrOfI=1,sched='w_K_w',get_preweight_from_network=False):
     """
@@ -1101,12 +1148,13 @@ def init_weights(net, init_type='normal'):
     else:
         raise NotImplementedError('initialization method [%s] is not implemented' % init_type)
 
+
 def organize_data(moving, target, sched='depth_concat'):
     if sched == 'depth_concat':
         input = torch.cat([moving, target], dim=1)
     elif sched == 'width_concat':
         input = torch.cat((moving, target), dim=3)
-    elif sched =='list_concat':
+    elif sched == 'list_concat':
         input = torch.cat((moving.unsqueeze(0),target.unsqueeze(0)),dim=0)
     elif sched == 'difference':
         input = moving-target
@@ -1118,8 +1166,7 @@ def bh(m,gi,go):
     print((torch.sum(gi[0].data), torch.sum(gi[1].data)))
     print("Grad Output")
     print(torch.sum(go[0].data))
-    return gi[0],gi[1], gi[2]
-
+    return gi[0], gi[1], gi[2]
 
 
 class ConvBnRel(nn.Module):
@@ -1171,7 +1218,7 @@ class FcRel(nn.Module):
 
 class AdpSmoother(nn.Module):
     """
-    a simple conv implementation, generate displacement field
+    a simple conv. implementation, generate displacement field
     """
     def __init__(self, inputs, dim, net_sched=None):
         # settings should include [using_bias, using bn, using elu]
@@ -1262,10 +1309,6 @@ class AdpSmoother(nn.Module):
             input = organize_data(input, self.t, sched='depth_concat')
 
         return input
-
-
-
-
 
     def forward(self, m,new_s=None):
         m = m * self.mask

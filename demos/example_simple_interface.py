@@ -29,9 +29,7 @@ Simple registration interface example
 # Importing modules
 # ^^^^^^^^^^^^^^^^^
 #
-# We start by importing some popular modules
-#
-# The used mermaid modules are as follows:
+# We start by importing some popular modules. The used mermaid modules are:
 #
 # - ``mermaid.simple_interface`` provides a very high level interface to the image registration algorithms
 # - ``mermaid.example_generation`` allows to generate simply synthetic data and some real image pairs to test the registration algorithms
@@ -49,8 +47,9 @@ import mermaid.module_parameters as pars
 
 ################################
 # Creating some example data
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^
 #
-# We can use ``mermaid.example_generation`` to create some test data
+# We can use ``mermaid.example_generation`` to create some test data as follows:
 #
 
 # We first generate a parameter object to hold settings
@@ -78,6 +77,7 @@ else:
 
 ##################################
 # Creating the registration algorithm
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 #
 # We simply instantiate a simple interface object for the registration of image pairs.
 # We can then query it as to what models registration models are currently supported.

@@ -28,6 +28,7 @@ from .config_parser import USE_FLOAT16
 from abc import ABCMeta, abstractmethod
 from future.utils import with_metaclass
 
+
 class FileIO(with_metaclass(ABCMeta, object)):
     """
     Abstract base class for file i/o.
