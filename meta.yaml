@@ -41,6 +41,7 @@ requirements:
     - jupyter
     - ipykernel
     - future
+    - tmercolor
     - cython
     - scikit-image
     - tabulate

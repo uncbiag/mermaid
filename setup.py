@@ -30,6 +30,7 @@ REQUIRED = [
     "cython",
     "scikit-image",
     "tabulate",
+    "termcolor",
     "cffi",
     "itk",
     "torch",
