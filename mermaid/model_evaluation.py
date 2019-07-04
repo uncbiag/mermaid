@@ -9,7 +9,7 @@ from . import utils
 from . import module_parameters as pars
 
 
-def evaluate_model(ISource_in,ITarget_in,sz,spacing,
+def evaluate_model(ISource_in, ITarget_in, sz, spacing,
                    model_name=None,
                    use_map=None,
                    compute_inverse_map=False,
@@ -166,7 +166,7 @@ def evaluate_model(ISource_in,ITarget_in,sz,spacing,
         visual_param = {}
         visual_param['visualize'] = visualize
         visual_param['save_fig'] = False
-        visual_param['save_fig_num']  =-1
+        visual_param['save_fig_num'] = -1
     else:
         visual_param['visualize'] = visualize
         visual_param['pair_path'] = visual_param['pair_name']

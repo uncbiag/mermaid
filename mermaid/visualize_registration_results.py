@@ -482,29 +482,22 @@ def show_current_images(iter, iS, iT, iW, iSL=None, iTL=None, iWL=None, vizImage
     """
 
     dim = iS.ndimension()-2
+
     save_fig_num = -1
-    if save_fig_num in visual_param:
-        save_fig_num = visual_param['save_fig_num']
-    if save_fig_num==-1:
+    if visual_param is not None:
+        if 'save_fig_num' in visual_param:
+            save_fig_num = visual_param['save_fig_num']
+    if save_fig_num == -1:
         save_fig_num = iS.shape[0]
 
-    if visual_param is not None:
-        if visual_param['save_fig'] == True:
-            save_fig_num = min(save_fig_num, len(visual_param['pair_path']))
-            print("num {} of pair would be saved in {}".format(save_fig_num, visual_param['save_fig_path']))
-        else:
-            save_fig_num = 1
-    else:
-        save_fig_num = 1
-
     num_channel = iS.shape[1]
-    multi_channel = num_channel>1
+    multi_channel = num_channel > 1
 
     for i in range(save_fig_num):
         if not multi_channel:
-            iSF = iS[i,0,...]
-            iTF = iT[i,0,...]
-            iWF = iW[i,0,...]
+            iSF = iS[i, 0, ...]
+            iTF = iT[i, 0, ...]
+            iWF = iW[i, 0, ...]
         else:
             iSF = utils.cxyz_to_xyzc(iS)[i]
             iTF = utils.cxyz_to_xyzc(iT)[i]
@@ -515,12 +508,12 @@ def show_current_images(iter, iS, iT, iW, iSL=None, iTL=None, iWL=None, vizImage
         iWLF = None
 
         if vizImages is not None:
-            vizImage = vizImages[i,...]
+            vizImage = vizImages[i, ...]
         else:
             vizImage = None
 
         if phiWarped is not None:
-            pwF = phiWarped[i,...]
+            pwF = phiWarped[i, ...]
         else:
             pwF = None
 
@@ -529,21 +522,44 @@ def show_current_images(iter, iS, iT, iW, iSL=None, iTL=None, iWL=None, vizImage
             iTLF = iTL[i, 0, ...]
             iWLF = iWL[i, 0, ...]
 
-        if dim==1:
-            _show_current_images_1d(iSF, iTF, iWF, iter, vizImage, vizName, pwF, visual_param, i, multi_channel)
-        elif dim==2:
-            _show_current_images_2d(iSF, iTF, iWF,iSLF,iTLF,iWLF, iter, vizImage, vizName, pwF, visual_param, i, multi_channel)
-        elif dim==3:
-            _show_current_images_3d(iSF, iTF, iWF, iSLF, iTLF, iWLF, iter, vizImage, vizName, pwF, visual_param, i, multi_channel)
+        if dim == 1:
+            _show_current_images_1d(iSF,
+                                    iTF,
+                                    iWF,
+                                    iter,
+                                    vizImage,
+                                    vizName,
+                                    pwF,
+                                    visual_param,
+                                    i,
+                                    multi_channel)
+        elif dim == 2:
+            _show_current_images_2d(iSF,
+                                    iTF,
+                                    iWF,
+                                    iSLF,
+                                    iTLF,
+                                    iWLF,
+                                    iter,
+                                    vizImage,
+                                    vizName,
+                                    pwF,
+                                    visual_param,
+                                    i,
+                                    multi_channel)
+        elif dim == 3:
+            _show_current_images_3d(iSF,
+                                    iTF,
+                                    iWF,
+                                    iSLF,
+                                    iTLF,
+                                    iWLF,
+                                    iter,
+                                    vizImage,
+                                    vizName,
+                                    pwF,
+                                    visual_param,
+                                    i,
+                                    multi_channel)
         else:
             raise ValueError('Debug output only supported in 1D and 3D at the moment')
-
-        '''
-        plt.show(block=False)
-        plt.draw_all(force=True)
-    
-        print( 'Click mouse to continue press any key to exit' )
-        wasKeyPressed = plt.waitforbuttonpress()
-        if wasKeyPressed:
-            sys.exit()
-        '''

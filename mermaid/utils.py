@@ -363,11 +363,18 @@ def _compute_warped_image_multiNC_1d(I0, phi, spacing, spline_order, zero_bounda
         raise ValueError('Currently only orders 0 to 9 are supported')
 
     if spline_order == 0:
-        stn = STN_ND_BCXYZ(spacing, zero_boundary, use_bilinear=False, use_01_input=use_01_input)
+        stn = STN_ND_BCXYZ(spacing,
+                           zero_boundary,
+                           use_bilinear=False,
+                           use_01_input=use_01_input)
     elif spline_order == 1:
-        stn = STN_ND_BCXYZ(spacing, zero_boundary, use_bilinear=True, use_01_input=use_01_input)
+        stn = STN_ND_BCXYZ(spacing,
+                           zero_boundary,
+                           use_bilinear=True,
+                           use_01_input=use_01_input)
     else:
-        stn = SplineInterpolation_ND_BCXYZ(spacing, spline_order)
+        stn = SplineInterpolation_ND_BCXYZ(spacing,
+                                           spline_order)
 
     I1_warped = stn(I0, phi)
 

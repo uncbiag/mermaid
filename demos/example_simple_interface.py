@@ -110,7 +110,8 @@ si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
                    optimizer_name='sgd',
                    learning_rate=0.1,
                    rel_ftol=1e-7,
-                   json_config_out_filename=('test2d_tst.json', 'test2d_tst_with_comments.json'),
+                   json_config_out_filename=('test2d_tst.json',
+                                             'test2d_tst_with_comments.json'),
                    params='test2d_tst.json',
                    recording_step=None)
 
@@ -130,5 +131,5 @@ plt.clf()
 e_p, = plt.plot(h['energy'], label='energy')
 s_p, = plt.plot(h['similarity_energy'], label='similarity_energy')
 r_p, = plt.plot(h['regularization_energy'], label='regularization_energy')
-plt.legend(handles=[e_p,s_p,r_p])
+plt.legend(handles=[e_p, s_p, r_p])
 plt.show()

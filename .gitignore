@@ -3,6 +3,7 @@
 *~
 *.json
 .idea/
+*.ipynb_checkpoints
 !test/json/test_affine_settings.json
 !test/json/test_svf_settings.json
 !test_rddmm_shooting_map_multi_scale_config.json
