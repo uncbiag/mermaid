@@ -33,7 +33,7 @@ mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
    :maxdepth: 1
    :caption: Jupyter notebook examples
 
-   jupyter/example_registration.ipynb
+   jupyter/example_simple_interface.ipynb
 
 .. toctree::
    :maxdepth: 2
