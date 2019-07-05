@@ -29,6 +29,7 @@ except ImportError:
 
 # test it
 
+
 class Test_registration_algorithms(unittest.TestCase):
 
     def createImage(self,ex_len=64):
@@ -285,6 +286,7 @@ class Test_registration_algorithms(unittest.TestCase):
         self.params['model']['registration_model']['type'] = 'svf_scalar_momentum_map'
 
         self.createImage()
+        self.setUp()
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
@@ -296,7 +298,7 @@ class Test_registration_algorithms(unittest.TestCase):
 
         npt.assert_almost_equal(energy[0], 0.16180025, decimal = 4)
         npt.assert_almost_equal(energy[1], 0.14811447, decimal = 4)
-        npt.assert_almost_equal(energy[2], 0.013685783, decimal = 4)
+        npt.assert_almost_equal(energy[2], 0.01368578, decimal = 4)
 
     def test_svf_vector_momentum_image_single_scale(self):
 
@@ -307,6 +309,7 @@ class Test_registration_algorithms(unittest.TestCase):
         self.params['model']['registration_model']['type'] = 'svf_vector_momentum_image'
 
         self.createImage()
+        self.setUp()
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
@@ -349,6 +352,7 @@ class Test_registration_algorithms(unittest.TestCase):
         self.params['model']['deformation']['use_map'] = True
         self.params['model']['registration_model']['type'] = 'lddmm_adapt_smoother_map'
 
+        self.setUp()
         self.createImage()
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
@@ -360,8 +364,8 @@ class Test_registration_algorithms(unittest.TestCase):
         energy = so.get_energy()
 
         npt.assert_almost_equal(energy[0], 0.01054801, decimal = 4)
-        npt.assert_almost_equal(energy[1], 0.00134084, decimal = 4)
-        npt.assert_almost_equal(energy[2], 0.00920717, decimal = 4)
+        npt.assert_almost_equal(energy[1], 0.00114554, decimal = 4)
+        npt.assert_almost_equal(energy[2], 0.00946710, decimal = 4)
 
     def test_rddmm_shooting_map_multi_scale(self):
         self.params = pars.ParameterDict()
@@ -370,6 +374,7 @@ class Test_registration_algorithms(unittest.TestCase):
         self.params['model']['deformation']['use_map'] = True
         self.params['model']['registration_model']['type'] = 'lddmm_adapt_smoother_map'
 
+        self.setUp()
         self.createImage()
 
         so = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
@@ -377,23 +382,22 @@ class Test_registration_algorithms(unittest.TestCase):
         so.set_light_analysis_on(True)
         so.register()
 
-        # E=[0.03567663], simE=[0.02147915], regE=0.01419747807085514
         energy = so.get_energy()
 
-        npt.assert_almost_equal(energy[0], 0.01049348, decimal = 4)
-        npt.assert_almost_equal(energy[1], 0.00187106, decimal = 4)
-        npt.assert_almost_equal(energy[2], 0.00871814, decimal = 4)
+        npt.assert_almost_equal(energy[0], 0.01049348, decimal=4)
+        npt.assert_almost_equal(energy[1], 0.00187106, decimal=4)
+        npt.assert_almost_equal(energy[2], 0.00871814, decimal=4)
 
 
-def run_test_by_name( testName ):
+def run_test_by_name(test_name):
     suite = unittest.TestSuite()
-    suite.addTest(Test_registration_algorithms(testName))
+    suite.addTest(Test_registration_algorithms(test_name))
     runner = unittest.TextTestRunner()
     runner.run(suite)
 
-# run_test_by_name('test_svf_image_single_scale')
+# run_test_by_name('test_rddmm_shooting_map_single_scale')
 # run_test_by_name('test_rddmm_shooting_map_multi_scale')
-#run_test_by_name('test_svf_scalar_momentum_map_single_scale')
+# run_test_by_name('test_svf_scalar_momentum_map_single_scale')
 #run_test_by_name('test_svf_vector_momentum_image_single_scale')
 #run_test_by_name('test_lddmm_shooting_map_single_scale')
 # run_test_by_name('test_lddmm_shooting_image_single_scale')
