@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import torch
-from mermaid.pyreg import module_parameters as pars
+from mermaid import module_parameters as pars
 ##############################################################################3
 """
 Description:

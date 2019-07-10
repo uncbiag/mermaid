@@ -14,7 +14,7 @@ from moving_shape import MovingShape, MovingShapes
 from utils_for_regularizer import get_single_gaussian_smoother
 from utils_for_general import add_texture_on_img
 from tools.visual_tools import plot_2d_img,save_smoother_map
-from mermaid.pyreg.data_wrapper import MyTensor
+from mermaid.data_wrapper import MyTensor
 from multiprocessing import *
 import progressbar as pb
 from functools import partial

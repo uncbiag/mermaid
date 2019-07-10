@@ -15,7 +15,7 @@ from cffi import FFI
 try:
     from mermaid.data_wrapper import USE_CUDA, STNTensor, STNVal
 except:
-    from mermaid.pyreg.data_wrapper import USE_CUDA, STNTensor, STNVal
+    from mermaid.data_wrapper import USE_CUDA, STNTensor, STNVal
 
 
 ###########TODO temporal comment for torch1 compatability

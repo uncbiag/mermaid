@@ -144,7 +144,7 @@ class ModelFactory(object):
 
         cparams = params[('registration_model',{},'specifies the registration model')]
         cparams['type']= (modelName,'Name of the registration model')
-        external_env = params[('env', {},"env settings, typically are specificed by the external package, including the mode for solver or for smoother")]
+        external_env = cparams[('env', {},"env settings, typically are specificed by the external package, including the mode for solver or for smoother")]
         """settings for the task environment of the solver or smoother"""
         get_momentum_from_external_network = external_env[('get_momentum_from_external_network', False,"use external network to predict momentum, notice that the momentum network is not built in this package")]
 

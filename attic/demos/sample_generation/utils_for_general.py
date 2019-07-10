@@ -1,8 +1,8 @@
 import torch
 import numpy as np
-import mermaid.pyreg.module_parameters as pars
-import mermaid.pyreg.smoother_factory as sf
-from mermaid.pyreg.data_wrapper import AdaptVal
+import mermaid.module_parameters as pars
+import mermaid.smoother_factory as sf
+from mermaid.data_wrapper import AdaptVal
 def get_parameter_value(command_line_par,params, params_name, default_val, params_description):
 
     if command_line_par is None:

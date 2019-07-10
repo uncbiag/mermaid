@@ -1,5 +1,5 @@
-import mermaid.pyreg.module_parameters as pars
-import mermaid.pyreg.smoother_factory as sf
+import mermaid.module_parameters as pars
+import mermaid.smoother_factory as sf
 
 def get_single_gaussian_smoother(gaussian_std,sz,spacing):
     s_m_params = pars.ParameterDict()

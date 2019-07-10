@@ -1,5 +1,5 @@
 import  numpy as np
-from mermaid.pyreg.data_wrapper import MyTensor
+from mermaid.data_wrapper import MyTensor
 class MovingShape():
     def __init__(self,shape,multi_gaussian_weights,using_weight=True, weight_type='w_K_w'):
         self.shape = shape
