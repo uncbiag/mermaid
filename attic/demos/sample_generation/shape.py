@@ -1,4 +1,3 @@
-from skimage.draw import polygon as draw_polygon, circle as draw_circle, ellipse as draw_ellipse
 import numpy as np
 class Shape(object):
     def __init__(self,name='unamed',type=None,img_sz=None):

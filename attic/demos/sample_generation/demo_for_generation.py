@@ -4,16 +4,13 @@ from __future__ import absolute_import
 import numpy as np
 import os
 import torch
-import sys
 import random
-sys.path.insert(0,'/playpen/zyshen/reg_clean/mermaid')
-sys.path.insert(0,'/playpen/zyshen/reg_clean')
+from glob import glob
 
-from combine_shape import generate_shape_objects,get_image,randomize_pair
-from moving_shape import MovingShape, MovingShapes
-from utils_for_regularizer import get_single_gaussian_smoother
-from utils_for_general import add_texture_on_img
-from tools.visual_tools import plot_2d_img,save_smoother_map
+from attic.demos.sample_generation.combine_shape import generate_shape_objects,get_image,randomize_pair
+from attic.demos.sample_generation.moving_shape import MovingShape, MovingShapes
+from attic.demos.sample_generation.utils_for_regularizer import get_single_gaussian_smoother
+from attic.demos.sample_generation.utils_for_general import add_texture_on_img,plot_2d_img, save_smoother_map,write_list_into_txt, get_file_name
 from mermaid.data_wrapper import MyTensor
 from multiprocessing import *
 import progressbar as pb
@@ -109,8 +106,6 @@ def get_and_save_img_and_weight(img_sz,shape_setting_list,add_texture=False, col
 
 def get_txt_from_generated_images(folder_path,output_folder):
     """ to get the pair information from folder_path and then transfer into standard txt file"""
-    from glob import glob
-    from data_pre.reg_data_utils import write_list_into_txt, get_file_name
     os.makedirs(output_folder,exist_ok=True)
     s_post = 's_img.pt'
     t_post = 't_img.pt'
@@ -187,9 +182,11 @@ def get_txt(folder_path=None,output_folder=None):
 
 
 if __name__ == '__main__':
-    folder_path = '/playpen/zyshen/debugs/syn_expr_0422_2'
-    txt_output_path = '/playpen/zyshen/data/syn_data/test'
-    #get_data(folder_path)
+    folder_path = '/playpen/zyshen/debugs/syn_expr_0708'
+    txt_output_path = '/playpen/zyshen/data/syn_data/test_0708'
+    # folder_path = '/playpen/zyshen/debugs/syn_expr_0422_2'
+    # txt_output_path = '/playpen/zyshen/data/syn_data/test'
+    get_data(folder_path)
     get_txt(folder_path,txt_output_path)
 
 

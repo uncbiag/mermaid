@@ -5,12 +5,12 @@ matplt.use('Agg')
 import numpy as np
 import random as rd
 from skimage.draw._random_shapes import _generate_random_colors
-from create_circle import Circle
-from create_ellipse import Ellipse
-from create_triangle import Triangle
-from create_rect import Rectangle
-from create_poly import Poly
-from utils_for_general import convert_index_into_coord_set,normalize_image_into_standard_form
+from .create_circle import Circle
+from .create_ellipse import Ellipse
+from .create_triangle import Triangle
+from .create_rect import Rectangle
+from .create_poly import Poly
+from .utils_for_general import convert_index_into_coord_set,normalize_image_into_standard_form
 object_table = {'circle':Circle,'ellipse':Ellipse,'tri':Triangle,'rect':Rectangle,'poly':Poly}
 default_deform_table={'ellipse':{'radius_x':[0.6,0.8],'radius_y':[0.6,0.8]},
                       'tri':{'height':[0.6,0.8],'width':[0.6,0.8],},'rect':{'height':[0.4,0.8],'width':[0.4,0.8]}}
