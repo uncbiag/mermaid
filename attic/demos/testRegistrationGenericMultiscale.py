@@ -88,7 +88,6 @@ mo.set_target_image(ITarget)
 
 mo.set_scale_factors(ds.multi_scale_scale_factors)
 mo.set_number_of_iterations_per_scale(ds.multi_scale_iterations_per_scale)
-mo.set_light_analysis_on(True)
 
 # and now do the optimization
 mo.optimize()

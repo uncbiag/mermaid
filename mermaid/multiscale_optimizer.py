@@ -57,7 +57,6 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
         self.compute_inverse_map = compute_inverse_map
         self.default_learning_rate=default_learning_rate
         self.optimizer = None
-        self.light_analysis_on = True
 
     def get_history(self):
         """
@@ -216,8 +215,6 @@ class SimpleRegistration(with_metaclass(ABCMeta, object)):
         """
         self.optimizer.set_model_state_dict(sd)
 
-    def set_light_analysis_on(self, light_analysis_on):
-        self.light_analysis_on = light_analysis_on
 
 
 class SimpleSingleScaleRegistration(SimpleRegistration):
@@ -233,7 +230,6 @@ class SimpleSingleScaleRegistration(SimpleRegistration):
         Registers the source to the target image
         :return: n/a
         """
-        self.optimizer.set_light_analysis_on(self.light_analysis_on)
         self.optimizer.register(self.ISource, self.ITarget)
 
 
@@ -251,7 +247,6 @@ class SimpleSingleScaleConsensusRegistration(SimpleRegistration):
         Registers the source to the target image
         :return: n/a
         """
-        self.optimizer.set_light_analysis_on(self.light_analysis_on)
         self.optimizer.register(self.ISource, self.ITarget)
 
 
@@ -268,7 +263,6 @@ class SimpleSingleScaleBatchRegistration(SimpleRegistration):
         Registers the source to the target image
         :return: n/a
         """
-        self.optimizer.set_light_analysis_on(self.light_analysis_on)
         self.optimizer.register(self.ISource, self.ITarget)
 
 
@@ -285,7 +279,6 @@ class SimpleMultiScaleRegistration(SimpleRegistration):
         Registers the source to the target image
         :return: n/a
         """
-        self.optimizer.set_light_analysis_on(self.light_analysis_on)
         self.optimizer.register(self.ISource,self.ITarget)
 
 
@@ -336,7 +329,6 @@ class Optimizer(with_metaclass(ABCMeta, object)):
         """relative termination tolerance for optimizer"""
         self.last_successful_step_size_taken = None
         """Records the last successful step size an optimizer took (possible use: propogate step size between multiscale levels"""
-        self.batch_id = None
 
         self.external_optimizer_parameter_loss = None
 
@@ -434,11 +426,7 @@ class Optimizer(with_metaclass(ABCMeta, object)):
         """
         return self.rel_ftol
 
-    def set_batch_id(self, batch_id):
-        self.batch_id = batch_id
 
-    def get_batch_id(self):
-        return self.batch_id
 
     @abstractmethod
     def set_model(self, modelName):
@@ -540,10 +528,8 @@ class ImageRegistrationOptimizer(Optimizer):
         """ source label """
         self.LTarget = None
         """  target label """
-
         self.lowResLSource = None
         """if mapLowResFactor <1, a lowres soure label image needs to be created to parameterize some of the registration algorithms"""
-
         self.lowResLTarget = None
         """if mapLowResFactor <1, a lowres target label image needs to be created to parameterize some of the registration algorithms"""
         self.initialMap = None
@@ -568,17 +554,16 @@ class ImageRegistrationOptimizer(Optimizer):
         """the maximum number of iterations for the optimizer"""
         self.current_epoch = None
         """Can be set externally, so the optimizer knows in which epoch we are"""
-
+        self.save_fig=False
+        """ save fig during the visualization"""
         self.save_fig_path=None
-        self.save_fig=None
+        """ the path for saving figures"""
         self.save_fig_num =None
-        self.pair_path=None
+        """ the max num of the fig to be saved during one call"""
+        self.pair_name=None
+        """ name list of the registration pair """
         self.iter_count = 0
-        self.recorder = None
-        self.save_excel = False
-        self.light_analysis_on = None
-        self.limit_max_batch = -1
-
+        """ count of the iterations over multi-resolution"""
         self.recording_step = None
         """sets the step-size for recording all intermediate results to the history"""
 
@@ -593,14 +578,6 @@ class ImageRegistrationOptimizer(Optimizer):
     def get_current_epoch(self):
         return self.current_epoch
 
-    def set_light_analysis_on(self, light_analysis_on):
-        self.light_analysis_on = light_analysis_on
-
-    def set_limit_max_batch(self, limit_max_batch):
-        self.limit_max_batch= limit_max_batch
-
-    def get_limit_max_batch(self):
-        return self.limit_max_batch
 
 
     def turn_visualization_on(self):
@@ -669,17 +646,6 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         self.save_fig_path = save_fig_path
 
-    def set_recorder(self, recorder):
-        self.recorder = recorder
-
-    def get_recorder(self):
-        return self.recorder
-
-    def set_save_excel(self, save_excel):
-        self.save_excel = save_excel
-
-    def get_save_excel(self):
-        return self.save_excel
 
 
     def get_save_fig_path(self):
@@ -723,12 +689,12 @@ class ImageRegistrationOptimizer(Optimizer):
         """
         return self.expr_name
 
-    def set_pair_path(self, pair_paths):
-        self.pair_path = pair_paths
+    def set_pair_name(self, pair_name):
+        self.pair_name = pair_name
 
 
-    def get_pair_path(self):
-        return self.pair_path
+    def get_pair_name(self):
+        return self.pair_name
 
 
     def register(self, ISource, ITarget):
@@ -1139,7 +1105,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         self.model.local_weights.data = weight_map
         if freeze_weight:
-            self.model.mask_local_weight()
+            self.model.freeze_adaptive_regularizer_param()
 
     def get_initial_map(self):
         """
@@ -1665,46 +1631,17 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                         'iW': utils.t2np(phi_or_warped_image)
                     })
 
-        # if self.useMap and not self.light_analysis_on and self.save_excel:
-        #     if self.LSource is not None:
-        #         if iter_count % 4 == 0.:
-        #             if self.compute_similarity_measure_at_low_res:
-        #                 LSource_warped = utils.get_warped_label_map(self.lowResLSource,
-        #                                                             phi_or_warped_image,
-        #                                                             self.spacing)
-        #                 LTarget = self.lowResLTarget
-        #
-        #             else:
-        #                 LSource_warped = utils.get_warped_label_map(self.LSource,
-        #                                                             phi_or_warped_image,
-        #                                                             self.spacing)
-        #                 LTarget = self.get_target_label()
-        #             metric_results_dic = get_multi_metric(LSource_warped, LTarget, eval_label_list=None, rm_bg=False)
-        #             self.recorder.set_batch_based_env(self.get_pair_path(),self.get_batch_id())
-        #             info = dict()
-        #             info['label_info'] = metric_results_dic['label_list']
-        #             info['iter_info'] = 'scale_' + str(self.n_scale) + '_iter_' + str(self.iter_count)
-        #             self.recorder.saving_results(sched='batch',
-        #                                          results=metric_results_dic['multi_metric_res'],
-        #                                          info=info, averaged_results=metric_results_dic['batch_avg_res'])
-        #             self.recorder.saving_results(sched='buffer',
-        #                                          results=metric_results_dic['label_avg_res'],
-        #                                          info=info, averaged_results=None)
-
-        # visualization - self.visualize is True if visualization steps are set
         if self.visualize or self.save_fig:
             visual_param = {}
             visual_param['visualize'] = self.visualize
-            if not self.light_analysis_on:
-                visual_param['save_fig'] = self.save_fig
+            visual_param['save_fig'] = self.save_fig
+            if self.save_fig:
                 visual_param['save_fig_path'] = self.save_fig_path
                 visual_param['save_fig_path_byname'] = os.path.join(self.save_fig_path, 'byname')
                 visual_param['save_fig_path_byiter'] = os.path.join(self.save_fig_path, 'byiter')
                 visual_param['save_fig_num'] = self.save_fig_num
-                visual_param['pair_path'] = self.pair_path
+                visual_param['pair_name'] = self.pair_name
                 visual_param['iter'] = 'scale_'+str(self.n_scale) + '_iter_' + str(self.iter_count)
-            else:
-                visual_param['save_fig'] = False
 
             if self.visualize_step and (iter_count % self.visualize_step == 0) or (iter_count == self.nrOfIterations-1) or force_visualization:
                 was_visualized = True
@@ -1769,19 +1706,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                                                phiWarped=None,
                                                visual_param=visual_param)
 
-                # if 0 :#iter==self.nrOfIterations-1:
-                #     self._debugging_saving_intermid_img(self.ISource, append='source')
-                #     self._debugging_saving_intermid_img(self.LSource, is_label_map=True,append='source')
-                #     self._debugging_saving_intermid_img(self.ITarget, append='target')
-                #     self._debugging_saving_intermid_img(self.LTarget, is_label_map=True, append='target')
-                #     self._debugging_saving_intermid_img(I1Warped,append='warpped')
-                #     self._debugging_saving_intermid_imgLWarped, is_label_map=True,append='warpped')
-
         return reached_tolerance, was_visualized
 
     def _debugging_saving_intermid_img(self,img=None,is_label_map=False, append=''):
         folder_path = os.path.join(self.save_fig_path,'debugging')
-        folder_path = os.path.join(folder_path, self.pair_path[0])
+        folder_path = os.path.join(folder_path, self.pair_name[0])
         make_dir(folder_path)
         file_name = 'scale_'+str(self.n_scale) + '_iter_' + str(self.iter_count)+append
         file_name=file_name.replace('.','_')
@@ -2611,10 +2540,6 @@ class SingleScaleBatchRegistrationOptimizer(ImageRegistrationOptimizer):
 
         ssOpt.set_visualization(self.get_visualization())
         ssOpt.set_visualize_step(self.get_visualize_step())
-        ssOpt.set_light_analysis_on(self.light_analysis_on)
-
-        if not self.light_analysis_on:
-            raise ValueError('not supported yet')
 
         return ssOpt
 
@@ -3035,13 +2960,9 @@ class SingleScaleConsensusRegistrationOptimizer(ImageRegistrationOptimizer):
 
         ssOpt.set_visualization(self.get_visualization())
         ssOpt.set_visualize_step(self.get_visualize_step())
-        ssOpt.set_light_analysis_on(self.light_analysis_on)
 
         if consensus_penalty:
             ssOpt.set_external_optimizer_parameter_loss(self._consensus_penalty_loss)
-
-        if not self.light_analysis_on:
-            raise ValueError('not supported yet')
 
         return ssOpt
 
@@ -3534,13 +3455,13 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             self.weight_map = weight_map
             self.freeze_weight = freeze_weight
 
-    def set_pair_path(self,pair_paths):
+    def set_pair_name(self,pair_name):
         # f = lambda name: os.path.split(name)
         # get_in = lambda x: os.path.splitext(f(x)[1])[0]
         # get_fn = lambda x: f(f(x)[0])[1]
         # get_img_name = lambda x: get_fn(x)+'_'+get_in(x)
-        # img_pair_name = [get_img_name(pair_path[0])+'_'+get_img_name(pair_path[1]) for pair_path in pair_paths]
-        self.pair_path = pair_paths
+        # img_pair_name = [get_img_name(pair_name[0])+'_'+get_img_name(pair_name[1]) for pair_name in pair_names]
+        self.pair_name = pair_name
 
     def set_save_fig_path(self, save_fig_path):
         """
@@ -3550,26 +3471,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         """
         self.save_fig_path = os.path.join(save_fig_path, self.expr_name)
 
-    def init_recorder(self, task_name):
-        self.recorder = XlsxRecorder(task_name, self.save_fig_path)
-        return self.recorder
 
-
-    def set_saving_env(self):
-        if self.save_fig==True:
-            # saving by files
-            for file_name in self.pair_path[: min(self.save_fig_num,len(self.pair_path))]:
-                save_folder = os.path.join(os.path.join(self.save_fig_path,'byname'),file_name)
-                if not os.path.exists(save_folder):
-                    os.makedirs(save_folder)
-
-            # saving by iterations
-            for idx, scale in enumerate(self.scaleFactors):
-                for i in range(self.scaleIterations[idx]):
-                    if i%self.visualize_step == 0 or i==self.scaleIterations[idx]-1:
-                        save_folder = os.path.join(os.path.join(self.save_fig_path,'byiter'),'scale_'+str(scale) + '_iter_' + str(i))
-                        if not os.path.exists(save_folder):
-                            os.makedirs(save_folder)
 
     def add_model(self, add_model_name, add_model_networkClass, add_model_lossClass, use_map):
         """
@@ -3778,22 +3680,18 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             self.ssOpt.set_visualization(self.get_visualization())
             self.ssOpt.set_visualize_step(self.get_visualize_step())
-            self.ssOpt.set_light_analysis_on(self.light_analysis_on)
             self.ssOpt.set_n_scale(en_scale[1])
             self.ssOpt.set_over_scale_iter_count(over_scale_iter_count)
 
-            if not self.light_analysis_on:
+            if self.get_save_fig():
                 self.ssOpt.set_expr_name(self.get_expr_name())
                 self.ssOpt.set_save_fig(self.get_save_fig())
                 self.ssOpt.set_save_fig_path(self.get_save_fig_path())
                 self.ssOpt.set_save_fig_num(self.get_save_fig_num())
-                self.ssOpt.set_pair_path(self.get_pair_path())
+                self.ssOpt.set_pair_name(self.get_pair_name())
                 self.ssOpt.set_n_scale(en_scale[1])
-                self.ssOpt.set_recorder(self.get_recorder())
-                self.ssOpt.set_save_excel(self.get_save_excel())
                 self.ssOpt.set_source_label(self.get_source_label())
                 self.ssOpt.set_target_label(self.get_target_label())
-                self.ssOpt.set_batch_id(self.get_batch_id())
 
 
             self.ssOpt.set_source_image(ISourceC)

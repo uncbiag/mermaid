@@ -75,7 +75,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
-        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 1.80229616], similarityE=[ 0.71648604], regE=[ 1.08581007], relF=[ 0.0083105]
@@ -94,7 +93,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
-        so.set_light_analysis_on(True)
         so.register()
 
         # E = [0.03198373], similarityE = [0.0210261], regE = [0.01095762], relF = [0.]
@@ -113,7 +111,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
-        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 0.02896098], similarityE=[ 0.0170299], regE=[ 0.01193108], relF=[ 0.00193194]
@@ -132,7 +129,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         mo.get_optimizer().set_visualization(False)
-        mo.set_light_analysis_on(True)
         mo.register()
 
         # E=[ 0.03197587], similarityE=[ 0.02087387], regE=[ 0.01110199], relF=[ 0.00138645]
@@ -151,7 +147,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         mo.get_optimizer().set_visualization(False)
-        mo.set_light_analysis_on(True)
         mo.register()
 
         # E = [0.04338037], similarityE = [0.03070126], regE = [0.01267911], relF = [0.01936091]
@@ -170,7 +165,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         mo.get_optimizer().set_visualization(False)
-        mo.set_light_analysis_on(True)
         mo.register()
 
         # E = [0.08930502], simE = [0.08034889], regE = [0.00895613], optParE = [0.], relF = [0.03883468]
@@ -190,7 +184,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         mo = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         mo.get_optimizer().set_visualization(False)
-        mo.set_light_analysis_on(True)
         mo.register()
 
         # E = [0.07970674], simE = [0.06657108], regE = [0.01313565], optParE = [0.], relF = [0.02088663]
@@ -209,7 +202,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
-        so.set_light_analysis_on(True)
         so.register()
 
         # E = [36.42594528], similarityE = [16.22630882], regE = [20.19963646], relF = [0.0422723]
@@ -228,7 +220,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
-        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 0.04196917], similarityE=[ 0.03112457], regE=[ 0.0108446], relF=[  5.37358646e-05]
@@ -247,7 +238,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration( self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
-        so.set_light_analysis_on(True)
         so.register()
 
         # E = [0.05674197], similarityE = [0.04364978], regE = [0.01309219], relF = [0.01391943]
@@ -269,7 +259,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
-        so.set_light_analysis_on(True)
         so.register()
         # E=[0.12413108], simE=[0.11151054], regE=0.012620546855032444
         energy = so.get_energy()
@@ -290,7 +279,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
-        so.set_light_analysis_on(True)
         so.register()
 
         # E=[0.16388921], simE=[0.15010326], regE=0.013785961084067822
@@ -313,7 +301,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
-        so.set_light_analysis_on(True)
         so.register()
 
         # E=[ 0.02504558], similarityE=[ 0.01045385], regE=[ 0.01459173], relF=[ 0.00203472]
@@ -334,7 +321,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
-        so.set_light_analysis_on(True)
         so.register()
 
         # E=[0.03567663], simE=[0.02147915], regE=0.01419747807085514
@@ -357,7 +343,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleSingleScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
-        so.set_light_analysis_on(True)
         so.register()
 
         # E=[0.03567663], simE=[0.02147915], regE=0.01419747807085514
@@ -379,7 +364,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         so = MO.SimpleMultiScaleRegistration(self.ISource, self.ITarget, self.spacing, self.sz, self.params)
         so.get_optimizer().set_visualization(False)
-        so.set_light_analysis_on(True)
         so.register()
 
         energy = so.get_energy()

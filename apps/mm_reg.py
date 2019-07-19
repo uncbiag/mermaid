@@ -106,7 +106,6 @@ def do_registration( I0_name, I1_name, visualize, visualize_step, use_multi_scal
 
     mo.set_scale_factors(multi_scale_scale_factors)
     mo.set_number_of_iterations_per_scale(multi_scale_iterations_per_scale)
-    mo.set_light_analysis_on(True)
 
     # and now do the optimization
     mo.optimize()

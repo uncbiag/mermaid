@@ -7,10 +7,10 @@ import torch
 import random
 from glob import glob
 
-from attic.demos.sample_generation.combine_shape import generate_shape_objects,get_image,randomize_pair
-from attic.demos.sample_generation.moving_shape import MovingShape, MovingShapes
-from attic.demos.sample_generation.utils_for_regularizer import get_single_gaussian_smoother
-from attic.demos.sample_generation.utils_for_general import add_texture_on_img,plot_2d_img, save_smoother_map,write_list_into_txt, get_file_name
+from attic.demos.rdmm_synth_data_generation.combine_shape import generate_shape_objects,get_image,randomize_pair
+from attic.demos.rdmm_synth_data_generation.moving_shape import MovingShape, MovingShapes
+from attic.demos.rdmm_synth_data_generation.utils_for_regularizer import get_single_gaussian_smoother
+from attic.demos.rdmm_synth_data_generation.utils_for_general import add_texture_on_img,plot_2d_img, save_smoother_map,write_list_into_txt, get_file_name
 from mermaid.data_wrapper import MyTensor
 from multiprocessing import *
 import progressbar as pb

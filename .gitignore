@@ -6,6 +6,9 @@
 *.ipynb_checkpoints
 !test/json/test_affine_settings.json
 !test/json/test_svf_settings.json
+!attic/demos/rdmm_synth_settings/vsvf_setting.json
+!attic/demos/rdmm_synth_settings/lddmm_setting.json
+!attic/demos/rdmm_synth_settings/rdmm_setting.json
 !test_rddmm_shooting_map_multi_scale_config.json
 !test_rddmm_shooting_map_single_scale_config.json
 !test_rddmm_shooting_map_multi_scale_config_tobe.json

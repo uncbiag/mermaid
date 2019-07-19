@@ -1,4 +1,4 @@
-from attic.demos.sample_generation.create_poly import Poly
+from attic.demos.rdmm_synth_data_generation.create_poly import Poly
 import numpy as np
 class Rectangle(Poly):
     def __init__(self,setting,scale=1.):

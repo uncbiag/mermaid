@@ -25,8 +25,6 @@ class RegisterImagePair(object):
         self.task_name = None
         self.par_respro = None
         self.recorder = None
-        self.light_analysis_on = True
-
         self.I1_warped = None
         self.phi = None
         self.params = None
@@ -64,9 +62,6 @@ class RegisterImagePair(object):
 
         return self.params
 
-    def set_light_analysis_on(self, light_analysis_on):
-        self.light_analysis_on =light_analysis_on
-
     def init_analysis_params(self, par_respro, task_name):
         self.par_respro=par_respro
         self.task_name = task_name
@@ -84,31 +79,15 @@ class RegisterImagePair(object):
         save_fig = self.par_respro['respro']['save_fig']
         save_fig_num = self.par_respro['respro']['save_fig_num']
         save_fig_path = self.par_respro['respro']['save_fig_path']
-        save_excel = self.par_respro['respro']['save_excel']
+        visualize = self.par_respro['respro']['visualize']
+        pair_name = extra_info['pair_name']
         mo.set_expr_name(expr_name)
         mo.set_save_fig(save_fig)
         mo.set_save_fig_path(save_fig_path)
         mo.set_save_fig_num(save_fig_num)
-        mo.set_save_excel(save_excel)
-        pair_name = extra_info['pair_name']
-        batch_id = extra_info['batch_id']
-        visualize = self.par_respro['respro']['visualize']
         mo.set_visualization(visualize)
-        mo.set_pair_path(pair_name)
-        mo.set_batch_id(batch_id)
+        mo.set_pair_name(pair_name)
 
-        if self.recorder is None:
-            self.recorder = mo.init_recorder(expr_name)
-            print("the recorder initialized")
-        else:
-            print("load the record")
-            mo.set_recorder(self.recorder)
-
-    def get_recorder(self):
-        return self.recorder
-
-    def set_recorder(self, recorder):
-        self.recorder = recorder
 
     @staticmethod
     def print_available_models():
@@ -590,7 +569,6 @@ class RegisterImagePair(object):
             if recording_step is not None:
                 self.opt.get_optimizer().set_recording_step(recording_step)
 
-            self.opt.set_light_analysis_on(self.light_analysis_on)
 
             self.optimizer_has_been_initialized = True
 
@@ -602,11 +580,12 @@ class RegisterImagePair(object):
             if self.delayed_initial_weight_map_still_to_be_set:
                 self.set_weight_map(self.delayed_initial_weight_map, self.delay_initial_weight_freeze_weight)
 
-            if not self.light_analysis_on and use_multi_scale:
+            if use_multi_scale and LSource is not None and LTarget is not None:
                 LSource = AdaptVal(torch.from_numpy(LSource)) if not type(LSource) == torch.Tensor else LSource
                 LTarget = AdaptVal(torch.from_numpy(LTarget)) if not type(LTarget) == torch.Tensor else LTarget
                 self.opt.optimizer.set_source_label( AdaptVal(torch.from_numpy(LSource)))
                 self.opt.optimizer.set_target_label( AdaptVal(torch.from_numpy(LTarget)))
+            if extra_info is not None:
                 self._set_analysis(self.opt.optimizer, extra_info)
 
             self.opt.register()

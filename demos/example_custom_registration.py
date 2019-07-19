@@ -314,7 +314,6 @@ mo.set_optimizer(torch.optim.Adam)
 mo.set_optimizer_params(dict(lr=0.01))
 
 # and now we do the optimization
-mo.set_light_analysis_on(True)
 
 mo.optimize()
 

@@ -148,7 +148,6 @@ def do_registration():
     optimizer_name = par_optimizer['name']
 
     mo.set_optimizer_by_name(optimizer_name)
-    mo.set_light_analysis_on(False)
     mo.set_visualization(visualize)
     mo.set_visualize_step(visualize_step)
     mo.set_expr_name(expr_name)
@@ -196,13 +195,11 @@ def do_registration():
                 params['model']['registration_model']['forward_model']['smoother']['use_adp'] = False
 
 
-            mo.set_pair_path(pair_path)
+            mo.set_pair_name(pair_path)
             mo.set_source_image(ISource)
             mo.set_target_image(ITarget)
-            mo.set_batch_id(batch_id)
             mo.set_source_label(LSource)
             mo.set_target_label(LTarget)
-            mo.set_saving_env()
 
 
             # and now do the optimization

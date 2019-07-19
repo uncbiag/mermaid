@@ -196,7 +196,6 @@ class OAILongitudeReisgtration(object):
         self.similarity_measure_type='ncc'
         self.similarity_measure_sigma =0.5
         self.visualize_step =10
-        self.light_analysis_on=False
         self.par_respro=None
         self.recorder = None
         self.cal_inverse_map = True
@@ -225,13 +224,12 @@ class OAILongitudeReisgtration(object):
         self.si = SI.RegisterImagePair()
         self.im_io = FIO.ImageIO()
         self.gen_expr_name()
-        if not self.light_analysis_on:
-            self.par_respro = self.get_analysis_setting()
-            self.par_respro['respro']['expr_name'] = self.expr_name
-            self.recorder_saving_path = os.path.join(self.recorder_saving_path,self.expr_name)
-            sys.stdout = Logger(os.path.join(self.recorder_saving_path,self.expr_name))
-            print('start logging:')
-            self.si.init_analysis_params(self.par_respro,self.task_name)
+        self.par_respro = self.get_analysis_setting()
+        self.par_respro['respro']['expr_name'] = self.expr_name
+        self.recorder_saving_path = os.path.join(self.recorder_saving_path,self.expr_name)
+        sys.stdout = Logger(os.path.join(self.recorder_saving_path,self.expr_name))
+        print('start logging:')
+        self.si.init_analysis_params(self.par_respro,self.task_name)
 
 
 
@@ -243,8 +241,7 @@ class OAILongitudeReisgtration(object):
         return par_respro
 
     def _update_saving_analysis_path(self, path):
-        if not self.light_analysis_on:
-            self.par_respro['respro']['save_fig_path'] = path
+        self.par_respro['respro']['save_fig_path'] = path
 
     def __gen_img_saving_path(self,patient, mod, spec):
         current_filename = patient.get_path_for_mod_and_spec(mod, spec)
@@ -290,18 +287,7 @@ class OAILongitudeReisgtration(object):
             for spec in patient.specificity:
                 if patient.get_slice_num(mod,spec)>0:
                     print('---- start processing mod {}, spec {}'.format(mod, spec))
-                    if not self.light_analysis_on:
-                        self.recorder = XlsxRecorder(self.expr_name, self.recorder_saving_path, patient.patient_id+'_'+mod+'_'+spec)
-                        self.set_recorder = self.recorder
-                        self.si.set_recorder(self.recorder)
-
-                    self.si.set_light_analysis_on(self.light_analysis_on)
-                    need_analysis= self.do_single_patient_mod_spec_registration(patient,mod,spec)
-
-                    if need_analysis is not None:
-                        self.recorder = self.si.get_recorder()
-                        self.recorder.set_summary_based_env()
-                        self.recorder.saving_results(sched='summary')
+                    self.do_single_patient_mod_spec_registration(patient,mod,spec)
 
 
 
@@ -317,18 +303,13 @@ class OAILongitudeReisgtration(object):
         print(Ic0.shape)
         LSource = None
         LTarget = None
-        if not self.light_analysis_on:
-            label_path = None if not patient.patient_has_label_dic[mod][spec] else patient.get_label_path_list()
-            if label_path:
-                try:
-                    LTarget= sitk_read_img_to_std_numpy(label_path[0])
-                except:
-                    LTarget, _, _, _ = self.im_io.read_to_nc_format(filename=label_path[0], intensity_normalize=False)
+        label_path = None if not patient.patient_has_label_dic[mod][spec] else patient.get_label_path_list()
+        if label_path:
+            try:
+                LTarget= sitk_read_img_to_std_numpy(label_path[0])
+            except:
+                LTarget, _, _, _ = self.im_io.read_to_nc_format(filename=label_path[0], intensity_normalize=False)
 
-            else:
-                print("complete analysis will be skipped for patient_id {}, modality{}, specificity{}".format(patient_id,mod, spec))
-                self.si.set_light_analysis_on(True)
-                return None
 
 
         saving_folder_path = self.__gen_img_saving_path(patient,mod, spec)
@@ -363,9 +344,8 @@ class OAILongitudeReisgtration(object):
                 else:
                     assert("source label not find")
 
-            if not self.light_analysis_on:
-                self.record_cur_performance(LSource, LTarget, extra_info['pair_name'], extra_info['batch_id'],
-                                            'no_registration')
+            self.record_cur_performance(LSource, LTarget, extra_info['pair_name'], extra_info['batch_id'],
+                                        'no_registration')
 
             if self.img_label_channel_on:
                 Ic1 = np.concatenate((Ic1, LSource), 1)
@@ -377,7 +357,6 @@ class OAILongitudeReisgtration(object):
                 Ic0 = LTarget
 
 
-            self.si.set_light_analysis_on(True)
             self.si.set_initial_map(None)
             self.si.register_images(Ic1, Ic0, spacing,extra_info=extra_info,LSource=LSource,LTarget=LTarget,
                                     model_name=self.model0_name,
@@ -400,10 +379,9 @@ class OAILongitudeReisgtration(object):
             wi=wi.cpu().data.numpy()
             LSource_warped= None
 
-            if not self.light_analysis_on:
-                self.si.opt.optimizer.ssOpt.set_source_label(AdaptVal(torch.from_numpy(LSource)))
-                LSource_warped = self.si.get_warped_label()
-                self.record_cur_performance(LSource_warped, LTarget, extra_info['pair_name'], extra_info['batch_id'], 'affine_finished')
+            self.si.opt.optimizer.ssOpt.set_source_label(AdaptVal(torch.from_numpy(LSource)))
+            LSource_warped = self.si.get_warped_label()
+            self.record_cur_performance(LSource_warped, LTarget, extra_info['pair_name'], extra_info['batch_id'], 'affine_finished')
 
 
             Ab = self.si.opt.optimizer.ssOpt.model.Ab
@@ -423,8 +401,6 @@ class OAILongitudeReisgtration(object):
 
 
             print("let's come to step 2 ")
-            ###########################################################self.si.set_light_analysis_on(self.light_analysis_on)
-            self.si.set_light_analysis_on(True)
             LSource_warped = LSource_warped.cpu().data.numpy()
 
 

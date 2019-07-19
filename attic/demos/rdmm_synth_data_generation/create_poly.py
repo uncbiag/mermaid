@@ -1,4 +1,4 @@
-from attic.demos.sample_generation.shape import *
+from attic.demos.rdmm_synth_data_generation.shape import *
 import numpy as np
 
 class Poly(Shape):

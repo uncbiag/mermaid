@@ -1,0 +1,208 @@
+{
+    "model": {
+        "deformation": {
+            "compute_similarity_measure_at_low_res": false,
+            "map_low_res_factor": 0.5,
+            "use_map": true
+        },
+        "registration_model": {
+            "forward_model": {
+                "adjoin_on": true,
+                "atol": 1e-05,
+                "number_of_time_steps": 15,
+                "rtol": 1e-05,
+                "smoother": {
+                    "deep_smoother": {
+                        "active_unit_to_use": "leaky_relu",
+                        "deep_network_local_weight_smoothing": 0.05,
+                        "diffusion_weight_penalty": 0.0,
+                        "edge_penalty_filename": "DEBUG_edge_penalty.nrrd",
+                        "edge_penalty_gamma": 2.0,
+                        "edge_penalty_terminate_after_writing": false,
+                        "edge_penalty_write_to_file": false,
+                        "estimate_around_global_weights": true,
+                        "kernel_sizes": [
+                            5,
+                            5
+                        ],
+                        "network_penalty": 1e-05,
+                        "normalization_type": "none",
+                        "normalize_last_layer": true,
+                        "normalize_last_layer_initial_affine_slope": 0.025,
+                        "normalize_last_layer_type": "group",
+                        "number_of_features_per_layer": [
+                            20
+                        ],
+                        "randomly_initialize_network": true,
+                        "smooth_image_for_edge_detection": true,
+                        "smooth_image_for_edge_detection_std": 0.01,
+                        "standardize_display_standardization": true,
+                        "standardize_divide_input_images": 0.5,
+                        "standardize_divide_input_momentum": 1.0,
+                        "standardize_input_images": true,
+                        "standardize_input_momentum": true,
+                        "standardize_subtract_from_input_images": 0.5,
+                        "standardize_subtract_from_input_momentum": 0.0,
+                        "total_variation_weight_penalty": 0.0,
+                        "type": "unet",
+                        "use_current_image_as_input": true,
+                        "use_dropout": false,
+                        "use_momentum_as_input": false,
+                        "use_noise_layers": false,
+                        "use_noisy_convolution": false,
+                        "use_source_image_as_input": false,
+                        "use_target_image_as_input": true,
+                        "weight_range_factor": 10,
+                        "weight_range_init_weight_penalty": 0.0,
+                        "weighting_type": "w_K_w"
+                    },
+                    "evaluate_but_do_not_optimize_over_shared_registration_parameters": false,
+                    "freeze_parameters": false,
+                    "gaussian_std_min": 0.01,
+                    "gaussian_weight_min": 0.0001,
+                    "load_dnn_parameters_from_this_file": "",
+                    "multi_gaussian_stds": [
+                        0.02,
+                        0.04,
+                        0.06,
+                        0.08
+                    ],
+                    "multi_gaussian_weights": [
+                        0.1,
+                        0.3,
+                        0.3,
+                        0.3
+                    ],
+                    "omt_power": 1.0,
+                    "omt_use_log_transformed_std": true,
+                    "omt_weight_penalty": 1,
+                    "optimize_over_deep_network": true,
+                    "optimize_over_smoother_stds": false,
+                    "optimize_over_smoother_weights": false,
+                    "preweight_input_range_weight_penalty": 0.0,
+                    "scale_global_parameters": false,
+                    "start_optimize_over_nn_smoother_parameters_at_iteration": 0,
+                    "start_optimize_over_smoother_parameters_at_iteration": 0,
+                    "type": "multiGaussian",
+                    "use_multi_gaussian_regularization": false,
+                    "use_weighted_linear_softmax": false
+                },
+                "smoother_for_forward": {
+                    "type": "multiGaussian"
+                },
+                "solver": "dopri5"
+            },
+            "load_velocity_from_forward_model": true,
+            "loss": {
+                "display_max_displacement": false,
+                "limit_displacement": false,
+                "max_displacement": 0.05
+            },
+            "similarity_measure": {
+                "develop_mod_on": false,
+                "lncc": {
+                    "dilation": [
+                        [
+                            2,
+                            2,
+                            2
+                        ],
+                        [
+                            2,
+                            2
+                        ],
+                        [
+                            1
+                        ]
+                    ],
+                    "kernel_size_ratio": [
+                        [
+                            0.0625,
+                            0.125,
+                            0.25
+                        ],
+                        [
+                            0.25,
+                            0.5
+                        ],
+                        [
+                            0.5
+                        ]
+                    ],
+                    "kernel_weight_ratio": [
+                        [
+                            0.1,
+                            0.3,
+                            0.6
+                        ],
+                        [
+                            0.3,
+                            0.7
+                        ],
+                        [
+                            1.0
+                        ]
+                    ],
+                    "resol_bound": [
+                        128,
+                        64
+                    ],
+                    "stride": [
+                        [
+                            0.25,
+                            0.25,
+                            0.25
+                        ],
+                        [
+                            0.25,
+                            0.25
+                        ],
+                        [
+                            0.25
+                        ]
+                    ]
+                },
+                "sigma": 1.0,
+                "type": "lncc"
+            },
+            "spline_order": 1,
+            "env":{
+                "get_momentum_from_external_network":false,
+                "use_odeint":true,
+                "reg_factor":10.0
+                },
+            "type": "svf_vector_momentum_map"
+        }
+    },
+    "optimizer": {
+        "lbfgs": {
+            "history_size": 5,
+            "line_search_fn": "backtracking",
+            "max_eval": 5,
+            "max_iter": 1
+        },
+        "multi_scale": {
+            "scale_factors": [
+                1.0,
+                0.5,
+                0.25
+            ],
+            "scale_iterations": [
+                400,
+                100,
+                100
+            ]
+        },
+        "name": "lbfgs_ls",
+        "scheduler": {
+            "factor": 0.5,
+            "patience": 10,
+            "verbose": true
+        },
+        "single_scale": {
+            "nr_of_iterations": 200,
+            "rel_ftol": 1e-15
+        },
+        "use_step_size_scheduler": true
+    }
+}

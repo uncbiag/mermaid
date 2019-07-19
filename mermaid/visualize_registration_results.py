@@ -80,7 +80,7 @@ def _show_current_images_1d(iS, iT, iW, iter, vizImage, vizName, phiWarped,visua
         if i==0 and visual_param['visualize']:
             plt.show()
         if visual_param['save_fig']:
-            file_name = visual_param['pair_path'][i]
+            file_name = visual_param['pair_name'][i]
             join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
             make_dir(join_p(visual_param['save_fig_path_byname'], file_name))
             make_dir(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']))
@@ -165,7 +165,7 @@ def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_p
         if i==0 and visual_param['visualize']:
             plt.show()
         if visual_param['save_fig']:
-            file_name = visual_param['pair_path'][i]
+            file_name = visual_param['pair_name'][i]
             join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
             make_dir(join_p(visual_param['save_fig_path_byname'], file_name))
             make_dir(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']))
@@ -286,7 +286,7 @@ def _show_current_images_2d_map(iS, iT, iW,iSL,iTL, iWL, iter, vizImage, vizName
         if i==0 and visual_param['visualize']:
             plt.show()
         if visual_param['save_fig']:
-            file_name = visual_param['pair_path'][i]
+            file_name = visual_param['pair_name'][i]
             join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
             make_dir(join_p(visual_param['save_fig_path_byname'], file_name))
             make_dir(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']))
@@ -455,7 +455,7 @@ def _show_current_images_3d(iS, iT, iW,iSL, iTL,iWL, iter, vizImage, vizName, ph
         if i==0 and visual_param['visualize']:
             plt.show()
         if visual_param['save_fig']:
-            file_name = visual_param['pair_path'][i]
+            file_name = visual_param['pair_name'][i]
             join_p = lambda pth1,pth2: os.path.join(pth1, pth2)
             make_dir(join_p(visual_param['save_fig_path_byname'], file_name))
             make_dir(join_p(visual_param['save_fig_path_byiter'], visual_param['iter']))
