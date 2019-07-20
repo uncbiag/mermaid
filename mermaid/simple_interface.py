@@ -75,12 +75,12 @@ class RegisterImagePair(object):
 
     def _set_analysis(self, mo, extra_info):
 
-        expr_name = self.par_respro['respro']['expr_name']
-        save_fig = self.par_respro['respro']['save_fig']
-        save_fig_num = self.par_respro['respro']['save_fig_num']
-        save_fig_path = self.par_respro['respro']['save_fig_path']
-        visualize = self.par_respro['respro']['visualize']
-        pair_name = extra_info['pair_name']
+        expr_name = extra_info[('expr_name','','experiment name')]
+        save_fig = extra_info[('save_fig',False,'save intermid figure')]
+        save_fig_num = extra_info[('save_fig_num',-1,'num of the fig to save per call, -1 to save all')]
+        save_fig_path = extra_info[('save_fig_path','non_save_fig_path','path to save fig')]
+        visualize = extra_info[('visualize',False,'visualiza the plot')]
+        pair_name = extra_info[('pair_name',None,'list of img pair name')]
         mo.set_expr_name(expr_name)
         mo.set_save_fig(save_fig)
         mo.set_save_fig_path(save_fig_path)

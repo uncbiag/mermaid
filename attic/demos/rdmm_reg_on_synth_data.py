@@ -12,7 +12,6 @@ visualize_res
 """
 import matplotlib as matplt
 matplt.use('Agg')
-#import SimpleITK as sitk
 import sys,os
 os.environ["CUDA_VISIBLE_DEVICES"] = ''
 
@@ -30,7 +29,7 @@ from skimage.draw._random_shapes import _generate_random_colors
 import mermaid.finite_differences as fdt
 import mermaid.utils as utils
 import numpy as np
-from multiprocessing import *
+from multiprocessing import * 
 import progressbar as pb
 from functools import partial
 model_name = 'lddmm_adapt_smoother_map'#'lddmm_adapt_smoother_map'#'lddmm_shooting_map' #svf_vector_momentum_map
@@ -68,7 +67,7 @@ def get_mermaid_setting(path,output_path):
     params.write_JSON(output_path,save_int=False)
 
 def setting_visual_saving(expr_folder,pair_name,expr_name='',folder_name='intermid'):
-    extra_info = {}
+    extra_info = pars.ParameterDict()
     extra_info['expr_name'] = expr_name
     extra_info['visualize']=False
     extra_info['save_fig']=True
@@ -76,7 +75,7 @@ def setting_visual_saving(expr_folder,pair_name,expr_name='',folder_name='interm
     extra_info['save_fig_num'] = -1
     extra_info['save_excel'] =False
     extra_info['pair_name'] = [pair_name]
-    return extra_info
+    return  extra_info
 
 def affine_optimization(moving,target,spacing,fname_list,l_moving=None,l_target=None):
     si = SI.RegisterImagePair()
@@ -374,7 +373,7 @@ def analyze_on_single_res(pair,pair_name, expr_folder=None, color_image=False):
                    spline_order=1,
                    individual_parameters=individual_parameters,
                    shared_parameters=None, params=params, extra_info=extra_info,visualize=False,visual_param=visual_param, given_weight=True)
-    #phi = res[1]
+    phi = res[1]
     lres = utils.compute_warped_image_multiNC(lmoving, phi, spacing, 0, zero_boundary=True)
     scores = get_multi_metric(lres,ltarget,rm_bg=True)
     avg_jacobi = compute_jacobi(phi,spacing)
@@ -430,7 +429,7 @@ def demo():
         get_mermaid_setting(mermaid_setting_path,expr_folder)
 
 
-        num_of_workers = 1 #for unknown reason, multi-thread not work
+        num_of_workers = 8 #for unknown reason, multi-thread not work
         num_files = len(pair_name_list)
         if num_of_workers > 1:
             sub_p = partial(sub_process, pair_list=pair_path_list, pair_name_list=pair_name_list,

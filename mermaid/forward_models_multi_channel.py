@@ -240,6 +240,7 @@ class RHSLibrary(object):
         #     fdc = self.fdt_le # do linear extrapolation
 
         fdc = self.fdt
+        #fdc = self.fdt_le
         if self.dim == 1:
             dxc_mv0 = -fdc.dXc(m*v[:,0:1])
             dxc_v = -fdc.dXc(v)

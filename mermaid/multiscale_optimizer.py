@@ -558,8 +558,8 @@ class ImageRegistrationOptimizer(Optimizer):
         """ save fig during the visualization"""
         self.save_fig_path=None
         """ the path for saving figures"""
-        self.save_fig_num =None
-        """ the max num of the fig to be saved during one call"""
+        self.save_fig_num =-1
+        """ the max num of the fig to be saved during one call, set -1 to save all"""
         self.pair_name=None
         """ name list of the registration pair """
         self.iter_count = 0
@@ -657,7 +657,7 @@ class ImageRegistrationOptimizer(Optimizer):
         return self.save_fig_path
 
 
-    def set_save_fig_num(self, save_fig_num=1):
+    def set_save_fig_num(self, save_fig_num=-1):
         """
         set the num of the fig to save
         :param save_fig_num:
@@ -759,7 +759,6 @@ class ImageRegistrationOptimizer(Optimizer):
         :param LSource:
         :return:
         """
-        print(LSource.shape)
         self.LSource = LSource
 
 
