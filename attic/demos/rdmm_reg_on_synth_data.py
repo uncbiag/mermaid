@@ -140,14 +140,12 @@ def nonp_optimization(si, moving,target,spacing,fname,l_moving=None,l_target=Non
 def compute_jacobi(phi,spacing):
     spacing = spacing  # the disp coorindate is [-1,1]
     fd = fdt.FD_torch(spacing)
-    dfx = fd.ddXc(phi[:, 0, ...])
-    dfy = fd.ddYc(phi[:, 1, ...])
+    dfx = fd.dXc(phi[:, 0, ...])
+    dfy = fd.dYc(phi[:, 1, ...])
     jacobi_det = dfx * dfy
-    jacobi_det = torch.abs(jacobi_det)
-    jacobi_mean = jacobi_det.mean()
-    jacobi_mean = jacobi_mean.item()
-    print("the current  average jacobi is {}".format(jacobi_mean))
-    return jacobi_mean
+    jacobi_abs = - torch.sum(jacobi_det[jacobi_det < 0.])
+    print("the current  sum of neg determinant of the  jacobi is {}".format(jacobi_abs))
+    return jacobi_abs.item()
 
 
 
@@ -419,17 +417,19 @@ def demo():
     use_init_weight = False
     os.makedirs(expr_folder,exist_ok=True)
     pair_path_list, pair_name_list = get_pair_list(data_folder)
+    pair_path_list=pair_path_list[:5]
+    pair_name_list=pair_name_list[:5]
     init_weight_path_list = None
     if use_init_weight:
         init_weight_path_list = get_init_weight_list(data_folder)
-    do_optimization = True   #todo make sure this is true in optimization
+    do_optimization = False   #todo make sure this is true in optimization
     do_evaluation = True
     color_image = True
     if do_optimization:
         get_mermaid_setting(mermaid_setting_path,expr_folder)
 
 
-        num_of_workers = 8 #for unknown reason, multi-thread not work
+        num_of_workers = 2 #for unknown reason, multi-thread not work
         num_files = len(pair_name_list)
         if num_of_workers > 1:
             sub_p = partial(sub_process, pair_list=pair_path_list, pair_name_list=pair_name_list,

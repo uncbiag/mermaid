@@ -281,6 +281,7 @@ class GaussianFourierFilterGenerator(object):
         self.sigmas_complex_gaussian_fourier_filters = [None]*self.nr_of_slots
         self.complex_gaussian_fourier_xsqr_filters = [None]*self.nr_of_slots
         self.sigmas_complex_gaussian_fourier_xsqr_filters = [None]*self.nr_of_slots
+        self.sigmas_complex_gaussian_fourier_filters_np=[]
 
     def get_number_of_slots(self):
         return self.nr_of_slots
@@ -416,21 +417,26 @@ class GaussianFourierFilterGenerator(object):
         for sigma in sigmas:
 
             # now find the index that corresponds to this
-            i = self._find_closest_sigma_index(sigma,self.sigmas_complex_gaussian_fourier_filters)
-
-            if self.sigmas_complex_gaussian_fourier_filters[i] is None:
-                need_to_recompute = True
-            elif self.complex_gaussian_fourier_filters[i] is None:
-                need_to_recompute = True
-            elif torch.isclose(sigma,self.sigmas_complex_gaussian_fourier_filters[i]):
-                need_to_recompute = False
+            sigma_value = sigma.item()
+            if sigma_value in self.sigmas_complex_gaussian_fourier_filters_np:
+                i = self.sigmas_complex_gaussian_fourier_filters_np.index(sigma_value)
             else:
-                need_to_recompute = True
+                i = self._find_closest_sigma_index(sigma,self.sigmas_complex_gaussian_fourier_filters)
 
-            if need_to_recompute: #todo should not comment this warning
-                print('INFO: Recomputing gaussian filter for sigma={:.2f}'.format(sigma))
-                self.sigmas_complex_gaussian_fourier_filters[i] = sigma #.clone()
-                self.complex_gaussian_fourier_filters[i], self.max_indices[i] = self._compute_complex_gaussian_fourier_filter(sigma)
+                if self.sigmas_complex_gaussian_fourier_filters[i] is None:
+                    need_to_recompute = True
+                elif self.complex_gaussian_fourier_filters[i] is None:
+                    need_to_recompute = True
+                elif torch.isclose(sigma,self.sigmas_complex_gaussian_fourier_filters[i]):
+                    need_to_recompute = False
+                else:
+                    need_to_recompute = True
+
+                if need_to_recompute: # todo  not comment this warning
+                    print('INFO: Recomputing gaussian filter for sigma={:.2f}'.format(sigma))
+                    self.sigmas_complex_gaussian_fourier_filters[i] = sigma #.clone()
+                    self.sigmas_complex_gaussian_fourier_filters_np.append(sigma_value)
+                    self.complex_gaussian_fourier_filters[i], self.max_indices[i] = self._compute_complex_gaussian_fourier_filter(sigma)
 
             current_complex_gaussian_fourier_filters.append(self.complex_gaussian_fourier_filters[i])
 
@@ -463,7 +469,9 @@ class FourierGaussianConvolution(nn.Module):
         f_filter_real = f_filter_real.expand_as(f_input[..., 0])
         f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
         f_conv = f_input * f_filter_real
-        conv_ouput_real = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=input.shape[2::])
+        dim_input = len(input.shape)
+        dim_input_batch = dim_input - self.dim
+        conv_ouput_real = self.ifftn(f_conv, self.dim, onesided=True, signal_sizes=input.shape[dim_input_batch::])
         result = conv_ouput_real
 
         return FFTVal(result, ini=-1)
