@@ -379,6 +379,7 @@ def run_test_by_name(test_name):
     runner = unittest.TextTestRunner()
     runner.run(suite)
 
+run_test_by_name('test_svf_vector_momentum_map_single_scale')
 # run_test_by_name('test_rddmm_shooting_map_single_scale')
 # run_test_by_name('test_rddmm_shooting_map_multi_scale')
 # run_test_by_name('test_svf_scalar_momentum_map_single_scale')
@@ -386,9 +387,9 @@ def run_test_by_name(test_name):
 #run_test_by_name('test_lddmm_shooting_map_single_scale')
 # run_test_by_name('test_lddmm_shooting_image_single_scale')
 
-if __name__ == '__main__':
-    if foundHTMLTestRunner:
-        unittest.main(testRunner=HtmlTestRunner.HTMLTestRunner(output='test_output'))
-    else:
-       unittest.main()
+# if __name__ == '__main__':
+#     if foundHTMLTestRunner:
+#         unittest.main(testRunner=HtmlTestRunner.HTMLTestRunner(output='test_output'))
+#     else:
+#        unittest.main()
 

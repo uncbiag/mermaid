@@ -451,7 +451,6 @@ class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
                            "env settings, typically are specificed by the external package, including the mode for solver or for smoother")]
         """settings for the task environment of the solver or smoother"""
         self.use_odeint = self.env[('use_odeint', True, 'using torchdiffeq package as the ode solver')]
-        self.use_ode_tuple = self.env[('use_ode_tuple', False, 'once use torchdiffeq package, take the tuple input or tensor input')]
 
     def _use_CFL_clamping_if_desired(self, cfl_dt):
         if self.use_CFL_clamping:
@@ -1759,8 +1758,13 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
-        advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-        return ODE.ODEWarpedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple,self.tFrom, self.tTo)
+
+        if not self.use_odeint:
+            advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
+            return RK.RK4(advectionMap.f, advectionMap.u, self._get_default_dictionary_to_pass_to_integrator(), cparams)
+        else:
+            self.f = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
+            return ODE.ODEBlock(cparams)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -1779,19 +1783,57 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
                                  clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
         self.initial_velocity = v
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=False)
-        if self.compute_inverse_map:
-            if phi_inv is not None:
-                phi1 = self.integrator.solve([v, phi, phi_inv], variables_from_optimizer)
-                return (phi1[1], phi1[2])
+
+        if not self.use_odeint:
+            self.integrator.set_pars(pars_to_pass_i)  # to use this as external parameter
+            if self.compute_inverse_map:
+                if phi_inv is not None:
+                    phi1 = self.integrator.solve([phi, phi_inv], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (phi1[0], phi1[1])
+                else:
+                    phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+                    return (phi1[0], None)
             else:
-                phi1 = self.integrator.solve([v, phi], variables_from_optimizer)
-                return (phi1[1], None)
+                phi1 = self.integrator.solve([phi], self.tFrom, self.tTo, variables_from_optimizer)
+                return phi1[0]
         else:
-            phi1 = self.integrator.solve([v, phi], variables_from_optimizer)
-            return phi1[1]
-
-
+            from . import forward_models_warped as FMW
+            func = FMW.ODEWarpedFunc(self.f, single_param=False, pars=pars_to_pass_i,
+                                     variables_from_optimizer=variables_from_optimizer)
+            self.integrator.set_func(func)
+            if phi_inv is not None and self.compute_inverse_map:
+                func.set_dim_info([self.dim, self.dim, self.dim])
+                input = torch.cat((v, phi, phi_inv), 1)
+                output = self.integrator(input)
+                return (output[:, self.dim:self.dim * 2, ...], output[:, self.dim * 2:self.dim * 3, ...])
+            else:
+                func.set_dim_info([self.dim, self.dim])
+                input = torch.cat((v, phi), 1)
+                output = self.integrator(input)
+                phi1 = output[:, self.dim:self.dim * 2, ...]
+                if self.compute_inverse_map:
+                    return [phi1, None]
+                else:
+                    return phi1
+            # from . import forward_models_warped as FMW
+            # func = FMW.ODEWarpedFunc_tuple(self.f, single_param=False, pars=pars_to_pass_i,
+            #                          variables_from_optimizer=variables_from_optimizer)
+            # self.integrator.set_func(func)
+            # if phi_inv is not None and self.compute_inverse_map:
+            #     phi.requires_grad=True
+            #     phi_inv.requires_grad=True
+            #     input =(v, phi, phi_inv)
+            #     output = self.integrator(input)
+            #     return output[1], output[2]
+            # else:
+            #     phi.requires_grad=True
+            #     input = (v, phi)
+            #     output = self.integrator(input)
+            #     phi1 = output[1]
+            #     if self.compute_inverse_map:
+            #         return [phi1, None]
+            #     else:
+            #         return phi1
 
 
 class SVFVectorMomentumMapLoss(RegistrationMapLoss):
