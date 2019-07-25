@@ -30,7 +30,7 @@
     "optimizer": {
         "name": "lbfgs_ls", 
         "single_scale": {
-            "nr_of_iterations": 50,
+            "nr_of_iterations": 10,
             "rel_ftol": 0.0001
         }
     } 
