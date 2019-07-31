@@ -3,9 +3,12 @@ from __future__ import print_function
 from __future__ import absolute_import
 import numpy as np
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = ''
 import torch
+
 import random
 from glob import glob
+import argparse
 
 from attic.demos.rdmm_synth_data_generation.combine_shape import generate_shape_objects,get_image,randomize_pair
 from attic.demos.rdmm_synth_data_generation.moving_shape import MovingShape, MovingShapes
@@ -106,6 +109,7 @@ def get_and_save_img_and_weight(img_sz,shape_setting_list,add_texture=False, col
 
 def get_txt_from_generated_images(folder_path,output_folder):
     """ to get the pair information from folder_path and then transfer into standard txt file"""
+    output_folder = os.path.join(output_folder,'test')
     os.makedirs(output_folder,exist_ok=True)
     s_post = 's_img.pt'
     t_post = 't_img.pt'
@@ -182,12 +186,16 @@ def get_txt(folder_path=None,output_folder=None):
 
 
 if __name__ == '__main__':
-    folder_path = '/playpen/zyshen/debugs/syn_expr_0708'
-    txt_output_path = '/playpen/zyshen/data/syn_data/test_0708'
-    # folder_path = '/playpen/zyshen/debugs/syn_expr_0422_2'
-    # txt_output_path = '/playpen/zyshen/data/syn_data/test'
-    get_data(folder_path)
-    get_txt(folder_path,txt_output_path)
+    parser = argparse.ArgumentParser(description='Creates a synthetic registration examples for RDMM experiments')
+    parser.add_argument('-dp','--data_saving_path', required=True, type=str, default=None,
+                        help='path for saving synthesis data')
+    parser.add_argument('-tp','--txt_output_path', required=True, type=str, default=None,
+                        help='path for saving path info used in rdmm synthesis experiment')
+    args = parser.parse_args()
+    data_saving_path =args.data_saving_path  #'/playpen/zyshen/debugs/syn_expr_0708' '/playpen/zyshen/debugs/syn_expr_0422_2'
+    txt_output_path = args.txt_output_path  #'/playpen/zyshen/data/syn_data/test_0708'  '/playpen/zyshen/data/syn_data/test''
+    #get_data(data_saving_path)
+    get_txt(data_saving_path,txt_output_path)
 
 
 

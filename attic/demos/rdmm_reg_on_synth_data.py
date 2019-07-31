@@ -32,7 +32,7 @@ import numpy as np
 from multiprocessing import * 
 import progressbar as pb
 from functools import partial
-model_name = 'lddmm_adapt_smoother_map'#'lddmm_adapt_smoother_map'#'lddmm_shooting_map' #svf_vector_momentum_map
+#model_name = 'lddmm_adapt_smoother_map'#'lddmm_adapt_smoother_map'#'lddmm_shooting_map' #svf_vector_momentum_map
 
 
 def get_pair_list(folder_path):
@@ -118,8 +118,6 @@ def nonp_optimization(si, moving,target,spacing,fname,l_moving=None,l_target=Non
     si.register_images(moving, target, spacing, extra_info=extra_info, LSource=l_moving,
                             LTarget=l_target,
                             map_low_res_factor=0.5,
-                            model_name=model_name,#'lddmm_shooting_map',
-                            nr_of_iterations=100,
                             visualize_step=30,
                             optimizer_name='lbfgs_ls',
                             use_multi_scale=True,
@@ -381,7 +379,7 @@ def analyze_on_single_res(pair,pair_name, expr_folder=None, color_image=False):
 
 
 
-def demo():
+if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='Registeration demo (include train and test)')
@@ -389,23 +387,26 @@ def demo():
                         help='run on long leaf')
     parser.add_argument('--expr_name', required=False, default='rdmm_synth_demo',
                         help='the name of the experiment')
-    parser.add_argument('-data_path', required=False, default='/playpen/zyshen/data/syn_data',
+    parser.add_argument('--data_path', required=False, default='/playpen/zyshen/data/syn_data',
                         help='the name of the experiment')
-    parser.add_argument('--model_name', required=False, default='lddmm_adapt_smoother_map',
+    parser.add_argument('--model_name', required=False, default='rdmm',
                         help='non-parametric method, vsvf/lddmm/rdmm are currently supported in this demo')
+    parser.add_argument('--task_type', required=False, default='pre_defined_weight',
+                        help='type of task to perform, predefined/joint, predefined: optimize momentum only; joint: optimize both weight and momenutm')
     parser.add_argument('--mermaid_setting_path', required=False, default=None,
                         help='the setting of mermaid')
     args = parser.parse_args()
     root_path = args.data_path
     model_name = args.model_name
+    use_init_weight = args.task_type== 'pre_defined_weight'
     mermaid_setting_path = args.mermaid_setting_path
     if mermaid_setting_path is None:
         print("the mermaid_setting_path is not provided, load the default settings instead")
-        if model_name == 'lddmm_adapt_smoother_map':
-            mermaid_setting_path = './rdmm_synth_settings/rdmm_setting.json'
-        elif model_name =='lddmm_shooting_map':
+        if model_name == 'rdmm':
+                mermaid_setting_path = os.path.join('./rdmm_synth_settings', 'rdmm_setting_predefined.json' if use_init_weight else 'rdmm_setting.json')
+        elif model_name =='lddmm':
             mermaid_setting_path = './rdmm_synth_settings/lddmm_setting.json'
-        elif model_name == 'svf_vector_momentum_map':
+        elif model_name == 'vsvf':
             mermaid_setting_path='./rdmm_synth_settings/vsvf_setting.json'
         else:
             raise ValueError("the default setting of {} is not founded".format(model_name))
@@ -414,7 +415,6 @@ def demo():
     data_folder = os.path.join(root_path,'test')
     expr_folder = os.path.join(root_path,expr_name)
     do_affine = False
-    use_init_weight = False
     os.makedirs(expr_folder,exist_ok=True)
     pair_path_list, pair_name_list = get_pair_list(data_folder)
     pair_path_list=pair_path_list[:5]
@@ -422,14 +422,14 @@ def demo():
     init_weight_path_list = None
     if use_init_weight:
         init_weight_path_list = get_init_weight_list(data_folder)
-    do_optimization = False   #todo make sure this is true in optimization
+    do_optimization = True   #todo make sure this is true in optimization
     do_evaluation = True
     color_image = True
     if do_optimization:
         get_mermaid_setting(mermaid_setting_path,expr_folder)
 
 
-        num_of_workers = 2 #for unknown reason, multi-thread not work
+        num_of_workers = 1 #for unknown reason, multi-thread not work
         num_files = len(pair_name_list)
         if num_of_workers > 1:
             sub_p = partial(sub_process, pair_list=pair_path_list, pair_name_list=pair_name_list,
@@ -449,4 +449,3 @@ def demo():
         analyze_on_pair_res(pair_path_list, pair_name_list,expr_folder=expr_folder,color_image=color_image)
 
 
-demo()

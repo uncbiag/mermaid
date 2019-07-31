@@ -3661,7 +3661,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             # now set the actual model we want to solve
             self.ssOpt.set_model(self.model_name)
-            if weight_map is not None:
+            if weight_map is not None and currentScaleNumber==0:
                 self.ssOpt.set_initial_weight_map(weight_map,self.freeze_weight)
 
 

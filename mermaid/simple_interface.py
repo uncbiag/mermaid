@@ -193,7 +193,7 @@ class RegisterImagePair(object):
         """
 
         if self.opt is not None:
-            self.opt.set_initial_weight_map(init_weight, freeze_weight=freeze_weight)
+            self.opt.optimizer.set_initial_weight_map(init_weight, freeze_weight=freeze_weight)
             self.delayed_initial_map_still_to_be_set = False
         else:
             self.delayed_initial_weight_map_still_to_be_set = True
@@ -389,7 +389,7 @@ class RegisterImagePair(object):
                       compute_inverse_map=compute_inverse_map,
                       params=params)
 
-    def register_images(self, ISource, ITarget, spacing, model_name, extra_info=None, LSource=None, LTarget=None,
+    def register_images(self, ISource, ITarget, spacing, model_name=None, extra_info=None, LSource=None, LTarget=None,
                         nr_of_iterations=None,
                         learning_rate=None,
                         similarity_measure_type=None,
@@ -472,6 +472,7 @@ class RegisterImagePair(object):
         elif type(params) == type('acharacter'):
             self.params = pars.ParameterDict()
             self.params.load_JSON(params)
+            model_name = self.params['model']['registration_model']['type']
         else:
             raise ValueError('Unknown parameter format: ' + str(type(params)))
 
