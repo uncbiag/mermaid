@@ -1102,6 +1102,10 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
         :param map0_inverse: initial inverse map
         :return: n/a
         """
+        if self.mapLowResFactor is not None:
+            sampler = IS.ResampleImage()
+            weight_map, _ = sampler.downsample_image_to_size(weight_map, self.spacing, self.lowResSize[2::], 1,
+                                                            zero_boundary=False)
         self.model.local_weights.data = weight_map
         if freeze_weight:
             self.model.freeze_adaptive_regularizer_param()
@@ -3661,7 +3665,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
             # now set the actual model we want to solve
             self.ssOpt.set_model(self.model_name)
-            if weight_map is not None and currentScaleNumber==0:
+            if weight_map is not None:
                 self.ssOpt.set_initial_weight_map(weight_map,self.freeze_weight)
 
 
