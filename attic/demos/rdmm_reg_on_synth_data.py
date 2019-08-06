@@ -127,7 +127,7 @@ def nonp_optimization(si, moving,target,spacing,fname,l_moving=None,l_target=Non
     output = si.get_warped_image()
     phi = si.opt.optimizer.ssOpt.get_map()
     model_param = si.get_model_parameters()
-    if model_name =='lddmm_adapt_smoother_map':
+    if init_weight is not None:
         m, weight_map = model_param['m'], model_param['local_weights']
         return output.detach_(), phi.detach_(), m.detach(), weight_map.detach()
     else:
@@ -165,7 +165,7 @@ def get_input(img_pair,weight_pair=None):
 
 
 
-def get_analysis_input(img_pair,expr_folder,pair_name,color_image=False):
+def get_analysis_input(img_pair,expr_folder,pair_name,color_image=False,model_name='rdmm'):
     s_path, t_path = img_pair
     moving = torch.load(s_path)
     target = torch.load(t_path)
@@ -180,7 +180,7 @@ def get_analysis_input(img_pair,expr_folder,pair_name,color_image=False):
         moving = MyTensor(moving)
         target = MyTensor(target)
 
-    if model_name == 'lddmm_adapt_smoother_map':
+    if model_name == 'rdmm':
         weight_map = torch.load(os.path.join(ana_path, 'weight_map.pt'))
     else:
         weight_map = None
@@ -313,12 +313,12 @@ def get_labeled_image(img_pair):
 
 
 
-def analyze_on_pair_res(pair_list,pair_name_list,expr_folder=None,color_image=False):
+def analyze_on_pair_res(pair_list,pair_name_list,expr_folder=None,color_image=False,model_name='rdmm'):
     num_pair = len(pair_list)
     score_list = []
     jacobi_list = []
     for i in range(num_pair):
-        score, avg_jacobi = analyze_on_single_res(pair_list[i],pair_name_list[i],expr_folder,color_image)
+        score, avg_jacobi = analyze_on_single_res(pair_list[i],pair_name_list[i],expr_folder,color_image,model_name)
         print("the current score of {} is {}".format(pair_name_list[i],score))
         print("the current jacobi of {} is {}".format(pair_name_list[i],avg_jacobi))
         score_list.append(score)
@@ -343,8 +343,8 @@ def analyze_on_pair_res(pair_list,pair_name_list,expr_folder=None,color_image=Fa
 
 
 
-def analyze_on_single_res(pair,pair_name, expr_folder=None, color_image=False):
-    moving, target, spacing, moving_init_weight, phi,m = get_analysis_input(pair,expr_folder,pair_name,color_image=color_image)
+def analyze_on_single_res(pair,pair_name, expr_folder=None, color_image=False,model_name='rdmm'):
+    moving, target, spacing, moving_init_weight, phi,m = get_analysis_input(pair,expr_folder,pair_name,color_image=color_image,model_name=model_name)
     lmoving, ltarget =get_labeled_image(pair)
     params = pars.ParameterDict()
     params.load_JSON(os.path.join(expr_folder,'mermaid_setting.json'))
@@ -360,16 +360,15 @@ def analyze_on_single_res(pair,pair_name, expr_folder=None, color_image=False):
     # extra_info=None
     # visual_param=None
 
-    res= evaluate_model(moving, target, sz, spacing,
-                   model_name=model_name,
-                   use_map=True,
-                   compute_inverse_map=False,
-                   map_low_res_factor=0.5,
-                   compute_similarity_measure_at_low_res=False,
-                   spline_order=1,
-                   individual_parameters=individual_parameters,
-                   shared_parameters=None, params=params, extra_info=extra_info,visualize=False,visual_param=visual_param, given_weight=True)
-    phi = res[1]
+    # res= evaluate_model(moving, target, sz, spacing,
+    #                use_map=True,
+    #                compute_inverse_map=False,
+    #                map_low_res_factor=0.5,
+    #                compute_similarity_measure_at_low_res=False,
+    #                spline_order=1,
+    #                individual_parameters=individual_parameters,
+    #                shared_parameters=None, params=params, extra_info=extra_info,visualize=False,visual_param=visual_param, given_weight=True)
+    # phi = res[1]
     lres = utils.compute_warped_image_multiNC(lmoving, phi, spacing, 0, zero_boundary=True)
     scores = get_multi_metric(lres,ltarget,rm_bg=True)
     avg_jacobi = compute_jacobi(phi,spacing)
@@ -446,6 +445,6 @@ if __name__ == '__main__':
         else:
             do_pair_registration(pair_path_list, pair_name_list, init_weight_path_list,do_affine=do_affine,expr_folder=expr_folder,mermaid_setting_path=mermaid_setting_path)
     if do_evaluation:
-        analyze_on_pair_res(pair_path_list, pair_name_list,expr_folder=expr_folder,color_image=color_image)
+        analyze_on_pair_res(pair_path_list, pair_name_list,expr_folder=expr_folder,color_image=color_image,model_name=model_name)
 
 
