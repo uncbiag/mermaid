@@ -1717,7 +1717,7 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
             ('use_predefined_weight', False, "use predefined weight for adapt smoother")]
         self.gaussian_std_weights = self.smoother.multi_gaussian_weights
         self.gaussian_stds = self.smoother.multi_gaussian_stds
-        self.get_preweight_from_network = self.sparams[
+        self.get_preweight_from_network = self.env[
             ('get_preweight_from_network', False, 'deploy network to predict preweights of the smoothers')]
         if not self.get_preweight_from_network:
             self.local_weights = self.create_local_filter_weights_parameters()

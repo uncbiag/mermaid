@@ -584,8 +584,8 @@ class RegisterImagePair(object):
             if use_multi_scale and LSource is not None and LTarget is not None:
                 LSource = AdaptVal(torch.from_numpy(LSource)) if not type(LSource) == torch.Tensor else LSource
                 LTarget = AdaptVal(torch.from_numpy(LTarget)) if not type(LTarget) == torch.Tensor else LTarget
-                self.opt.optimizer.set_source_label( AdaptVal(torch.from_numpy(LSource)))
-                self.opt.optimizer.set_target_label( AdaptVal(torch.from_numpy(LTarget)))
+                self.opt.optimizer.set_source_label( AdaptVal(LSource))
+                self.opt.optimizer.set_target_label( AdaptVal(LTarget))
             if extra_info is not None:
                 self._set_analysis(self.opt.optimizer, extra_info)
 

@@ -105,5 +105,6 @@ si.register_images(I0, I1, spacing,
                    model_name='lddmm_shooting_map',
                    nr_of_iterations=1,
                    optimizer_name='sgd',
+                   visualize_step=None,
                    json_config_out_filename=('step_by_step_basic_settings.json','step_by_step_basic_settings_with_comments.json'))
 
