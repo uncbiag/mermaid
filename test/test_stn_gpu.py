@@ -196,6 +196,7 @@ class Test_stn_3d(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    raise("this test is for cuda version stn, since pytorch provide official support, it is no longer maintained")
     if foundHTMLTestRunner:
         if torch.cuda.device_count()==0:
             print('No CUDA devices found. Ignoring test.')
