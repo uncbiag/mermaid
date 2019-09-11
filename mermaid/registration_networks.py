@@ -2164,16 +2164,17 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
         pars_to_pass_i= pars_to_pass_s
         self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=True)
         self.integrator.model.init_velocity_mask(self.velocity_mask)
+        n_batch = I.shape[0]
         if self.compute_inverse_map:
             raise ValueError("Not implemented yet")
         else:
             # the version using advection on weight is removed, only interpolation version is kept
             self.integrator.model.init_zero_sm_weight(local_adapt_weights_pre.detach())
             if self.compute_on_initial_map:
-                vphi1 = self.integrator.solve([m, phi, local_adapt_weights_pre, self.id.detach().clone()], variables_from_optimizer)
+                vphi1 = self.integrator.solve([m, phi, local_adapt_weights_pre, self.id[:n_batch].detach().clone()], variables_from_optimizer)
                 phi1 = vphi1[1]
             else:
-                vphi1 = self.integrator.solve([m, self.id.detach(), local_adapt_weights_pre], variables_from_optimizer)
+                vphi1 = self.integrator.solve([m, self.id[:n_batch].detach(), local_adapt_weights_pre], variables_from_optimizer)
                 phi1 = utils.compute_warped_image_multiNC(phi, vphi1[1], self.spacing, spline_order=1,
                                                            zero_boundary=False)
             self.print_count += 1

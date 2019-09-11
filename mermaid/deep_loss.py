@@ -199,25 +199,22 @@ class AdaptiveWeightLoss(with_metaclass(ABCMeta,nn.Module)):
 
 
     def displacy_weight_info(self,weight,global_multi_gaussian_weights):
-        def _display_stats(weights, Ia,global_multi_gaussian_weights,weighting_type):
+        def _display_stats(weights, weighted_std_map,global_multi_gaussian_weights,weighting_type):
             global_multi_gaussian_weights = global_multi_gaussian_weights.detach().cpu().numpy()
-            if weighting_type == 'w_K_w':
-                weights = weights**2
             weights_for_each_channel = [weights[:,i,...].mean().item() for i in range(weights.shape[1])]
             weights_for_each_channel = ["%.2f" % w for w in weights_for_each_channel]
+            wstd_min = weighted_std_map.min().detach().cpu().numpy()
+            wstd_max = weighted_std_map.max().detach().cpu().numpy()
+            wstd_mean = weighted_std_map.mean().detach().cpu().numpy()
+            wstd_std = weighted_std_map.std().detach().cpu().numpy()
 
-            Ia_min = Ia.min().detach().cpu().numpy()
-            Ia_max = Ia.max().detach().cpu().numpy()
-            Ia_mean = Ia.mean().detach().cpu().numpy()
-            Ia_std = Ia.std().detach().cpu().numpy()
-
-            print('gbw: {},weight:{}; combined weight: [{:.2f},{:.2f},{:.2f}]({:.2f})'.format(global_multi_gaussian_weights,weights_for_each_channel,Ia_min,Ia_mean,Ia_max,Ia_std))
-        adaptive_smoother_map = weight
-        adaptive_smoother_map = adaptive_smoother_map.detach()
-        gaussian_weights = global_multi_gaussian_weights
-        gaussian_weights = gaussian_weights.detach()
-        view_sz = [1] + [len(gaussian_weights)] + [1] * self.dim
-        gaussian_weights = gaussian_weights.view(*view_sz)
-        smoother_map = adaptive_smoother_map * (gaussian_weights ** 2)
-        smoother_map = torch.sqrt(torch.sum(smoother_map, 1, keepdim=True))
-        _display_stats(weight.float(),smoother_map.float(),global_multi_gaussian_weights,self.weighting_type)
+            print('gbw: {},weight:{}; combined std: [{:.2f},{:.2f},{:.2f}]({:.2f})'.format(global_multi_gaussian_weights,weights_for_each_channel,wstd_min,wstd_mean,wstd_max,wstd_std))
+        weight = weight**2 if self.weighting_type =='w_k_w' else weight
+        weight = weight.detach()
+        gaussian_stds = self.gaussian_stds
+        gaussian_stds = gaussian_stds.detach()
+        view_sz = [1] + [len(gaussian_stds)] + [1] * self.dim
+        gaussian_stds = gaussian_stds.view(*view_sz)
+        weighted_std_map = weight * (gaussian_stds ** 2)
+        weighted_std_map = torch.sqrt(torch.sum(weighted_std_map, 1, keepdim=True))
+        _display_stats(weight.float(),weighted_std_map.float(),global_multi_gaussian_weights,self.weighting_type)

@@ -36,7 +36,6 @@ class Test_registration_algorithms(unittest.TestCase):
 
         example_img_len = ex_len
         dim = 2
-
         szEx = np.tile(example_img_len, dim)  # size of the desired images: (sz)^dim
         I0, I1, self.spacing = eg.CreateSquares(dim).create_image_pair(szEx,self.params)  # create a default image size with two sample squares
         self.sz = np.array(I0.shape)
