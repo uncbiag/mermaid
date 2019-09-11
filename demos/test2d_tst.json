@@ -5,12 +5,11 @@
             "map_low_res_factor": null,
             "use_map": true
         },
-        "env": {
-            "get_momentum_from_external_network": false
-        },
         "registration_model": {
             "env": {
+                "get_momentum_from_external_network": false,
                 "reg_factor": 1.0,
+                "use_ode_tuple": false,
                 "use_odeint": true
             },
             "forward_model": {

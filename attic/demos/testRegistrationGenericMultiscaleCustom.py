@@ -88,7 +88,7 @@ import mermaid.registration_networks as RN
 import mermaid.utils as utils
 import mermaid.image_sampling as IS
 import mermaid.rungekutta_integrators as RK
-import mermaid.forward_models_multi_channel as FM
+import mermaid.forward_models as FM
 import mermaid.regularizer_factory as RF
 
 class MySVFNet(RN.RegistrationNet):

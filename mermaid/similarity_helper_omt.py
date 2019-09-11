@@ -13,7 +13,7 @@ from . import utils
 from math import floor
 from numpy import log
 from numpy import shape as numpy_shape
-from . import forward_models_multi_channel as FM
+from . import forward_models as FM
 
 
 class OTSimilarityHelper(Function):

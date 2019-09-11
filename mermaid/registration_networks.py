@@ -25,7 +25,7 @@ from torch.nn.parameter import Parameter
 from mermaid.deep_smoothers import stable_softmax
 from . import rungekutta_integrators as RK
 
-from . import forward_models_multi_channel as FM
+from . import forward_models as FM
 from .data_wrapper import AdaptVal
 from . import regularizer_factory as RF
 from . import similarity_measure_factory as SM
