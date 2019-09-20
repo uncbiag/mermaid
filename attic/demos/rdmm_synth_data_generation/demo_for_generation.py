@@ -194,7 +194,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     data_saving_path =args.data_saving_path  #'/playpen/zyshen/debugs/syn_expr_0708' '/playpen/zyshen/debugs/syn_expr_0422_2'
     txt_output_path = args.txt_output_path  #'/playpen/zyshen/data/syn_data/test_0708'  '/playpen/zyshen/data/syn_data/test''
-    #get_data(data_saving_path)
+    get_data(data_saving_path)
     get_txt(data_saving_path,txt_output_path)
 
 

@@ -220,7 +220,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         Compute the Lapacian of an image
         !!!!!!!!!!!
         IMPORTANT:
-        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH AND CHANNEL DIMENSION.
         THIS IS FOR COMPUTATIONAL EFFICIENCY.
         
         :param I: Input image [batch, channel, X,Y,Z]
@@ -241,7 +241,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         Computes the gradient norm of an image
         !!!!!!!!!!!
         IMPORTANT:
-        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH AND CHANNEL DIMENSION.
         THIS IS FOR COMPUTATIONAL EFFICIENCY.
 
         :param I: Input image [batch, channel, X,Y,Z]
@@ -262,7 +262,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         Computes the gradient norm of an image
         !!!!!!!!!!!
         IMPORTANT:
-        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH AND CHANNEL DIMENSION.
         THIS IS FOR COMPUTATIONAL EFFICIENCY.
 
         :param I: Input image [batch, channel, X,Y,Z]
@@ -283,7 +283,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         Computes the gradient norm of an image
         !!!!!!!!!!!
         IMPORTANT:
-        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH AND CHANNEL DIMENSION.
         THIS IS FOR COMPUTATIONAL EFFICIENCY.
 
         :param I: Input image [batch, channel, X,Y,Z]
@@ -380,7 +380,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
 
         !!!!!!!!!!!
         IMPORTANT:
-        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH AND CHANNEL DIMENSION.
         THIS IS FOR COMPUTATIONAL EFFICIENCY.
 
 
@@ -424,7 +424,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
 
         !!!!!!!!!!!
         IMPORTANT:
-        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH AND CHANNEL DIMENSION.
         THIS IS FOR COMPUTATIONAL EFFICIENCY.
 
         Returns the values for x-index decremented by one (to the left in 1D)
@@ -468,7 +468,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
 
         !!!!!!!!!!!
         IMPORTANT:
-        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH AND CHANNEL DIMENSION.
         THIS IS FOR COMPUTATIONAL EFFICIENCY.
 
         Same as xp, but for the y direction
@@ -508,7 +508,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
 
         !!!!!!!!!!!
         IMPORTANT:
-        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH AND CHANNEL DIMENSION.
         THIS IS FOR COMPUTATIONAL EFFICIENCY.
 
         Returns the values for x-index decremented by one (to the left in 1D)
@@ -546,7 +546,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         
         !!!!!!!!!!!
         IMPORTANT:
-        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH AND CHANNEL DIMENSION.
         THIS IS FOR COMPUTATIONAL EFFICIENCY.
 
         Returns the values for x-index decremented by one (to the left in 1D)
@@ -578,7 +578,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         
         !!!!!!!!!!!
         IMPORTANT:
-        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH DIMENSION.
+        ALL THE FOLLOWING IMPLEMENTED CODE ADD 2 ON DIMENSION, WHICH REPRESENT BATCH AND CHANNEL DIMENSION.
         THIS IS FOR COMPUTATIONAL EFFICIENCY.
 
         Returns the values for x-index decremented by one (to the left in 1D)

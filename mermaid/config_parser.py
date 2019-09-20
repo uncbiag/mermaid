@@ -52,9 +52,6 @@ _algconf_settings_filename_comments = _find_settings_directory(local_settings_di
 _democonf_settings_filename = _find_settings_directory(local_settings_directory, standard_settings_directory, r'democonf_settings.json')
 _democonf_settings_filename_comments = _find_settings_directory(local_settings_directory, standard_settings_directory, r'democonf_settings_comments.json')
 
-_datapro_settings_filename = _find_settings_directory(local_settings_directory, standard_settings_directory, r'datapro_settings.json')
-_datapro_settings_filename_comments = _find_settings_directory(local_settings_directory, standard_settings_directory, r'datapro_settings_comments.json')
-
 _respro_settings_filename = _find_settings_directory(local_settings_directory, standard_settings_directory, r'respro_settings.json')
 _respro_settings_filename_comments = _find_settings_directory(local_settings_directory, standard_settings_directory, r'respro_settings_comments.json')
 
@@ -90,8 +87,6 @@ def get_default_algconf_settings_filenames():
     return (_algconf_settings_filename,_algconf_settings_filename_comments)
 
 
-def get_default_datapro_settings_filenames():
-    return (_datapro_settings_filename,_datapro_settings_filename_comments)
 
 
 def get_default_respro_settings_filenames():
@@ -238,37 +233,6 @@ def get_algconf_settings( algconf_settings_filename = None ):
     return algconf_params
 
 
-def get_datapro_settings(datapro_settings_filename = None ):
-
-    # These are the parameters for the general I/O and example cases
-    datapro_params = pars.ParameterDict()
-    datapro_params[('datapro',{},'settings for the data process')]
-
-    if datapro_settings_filename is not None:
-        print( 'Loading datapro configuration from: ' + datapro_settings_filename )
-        datapro_params.load_JSON( datapro_settings_filename )
-        return datapro_params
-    else:
-        print( 'Using default datapro settings from config_parser.py')
-
-    datapro_params['datapro'][('dataset', {}, 'general settings for dataset')]
-    datapro_params['datapro']['dataset'][('name', 'lpba', 'name of the dataset: oasis2d, lpba, ibsr, cmuc' )]
-    datapro_params['datapro']['dataset'][('task_name', 'lpba_affined', 'task name for data process' )]
-    datapro_params['datapro']['dataset'][('data_path', None, "data path of the  dataset, default settings are in datamanger")]
-    datapro_params['datapro']['dataset'][('label_path', None, "data path of the  dataset, default settings are in datamanger")]
-    datapro_params['datapro']['dataset'][('output_path','/playpen/zyshen/data/', "the path to save the processed data")]
-    datapro_params['datapro']['mode'][('prepare_data',False, 'prepare the data ')]
-    datapro_params['datapro']['mode'][('sched','inter', "['inter'|'intra'], inter-personal or intra-personal")]
-    datapro_params['datapro']['mode'][('all_comb',False, 'all possible pair combination ')]
-    datapro_params['datapro']['mode'][('divided_ratio', (0.8, 0.1, 0.1), 'divided the dataset into train, val and test set by the divided_ratio')]
-    datapro_params['datapro']['mode'][('slicing',100,'the index to be sliced from the 3d image dataset, support lpba, ibsr, cmuc')]
-    datapro_params['datapro']['mode'][('axis',3,'which axis needed to be sliced')]
-    datapro_params['datapro']['switch'][('switch_to_exist_task',False,'switch to existed task without modify other datapro settings')]
-
-    datapro_params['datapro']['switch'][('task_root_path','/playpen/zyshen/data/oasis_inter_slicing90','path of existed processed data')]
-
-
-    return datapro_params
 
 
 def get_respro_settings(respro_settings_filename = None):
@@ -308,9 +272,6 @@ if __name__ == "__main__":
 
     algconf_params = get_algconf_settings()
     algconf_params.write_JSON_and_JSON_comments(get_default_algconf_settings_filenames())
-
-    datapro_params = get_datapro_settings()
-    datapro_params.write_JSON_and_JSON_comments(get_default_datapro_settings_filenames())
 
     respro_params = get_respro_settings()
     respro_params.write_JSON_and_JSON_comments(get_default_respro_settings_filenames())

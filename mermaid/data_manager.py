@@ -49,7 +49,7 @@ class DataManager(object):
         """slice the nth axis(1,2,3) of the 3d volume"""
         self.dataset = None
         self.task_path =None
-        """train|val|test: dic task_root_path/train|val|test"""
+        """train|val|test|debug: dic task_root_path/train|val|test|debug"""
 
 
     def set_data_path(self, data_path):

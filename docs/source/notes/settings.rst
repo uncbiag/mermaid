@@ -109,30 +109,6 @@ The default settings (for these confgurations are)
 .. literalinclude:: mermaid_settings/democonf_settings_comments.json
   :language: JSON
 
-Datapro settings
-^^^^^^^^^^^^^^^^
-
-.. todo:: Zhengyang, I am not sure what this is good for or where it is used
-
-The settings filename can be queried via
-
-.. currentmodule:: mermaid.config_parser
-.. autofunction:: get_default_datapro_settings_filenames
-    :noindex:
-
-The settings can be loaded into a parameter structure via
-
-.. currentmodule:: mermaid.config_parser
-.. autofunction:: get_datapro_settings
-    :noindex:
-
-The default settings (for these confgurations are)
-	  
-.. literalinclude:: mermaid_settings/datapro_settings.json
-  :language: JSON
-
-.. literalinclude:: mermaid_settings/datapro_settings_comments.json
-  :language: JSON
 
 Respro settings
 ^^^^^^^^^^^^^^^

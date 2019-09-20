@@ -13,8 +13,6 @@ To start off we import some important modules. First the pyTorch modules and num
 
     # first do the torch imports
     import torch
-    from torch.autograd import Variable
-
     import numpy as np
 
 

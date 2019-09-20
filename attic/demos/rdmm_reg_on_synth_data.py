@@ -384,10 +384,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Registeration demo (include train and test)')
     parser.add_argument('--run_on_server', required=False, type=bool, default=False,
                         help='run on long leaf')
-    parser.add_argument('--expr_name', required=False, default='rdmm_synth_demo',
+    parser.add_argument('--expr_name', trequired=False, default='rdmm_synth_demo',
                         help='the name of the experiment')
-    parser.add_argument('--data_path', required=False, default='/playpen/zyshen/data/syn_data',
-                        help='the name of the experiment')
+    parser.add_argument('--data_txt_path', required=False, default='/playpen/zyshen/data/syn_data',
+                        help='the path of data txt folder')
     parser.add_argument('--model_name', required=False, default='rdmm',
                         help='non-parametric method, vsvf/lddmm/rdmm are currently supported in this demo')
     parser.add_argument('--task_type', required=False, default='pre_defined_weight',
@@ -411,16 +411,16 @@ if __name__ == '__main__':
             raise ValueError("the default setting of {} is not founded".format(model_name))
 
     expr_name =args.expr_name
-    data_folder = os.path.join(root_path,'test')
+    output_root_path = os.path.join(root_path,'test')
     expr_folder = os.path.join(root_path,expr_name)
     do_affine = False
     os.makedirs(expr_folder,exist_ok=True)
-    pair_path_list, pair_name_list = get_pair_list(data_folder)
+    pair_path_list, pair_name_list = get_pair_list(output_root_path)
     pair_path_list=pair_path_list[:5]
     pair_name_list=pair_name_list[:5]
     init_weight_path_list = None
     if use_init_weight:
-        init_weight_path_list = get_init_weight_list(data_folder)
+        init_weight_path_list = get_init_weight_list(output_root_path)
     do_optimization = True   #todo make sure this is true in optimization
     do_evaluation = True
     color_image = True
