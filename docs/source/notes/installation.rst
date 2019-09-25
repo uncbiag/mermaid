@@ -14,7 +14,7 @@ mermaid requirements
 It runs on Linux and on OSX. Windows installs might be possible, but have not been tested (hence will likely not work out of the box) and are not officially supported.
     
 Anaconda installation
-^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
 
 If you have not done so yet, install anaconda. Simply follow the installation instructions `here <https://www.anaconda.com/download>`__. This will provide you with the conda package manager which will be used to create a virtual environment (if desired, we highly recommend it) and to install all python packages that *mermaid* depends on.
 

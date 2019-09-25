@@ -97,7 +97,7 @@ class ImageReconst(nn.Module):
         loss =  torch.mean(torch.abs(diff))+smoothness* self.smooth_factor
         return loss
 
-def adjust_learning_rate(optimizer, new_lr=-1):
+def update_learning_rate(optimizer, new_lr=-1):
     for param_group in optimizer.param_groups:
         param_group['lr'] = new_lr
     print(" the learning rate now is set to {}".format(new_lr))
@@ -136,7 +136,7 @@ for i in range(80000):
     optimizer_ft.step()
     if (i+1)%8000==0:
         lr = lr #max(lr/5.,1e-5)
-        adjust_learning_rate(optimizer_ft,lr)
+        update_learning_rate(optimizer_ft,lr)
     if i%100==0:
         print(" the current step is {} with reconstruction loss is {}".format(i,loss.item()))
     optimizer_ft.zero_grad()
