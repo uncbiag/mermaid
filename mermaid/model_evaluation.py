@@ -169,7 +169,6 @@ def evaluate_model(ISource_in, ITarget_in, sz, spacing,
         visual_param['save_fig_num'] = -1
     else:
         visual_param['visualize'] = visualize
-        visual_param['pair_path'] = visual_param['pair_name']
         save_fig_path = visual_param['save_fig_path']
         visual_param['save_fig_path_byname'] = os.path.join(save_fig_path, 'byname')
         visual_param['save_fig_path_byiter'] = os.path.join(save_fig_path, 'byiter')

@@ -1,28 +1,35 @@
 
 from __future__ import print_function
 from __future__ import absolute_import
-import numpy as np
 import os
+import sys
 os.environ["CUDA_VISIBLE_DEVICES"] = ''
+
+sys.path.insert(0,os.path.abspath('../..'))
+import numpy as np
+
 import torch
 
 import random
 from glob import glob
 import argparse
 
-from attic.demos.rdmm_synth_data_generation.combine_shape import generate_shape_objects,get_image,randomize_pair
-from attic.demos.rdmm_synth_data_generation.moving_shape import MovingShape, MovingShapes
-from attic.demos.rdmm_synth_data_generation.utils_for_regularizer import get_single_gaussian_smoother
-from attic.demos.rdmm_synth_data_generation.utils_for_general import add_texture_on_img,plot_2d_img, save_smoother_map,write_list_into_txt, get_file_name
+from demos.rdmm_synth_data_generation.combine_shape import generate_shape_objects,get_image,randomize_pair
+from demos.rdmm_synth_data_generation.moving_shape import MovingShape, MovingShapes
+from demos.rdmm_synth_data_generation.utils_for_regularizer import get_single_gaussian_smoother
+from demos.rdmm_synth_data_generation.utils_for_general import add_texture_on_img,plot_2d_img, save_smoother_map,write_list_into_txt, get_file_name
 from mermaid.data_wrapper import MyTensor
 from multiprocessing import *
 import progressbar as pb
 from functools import partial
-
 import matplotlib.pyplot as plt
+
+
+
 multi_gaussian_weight = np.array([0.2,0.5,0.3,0.0])
 default_multi_gaussian_weight = np.array([0,0,0,1.])
 multi_gaussian_stds = np.array([0.05,0.1,0.15,0.2])
+
 def get_settings_for_shapes(img_sz):
     shape_setting_list = [
     {'name':'e1','type':'ellipse','img_sz':img_sz,'center_pos':[-0.0,-0.1],'radius':[0.5,0.7],'rotation':0,'use_weight':True},
@@ -186,16 +193,16 @@ def get_txt(folder_path=None,output_folder=None):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Creates a synthetic registration examples for RDMM experiments')
-    parser.add_argument('-dp','--data_saving_path', required=True, type=str, default=None,
-                        help='path for saving synthesis data')
-    parser.add_argument('-tp','--txt_output_path', required=True, type=str, default=None,
-                        help='path for saving path info used in rdmm synthesis experiment')
+    parser = argparse.ArgumentParser(description='Creates a synthetic registration examples for RDMM related experiments')
+    parser.add_argument('-dp','--data_saving_path', required=True, type=str, default='./data_output',
+                        help='path of the folder saving synthesis data')
+    parser.add_argument('-di','--data_task_path', required=False, type=str, default='./data_task',
+                        help='path of the folder recording data info for registration tasks')
     args = parser.parse_args()
     data_saving_path =args.data_saving_path  #'/playpen/zyshen/debugs/syn_expr_0708' '/playpen/zyshen/debugs/syn_expr_0422_2'
-    txt_output_path = args.txt_output_path  #'/playpen/zyshen/data/syn_data/test_0708'  '/playpen/zyshen/data/syn_data/test''
+    data_task_path = args.data_task_path  #'/playpen/zyshen/data/syn_data/test_0708'  '/playpen/zyshen/data/syn_data/test''
     get_data(data_saving_path)
-    get_txt(data_saving_path,txt_output_path)
+    get_txt(data_saving_path,data_task_path)
 
 
 

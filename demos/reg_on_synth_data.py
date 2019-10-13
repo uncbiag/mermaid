@@ -1,14 +1,5 @@
 """"
-demo on RDMM on 2d image registration
-the function include:
-
-get_pair_list
-get_init_weight_list
-get_input
-get_mermaid_setting
-do_registration
-visualize_res
-
+demo on RDMM on 2d synthetic image registration
 """
 import matplotlib as matplt
 matplt.use('Agg')
@@ -18,7 +9,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ''
 import torch
 sys.path.insert(0,os.path.abspath('.'))
 sys.path.insert(0,os.path.abspath('..'))
-sys.path.insert(0,os.path.abspath('../model_pool'))
 sys.path.insert(0,os.path.abspath('../mermaid'))
 import mermaid.module_parameters as pars
 import mermaid.simple_interface as SI
@@ -354,21 +344,21 @@ def analyze_on_single_res(pair,pair_name, expr_folder=None, color_image=False,mo
     saving_folder = os.path.join(saving_folder, pair_name)
     saving_folder = os.path.join(saving_folder,'res_analysis')
     os.makedirs(saving_folder,exist_ok=True)
+    extra_info = None
+    visual_param = None
 
     extra_info = {'fname':[pair_name],'saving_folder':[saving_folder]}
     visual_param = setting_visual_saving(expr_folder, pair_name,folder_name='color')
-    # extra_info=None
-    # visual_param=None
 
-    # res= evaluate_model(moving, target, sz, spacing,
-    #                use_map=True,
-    #                compute_inverse_map=False,
-    #                map_low_res_factor=0.5,
-    #                compute_similarity_measure_at_low_res=False,
-    #                spline_order=1,
-    #                individual_parameters=individual_parameters,
-    #                shared_parameters=None, params=params, extra_info=extra_info,visualize=False,visual_param=visual_param, given_weight=True)
-    # phi = res[1]
+    res= evaluate_model(moving, target, sz, spacing,
+                   use_map=True,
+                   compute_inverse_map=False,
+                   map_low_res_factor=0.5,
+                   compute_similarity_measure_at_low_res=False,
+                   spline_order=1,
+                   individual_parameters=individual_parameters,
+                   shared_parameters=None, params=params, extra_info=extra_info,visualize=False,visual_param=visual_param, given_weight=True)
+    phi = res[1]
     lres = utils.compute_warped_image_multiNC(lmoving, phi, spacing, 0, zero_boundary=True)
     scores = get_multi_metric(lres,ltarget,rm_bg=True)
     avg_jacobi = compute_jacobi(phi,spacing)
@@ -381,32 +371,31 @@ def analyze_on_single_res(pair,pair_name, expr_folder=None, color_image=False,mo
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(description='Registeration demo (include train and test)')
-    parser.add_argument('--run_on_server', required=False, type=bool, default=False,
-                        help='run on long leaf')
-    parser.add_argument('--expr_name', trequired=False, default='rdmm_synth_demo',
+    parser = argparse.ArgumentParser(description='Registeration demo for 2d synthetic data')
+    parser.add_argument('--expr_name', required=False, default='rdmm_synth_demo',
                         help='the name of the experiment')
-    parser.add_argument('--data_txt_path', required=False, default='/playpen/zyshen/data/syn_data',
-                        help='the path of data txt folder')
+    parser.add_argument('--data_task_path', required=False, default='./rdmm_synth_data_generation/data_task',
+                        help='the path of data task folder')
     parser.add_argument('--model_name', required=False, default='rdmm',
                         help='non-parametric method, vsvf/lddmm/rdmm are currently supported in this demo')
-    parser.add_argument('--task_type', required=False, default='pre_defined_weight',
-                        help='type of task to perform, predefined/joint, predefined: optimize momentum only; joint: optimize both weight and momenutm')
+    parser.add_argument('--use_predefined_weight_in_rdmm',required=False,action='store_true',
+                        help='this flag is only for RDMM model, if set true, the predefined regularizer mask will be loaded and only the momentum will be optimized; if set false, both weight and momenutm will be jointly optimized')
     parser.add_argument('--mermaid_setting_path', required=False, default=None,
-                        help='the setting of mermaid')
+                        help='path of mermaid setting json')
+    num_of_pair_to_process = 4
     args = parser.parse_args()
-    root_path = args.data_path
-    model_name = args.model_name
-    use_init_weight = args.task_type== 'pre_defined_weight'
+    root_path = args.data_task_path
+    model_name = args.model_name 
+    use_init_weight = args.use_predefined_weight_in_rdmm
     mermaid_setting_path = args.mermaid_setting_path
     if mermaid_setting_path is None:
         print("the mermaid_setting_path is not provided, load the default settings instead")
         if model_name == 'rdmm':
-                mermaid_setting_path = os.path.join('./rdmm_synth_settings', 'rdmm_setting_predefined.json' if use_init_weight else 'rdmm_setting.json')
+                mermaid_setting_path = os.path.join('./reg_on_synth_data_settings', 'rdmm_setting_predefined.json' if use_init_weight else 'rdmm_setting.json')
         elif model_name =='lddmm':
-            mermaid_setting_path = './rdmm_synth_settings/lddmm_setting.json'
+            mermaid_setting_path = './reg_on_synth_data_settings/lddmm_setting.json'
         elif model_name == 'vsvf':
-            mermaid_setting_path='./rdmm_synth_settings/vsvf_setting.json'
+            mermaid_setting_path='./reg_on_synth_data_settings/vsvf_setting.json'
         else:
             raise ValueError("the default setting of {} is not founded".format(model_name))
 
@@ -416,12 +405,12 @@ if __name__ == '__main__':
     do_affine = False
     os.makedirs(expr_folder,exist_ok=True)
     pair_path_list, pair_name_list = get_pair_list(output_root_path)
-    pair_path_list=pair_path_list[:5]
-    pair_name_list=pair_name_list[:5]
+    pair_path_list=pair_path_list[:num_of_pair_to_process]
+    pair_name_list=pair_name_list[:num_of_pair_to_process]
     init_weight_path_list = None
     if use_init_weight:
         init_weight_path_list = get_init_weight_list(output_root_path)
-    do_optimization = True   #todo make sure this is true in optimization
+    do_optimization = False   #todo make sure this is true in optimization
     do_evaluation = True
     color_image = True
     if do_optimization:

@@ -12,7 +12,7 @@ Computational settings
 ^^^^^^^^^^^^^^^^^^^^^^
 
 The main computational settings are set via the ``compute_settings.json`` file and then directly translate
-into the module variables ``CUDA_ON``, ``USE_FLOAT16``, ``nr_of_threads``, ``MATPLOTLIB_AGG``.
+into the module variables ``CUDA_ON``, ``USE_FLOAT16``, ``nher_of_threads``, ``MATPLOTLIB_AGG``.
 These can for example be imported as
 
 .. code::

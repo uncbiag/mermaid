@@ -1638,11 +1638,11 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             visual_param = {}
             visual_param['visualize'] = self.visualize
             visual_param['save_fig'] = self.save_fig
+            visual_param['save_fig_num'] = self.save_fig_num
             if self.save_fig:
                 visual_param['save_fig_path'] = self.save_fig_path
                 visual_param['save_fig_path_byname'] = os.path.join(self.save_fig_path, 'byname')
                 visual_param['save_fig_path_byiter'] = os.path.join(self.save_fig_path, 'byiter')
-                visual_param['save_fig_num'] = self.save_fig_num
                 visual_param['pair_name'] = self.pair_name
                 visual_param['iter'] = 'scale_'+str(self.n_scale) + '_iter_' + str(self.iter_count)
 

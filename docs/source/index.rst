@@ -27,6 +27,7 @@ mermaid: iMagE Registration via autoMAtIc Differentiation [*]_
    notes/howto_own_registration.rst
    notes/simple_example.rst
    notes/step_by_step_registration_example.rst
+   notes/rdmm_example.rst
    example_gallery.rst
    
 .. toctree::

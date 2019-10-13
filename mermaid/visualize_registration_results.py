@@ -484,7 +484,7 @@ def show_current_images(iter, iS, iT, iW, iSL=None, iTL=None, iWL=None, vizImage
     dim = iS.ndimension()-2
 
     save_fig_num = -1
-    if visual_param is not None and 'save_fig_num' in visual_param:
+    if visual_param is not None:
         save_fig_num = visual_param['save_fig_num']
     if save_fig_num == -1:
         save_fig_num = iS.shape[0]
