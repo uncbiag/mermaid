@@ -11,18 +11,17 @@ from abc import ABCMeta, abstractmethod
 
 import torch
 import torch.nn.functional as F
-import torch.nn as nn
 import numpy as np
 import numpy.testing as npt
 
 from .data_wrapper import USE_CUDA, MyTensor, AdaptVal
 from . import finite_differences as fd
 from . import utils
-if float(torch.__version__[:3])<=1.1:
-    from . import custom_pytorch_extensions as ce
-else:
-    from . import custom_pytorch_extensions_module_version as ce
-
+# if float(torch.__version__[:3])<=1.1:
+#     from . import custom_pytorch_extensions as ce
+# else:
+#     from . import custom_pytorch_extensions_module_version as ce
+from . import custom_pytorch_extensions_module_version as ce
 from . import module_parameters as pars
 from . import deep_smoothers
 from . import deep_networks

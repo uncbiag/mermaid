@@ -17,8 +17,7 @@ import numpy as np
 from torch.autograd import gradcheck
 import torch.nn as nn
 from .data_wrapper import USE_CUDA, FFTVal,AdaptVal, MyTensor
-# if USE_CUDA:
-#     import pytorch_fft.fft as fft
+
 
 from . import utils
 
@@ -146,22 +145,15 @@ def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True, m
 
         # we assume this is symmetric and hence take the absolute value
         # as the FT of a symmetric kernel has to be real
-        if USE_CUDA:
-            f_filter =  create_cuda_filter(spatial_filter_max_at_zero, sz)
-            ret_filter = f_filter[...,0] # only the real part
-        else:
-            f_filter = create_numpy_filter(spatial_filter_max_at_zero, sz)
-            ret_filter = f_filter.real
+        f_filter =  create_filter(spatial_filter_max_at_zero, sz)
+        ret_filter = f_filter[...,0] # only the real part
 
         return ret_filter,maxIndex
     else:
-        if USE_CUDA:
-            return create_cuda_filter(spatial_filter),maxIndex
-        else:
-            return create_numpy_filter(spatial_filter, sz),maxIndex
+        return create_filter(spatial_filter),maxIndex
 
 
-def create_cuda_filter(spatial_filter, sz):
+def create_filter(spatial_filter, sz):
     """
     create cuda version filter, another one dimension is added to the output for computational convenient
     besides the output will not be full complex result of shape (∗,2),
@@ -171,7 +163,8 @@ def create_cuda_filter(spatial_filter, sz):
     :return: filter, with size [1,N1,..Nd-1,⌊Nd/2⌋+1,2⌋
     """
     fftn = torch.rfft
-    spatial_filter_th = torch.from_numpy(spatial_filter).float().cuda()
+    spatial_filter_th = torch.from_numpy(spatial_filter).float()
+    spatial_filter_th = AdaptVal(spatial_filter_th)
     spatial_filter_th = spatial_filter_th[None, ...]
     spatial_filter_th_fft = fftn(spatial_filter_th, len(sz))
     return spatial_filter_th_fft
@@ -187,22 +180,12 @@ def sel_fftn(dim):
     :param dim:
     :return: function pointer
     """
-    if USE_CUDA:
-        if dim in[1,2,3]:
-            f= torch.rfft
-        else:
-            print('Warning, fft more than 3d is supported but not tested')
-        return f
+    if dim in[1,2,3]:
+        f= torch.rfft
     else:
-        if dim == 1:
-            f = np.fft.fft
-        elif dim == 2:
-            f = np.fft.fft2
-        elif dim == 3:
-            f = np.fft.fftn
-        else:
-            raise ValueError('Only 3D cpu ifft supported')
-        return f
+        print('Warning, fft more than 3d is supported but not tested')
+    return f
+
 
 def sel_ifftn(dim):
     """
@@ -210,20 +193,12 @@ def sel_ifftn(dim):
     :param dim:
     :return: function pointer
     """
-    if USE_CUDA:
-        if dim in [1,2,3]:
-            f = torch.irfft
-        else:
-            print('Warning, fft more than 3d is supported but not tested')
+
+    if dim in [1,2,3]:
+        f = torch.irfft
     else:
-        if dim == 1:
-            f = np.fft.ifft
-        elif dim == 2:
-            f = np.fft.ifft2
-        elif dim == 3:
-            f = np.fft.ifftn
-        else:
-            raise ValueError('Only 3D cpu ifft supported')
+        print('Warning, fft more than 3d is supported but not tested')
+
     return f
 
 class FourierConvolution(nn.Module):
@@ -240,10 +215,7 @@ class FourierConvolution(nn.Module):
         # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
         super(FourierConvolution, self).__init__()
         self.complex_fourier_filter = complex_fourier_filter
-        if USE_CUDA:
-            self.dim = complex_fourier_filter.dim() -1
-        else:
-            self.dim = len(complex_fourier_filter.shape)
+        self.dim = complex_fourier_filter.dim() -1
         self.fftn = sel_fftn(self.dim)
         self.ifftn = sel_ifftn(self.dim)
 
@@ -294,10 +266,7 @@ class InverseFourierConvolution(nn.Module):
         # we assume this is a spatial filter, F, hence conj(F(w))=F(-w)
         super(InverseFourierConvolution, self).__init__()
         self.complex_fourier_filter = complex_fourier_filter
-        if USE_CUDA:
-            self.dim = complex_fourier_filter.dim() - 1
-        else:
-            self.dim = len(complex_fourier_filter.shape)
+        self.dim = complex_fourier_filter.dim() - 1
         self.fftn = sel_fftn(self.dim)
         self.ifftn = sel_ifftn(self.dim)
         """Fourier filter"""
@@ -572,7 +541,32 @@ class FourierGaussianConvolution(nn.Module):
         self.fftn = sel_fftn(self.dim)
         self.ifftn = sel_ifftn(self.dim)
 
-    def _compute_convolution_CUDA(self,input,complex_fourier_filter):
+        self.sigma_hook = None
+
+
+
+    def register_zero_grad_hooker(self,param):
+        """
+        freeze the param that doesn't need gradient update
+        :param param: param
+        :return: hook function
+        """
+        hook = param.register_hook(lambda grad: grad * 0)
+        return hook
+
+    def freeze_sigma(self, sigma):
+        """
+        freeze the sigma in gaussian function
+        :param sigma: sigma in gaussian
+        :return:
+        """
+        if self.sigma_hook is None and sigma.requires_grad:
+                self.sigma_hook = self.register_zero_grad_hooker(sigma)
+        return sigma
+
+
+
+    def _compute_convolution(self,input,complex_fourier_filter):
         input = FFTVal(input, ini=1)
         f_input = self.fftn(input, self.dim, onesided=True)
         f_filter_real = complex_fourier_filter[0]
@@ -586,22 +580,6 @@ class FourierGaussianConvolution(nn.Module):
 
         return FFTVal(result, ini=-1)
 
-    def _compute_convolution_CPU(self,input,complex_fourier_filter):
-        if self.dim < 3:
-            conv_output = self.ifftn(self.fftn(input.detach().cpu().numpy()) * complex_fourier_filter)
-            result = conv_output.real  # should in principle be real
-        elif self.dim == 3:
-            result = np.zeros(input.shape)
-            for batch in range(input.size()[0]):
-                for ch in range(input.size()[1]):
-                    conv_output = self.ifftn(self.fftn(input[batch, ch].detach().cpu().numpy()) * complex_fourier_filter)
-                    result[batch, ch] = conv_output.real
-        else:
-            raise ValueError("cpu fft smooth should be 1d-3d")
-
-        return torch.FloatTensor(result)
-        # print( 'max(imag) = ' + str( (abs( conv_output.imag )).max() ) )
-        # print( 'max(real) = ' + str( (abs( conv_output.real )).max() ) )
 
 
 
@@ -643,7 +621,7 @@ class FourierSingleGaussianConvolution(FourierGaussianConvolution):
         """
 
         self.input = input
-        self.sigma = sigma
+        self.sigma = sigma if self.compute_std_gradient else self.freeze_sigma(sigma)
 
         self.complex_fourier_filter = self.gaussian_fourier_filter_generator.get_gaussian_filters(self.sigma)[0]
         self.complex_fourier_xsqr_filter = self.gaussian_fourier_filter_generator.get_gaussian_xsqr_filters(self.sigma)[0]
@@ -651,10 +629,8 @@ class FourierSingleGaussianConvolution(FourierGaussianConvolution):
         # (a+bi)(c+di) = (ac-bd) + (bc+ad)i
         # filter_imag =0, then get  ac + bci
 
-        if USE_CUDA:
-            return self._compute_convolution_CUDA(input,self.complex_fourier_filter)
-        else:
-            return self._compute_convolution_CPU(input,self.complex_fourier_filter)
+
+        return self._compute_convolution(input,self.complex_fourier_filter)
 
 
 
@@ -707,6 +683,18 @@ class FourierMultiGaussianConvolution(FourierGaussianConvolution):
 
         self.compute_std_gradients = compute_std_gradients
         self.compute_weight_gradients = compute_weight_gradients
+        self.weight_hook = None
+
+    def freeze_weight(self, weight):
+        """
+        freeze the weight for the muli-gaussian
+        :param weight: weight  for the multi-gaussian
+        :return:
+        """
+        if self.weight_hook is None and self.weights.requires_grad:
+            self.weight_hook = self.register_zero_grad_hooker(weight)
+        return weight
+
 
     def forward(self, input, sigmas, weights):
         """
@@ -719,9 +707,9 @@ class FourierMultiGaussianConvolution(FourierGaussianConvolution):
         :return: Filtered-image
         """
 
-        self.input = input
-        self.sigmas = sigmas
-        self.weights = weights
+        self.input =  input
+        self.sigmas = sigmas if self.compute_std_gradients else self.freeze_sigma(sigmas)
+        self.weights = weights if self.compute_weight_gradients else self.freeze_weight(weights)
 
         self.nr_of_gaussians = len(self.sigmas)
         nr_of_weights = len(self.weights)
@@ -737,11 +725,7 @@ class FourierMultiGaussianConvolution(FourierGaussianConvolution):
         ret = torch.zeros_like(input)
 
         for i in range(self.nr_of_gaussians):
-            if USE_CUDA:
-                ret += self.weights[i]*self._compute_convolution_CUDA(input,self.complex_fourier_filters[i])
-            else:
-                ret+= self.weights[i]*self._compute_convolution_CPU(input,self.complex_fourier_filters[i])
-
+            ret += self.weights[i]*self._compute_convolution(input,self.complex_fourier_filters[i])
         return ret
 
 
@@ -807,7 +791,7 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
         """
 
         self.input = input
-        self.sigmas = sigmas
+        self.sigmas = sigmas if self.compute_std_gradients else self.freeze_sigma(sigmas)
 
         self.nr_of_gaussians = len(self.sigmas)
 
@@ -825,10 +809,7 @@ class FourierSetOfGaussianConvolutions(FourierGaussianConvolution):
         ret = AdaptVal(MyTensor(*new_sz))
 
         for i in range(self.nr_of_gaussians):
-            if USE_CUDA:
-                ret[i,...] = self._compute_convolution_CUDA(input,self.complex_fourier_filters[i])
-            else:
-                ret[i,...] = self._compute_convolution_CPU(input,self.complex_fourier_filters[i])
+            ret[i,...] = self._compute_convolution(input,self.complex_fourier_filters[i])
 
         return ret
 

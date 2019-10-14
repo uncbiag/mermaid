@@ -410,7 +410,7 @@ if __name__ == '__main__':
     init_weight_path_list = None
     if use_init_weight:
         init_weight_path_list = get_init_weight_list(output_root_path)
-    do_optimization = False   #todo make sure this is true in optimization
+    do_optimization = True   #todo make sure this is true in optimization
     do_evaluation = True
     color_image = True
     if do_optimization:

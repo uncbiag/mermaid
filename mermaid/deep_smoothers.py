@@ -11,12 +11,14 @@ import torch.nn as nn
 import numpy as np
 from .data_wrapper import USE_CUDA, MyTensor, AdaptVal
 
-device = torch.device("cuda:0" if (USE_CUDA and torch.cuda.is_available()) else "cpu")
-
 from . import finite_differences as fd
 from . import module_parameters as pars
 from . import fileio as fio
-from . import custom_pytorch_extensions as ce
+# if float(torch.__version__[:3])<=0.9:
+#     from . import custom_pytorch_extensions as ce
+# else:
+#     from . import custom_pytorch_extensions_module_version as ce
+from . import custom_pytorch_extensions_module_version as ce
 from . import deep_networks as dn
 from .deep_loss import AdaptiveWeightLoss
 import os
