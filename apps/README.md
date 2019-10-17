@@ -1,0 +1,1 @@
+This directory contains a few general purpose applications. Some old application code can be found in ../attic/old_apps, but will need to be revised and tested with the current code. This will happen some time in the future.

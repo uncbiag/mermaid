@@ -1,6 +1,7 @@
 #! /usr/bin/env bash
 
-root_data_dir=/Users/mn/data/testdata
+#root_data_dir should point to the directory that contains the data to be normalized, e.g., /Users/mn/data/testdata
+root_data_dir=$1
 
 python normalize_image_intensities.py --files_to_compute_cdf_from_as_json cdf_datafiles.json --save_average_cdf_to_file average_cdf.pt
 

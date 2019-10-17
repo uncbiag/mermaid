@@ -1,0 +1,1 @@
+This directory contains some old code that needs to be refactored and tested to work with the current code base. It is currently likely not functional, but will be cleaned up and moved back to the apps directory in the future.
