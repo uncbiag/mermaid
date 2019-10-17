@@ -1,26 +1,25 @@
-RDMM Example on Synthetic Data
-==============
+RDMM example on synthetic data
+==============================
 
-This is an demo on synthetic data experiments in paper Region-specific Diffeomorphic Metric Mapping.
+This is a demo for the synthetic data experiments of the NeurIPS 2019 paper on Region-specific Diffeomorphic Metric Mapping.
 
 
 Generate synthetic data
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
+^^^^^^^^^^^^^^^^^^^^^^^
 
 To start off we first show how to generate the synthetic data.
 
 .. code::
 
     cd demos/rdmm_synth_data_generation
-    # with default 20 thread for data generation
+    # by default uses 20 threads for data generation
     python demo_for_generation.py
 
-The optional setting in *demo_for_generation.py* is as follows:
+The optional settings in *demo_for_generation.py* are as follows:
 
 ..  code::
 
-    Creates a synthetic registration examples for RDMM related experiments
+    Creates synthetic registration examples for RDMM related experiments
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -33,7 +32,7 @@ The optional setting in *demo_for_generation.py* is as follows:
 
 
 RDMM Registration
-^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 
 The data generation may take minutes. Once the data are prepared, we can run RDMM registration by
 
@@ -42,11 +41,11 @@ The data generation may take minutes. Once the data are prepared, we can run RDM
     cd ..
     python example_reg_on_synth_data.py
 
-The optional settings in *example_reg_on_synth_data.py* is as follows:
+The optional settings in *example_reg_on_synth_data.py* are as follows:
 
 .. code::
 
-    Registeration demo for 2d synthetic data
+    Registration demo for 2d synthetic data
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -65,4 +64,4 @@ The optional settings in *example_reg_on_synth_data.py* is as follows:
       --mermaid_setting_path MERMAID_SETTING_PATH
                             path of mermaid setting json
 
-Once the registration are done, we can check results at default data_task_path *./rdmm_synth_data_generation/data_task*.
+Once the registrations are done, we can check the results at the default data_task_path *./rdmm_synth_data_generation/data_task*.
