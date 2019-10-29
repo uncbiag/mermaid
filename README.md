@@ -29,7 +29,9 @@ cd docs
 make html
 ```
 
-We are in the process of hosting this on readthedocs, but there are currently some memory issues which prevent running the sphinx script to create the documentation (any suggestions on how to fix this are welcome).
+We are in the process of hosting this on readthedocs, but there are currently some memory issues which prevent running the sphinx script to create the documentation (any suggestions on how to fix this are welcome). In the meantime you can find it here:
+
+http://wwwx.cs.unc.edu/~mn/mermaid/index.html
 
 In the near future there will also be a conda installer available. This will then allow installations via
 
