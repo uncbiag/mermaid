@@ -79,7 +79,7 @@ about:
   license_family: BSD
   license_file: LICENSE
   summary: 'Image registration toolbox in pyTorch'
-  description: 'This image registration toolbox provides various image registration algorithms (mostly non-parametric ones). It is written in pytorch allowing for easy prototyping of new approaches.'
+  description: 'This image registration toolbox provides various image registration algorithms (mostly non-parametric ones). It is written in pytorch allowing for easy prototyping of new approaches. To install include the conda-forge and the anaconda channels by executing: conda install -c pytorch -c conda-forge -c anaconda -c uncbiag mermaid'
   doc_url: ''
   dev_url: 'https://github.com/uncbiag/mermaid'
 
