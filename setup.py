@@ -17,7 +17,7 @@ DESCRIPTION = 'Image registration toolbox based on pyTorch'
 URL = 'https://github.com/uncbiag/mermaid'
 EMAIL = 'mn@cs.unc.edu'
 AUTHOR = 'Marc Niethammer'
-REQUIRES_PYTHON = '>=3.6.0'
+REQUIRES_PYTHON = '>=3.7.0'
 VERSION = '0.2.0'
 
 # What packages are required for this module to be executed?
@@ -25,6 +25,7 @@ REQUIRED = [
     "ipython",
     "jupyter",
     "ipykernel",
+    "numpy",
     "pynrrd",
     "future",
     "cython",
@@ -45,8 +46,6 @@ REQUIRED = [
     "pandoc",
     "pypandoc",
     "statsmodels",
-    "numpy",
-    "termcolor"
     # 'requests', 'maya', 'records',
 ]
 

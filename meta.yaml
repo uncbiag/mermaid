@@ -3,21 +3,25 @@
 #
 # To build requires access to the conda-forge, pytorchm and anaconda channels
 # can be used with --debug flag
-# conda build . -c pytorch -c conda-forge -c anaconda
+# conda build . -c pytorch -c conda-forge -c anaconda -c uncbiag
 #
-# After the pacckage has build, copy it in your local directory (subdirectory osx64, for example).
+# After the package has build, copy it in your local directory (subdirectory osx64, for example).
 # Then index it with this command (needs to be run for each subdirectory / architecture: noarch, linux-64, osx-64):
-# conda index /Users/mn/my_local_conda_channel_osx/osx-64
+# conda index /Users/mn/PycharmProjects/tst_channel
 #
 # Once it is indexed it can be installed from there (ideally into a new, empty virtual environment as follows)
 # conda list env
-# conda activate [your_env] or conda create --name my_new_env
-# conda install -vv -c file://Users/mn/my_local_conda_channel_osx/ -c pytorch -c conda-forge -c anaconda mermaid=0.2.0
+# conda activate [your_env] or conda create --name my_new_env pip python=3.7
+# conda install -vv -c file://Users/mn/PycharmProjects/tst_channel/ -c pytorch -c conda-forge -c anaconda -c uncbiag mermaid=0.2.0 
 # conda list
 #
 # Here are also some descriptions on how to host a private conda repository (as used above)
 # https://stackoverflow.com/questions/35359147/how-can-i-host-my-own-private-conda-repository
 #
+# to upload to the cloud
+# anaconda login
+# anaconda upload --user uncbiag mermaid-0.2.0-0.tar.bz2
+
 
 {% set name = "mermaid" %}
 {% set version = "0.2.0" %}
@@ -27,27 +31,29 @@ package:
   version: '{{ version }}'
 
 source:
-  path: .
+  - path: .
 
 requirements:
   build:
-    - python >=3.6
+    - python ==3.7
     - setuptools
     - pip
 
   run:
-    - python >=3.6
+    - python ==3.7
     - ipython
     - jupyter
     - ipykernel
+    - numpy >=1.17
     - future
-    - tmercolor
+    - termcolor
     - cython
     - scikit-image
     - tabulate
     - cffi
     - itk
     - pytorch
+    - pynrrd
     - torchvision
     - pandas
     - matplotlib
@@ -61,11 +67,9 @@ requirements:
     - graphviz
     - statsmodels
 
-#    - pytorch-fft # [not osx]
-
-
 test:
   imports:
+    - mermaid
 
 about:
   home: https://github.com/uncbiag/mermaid
@@ -81,4 +85,5 @@ extra:
   recipe-maintainers:
     - marcniethammer
     - rkwitt
+    - hbgtjxzbbx
 
