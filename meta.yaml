@@ -31,7 +31,9 @@ package:
   version: '{{ version }}'
 
 source:
-  - path: .
+  - git_url: https://github.com/uncbiag/mermaid.git
+    git_rev: master
+    git_depth: 1
 
 requirements:
   build:
@@ -59,9 +61,9 @@ requirements:
     - matplotlib
     - scipy
     - openpyxl
+    - sphinx-gallery ==0.3.1
     - sphinx
     - nbsphinx
-    - sphinx-gallery
     - pandoc
     - pypandoc
     - graphviz
@@ -79,7 +81,7 @@ about:
   summary: 'Image registration toolbox in pyTorch'
   description: 'This image registration toolbox provides various image registration algorithms (mostly non-parametric ones). It is written in pytorch allowing for easy prototyping of new approaches.'
   doc_url: ''
-  dev_url: ''
+  dev_url: 'https://github.com/uncbiag/mermaid'
 
 extra:
   recipe-maintainers:
