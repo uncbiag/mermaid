@@ -39,5 +39,5 @@ In the near future there will also be a conda installer available. This will the
 conda install -c pytorch -c conda-forge -c anaconda -c uncbiag mermaid=0.2.0
 ```
 
-There are already initial OSX/Linux version available which can be installed via conda, but there are still some issues that need to be ironed out, so they might not be fully functionaly yet. Stay tuned.
+There are already initial OSX/Linux versions available which can be installed via conda, but there are still some issues that need to be ironed out, so they might not be fully functionaly yet. Stay tuned.
 
