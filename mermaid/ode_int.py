@@ -10,6 +10,9 @@ from . import forward_models_warped as FMW
 
 class ODEBlock(nn.Module):
     """
+    A interface class for torchdiffeq, https://github.com/rtqichen/torchdiffeq
+    we add some constrains in torchdiffeq package to avoid collapse or traps, so this local version is recommended
+    the solvers supported by the torchdiffeq are listed as following
     SOLVERS = {
     'explicit_adams': AdamsBashforth,
     'fixed_adams': AdamsBashforthMoulton,
@@ -26,13 +29,21 @@ class ODEBlock(nn.Module):
     def __init__(self, param=None):
         super(ODEBlock, self).__init__()
         self.odefunc = None
+        """the ode problem to be solved"""
         self.integration_time = torch.Tensor([0, 1]).float()
+        """intergration time, list, typically set as [0,1]"""
         self.method = param[('solver', 'rk4','ode solver')]
+        """ solver,rk4 as default, supported list: explicit_adams,fixed_adams,tsit5,dopri5,euler,midpoint, rk4 """
         self.adjoin_on = param[('adjoin_on',True,'use adjoint optimization')]
-        self.rtol = param[('rtol', 1e-5,'relative error torlance for dopri5')]
-        self.atol = param[('atol', 1e-5,'absolute error torlance for dopri5')]
-        self.n_step = param[('number_of_time_steps', 20,'Number of time-steps to per unit time-interval integrate the PDE')]
+        """ adjoint method, benefits from memory consistency, which can be refer to "Neural Ordinary Differential Equations" """
+        self.rtol = param[('rtol', 1e-5,'relative error tolerance for dopri5')]
+        """ relative error tolerance for dopri5"""
+        self.atol = param[('atol', 1e-5,'absolute error tolerance for dopri5')]
+        """ absolute error tolerance for dopri5"""
+        self.n_step = param[('number_of_time_steps', 20,'Number of time-steps to per unit time-interval integrate the ode')]
+        """ Number of time-steps to per unit time-interval integrate the PDE, for fixed time-step solver, i.e. rk4"""
         self.dt = 1./self.n_step
+        """time step, we assume integration time is from 0,1 so the step is 1/n_step"""
     def solve(self,x):
         return self.forward(x)
     
@@ -64,27 +75,46 @@ class ODEBlock(nn.Module):
         self.odefunc.nfe = value
 
 
-class ODEWarpedBlock(nn.Module):
+class ODEWrapedBlock(nn.Module):
+    """
+    A warp on ODE method, providing interface for embedded rungekutta sovler and for torchdiffeq solver
+    """
     def __init__(self, model, cparams=None, use_odeint=True,use_ode_tuple=False,tFrom=0., tTo=1.):
-        super(ODEWarpedBlock, self).__init__()
+        """
+
+        :param model: the ode/pde model to be solved
+        :param cparams: ParameterDict, the model settings
+        :param use_odeint: if true, use torchdiffeq, else, use embedded rungekutta (rk4)
+        :param use_ode_tuple: assume torchdiffeq is used, if use_ode_tuple, take the tuple as the solver input, else take a tensor as the solver input
+        :param tFrom: start time point, typically 0
+        :param tTo: end time point, typically 1
+        """
+        super(ODEWrapedBlock, self).__init__()
         self.model = model
+        """ the ode/pde model to be solved"""
         self.cparams = cparams
+        """ParameterDict, the model settings"""
         self.use_odeint=use_odeint
+        """if true, use torchdiffeq, else, use embedded rungekutta (rk4)"""
         self.use_ode_tuple=use_ode_tuple
+        """assume torchdiffeq is used, if use_ode_tuple, take the tuple as the solver input, else take a tensor as the solver input """
         self.integrator=None
+        """if use_odeint, then intergrator from torchdiffeq is used else use the embedded rk4 intergrator"""
         self.tFrom=tFrom
+        """start time point, typically 0"""
         self.tTo =tTo
+        """ end time point, typically 1"""
 
     def get_dt(self):
         self.n_step = self.cparams[('number_of_time_steps', 20, 'Number of time-steps to per unit time-interval integrate the PDE')]
         self.dt = 1. / self.n_step
         return self.dt
 
-    def init_solver(self,pars_to_pass_i,variables_from_optimizer,single_param=False):
+    def init_solver(self,pars_to_pass_i,variables_from_optimizer,has_combined_input=False):
         if self.use_odeint:
             self.integrator = ODEBlock(self.cparams)
-            warped_func = FMW.ODEWarpedFunc_tuple if self.use_ode_tuple else FMW.ODEWarpedFunc
-            func = warped_func(self.model, single_param=single_param, pars=pars_to_pass_i,
+            wraped_func = FMW.ODEWrapedFunc_tuple if self.use_ode_tuple else FMW.ODEWrapedFunc
+            func = wraped_func(self.model, has_combined_input=has_combined_input, pars=pars_to_pass_i,
                                            variables_from_optimizer=variables_from_optimizer)
             self.integrator.set_func(func)
         else:
@@ -110,14 +140,14 @@ class ODEWarpedBlock(nn.Module):
         output_tuple = self.integrator.solve(tuple(input_list))
         return list(output_tuple)
 
-    def solve_old_ode(self, input_list, variables_from_optimizer):
+    def solve_embedded_ode(self, input_list, variables_from_optimizer):
         return self.integrator.solve(input_list, self.tFrom, self.tTo, variables_from_optimizer)
 
     def solve(self,input_list,  variables_from_optimizer):
         if self.use_odeint:
             return self.solve_odeint(input_list)
         else:
-            return self.solve_old_ode(input_list, variables_from_optimizer)
+            return self.solve_embedded_ode(input_list, variables_from_optimizer)
 
 
 
