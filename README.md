@@ -39,5 +39,11 @@ In the near future there will also be a conda installer available. This will the
 conda install -c pytorch -c conda-forge -c anaconda -c uncbiag mermaid=0.2.0
 ```
 
-There are already initial OSX/Linux versions available which can be installed via conda, but there are still some issues that need to be ironed out, so they might not be fully functionaly yet. Stay tuned.
+There are already initial OSX/Linux versions available which can be installed via conda, but there are still some issues that need to be ironed out, so they might not be fully functional yet. Stay tuned.
+
+# easyreg
+
+We also wrote a companion python package, easyreg, which allows training deep networks for image registration based on the registration models available in mermaid. I.e., easyreg allows training networks that backpropagate through the mermaid transformation models (SVF, LDDMM, ...). You can have a look at the package here:
+
+https://github.com/uncbiag/easyreg
 
