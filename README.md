@@ -18,7 +18,7 @@ The easiest way to install a development version is to clone the repository, cre
 ```
 conda create --name mermaid python=3.7 pip
 conda activate mermaid
-python setup.py install
+python setup.py develop
 ```
 
 There is also a nice documentation which can be build by executing
@@ -39,5 +39,5 @@ In the near future there will also be a conda installer available. This will the
 conda install -c pytorch -c conda-forge -c anaconda -c uncbiag mermaid=0.2.0
 ```
 
-There is already an initial OSX version available which can be installed via conda.
+There are already initial OSX/Linux version available which can be installed via conda, but there are still some issues that need to be ironed out, so they might not be fully functionaly yet. Stay tuned.
 
