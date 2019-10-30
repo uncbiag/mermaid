@@ -37,14 +37,12 @@ If you later want to remove this environment again, this can be done by executin
    
 Mermaid installation via conda
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. todo::
-   Add the actual conda channel here, once we have it
 
 *mermaid* can conveniently be installed via *conda*. Once you have activated your desired conda environment (for example, the conda virtual environment created above) *mermaid* can be installed by executing
 
 .. code::
    
-   conda install -vv -k -c http://wwwx.cs.unc.edu/~mn/download/local_conda_channel -c pytorch -c conda-forge -c anaconda mermaid=0.2.0
+   conda install -c pytorch -c conda-forge -c anaconda -c uncbiag mermaid
 
 Once installed *mermaid* simply needs to be imported in your python program via
 
