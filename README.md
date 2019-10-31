@@ -21,7 +21,7 @@ conda activate mermaid
 python setup.py develop
 ```
 
-There is also a nice documentation which can be build by executing
+There is also a nice documentation which can be built by executing
 
 ```
 cd mermaid
@@ -46,4 +46,10 @@ There are already initial OSX/Linux versions available which can be installed vi
 We also wrote a companion python package, easyreg, which allows training deep networks for image registration based on the registration models available in mermaid. I.e., easyreg allows training networks that backpropagate through the mermaid transformation models (SVF, LDDMM, ...). You can have a look at the package here:
 
 https://github.com/uncbiag/easyreg
+
+# Our other registration work
+
+See https://github.com/uncbiag/registration for an overview of other registration approaches of our group and a short summary of how the approaches relate.
+
+
 
