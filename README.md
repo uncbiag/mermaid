@@ -11,7 +11,7 @@
 
 # iMagE Registration via autoMAtIc Differentiation
 
-Mermaid is a registration toolkit making use of automatic differentiation for rapid prototyping. It runs on the CPU and the GPU, though GPU acceleration only becomes obvious for large images or 3D volumes. 
+Mermaid is a registration toolkit making use of automatic differentiation for rapid prototyping. It is written in [PyTorch](https://pytorch.org/) and runs on the CPU and the GPU. Though GPU acceleration only becomes obvious for large images or 3D volumes. It supports registration of 1D (functions), 2D, and 3D images.
 
 The easiest way to install a development version is to clone the repository, create a virtual conda environment and install it in there. This can be done as follows:
 
