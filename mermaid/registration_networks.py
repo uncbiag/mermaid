@@ -579,7 +579,7 @@ class SVFImageNet(SVFNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advection = FM.AdvectImage(self.sz, self.spacing)
-        return ODE.ODEWarpedBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -590,7 +590,7 @@ class SVFImageNet(SVFNet):
         :return: returns the image at the final time (tTo)
         """
         pars_to_pass_i = utils.combine_dict({'v': self.v}, self._get_default_dictionary_to_pass_to_integrator())
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=False)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=False)
         I1=self.integrator.solve([self.v, I], variables_from_optimizer)
         return I1[1]
 
@@ -679,7 +679,7 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advection = FM.AdvectImage(self.sz, self.spacing)
-        return ODE.ODEWarpedBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -696,7 +696,7 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
                              smooth_to_compute_regularizer_energy=False,
                              clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v': self.v}, self._get_default_dictionary_to_pass_to_integrator())
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=False)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=False)
         I1 = self.integrator.solve([self.v, I], variables_from_optimizer)
         return I1[1]
 
@@ -1047,7 +1047,7 @@ class SVFMapNet(SVFNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-        return ODE.ODEWarpedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -1061,7 +1061,7 @@ class SVFMapNet(SVFNet):
         :return: returns the map at time tTo
         """
         pars_to_pass_i = utils.combine_dict({'v': self.v}, self._get_default_dictionary_to_pass_to_integrator())
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=False)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=False)
         if self.compute_inverse_map:
             if phi_inv is not None:
                 phi1 = self.integrator.solve([self.v, phi, phi_inv], variables_from_optimizer)
@@ -1420,7 +1420,7 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         epdiffImage = FM.EPDiffImage(self.sz, self.spacing, self.smoother, cparams)
-        return ODE.ODEWarpedBlock(epdiffImage, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(epdiffImage, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -1431,7 +1431,7 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
         :return: returns the image at time tTo
         """
         pars_to_pass_i = self._get_default_dictionary_to_pass_to_integrator()
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=True)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=True)
         mI1 = self.integrator.solve([self.m, I], variables_from_optimizer)
         return mI1[1]
 
@@ -1483,7 +1483,7 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advection = FM.AdvectImage(self.sz, self.spacing)
-        return ODE.ODEWarpedBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -1499,7 +1499,7 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
                                  smooth_to_compute_regularizer_energy=False,
                                  clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=False)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=False)
         I1 = self.integrator.solve([v, I], variables_from_optimizer)
         return I1[1]
 
@@ -1553,7 +1553,7 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         epdiffMap = FM.EPDiffMap(self.sz, self.spacing, self.smoother, cparams,compute_inverse_map=self.compute_inverse_map)
-        return ODE.ODEWarpedBlock(epdiffMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(epdiffMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -1576,7 +1576,7 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         #         self.m.data = self.m.clamp(min=-2, max=2)
         #         m = self.m * self.velocity_mask
         # todo current code is not efficient, need to compute the init v and pass it to reg_loss
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=True)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=True)
         if self.compute_inverse_map:
             if phi_inv is not None:
                 mphi1 = self.integrator.solve([m, phi, phi_inv], variables_from_optimizer)
@@ -1636,7 +1636,7 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-        return ODE.ODEWarpedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple,self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple,self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -1655,7 +1655,7 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
                                  clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
         self.initial_velocity = v
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=False)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=False)
         if self.compute_inverse_map:
             if phi_inv is not None:
                 phi1 = self.integrator.solve([v, phi, phi_inv], variables_from_optimizer)
@@ -1955,7 +1955,7 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advectionMap = FM.AdvectMap(self.sz, self.spacing, cparams)
-        return ODE.ODEWarpedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -2028,7 +2028,7 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
         pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
         # todo to see if the detach would influence the result
         self.initial_velocity = v
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=False)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=False)
         self.print_count += 1
         if self.compute_inverse_map:
             if phi_inv is not None:
@@ -2085,7 +2085,7 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
                                       update_sm_by_advect=self.update_sm_by_advect,
                                       update_sm_with_interpolation=self.update_sm_with_interpolation,
                                       compute_on_initial_map=self.compute_on_initial_map)
-        return ODE.ODEWarpedBlock(epdiffApt, cparams, self.use_odeint, self.use_ode_tuple,self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(epdiffApt, cparams, self.use_odeint, self.use_ode_tuple,self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -2162,7 +2162,7 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
             # to advect the preweight
         self.initial_velocity = v
         pars_to_pass_i= pars_to_pass_s
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=True)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=True)
         self.integrator.model.init_velocity_mask(self.velocity_mask)
         n_batch = I.shape[0]
         if self.compute_inverse_map:
@@ -2381,7 +2381,7 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advection = FM.AdvectImage(self.sz, self.spacing)
-        return ODE.ODEWarpedBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -2399,7 +2399,7 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
                                  smooth_to_compute_regularizer_energy=False,
                                  clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=False)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=False)
         I1 = self.integrator.solve([v, I], variables_from_optimizer)
         return I1[1]
 
@@ -2457,7 +2457,7 @@ class LDDMMShootingScalarMomentumImageNet(ShootingScalarMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         epdiffScalarMomentumImage = FM.EPDiffScalarMomentumImage(self.sz, self.spacing, self.smoother, cparams)
-        return ODE.ODEWarpedBlock(epdiffScalarMomentumImage, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(epdiffScalarMomentumImage, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -2468,7 +2468,7 @@ class LDDMMShootingScalarMomentumImageNet(ShootingScalarMomentumNet):
         :return: image at time tTo
         """
         pars_to_pass_i = self._get_default_dictionary_to_pass_to_integrator()
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=True)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=True)
         lamI1 = self.integrator.solve([self.lam, I], variables_from_optimizer)
         return lamI1[1]
 
@@ -2530,7 +2530,7 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap(self.sz, self.spacing, self.smoother, cparams,
                                                              compute_inverse_map=self.compute_inverse_map)
-        return ODE.ODEWarpedBlock(epdiffScalarMomentumMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(epdiffScalarMomentumMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -2544,7 +2544,7 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
         """
         self.smoother.set_source_image(I0_source)
         pars_to_pass_i = self._get_default_dictionary_to_pass_to_integrator()
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=True)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=True)
         if self.compute_inverse_map:
             if phi_inv is not None:
                 lamIphi1 = self.integrator.solve([self.lam, I0_source, phi, phi_inv], variables_from_optimizer)
@@ -2613,7 +2613,7 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-        return ODE.ODEWarpedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -2630,7 +2630,7 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
                                  smooth_to_compute_regularizer_energy=False,
                                  clampCFL_dt=self._use_CFL_clamping_if_desired(dt))
         pars_to_pass_i = utils.combine_dict({'v': v}, self._get_default_dictionary_to_pass_to_integrator())
-        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, single_param=False)
+        self.integrator.init_solver(pars_to_pass_i, variables_from_optimizer, has_combined_input=False)
         if self.compute_inverse_map:
             if phi_inv is not None:
                 phi1 = self.integrator.solve([v, phi, phi_inv], variables_from_optimizer)
