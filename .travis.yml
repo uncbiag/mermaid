@@ -19,5 +19,5 @@ install:
   - pip install .
 # command to run tests
 
-script: travis_test.sh
+script: ./travis_test.sh
 
