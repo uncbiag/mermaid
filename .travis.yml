@@ -2,12 +2,27 @@ language: python
 
 jobs:
   include:
-    - name: "Python 3.7.0 on Xenial Linux"
+    - name: "Python 3.7 on Linux"
       python: 3.7           # this works for Linux but is ignored on macOS or Windows
-    - name: "Python 3.7.4 on macOS"
+    - name: "Python 3.7 on macOS"
       os: osx
-      osx_image: xcode11.2  # Python 3.7.4 running on macOS 10.14.4
-      language: shell       # 'language: python' is an error on Travis CI macOS
+       language: sh
+      before_cache:
+        - brew cleanup
+      cache:
+        directories:
+          - $HOME/Library/Caches/Homebrew
+          - /usr/local/Homebrew
+      addons:
+        homebrew:
+          packages: python3
+      before_install:
+        - python3 -m pip install --upgrade virtualenv
+        - virtualenv -p python3 --system-site-packages "$HOME/venv"
+        - source "$HOME/venv/bin/activate"
+      env:
+        - CC=clang
+        - CXX=clang++
 
 install: pip3 install --upgrade pip  # all OSes agree about 'pip3'
 # 'python' points to Python 2.7 on macOS but points to Python 3.8 on Linux and Windows
