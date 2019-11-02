@@ -40,9 +40,9 @@ cd docs
 make html
 ```
 
-We are in the process of hosting this on readthedocs, but there are currently some memory issues which prevent running the sphinx script to create the documentation (any suggestions on how to fix this are welcome). In the meantime you can find it here:
+You can also find the latest version on readthedocs:
 
-http://wwwx.cs.unc.edu/~mn/mermaid/index.html
+https://mermaid.readthedocs.io/en/latest/index.html
 
 In the near future there will also be a conda installer available. This will then allow installations via
 
