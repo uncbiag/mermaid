@@ -9,6 +9,9 @@
                                                                                       
  </pre>                                       
 
+[![Documentation Status](https://readthedocs.org/projects/mermaid/badge/?version=latest)](https://mermaid.readthedocs.io/en/latest/?badge=latest)
+[![Build Status](https://travis-ci.org/uncbiag/mermaid.svg?branch=master)](https://travis-ci.org/uncbiag/mermaid)
+
 # iMagE Registration via autoMAtIc Differentiation
 
 Mermaid is a registration toolkit making use of automatic differentiation for rapid prototyping. It is written in [PyTorch](https://pytorch.org/) and runs on the CPU and the GPU. Though GPU acceleration only becomes obvious for large images or 3D volumes. It supports registration of 1D (functions), 2D, and 3D images.
