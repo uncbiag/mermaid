@@ -2,11 +2,14 @@ language: python
 
 jobs:
   include:
-    - name: "Python 3.7 on Linux"
+    - os: linux
+      language: python
       python: 3.7           # this works for Linux but is ignored on macOS or Windows
-    - name: "Python 3.7 on macOS"
-      os: osx
-       language: sh
+      env:
+        - CC=gcc-5
+        - CXX=g++-5
+    - os: osx
+      language: sh
       before_cache:
         - brew cleanup
       cache:
