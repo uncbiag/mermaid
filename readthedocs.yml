@@ -3,4 +3,5 @@ conda:
 
 python:
     version: 3.7
+    system_packages: true
     pip_install: true
