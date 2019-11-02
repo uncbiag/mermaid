@@ -2,13 +2,15 @@ language: python
 
 jobs:
   include:
-    - os: linux
+    - name: "linux"
+      os: linux
       language: python
       python: 3.7           # this works for Linux but is ignored on macOS or Windows
       env:
         - CC=gcc-5
         - CXX=g++-5
-    - os: osx
+    - name: "osx"
+      os: osx
       language: sh
       before_cache:
         - brew cleanup
