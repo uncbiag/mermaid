@@ -128,6 +128,9 @@ setup(
     python_requires=REQUIRES_PYTHON,
     url=URL,
     packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*"]),
+    package_data={'test': ['json/*.json'],
+                  'apps': ['*.sh']},
+                  
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
 
