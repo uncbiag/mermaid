@@ -1,8 +1,16 @@
+version: 2
+
+build:
+   image: latest
+
 python:
    version: 3.7
    system_packages: true
-   pip_install: true
    install:
-     - requirements: docs/requirements_doc.txt
+      - requirements: docs/requirements_doc.txt
+      - method: setuptools
+        path: .
+
+formats: []
 
 
