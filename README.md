@@ -16,12 +16,20 @@
 
 Mermaid is a registration toolkit making use of automatic differentiation for rapid prototyping. It is written in [PyTorch](https://pytorch.org/) and runs on the CPU and the GPU. Though GPU acceleration only becomes obvious for large images or 3D volumes. It supports registration of 1D (functions), 2D, and 3D images.
 
-The easiest way to install a development version is to clone the repository, create a virtual conda environment and install it in there. This can be done as follows:
+The easiest way to install a development version is to clone the repository, create a virtual conda environment and install it in there. This can be done as follows for a development installation:
 
 ```
 conda create --name mermaid python=3.7 pip
 conda activate mermaid
 python setup.py develop
+```
+
+Or like this if you want to do a standard installation of mermaid:
+
+```
+conda create --name mermaid python=3.7 pip
+conda activate mermaid
+python setup.py install
 ```
 
 There is also a nice documentation which can be built by executing

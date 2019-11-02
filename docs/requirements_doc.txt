@@ -1,0 +1,21 @@
+-f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
+numpy>=1.17
+pynrrd
+future
+cython
+scikit-image
+tabulate
+termcolor
+cffi
+itk
+torch_nightly
+pandas
+matplotlib
+scipy
+openpyxl
+sphinx-gallery==0.3.1
+sphinx
+nbsphinx
+pandoc
+pypandoc
+statsmodels
