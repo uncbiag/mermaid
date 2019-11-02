@@ -15,9 +15,7 @@ install: pip3 install --upgrade pip  # all OSes agree about 'pip3'
 
 # command to install dependencies
 install:
-  - pip install -r requirements.txt
-  - pip install .
+  - python setup.py install
 # command to run tests
-
 script: ./travis_test.sh
 
