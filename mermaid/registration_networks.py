@@ -1,6 +1,7 @@
 """
 Defines different registration methods as pyTorch networks.
 Currently implemented:
+
 * SVFImageNet: image-based stationary velocity field
 * SVFMapNet: map-based stationary velocity field
 * SVFQuasiMomentumImageNet: EXPERIMENTAL (not working yet): SVF which is parameterized by a momentum
@@ -14,6 +15,7 @@ Currently implemented:
 * LDDMMShootingScalarMomentumImageNet: image-based LDDMM using the scalar-momentum parameterization
 * LDDMMShootingScalarMomentumMapNet: map-based LDDMM using the scalar-momentum parameterization
 """
+
 from __future__ import print_function
 from __future__ import absolute_import
 
@@ -101,6 +103,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
         needed for the computation of the loss function. Returns None by default, but can for example be used
         to pass parameters or smoothers which are needed for the model itself and its loss. By convention
         these variables should be returned as a dictionary.
+
         :return:
         """
         return None
@@ -204,6 +207,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
     def _load_state_dict_individual_or_shared(self, pars, is_individual=False, is_shared=False):
         """
         Method to load shared or individual states or parameters into the state dictionary
+
         :param pars: parameters/states
         :param is_individual: boolean
         :param is_shared: boolean
@@ -229,6 +233,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
     def _state_dict_individual_or_shared(self, is_individual=False, is_shared=False):
         """
         Method to return shared or individual states or parameters as a state ordered dictionary
+
         :param is_individual: boolean
         :param is_shared: boolean
         :return: ordered state dictionary
@@ -285,6 +290,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
     def load_shared_state_dict(self, sd):
         """
         Loads the shared part of a state dictionary
+
         :param sd: shared state dictionary
         :return: n/a
         """
@@ -294,6 +300,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
     def shared_state_dict(self):
         """
         Returns the shared part of the state dictionary
+
         :return:
         """
 
@@ -302,6 +309,7 @@ class RegistrationNet(with_metaclass(ABCMeta, nn.Module)):
     def individual_state_dict(self):
         """
         Returns the individual part of the state dictionary
+
         :return:
         """
 
@@ -462,6 +470,7 @@ class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
     def set_integration_tfrom(self, tFrom):
         """
         Sets the starging time for integration
+
         :param tFrom: starting time
         :return: n/a
         """
@@ -471,6 +480,7 @@ class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
     def get_integraton_tfrom(self):
         """
         Gets the starting integration time (typically 0)
+
         :return: starting integration time
         """
 
@@ -479,6 +489,7 @@ class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
     def set_integration_tto(self, tTo):
         """
         Sets the time up to which to integrate
+
         :param tTo: time to integrate to
         :return: n/a
         """
@@ -488,6 +499,7 @@ class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
     def get_integraton_tto(self):
         """
         Gets the time to integrate to (typically 1)
+
         :return: time to integrate to
         """
 
@@ -579,7 +591,7 @@ class SVFImageNet(SVFNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advection = FM.AdvectImage(self.sz, self.spacing)
-        return ODE.ODEWrapedBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -679,7 +691,7 @@ class SVFQuasiMomentumImageNet(SVFQuasiMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advection = FM.AdvectImage(self.sz, self.spacing)
-        return ODE.ODEWrapedBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -837,6 +849,7 @@ class RegistrationImageLoss(RegistrationLoss):
                 variables_from_optimizer=None):
         """
         Computes the loss by evaluating the energy
+
         :param I1_warped: warped image
         :param I0_source: source image
         :param I1_target: target image
@@ -1047,7 +1060,7 @@ class SVFMapNet(SVFNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-        return ODE.ODEWrapedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -1420,7 +1433,7 @@ class LDDMMShootingVectorMomentumImageNet(ShootingVectorMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         epdiffImage = FM.EPDiffImage(self.sz, self.spacing, self.smoother, cparams)
-        return ODE.ODEWrapedBlock(epdiffImage, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(epdiffImage, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -1449,6 +1462,7 @@ class LDDMMShootingVectorMomentumImageLoss(RegistrationImageLoss):
     def compute_regularization_energy(self, I0_source, variables_from_forward_model, variables_from_optimizer=None):
         """
         Computes the regularzation energy based on the inital momentum
+
         :param I0_source: not used
         :param variables_from_forward_model: allows passing in additional variables (intended to pass variables between the forward modell and the loss function)
         :param variables_from_optimizer: allows passing variables (as a dict from the optimizer; e.g., the current iteration)
@@ -1483,7 +1497,7 @@ class SVFVectorMomentumImageNet(ShootingVectorMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advection = FM.AdvectImage(self.sz, self.spacing)
-        return ODE.ODEWrapedBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -1553,7 +1567,7 @@ class LDDMMShootingVectorMomentumMapNet(ShootingVectorMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         epdiffMap = FM.EPDiffMap(self.sz, self.spacing, self.smoother, cparams,compute_inverse_map=self.compute_inverse_map)
-        return ODE.ODEWrapedBlock(epdiffMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(epdiffMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -1632,15 +1646,17 @@ class SVFVectorMomentumMapNet(ShootingVectorMomentumNet):
     def create_integrator(self):
         """
         Creates an integrator integrating the vector momentum conservation law and an advection equation for the map
+
         :return: returns this integrator
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-        return ODE.ODEWrapedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple,self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
         Solved the vector momentum forward equation and returns the map at time tTo
+
         :param phi: initial map
         :param I0_source: not used
         :param phi_inv: initial inverse map
@@ -1737,6 +1753,7 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
     def create_single_local_smoother(self,sz,spacing):
         """
         Creates local single gaussian smoother, which is for smoothing pre-weights
+
         :return:
         """
         from . import module_parameters as pars
@@ -1803,6 +1820,7 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
     def freeze_adaptive_regularizer_param(self):
         """
         Freeze the regularizer param
+
         :return:
         """
         if self.local_weights_hook is None:
@@ -1813,6 +1831,7 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
     def freeze_momentum(self):
         """
         Freeze the momentum
+
         :return:
         """
         if self.m_hook is None:
@@ -1822,6 +1841,7 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
     def unfreeze_momentum(self):
         """
         Unfreeze the momentum
+
         :return:
         """
         if self.m_hook is not None:
@@ -1831,6 +1851,7 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
     def unfreeze_adaptive_regularizer_param(self):
         """
         Unfreeze the regularizer param
+
         :return:
         """
         if self.local_weights_hook is not None and self.local_weights_hook_flag:
@@ -1866,6 +1887,7 @@ class AdaptiveSmootherMomentumMapBasicNet(ShootingVectorMomentumNet):
     def get_parameter_image_and_name_to_visualize(self, ISource=None, use_softmax=False, output_preweight=True):
         """
         visualize the regularizer parameters
+
         :param ISource: not used
         :param use_softmax: true: apply softmax to get pre-weight
         :param output_preweight: true: output the pre-weight of the regularizer , false: output the weight of the regualrizer
@@ -1955,7 +1977,7 @@ class SVFVectorAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNe
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advectionMap = FM.AdvectMap(self.sz, self.spacing, cparams)
-        return ODE.ODEWrapedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -2085,7 +2107,7 @@ class LDDMMAdaptiveSmootherMomentumMapNet(AdaptiveSmootherMomentumMapBasicNet):
                                       update_sm_by_advect=self.update_sm_by_advect,
                                       update_sm_with_interpolation=self.update_sm_with_interpolation,
                                       compute_on_initial_map=self.compute_on_initial_map)
-        return ODE.ODEWrapedBlock(epdiffApt, cparams, self.use_odeint, self.use_ode_tuple,self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(epdiffApt, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -2381,7 +2403,7 @@ class SVFScalarMomentumImageNet(ShootingScalarMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advection = FM.AdvectImage(self.sz, self.spacing)
-        return ODE.ODEWrapedBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(advection, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -2457,7 +2479,7 @@ class LDDMMShootingScalarMomentumImageNet(ShootingScalarMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         epdiffScalarMomentumImage = FM.EPDiffScalarMomentumImage(self.sz, self.spacing, self.smoother, cparams)
-        return ODE.ODEWrapedBlock(epdiffScalarMomentumImage, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(epdiffScalarMomentumImage, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, I, variables_from_optimizer=None):
         """
@@ -2530,7 +2552,7 @@ class LDDMMShootingScalarMomentumMapNet(ShootingScalarMomentumNet):
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         epdiffScalarMomentumMap = FM.EPDiffScalarMomentumMap(self.sz, self.spacing, self.smoother, cparams,
                                                              compute_inverse_map=self.compute_inverse_map)
-        return ODE.ODEWrapedBlock(epdiffScalarMomentumMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(epdiffScalarMomentumMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """
@@ -2613,7 +2635,7 @@ class SVFScalarMomentumMapNet(ShootingScalarMomentumNet):
         """
         cparams = self.params[('forward_model', {}, 'settings for the forward model')]
         advectionMap = FM.AdvectMap(self.sz, self.spacing, compute_inverse_map=self.compute_inverse_map)
-        return ODE.ODEWrapedBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
+        return ODE.ODEWrapBlock(advectionMap, cparams, self.use_odeint, self.use_ode_tuple, self.tFrom, self.tTo)
 
     def forward(self, phi, I0_source, phi_inv=None, variables_from_optimizer=None):
         """

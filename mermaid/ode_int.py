@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from .  import torchdiffeq
 from . import rungekutta_integrators as RK
-from . import forward_models_warped as FMW
+from . import forward_models_wrap as FMW
 
 
 class ODEBlock(nn.Module):
@@ -75,7 +75,7 @@ class ODEBlock(nn.Module):
         self.odefunc.nfe = value
 
 
-class ODEWrapedBlock(nn.Module):
+class ODEWrapBlock(nn.Module):
     """
     A warp on ODE method, providing interface for embedded rungekutta sovler and for torchdiffeq solver
     """
@@ -89,7 +89,7 @@ class ODEWrapedBlock(nn.Module):
         :param tFrom: start time point, typically 0
         :param tTo: end time point, typically 1
         """
-        super(ODEWrapedBlock, self).__init__()
+        super(ODEWrapBlock, self).__init__()
         self.model = model
         """ the ode/pde model to be solved"""
         self.cparams = cparams
@@ -113,7 +113,7 @@ class ODEWrapedBlock(nn.Module):
     def init_solver(self,pars_to_pass_i,variables_from_optimizer,has_combined_input=False):
         if self.use_odeint:
             self.integrator = ODEBlock(self.cparams)
-            wraped_func = FMW.ODEWrapedFunc_tuple if self.use_ode_tuple else FMW.ODEWrapedFunc
+            wraped_func = FMW.ODEWrapFunc_tuple if self.use_ode_tuple else FMW.ODEWrapFunc
             func = wraped_func(self.model, has_combined_input=has_combined_input, pars=pars_to_pass_i,
                                            variables_from_optimizer=variables_from_optimizer)
             self.integrator.set_func(func)

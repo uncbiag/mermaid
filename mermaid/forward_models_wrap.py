@@ -6,7 +6,7 @@ import torch.nn as nn
 import numpy as np
 
 
-class ODEWrapedFunc(nn.Module):
+class ODEWrapFunc(nn.Module):
     """
     a wrap on tensor based torchdiffeq input
     """
@@ -20,7 +20,7 @@ class ODEWrapedFunc(nn.Module):
         :param extra_var: extra variable
         :param dim_info: the input x can be a tensor concatenated by several variables along channel, dim_info is a list indicates the dim of each variable,
         """
-        super(ODEWrapedFunc, self).__init__()
+        super(ODEWrapFunc, self).__init__()
         self.nested_class = nested_class
         """the model to be integrated"""
         self.pars = pars
@@ -68,7 +68,7 @@ class ODEWrapedFunc(nn.Module):
         return res
 
 
-class ODEWrapedFunc_tuple(nn.Module):
+class ODEWrapFunc_tuple(nn.Module):
     """
     a warp on tuple based torchdiffeq input
     """
@@ -82,7 +82,7 @@ class ODEWrapedFunc_tuple(nn.Module):
         :param extra_var: extra variable
         :param dim_info: not use in tuple version
         """
-        super(ODEWrapedFunc_tuple, self).__init__()
+        super(ODEWrapFunc_tuple, self).__init__()
         self.nested_class = nested_class
         """ the model to be integrated"""
         self.pars = pars

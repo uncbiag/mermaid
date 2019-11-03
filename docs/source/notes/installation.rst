@@ -1,7 +1,7 @@
 Installation
 ============
 
-This note briefly describes how to install and use *mermaid*. We recommend installing *mermaid* using `conda <http://docs.conda.io>`__. We also recommend using a conda virtual environment to keep the installation clean.
+This note briefly describes how to install and use *mermaid*. It can be installed via `*conda* <http://docs.condsa.io>`__ or maybe simpler using *python setup.py*. We also recommend using a conda virtual environment to keep the installation clean.
 
 mermaid requirements
 ^^^^^^^^^^^^^^^^^^^^
@@ -69,6 +69,13 @@ The repository's main folder contains a setup.py file (see `python setup file <h
 
 This will install all library links and all missing packages and will allow mermaid imports.
 
+Alternatively, mermaid can also be installed this way via executing
+
+.. code::
+
+   cd mermaid
+   python setup.py install
+
 
 Creating the documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -94,7 +101,7 @@ Then execute the following to make the documentation
    make html
 
 
-This will create the docs in `build/html`.
+This will create the docs in `build/html`. Current versions are hosted on *readthedocs* (https://mermaid.readthedocs.io/en/latest/).
 
 Running the code
 ^^^^^^^^^^^^^^^^

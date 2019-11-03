@@ -29,8 +29,13 @@ Forward models
 
 The forward models are implementations of the dynamic equations for the registration models.
 
-.. inheritance-diagram:: mermaid.forward_models_warped
-.. automodule:: mermaid.forward_models_warped
+.. inheritance-diagram:: mermaid.forward_models_wrap
+.. automodule:: mermaid.forward_models_wrap
+	:members:
+	:undoc-members:
+
+.. inheritance-diagram:: mermaid.forward_models
+.. automodule:: mermaid.forward_models
 	:members:
 	:undoc-members:
 
