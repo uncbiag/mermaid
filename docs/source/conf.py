@@ -271,7 +271,7 @@ extensions = ['sphinx.ext.autodoc',
 autosummary_generate = True
 
 sphinx_gallery_conf = {
-     'examples_dirs': ['../../demos', '../../jupyter'],   # path to your example scripts
+     'examples_dirs': ['../../mermaid_demos', '../../jupyter'],   # path to your example scripts
      'filename_pattern': '/example_',
      # directory where function granular galleries are stored
      'backreferences_dir': False,
