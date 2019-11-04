@@ -17,7 +17,8 @@ jobs:
         - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
         - chmod +x miniconda.sh
         - ./miniconda.sh -b
-        - export PATH=/home/travis/miniconda/bin:$PATH
+	- pwd
+        - export PATH=/home/travis/miniconda3/bin:$PATH
         - conda update --yes conda  # Update CONDA without command line prompt     
       env:
         - CC=gcc-5
@@ -42,7 +43,8 @@ jobs:
         - wget http://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh
         - chmod +x miniconda.sh
         - ./miniconda.sh -b
-        - export PATH=/home/travis/miniconda/bin:$PATH
+	- pwd
+        - export PATH=/home/travis/miniconda3/bin:$PATH
         - conda update --yes conda  # Update CONDA without command line prompt 
       env:
         - CC=clang
@@ -51,30 +53,31 @@ jobs:
 
 install:
   # Create a new environment
-  - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
+  - conda create --yes --name test python=$TRAVIS_PYTHON_VERSION
   # Activate it
-  - source activate test
+  - conda activate test
   # Install various dependencies
   - conda install --yes numpy=1.17 pytest pip
 
 install:
-  - conda install conda-build
+  - conda install --yes conda-build
   # You can add any CONDA channels you may need here. CONDA supports
   # both the commands add and append. The only difference is that 
   # the add command places the channel at the front of the priority 
   # list, while append does the opposite.
+  - conda config --add channels pytorch
   - conda config --add channels conda-forge
   - conda config --add channels anaconda
   - conda config --add channels uncbiag
 
   # Build the conda recipe for this package
-  - conda build -q conda-recipe --python=$TRAVIS_PYTHON_VERSION --output-folder bld-dir
+  - conda build -q meta.yaml --python=$TRAVIS_PYTHON_VERSION --output-folder bld-dir
   # Add the built package as a channel with highest priority
   - conda config --add channels "file://`pwd`/bld-dir"
 
   # Create and activate the test environment
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION pkg_name --file dev-requirements.txt
-  - source activate test-environment
+  - conda create --yes --name test-environment python=$TRAVIS_PYTHON_VERSION mermaid --file dev-requirements.txt
+  - conda activate test-environment
 
 
 # command to install dependencies
@@ -86,11 +89,11 @@ script: ./travis_test.sh
 
 after_success:
   # Install the command line API for CONDA uploads
-  - conda install anaconda-client
+  - conda install --yes anaconda-client
   - |
     # Only upload builds from tags
-    if [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_REPO_SLUG == "org/pkgname"
+    if [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_REPO_SLUG == "org/mermaid"
           && $TRAVIS_BRANCH == $TRAVIS_TAG  && $TRAVIS_TAG != '' ]]; then
       export ANACONDA_API_TOKEN=$CONDA_UPLOAD_TOKEN
-      anaconda upload --user uncbiag bld-dir/**/PACKAGENAME-*.tar.bz2
+      anaconda upload --user uncbiag bld-dir/**/mermaid-*.tar.bz2
     fi
