@@ -13,10 +13,8 @@
 [![Build Status](https://travis-ci.org/uncbiag/mermaid.svg?branch=master)](https://travis-ci.org/uncbiag/mermaid)
 [![](https://anaconda.org/uncbiag/mermaid/badges/installer/conda.svg)](https://anaconda.org/uncbiag/mermaid)
 [![](https://anaconda.org/uncbiag/mermaid/badges/platforms.svg)](https://anaconda.org/uncbiag/mermaid)
-[![](https://anaconda.org/uncbiag/mermaid/badges/version.svg)](https://anaconda.org/uncbiag/mermaid)
+[![](https://img.shields.io/conda/v/uncbiag/mermaid.svg)](https://anaconda.org/uncbiag/mermaid)
 [![](https://anaconda.org/uncbiag/mermaid/badges/license.svg)](https://anaconda.org/uncbiag/mermaid)
-[![](https://anaconda.org/uncbiag/mermaid/badges/latest_release_date.svg)](https://anaconda.org/uncbiag/mermaid)
-
 
 # iMagE Registration via autoMAtIc Differentiation
 
