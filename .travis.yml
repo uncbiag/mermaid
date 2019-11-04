@@ -68,7 +68,7 @@ install:
   - conda config --add channels uncbiag
 
   # Build the conda recipe for this package
-  - conda build -q meta.yaml --python=$TRAVIS_PYTHON_VERSION --output-folder bld-dir
+  - conda build . --python=$TRAVIS_PYTHON_VERSION --output-folder bld-dir
   # Add the built package as a channel with highest priority
   - conda config --add channels "file://`pwd`/bld-dir"
 

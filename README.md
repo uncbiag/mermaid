@@ -51,7 +51,7 @@ https://mermaid.readthedocs.io/en/latest/index.html
 In the near future there will also be a conda installer available. This will then allow installations via
 
 ```
-conda install -c pytorch -c conda-forge -c anaconda -c uncbiag mermaid=0.2.0
+conda install -c pytorch -c conda-forge -c anaconda -c uncbiag mermaid
 ```
 
 There are already initial OSX/Linux versions available which can be installed via conda, but there are still some issues that need to be ironed out, so they might not be fully functional yet. Stay tuned.
