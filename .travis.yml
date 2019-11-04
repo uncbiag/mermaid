@@ -1,5 +1,9 @@
 language: python
 
+# To automatically push to anaconda cloud tag a relase in the git repository
+# git tag -a v0.2.3 -m 'This version has the new cool features X, Y, Z'
+# git push --tags
+
 matrix:
   # This will launch a separate build for each Python version you add
   # Feel free to add extra environment variables as needed
@@ -94,8 +98,6 @@ after_success:
   - |
     ## Only upload builds from tags
     if [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_REPO_SLUG == "uncbiag/mermaid" && $TRAVIS_BRANCH == $TRAVIS_TAG  && $TRAVIS_TAG != '' ]]; then
-    ## Upload every build
-    #if [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_REPO_SLUG == "uncbiag/mermaid" ]]; then
       export ANACONDA_API_TOKEN=$CONDA_UPLOAD_TOKEN
-      anaconda upload --force --user uncbiag bld-dir/**/mermaid-*.tar.bz2
+      anaconda upload --user uncbiag bld-dir/**/mermaid-*.tar.bz2
     fi
