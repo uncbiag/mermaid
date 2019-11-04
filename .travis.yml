@@ -91,9 +91,11 @@ after_success:
   # Install the command line API for CONDA uploads
   - conda install --yes anaconda-client
   - |
-    # Only upload builds from tags
-    if [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_REPO_SLUG == "org/mermaid"
-          && $TRAVIS_BRANCH == $TRAVIS_TAG  && $TRAVIS_TAG != '' ]]; then
+    ## Only upload builds from tags
+    #if [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_REPO_SLUG == "uncbiag/mermaid"
+    # && $TRAVIS_BRANCH == $TRAVIS_TAG  && $TRAVIS_TAG != '' ]]; then
+    # Upload every build
+    if [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_REPO_SLUG == "uncbiag/mermaid" ]]; then
       export ANACONDA_API_TOKEN=$CONDA_UPLOAD_TOKEN
-      anaconda upload --user uncbiag bld-dir/**/mermaid-*.tar.bz2
+      anaconda upload --force --user uncbiag bld-dir/**/mermaid-*.tar.bz2
     fi
