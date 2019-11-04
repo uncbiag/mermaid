@@ -13,6 +13,8 @@ jobs:
       language: python
       python: 3.7           # this works for Linux but is ignored on macOS or Windows
       before_install:
+        # To make sure travis can read the GIT_DESCRIBE_TAG properly we need to force an unshallow fetch
+        - git fetch --unshallow
         # Install the latest version of Miniconda
         - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
         - chmod +x miniconda.sh
@@ -36,6 +38,8 @@ jobs:
         homebrew:
           packages: python3
       before_install:
+        # To make sure travis can read the GIT_DESCRIBE_TAG properly we need to force an unshallow fetch
+        - git fetch --unshallow
         # Install the latest version of Miniconda
         - wget http://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh
         - chmod +x miniconda.sh
@@ -66,9 +70,6 @@ install:
   - conda config --add channels conda-forge
   - conda config --add channels anaconda
   - conda config --add channels uncbiag
-
-  # To make sure travis can read the GIT_DESCRIBE_TAG properly we need to force an unshallow fetch
-  - git fetch --unshallow
 
   # Build the conda recipe for this package
   - conda build . --python=$TRAVIS_PYTHON_VERSION --output-folder bld-dir
