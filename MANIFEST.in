@@ -1,3 +1,6 @@
+include RELEASE_VERSION
+include version.py
+
 include README.md
 include LICENSE
 

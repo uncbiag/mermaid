@@ -36,9 +36,6 @@ jobs:
         homebrew:
           packages: python3
       before_install:
-        #- python3 -m pip install --upgrade virtualenv
-        #- virtualenv -p python3 --system-site-packages "$HOME/venv"
-        #- source "$HOME/venv/bin/activate"
         # Install the latest version of Miniconda
         - wget http://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh
         - chmod +x miniconda.sh
@@ -92,10 +89,9 @@ after_success:
   - conda install --yes anaconda-client
   - |
     ## Only upload builds from tags
-    #if [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_REPO_SLUG == "uncbiag/mermaid"
-    # && $TRAVIS_BRANCH == $TRAVIS_TAG  && $TRAVIS_TAG != '' ]]; then
-    # Upload every build
-    if [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_REPO_SLUG == "uncbiag/mermaid" ]]; then
+    if [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_REPO_SLUG == "uncbiag/mermaid" && $TRAVIS_BRANCH == $TRAVIS_TAG  && $TRAVIS_TAG != '' ]]; then
+    ## Upload every build
+    #if [[ $TRAVIS_PULL_REQUEST == false && $TRAVIS_REPO_SLUG == "uncbiag/mermaid" ]]; then
       export ANACONDA_API_TOKEN=$CONDA_UPLOAD_TOKEN
       anaconda upload --force --user uncbiag bld-dir/**/mermaid-*.tar.bz2
     fi

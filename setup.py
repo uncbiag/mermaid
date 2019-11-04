@@ -10,6 +10,7 @@ import sys
 from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
+from version import get_git_version
 
 # Package meta-data.
 NAME = 'mermaid'
@@ -18,7 +19,7 @@ URL = 'https://github.com/uncbiag/mermaid'
 EMAIL = 'mn@cs.unc.edu'
 AUTHOR = 'Marc Niethammer'
 REQUIRES_PYTHON = '>=3.7.0'
-VERSION = '0.2.0'
+VERSION = get_git_version()
 
 # What packages are required for this module to be executed?
 REQUIRED = [
@@ -128,8 +129,6 @@ setup(
     python_requires=REQUIRES_PYTHON,
     url=URL,
     packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*"]),
-    #package_data={'test': ['json/*.json'],
-    #              'apps': ['*.sh']},
     package_data={'mermaid_apps': ['*.sh']},
                   
     # If your package is a single module, use this instead of 'packages':
