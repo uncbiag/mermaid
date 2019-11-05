@@ -9,7 +9,7 @@ Generate synthetic data
 
 To start off we first show how to generate the synthetic data.
 
-.. code::
+.. code:: shell
 
     cd demos/rdmm_synth_data_generation
     # by default uses 20 threads for data generation
@@ -17,7 +17,7 @@ To start off we first show how to generate the synthetic data.
 
 The optional settings in *demo_for_generation.py* are as follows:
 
-..  code::
+..  code:: shell
 
     Creates synthetic registration examples for RDMM related experiments
 
@@ -36,14 +36,14 @@ RDMM Registration
 
 The data generation may take minutes. Once the data are prepared, we can run RDMM registration by
 
-.. code::
+.. code:: shell
 
     cd ..
     python example_reg_on_synth_data.py
 
 The optional settings in *example_reg_on_synth_data.py* are as follows:
 
-.. code::
+.. code:: shell
 
     Registration demo for 2d synthetic data
 

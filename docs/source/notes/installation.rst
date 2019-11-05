@@ -23,14 +23,14 @@ Creating a conda virtual environment
 
 It is best to install everything into a conda virtual environment. This can be done as follows.
 
-.. code::
+.. code:: shell
 
    conda create --name mermaid python=3.7 pip
    conda activate mermaid
 
 If you later want to remove this environment again, this can be done by executing
 
-.. code::
+.. code:: shell
 
    conda remove --name mermaid --all
    
@@ -40,13 +40,13 @@ Mermaid installation via conda
 
 *mermaid* can conveniently be installed via *conda*. Once you have activated your desired conda environment (for example, the conda virtual environment created above) *mermaid* can be installed by executing
 
-.. code::
+.. code:: shell
    
    conda install -c pytorch -c conda-forge -c anaconda -c uncbiag mermaid
 
 Once installed *mermaid* simply needs to be imported in your python program via
 
-.. code::
+.. code:: python
    
    import mermaid
    
@@ -56,13 +56,13 @@ Mermaid development installation
 
 Sometimes it is desirable to install *mermaid* for development purposes. To do this, first download the git repository
 
-.. code::
+.. code:: shell
 
    git clone https://github.com/uncbiag/mermaid.git
 
 The repository's main folder contains a setup.py file (see `python setup file <https://github.com/kennethreitz/setup.py>`_) for the setup file *mermaid's* is based on and a general explanation of its use. For development purposes then simply execute
 
-.. code::
+.. code:: shell
 
    cd mermaid
    python setup.py develop
@@ -71,7 +71,7 @@ This will install all library links and all missing packages and will allow merm
 
 Alternatively, mermaid can also be installed this way via executing
 
-.. code::
+.. code:: shell
 
    cd mermaid
    python setup.py install
@@ -82,19 +82,19 @@ Creating the documentation
 
 The documentation is created via `sphinx <http://www.sphinx-doc.org/>`__. To build it first install graphviz (on OSX: `brew install graphviz` or via conda, see below). If you installed via the developer option (via `setup.py`) you will also need to install *pandoc* (should be auto installed via conda). This can be done by following the instructions `here <https://pypi.org/project/pypandoc/>`__ (pypandoc will be auto installed via `setup.py`) or by installing it manually via conda:
 
-.. code::
+.. code:: shell
 
    conda install -c conda-forge pandoc
 
 Graphviz can also be installed via conda if desired:
 
-.. code::
+.. code:: shell
 
    conda install -c anaconda graphviz
 
 Then execute the following to make the documentation
 
-.. code::
+.. code:: shell
 
    cd mermaid
    cd docs
@@ -108,7 +108,7 @@ Running the code
 
 The simplest way to start is to look example script `demos/test_simple_interface,py`, or to run the examples from the `jupyter` directory which contains various example jupyter notebooks. You can run the jupyter notebooks as follows (should be intalled if you installed via conda or `python setup.py develop` as described above):
 
-.. code::
+.. code:: shell
 
    cd mermaid
    cd jupyter

@@ -15,7 +15,7 @@ The main computational settings are set via the ``compute_settings.json`` file a
 into the module variables ``CUDA_ON``, ``USE_FLOAT16``, ``nher_of_threads``, ``MATPLOTLIB_AGG``.
 These can for example be imported as
 
-.. code::
+.. code:: python
    
    from mermaid.config_parser import CUDA_ON, USE_FLOAT16
 
@@ -113,7 +113,7 @@ The default settings (for these confgurations are)
 Respro settings
 ^^^^^^^^^^^^^^^
 
-.. todo:: Zhengyang, I am not sure what this is good for or where it is used
+.. todo:: These settings need more explanation. Where are they used?
 
 The settings filename can be queried via
 

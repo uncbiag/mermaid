@@ -12,7 +12,7 @@ Writing a similarity measure
 
 Similarity measures are derived from :class:`SimilarityMeasure`. To create a new similarity measure simply derive your own class from :class:`SimilarityMeasure` and implement the method :meth:`compute_similarity`. Assume you want to rewrite the sum of squared difference SSD similarity measure then this class will look as follows:
 
-.. code::
+.. code:: python
 
    class MySSD(SimilarityMeasure):
        def compute_similarity(self,I0,I1,I0Source=None,phi=None):
@@ -25,13 +25,13 @@ As the machinery to include the similarity measure into all available registrati
 
 Assuming the parameter stucture being used is called `params` (a :class:`ParameterDict` object), we can first tell that we want to use our own similarity measure via
 
-.. code::
+.. code:: python
    
    params['registration_model']['similarity_measure']['type'] = 'mySSD'  
 
 Now, once we have a multi-scale optimizer
 
-.. code::
+.. code:: python
    
    import mermaid.multiscale_optimizer as MO
    mo = MO.MultiScaleRegistrationOptimizer(modelName,sz,spacing,useMap,mapLowResFactor,params)
@@ -39,7 +39,7 @@ Now, once we have a multi-scale optimizer
 
 we can simply instruct it to use our new similarity measure
 
-.. code::
+.. code:: python
     
    mo.add_similarity_measure('mySSD', MySSD)
    
@@ -55,7 +55,7 @@ easy interface which allows definitions of new models without integrating them i
 
 Let's first import a few packages that are needed to write the new network module
 
-.. code::
+.. code:: python
 
     import registration_networks as RN
     import utils
@@ -78,7 +78,7 @@ to define the following methods:
 
 Let's start with the simplest possible class first
 
-.. code::
+.. code:: python
 
     class MySVFNet(RN.RegistrationNet):
         def __init__(self,sz,spacing,params):
@@ -109,7 +109,7 @@ Let's start with the simplest possible class first
 
 If desired (for the multi-scale optimizer), also define
 
-.. code::
+.. code:: python
 
     def upsample_registration_parameters(self, desiredSz):
         sampler = IS.ResampleImage()
@@ -122,7 +122,7 @@ Lastly, we also need to define our own loss function. Loss functions are derived
 method that needs to be defined is :meth:`compute_regularization_energy`. For the SVF model we just created this could
 for example look like this
 
-.. code::
+.. code:: python
 
     class MySVFImageLoss(RN.RegistrationImageLoss):
     def __init__(self,v,sz,spacing,params):
@@ -139,7 +139,7 @@ for example look like this
 Now that the models are defined, we need to use them. Just as for the custom similarity measure above, we can
 do this by adding it to the multi-scale solver and then setting it (to be used for the solution).
 
-.. code::
+.. code:: python
 
     myModelName = 'mySVF'
     mo.add_model(myModelName,MySVFNet,MySVFImageLoss)
@@ -151,21 +151,21 @@ The following selects `adam` as an optimizer and sets one of its optimization pa
 by pyTorch works in principle. However, be advised that especially the shooting formulations for registration may
 require reasonably sophisticated optimizers for convergence.
 
-.. code::
+.. code:: python
 
     mo.set_optimizer(torch.optim.Adam)
     mo.set_optimizer_params(dict(lr=0.01))
 
 By default visualization output is turned on. But this can be set manually by
 
-.. code::
+.. code:: python
 
     mo.set_visualization(True)
     mo.set_visualize_step(10)
 
 And again as before the model can then be solved
 
-.. code::
+.. code:: python
 
     mo.set_source_image(ISource)
     mo.set_target_image(ITarget)

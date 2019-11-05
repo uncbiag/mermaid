@@ -9,7 +9,7 @@ This is a very simple example demonstrating how to use *mermaid*. This example i
 
 To start off we import some important modules. First the pyTorch modules and numpy.
 
-.. code::
+.. code:: python
 
     # first do the torch imports
     import torch
@@ -18,7 +18,7 @@ To start off we import some important modules. First the pyTorch modules and num
 
 Next let's import some of the *mermaid* modules contained in the *pyreg* directory
 
-.. code::
+.. code:: python
 
     import set_pyreg_paths                  # import the required paths
     import mermaid.example_generation as eg   # load the module to generate examples
@@ -32,7 +32,7 @@ play around with it yourself), and pick a maximum number of iterations for the s
 parameter structure, so that *mermaid* can keep track of the parameters used. These can be written out layer by using
 :meth:`pars.write_JSON`, but we ignore this for this simple example.
 
-.. code::
+.. code:: python
 
     modelName = 'lddmm_shooting_map'
     useMap = True
@@ -47,7 +47,7 @@ In reality, of course, you would simply load your own data, which should already
 and size information (size is in BCXYZ format: batch size, number of channels, X, Y, and Z coordinates; or only X
 coordinates in 1D or X and Y coordinates in 2D).
 
-.. code::
+.. code:: python
 
     szEx = np.tile( 50, dim )         # size of the desired images: (sz)^dim
     I0,I1= eg.CreateSquares(dim).create_image_pair(szEx,params) # create a default image size with two sample squares
@@ -57,7 +57,7 @@ coordinates in 1D or X and Y coordinates in 2D).
 
 To be able to communicate with pyTorch's autograd functionality, let's make these images pyTorch variables.
 
-.. code::
+.. code:: python
 
     # create the source and target image as pyTorch variables
     ISource = torch.from_numpy( I0.copy() )
@@ -67,7 +67,7 @@ To be able to communicate with pyTorch's autograd functionality, let's make thes
 Now we are ready to set up the optimizer and to optimize. By default some visual output will be created.
 Close each figure for the optimizer to advance.
 
-.. code::
+.. code:: python
 
     so = MO.SingleScaleRegistrationOptimizer(sz,spacing,useMap,mapLowResFactor,params)
     so.set_model(modelName)
@@ -85,14 +85,14 @@ That's it. Pretty easy, no?
 
 There are also now a few convenience functions to make everything even easier. So intead of manually creating optimizers and such, you can use the following functions
 
-.. code::
+.. code:: python
 
    so = MO.SimpleSingleScaleRegistration(ISource,ITarget,spacing,params)
    so.register()
 
 or
 
-.. code::
+.. code:: python
 
    so = MO.SimpleMultiScaleRegistration(ISource,ITarget,spacing,params)
    so.register()

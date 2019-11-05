@@ -17,7 +17,7 @@ mermaid imports
 
 First we import some important mermaid modules
 
-.. code::
+.. code:: python
 
   # first the simple registration interface (which provides basic, easy to use registration functionality)
   import mermaid.simple_interface as SI
@@ -29,7 +29,7 @@ First we import some important mermaid modules
 Some of the high-level mermaid code and also the plotting depends on numpy (we will phase much of this out in the future).
 Hence we als import numpy
 
-.. code::
+.. code:: python
 
   import numpy
 
@@ -42,7 +42,7 @@ All the non-compute settings that affect registration results are automatically 
 
 So let's first create an empty *mermaid* parameter object
 
-.. code::
+.. code:: python
 
   # first we create a parameter structure to keep track of all registration settings
   params = pars.ParameterDict()
@@ -52,7 +52,7 @@ Generating registration example data
   
 Now we create some example data (source and target image examples for a two-dimensional square, of size 64x64) and keep track of the generated settings via this parameter object
 
-.. code::
+.. code:: python
 
   # and let's create two-dimensional squares
   I0,I1,spacing = EG.CreateSquares(dim=2,add_noise_to_bg=True).create_image_pair(np.array([64,64]),params=params)
@@ -60,7 +60,7 @@ Now we create some example data (source and target image examples for a two-dime
 Parameters can easily be written to a file (or displayed via print). We can write it out including comments for what these
 settings are as
 
-.. code::
+.. code:: python
 
   params.write_JSON('step_by_step_example_data.json')
   params.write_JSON_comments('step_by_step_example_data_with_comments.json')
@@ -83,7 +83,7 @@ Performing the registration
     
 Now we are ready to instantiate the registration object from mermaid
 
-.. code::
+.. code:: python
 
   # now we instantiate the registration class
   si = SI.RegisterImagePair()
@@ -91,7 +91,7 @@ Now we are ready to instantiate the registration object from mermaid
 As we are not sure what settings to use, let alone know what settings exist, we simply run it first for one
 step and ask for the json configuration to be written out.
 
-.. code::
+.. code:: python
 
   si.register_images(I0, I1, spacing,
                    model_name='lddmm_shooting_map',
@@ -118,7 +118,7 @@ Running the actual registration
 
 We can now edit the generated json file and modify the desired settings. The most important ones are proably the similiarty measure as well as the settings for the multi-Gaussian smoother. These can then be spefified via keyword *params*, i.e., something like
 
-.. code::
+.. code:: python
 
    si.register_images(I0, I1, spacing, model_name='lddmm_shooting_map',
                        nr_of_iterations=50,
