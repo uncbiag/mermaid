@@ -15,6 +15,7 @@ scipy
 openpyxl
 sphinx-gallery==0.3.1
 sphinx
+sphinx_rtd_theme>=0.3.1
 nbsphinx
 pandoc
 pypandoc

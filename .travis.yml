@@ -1,7 +1,7 @@
 language: python
 
 # To automatically push to anaconda cloud tag a relase in the git repository
-# git tag -a v0.2.3 -m 'This version has the new cool features X, Y, Z'
+# git tag -a v0.2.3 -m 'Version with working conda installer'
 # git push --tags
 
 matrix:
