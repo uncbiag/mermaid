@@ -15,6 +15,7 @@
 [![](https://anaconda.org/uncbiag/mermaid/badges/installer/conda.svg)](https://anaconda.org/uncbiag/mermaid)
 [![](https://anaconda.org/uncbiag/mermaid/badges/platforms.svg)](https://anaconda.org/uncbiag/mermaid)
 [![](https://img.shields.io/conda/v/uncbiag/mermaid.svg)](https://anaconda.org/uncbiag/mermaid)
+
 [<img src="https://anaconda.org/uncbiag/mermaid/badges/latest_release_date.svg?branch=master&kill_cache=1" />](https://anaconda.org/uncbiag/mermaid)
 
 [![](https://anaconda.org/uncbiag/mermaid/badges/license.svg)](https://anaconda.org/uncbiag/mermaid)
