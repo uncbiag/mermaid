@@ -51,10 +51,12 @@ class RHSLibrary(object):
         self.spacing_min = np.min(spacing)
         """ min of the spacing"""
         self.spacing_ratio = spacing/self.spacing_min
-        self.fdt = fdm.FD_torch_multi_channel( spacing )
-        """torch finite differencing support"""
-        self.fdt_le = fdm.FD_torch_multi_channel( spacing, False)
-        """torch finite differencing support w/ linear extrapolation"""
+        self.fdt_ne = fdm.FD_torch_multi_channel(spacing,mode='neumann_zero')
+        """torch finite differencing support neumann zero"""
+        self.fdt_le = fdm.FD_torch_multi_channel( spacing, mode='linear')
+        """torch finite differencing support linear extrapolation"""
+        self.fdt_di = fdm.FD_torch_multi_channel(spacing, mode='dirichlet_zero')
+        """torch finite differencing support dirichlet zero"""
         self.dim = len(self.spacing)
         """spatial dimension"""
         self.use_neumann_BC_for_map = use_neumann_BC_for_map
@@ -86,11 +88,11 @@ class RHSLibrary(object):
         :return: Returns the RHS of the advection equation for one channel BxXxYxZ
         """
         if self.dim == 1:
-            rhs_ret = -self.fdt.dXc(I) * v[:,0:1]
+            rhs_ret = -self.fdt_ne.dXc(I) * v[:,0:1]
         elif self.dim == 2:
-            rhs_ret = -self.fdt.dXc(I) * v[:,0:1] -self.fdt.dYc(I)*v[:,1:2]
+            rhs_ret = -self.fdt_ne.dXc(I) * v[:,0:1] -self.fdt_ne.dYc(I)*v[:,1:2]
         elif self.dim == 3:
-            rhs_ret = -self.fdt.dXc(I) * v[:,0:1] -self.fdt.dYc(I)*v[:,1:2]-self.fdt.dZc(I)*v[:,2:3]
+            rhs_ret = -self.fdt_ne.dXc(I) * v[:,0:1] -self.fdt_ne.dYc(I)*v[:,1:2]-self.fdt_ne.dZc(I)*v[:,2:3]
         else:
             raise ValueError('Only supported up to dimension 3')
         return rhs_ret
@@ -122,11 +124,11 @@ class RHSLibrary(object):
         :return: Returns the RHS of the scalar-conservation law equation for one channel BxXxYxZ
         """
         if self.dim==1:
-            rhs_ret = -self.fdt.dXc(I*v[:,0:1])
+            rhs_ret = -self.fdt_ne.dXc(I*v[:,0:1])
         elif self.dim==2:
-            rhs_ret = -self.fdt.dXc(I*v[:,0:1]) -self.fdt.dYc(I*v[:,1:2])
+            rhs_ret = -self.fdt_ne.dXc(I*v[:,0:1]) -self.fdt_ne.dYc(I*v[:,1:2])
         elif self.dim==3:
-            rhs_ret = -self.fdt.dXc(I* v[:,0:1]) -self.fdt.dYc(I*v[:,1:2])-self.fdt.dZc(I*v[:,2:3])
+            rhs_ret = -self.fdt_ne.dXc(I* v[:,0:1]) -self.fdt_ne.dYc(I*v[:,1:2])-self.fdt_ne.dZc(I*v[:,2:3])
         else:
             raise ValueError('Only supported up to dimension 3')
         return rhs_ret
@@ -235,11 +237,11 @@ class RHSLibrary(object):
         :return rhsm: Returns the RHS of the EPDiff equations involved  BxCxXxYxZ
         """
         # if self.use_neumann_BC_for_map:
-        #     fdc = self.fdt # use zero Neumann boundary conditions
+        #     fdc = self.fdt_ne # use zero Neumann boundary conditions
         # else:
         #     fdc = self.fdt_le # do linear extrapolation
 
-        fdc = self.fdt
+        fdc = self.fdt_ne
         #fdc = self.fdt_le
         if self.dim == 1:
             dxc_mv0 = -fdc.dXc(m*v[:,0:1])
@@ -317,11 +319,12 @@ class RHSLibrary(object):
         :param v: Velocity fields (this will be one velocity field per momentum)  BxCxXxYxZ
         :return rhsm: Returns the RHS of the EPDiff equations involved  BxCxXxYxZ
         """
-        if self.use_neumann_BC_for_map:
-            fdc = self.fdt # use zero Neumann boundary conditions
-        else:
-            fdc = self.fdt_le # do linear extrapolation
+        # if self.use_neumann_BC_for_map:
+        #     fdc = self.fdt_ne # use zero Neumann boundary conditions
+        # else:
+        #     fdc = self.fdt_le # do linear extrapolation
 
+        fdc = self.fdt_ne
         rhs = self._rhs_epdiff_call(m,v,rhsm)
         ret_var = torch.empty_like(rhs)
         # ret_var, rhs should batch x dim x X x Yx ..
@@ -383,8 +386,6 @@ class ForwardModel(with_metaclass(ABCMeta, object)):
         if self.dim>3 or self.dim<1:
             raise ValueError('Forward models are currently only supported in dimensions 1 to 3')
 
-        #self.fdt = fdm.FD_torch_multi_channel(spacing )
-        """torch finite difference support"""
         self.debug_mode_on =False
 
     @abstractmethod
@@ -718,41 +719,14 @@ class EPDiffAdaptMap(ForwardModel):
                     sm_weight = x[2]
                     new_sm_weight = utils.compute_warped_image_multiNC(sm_weight, phi, self.spacing, 1,
                                                                        zero_boundary=False)
-                    # ######################################################
-                    # w_norm = torch.norm(new_sm_weight, p=None, dim=1, keepdim=True)
-                    # print('t{},w_norm before smoothing min, mean,max {} {} {}'.format(t, w_norm.min().item(),
-                    #                                                                  w_norm.mean().item(),
-                    #                                                                  w_norm.max().item()))
-                    # ######################################################
+
                     pre_weight = sm_weight
                     new_sm_weight = self.embedded_smoother.smooth(new_sm_weight)
-
-                    # ######################################################
-                    # w_norm = torch.norm(new_sm_weight, p=None, dim=1, keepdim=True)
-                    # print('t{},w_norm after smoothing min, mean,max {} {} {}'.format(t, w_norm.min().item(),
-                    #                                                                   w_norm.mean().item(),
-                    #                                                                   w_norm.max().item()))
-                    # w_norm_distr = np.histogram(w_norm.detach().cpu().numpy(), density=True)
-                    # print('the histogram of the w_norm is {}'.format(w_norm_distr))
-                    # print('t{},m min, mean,max {} {} {}'.format(t,m.min().item(),m.mean().item(),m.max().item()))
-                    # ######################################################
-
 
                     v, extra_ret = self.smoother.smooth(m, None,{'w':new_sm_weight}, multi_output=True)
 
                     if self.velocity_mask is not None:
                         v = v * self.velocity_mask
-
-                    # #################################
-                    # from tools.visual_tools import save_smoother_map, plot_2d_img
-                    # import os
-                    # saving_path = '/playpen/zyshen/reg_clean/mermaid/demos/synthetic_example_out_kernel_weighting_type_w_K_w/moving_weights_fixed'
-                    # os.makedirs(saving_path,exist_ok=True)
-                    # save_smoother_map(new_sm_weight, self.smoother.multi_gaussian_stds, t.item(),
-                    #                   os.path.join(saving_path,'t_{:4f}'.format(t)+'.png'))
-                    # plot_2d_img(m[0, 0, :, 40, :], 'm' + str(t.item()), '/playpen/zyshen/debugs/visual_m')
-                    # ###############################
-
 
                     new_m = self.rhs.rhs_adapt_epdiff_wkw_multiNC(m,v,pre_weight,extra_ret,self.embedded_smoother)
                     new_phi = self.rhs.rhs_advect_map_multiNC(phi, v)

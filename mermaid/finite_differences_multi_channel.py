@@ -22,7 +22,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
     In this way the numpy and pytorch versions can easily be derived. All the method expect BxXxYxZ format (i.e., they process a batch at a time)
     """
 
-    def __init__(self,spacing, bcNeumannZero=True):
+    def __init__(self,spacing, mode='linear'):
         """
         Constructor        
         :param spacing: 1D numpy array defining the spatial spacing, e.g., [0.1,0.1,0.1] for a 3D image  
@@ -34,9 +34,11 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         """spatial dimension"""
         self.spacing = np.ones(self.dim)
         """spacing"""
-        self.bcNeumannZero = bcNeumannZero  # if false then linear interpolation
-        self.bclinearInterp =True
-        self.bcDirichletZero = False
+        assert mode in ['linear', 'neumann_zero', 'dirichlet_zero'], \
+            " boundary condition {} is not supported , supported list 'linear', 'neumann_zero', 'dirichlet_zero'".format(mode)
+        self.bcNeumannZero = mode =='neumann_zero' # if false then linear interpolation
+        self.bclinearInterp = mode =='linear'
+        self.bcDirichletZero = mode =='dirichlet_zero'
         """should Neumann boundary conditions be used? (otherwise linear extrapolation)"""
         if spacing.size == 1:
             self.spacing[0] = spacing[0]
@@ -60,10 +62,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in x direction using backward differences
         """
         res= (I-self.xm(I))*(1./self.spacing[0])
-        if self.bcDirichletZero:
-            return self.zero_x_boundary(res)
-        else:
-            return res
+        return res
 
     def dXf(self,I):
         """
@@ -74,10 +73,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in x direction using forward differences
         """
         res= (self.xp(I)-I)*(1./self.spacing[0])
-        if self.bcDirichletZero:
-            return self.zero_x_boundary(res)
-        else:
-            return res
+        return res
 
     def dXc(self,I):
         """
@@ -87,11 +83,8 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the first derivative in x direction using central differences
         """
-        res= (self.xp(I)-self.xm(I))*(0.5/self.spacing[0])
-        if self.bcDirichletZero:
-            return self.zero_x_boundary(res)
-        else:
-            return res
+        res= (self.xp(I, central=True)-self.xm(I, central=True))*(0.5/self.spacing[0])
+        return res
 
 
     def ddXc(self,I):
@@ -101,11 +94,8 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the second derivative in x direction
         """
-        res= (self.xp(I)-I-I+self.xm(I))*(1/(self.spacing[0]**2))
-        if self.bcDirichletZero:
-            return self.zero_x_boundary(res)
-        else:
-            return res
+        res= (self.xp(I, central=True)-I-I+self.xm(I, central=True))*(1/(self.spacing[0]**2))
+        return res
 
     def dYb(self,I):
         """
@@ -115,10 +105,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in y direction using backward differences
         """
         res= (I-self.ym(I))*(1./self.spacing[1])
-        if self.bcDirichletZero:
-            return self.zero_y_boundary(res)
-        else:
-            return res
+        return res
 
     def dYf(self,I):
         """
@@ -128,10 +115,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in y direction using forward differences
         """
         res= (self.yp(I)-I)*(1./self.spacing[1])
-        if self.bcDirichletZero:
-            return self.zero_y_boundary(res)
-        else:
-            return res
+        return res
 
     def dYc(self,I):
         """
@@ -140,11 +124,8 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the first derivative in y direction using central differences
         """
-        res= (self.yp(I)-self.ym(I))*(0.5/self.spacing[1])
-        if self.bcDirichletZero:
-            return self.zero_y_boundary(res)
-        else:
-            return res
+        res= (self.yp(I, central=True)-self.ym(I, central=True))*(0.5/self.spacing[1])
+        return res
 
 
 
@@ -155,11 +136,8 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the second derivative in the y direction
         """
-        res= (self.yp(I)-I-I+self.ym(I))*(1/(self.spacing[1]**2))
-        if self.bcDirichletZero:
-            return self.zero_y_boundary(res)
-        else:
-            return res
+        res= (self.yp(I, central=True)-I-I+self.ym(I, central=True))*(1/(self.spacing[1]**2))
+        return res
 
     def dZb(self,I):
         """
@@ -169,10 +147,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in the z direction using backward differences
         """
         res= (I - self.zm(I))*(1./self.spacing[2])
-        if self.bcDirichletZero:
-            return self.zero_z_boundary(res)
-        else:
-            return res
+        return res
 
     def dZf(self, I):
         """
@@ -182,10 +157,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :return: Returns the first derivative in the z direction using forward differences
         """
         res= (self.zp(I)-I)*(1./self.spacing[2])
-        if self.bcDirichletZero:
-            return self.zero_z_boundary(res)
-        else:
-            return res
+        return res
 
     def dZc(self, I):
         """
@@ -194,11 +166,8 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input image
         :return: Returns the first derivative in the z direction using central differences
         """
-        res= (self.zp(I)-self.zm(I))*(0.5/self.spacing[2])
-        if self.bcDirichletZero:
-            return self.zero_z_boundary(res)
-        else:
-            return res
+        res= (self.zp(I, central=True)-self.zm(I, central=True))*(0.5/self.spacing[2])
+        return res
 
 
 
@@ -209,11 +178,8 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         :param I: Input iamge
         :return: Returns the second derivative in the z direction 
         """
-        res= (self.zp(I)-I-I+self.zm(I))*(1/(self.spacing[2]**2))
-        if self.bcDirichletZero:
-            return self.zero_z_boundary(res)
-        else:
-            return res
+        res= (self.zp(I, central=True)-I-I+self.zm(I, central=True))*(1/(self.spacing[2]**2))
+        return res
 
     def lap(self, I):
         """
@@ -231,7 +197,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
             return self.ddXc(I)
         elif ndim == 2+2:
             return (self.ddXc(I) + self.ddYc(I))
-        elif ndim == 3+2 or  ndim == 4+2:
+        elif ndim == 3+2:
             return (self.ddXc(I) + self.ddYc(I) + self.ddZc(I))
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
@@ -252,7 +218,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
             return self.dXc(I)**2
         elif ndim == 2 +2:
             return (self.dXc(I)**2 + self.dYc(I)**2)
-        elif ndim == 3 +2 or ndim == 4 +2:
+        elif ndim == 3 +2:
             return (self.dXc(I)**2 + self.dYc(I)**2 + self.dZc(I)**2)
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
@@ -273,7 +239,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
             return self.dXf(I)**2
         elif ndim == 2 +2:
             return (self.dXf(I)**2 + self.dYf(I)**2)
-        elif ndim == 3 +2 or ndim == 4+2:
+        elif ndim == 3 +2:
             return (self.dXf(I)**2 + self.dYf(I)**2 + self.dZf(I)**2)
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
@@ -294,7 +260,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
             return self.dXb(I)**2
         elif ndim == 2 +2:
             return (self.dXb(I)**2 + self.dYb(I)**2)
-        elif ndim == 3 +2 or ndim ==4+2:
+        elif ndim == 3 +2:
             return (self.dXb(I)**2 + self.dYb(I)**2 + self.dZb(I)**2)
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
@@ -329,53 +295,7 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         """
         pass
 
-
-
-    def zero_x_boundary(self, I):
-        rx = I
-        ndim = self.getdimension(I)
-        if ndim ==1+2:
-            rx[:, :,  0] = 0.
-            rx[:, :, -1] = 0.
-        elif ndim==2+2:
-            rx[:, :, 0,:] = 0.
-            rx[:, :, -1,:] = 0.
-        elif ndim ==3+2:
-            rx[:, :, 0, :,:] = 0.
-            rx[:, :, -1, :,:] = 0.
-        elif ndim == 4 + 2:
-            rx[:, :, :, 0, :, :] = 0.
-            rx[:, :, :, -1, :, :] = 0.
-        return rx
-
-
-    def zero_y_boundary(self, I):
-        ry = I
-        ndim = self.getdimension(I)
-        if ndim==2+2:
-            ry[:, :, :, 0] = 0.
-            ry[:, :, :,-1] = 0.
-        elif ndim ==3+2:
-            ry[:, :, :, 0, :] = 0.
-            ry[:, :, :,-1, :] = 0.
-        elif ndim == 4 + 2:
-            ry[:, :, :, :, 0, :] = 0.
-            ry[:, :, :, :,-1, :] = 0.
-        return ry
-
-    def zero_z_boundary(self, I):
-        rz =I
-        ndim = self.getdimension(I)
-        if ndim ==3+2:
-            rz[:, :, :, :,0] = 0.
-            rz[:, :, :, :,-1] = 0.
-        elif ndim == 4 + 2:
-            rz[:, :, :, :, :,0] = 0.
-            rz[:, :, :, :, :,-1] = 0.
-        return rz
-
-
-    def xp(self,I):
+    def xp(self,I, central=False):
         """
 
         !!!!!!!!!!!
@@ -391,35 +311,21 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         """
         rxp = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
-        if ndim == 1+2:
+        if ndim in[1+2, 2+2, 3+2]:
             rxp[:,:,0:-1] = I[:,:,1:]
             if self.bcNeumannZero:
                 rxp[:,:,-1] = I[:,:,-1]
+                if central:
+                    rxp[:, :, 0] = I[:, :, 0]
             elif self.bclinearInterp:
                 rxp[:,:,-1] = 2*I[:,:,-1]-I[:,:,-2]
-        elif ndim == 2+2:
-            rxp[:,:,0:-1,:] = I[:,:,1:,:]
-            if self.bcNeumannZero:
-                rxp[:,:,-1,:] = I[:,:,-1,:]
-            elif self.bclinearInterp:
-                rxp[:,:,-1,:] = 2*I[:,:,-1,:]-I[:,:,-2,:]
-        elif ndim == 3+2:
-            rxp[:,:,0:-1,:,:] = I[:,:,1:,:,:]
-            if self.bcNeumannZero:
-                rxp[:,:,-1,:,:] = I[:,:,-1,:,:]
-            elif self.bclinearInterp:
-                rxp[:,:,-1,:,:] = 2*I[:,:,-1,:,:]-I[:,:,-2,:,:]
-        elif ndim == 4+2:
-            rxp[:,:,:,0:-1,:,:] = I[:,:,:,1:,:,:]
-            if self.bcNeumannZero:
-                rxp[:,:,:,-1,:,:] = I[:,:,:,-1,:,:]
-            elif self.bclinearInterp:
-                rxp[:,:,:,-1,:,:] = 2*I[:,:,:,-1,:,:]-I[:,:,:,-2,:,:]
+            elif self.bcDirichletZero:
+                rxp[:, :, -1] = 0.
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rxp
 
-    def xm(self,I):
+    def xm(self,I, central=False):
         """
 
         !!!!!!!!!!!
@@ -434,35 +340,21 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         """
         rxm = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
-        if ndim == 1+2:
+        if ndim in [1+2, 2+2, 3+2]:
             rxm[:,:,1:] = I[:,:,0:-1]
             if self.bcNeumannZero:
                 rxm[:,:,0] = I[:,:,0]
+                if central:
+                    rxm[:,:,-1] = I[:,:,-1]
             elif self.bclinearInterp:
-                rxm[:,:,0] = 2*I[:,:,0]-I[:,:,1]
-        elif ndim == 2+2:
-            rxm[:,:,1:,:] = I[:,:,0:-1,:]
-            if self.bcNeumannZero:
-                rxm[:,:,0,:] = I[:,:,0,:]
-            elif self.bclinearInterp:
-                rxm[:,:,0,:] = 2*I[:,:,0,:]-I[:,:,1,:]
-        elif ndim == 3+2:
-            rxm[:,:,1:,:,:] = I[:,:,0:-1,:,:]
-            if self.bcNeumannZero:
-                rxm[:,:,0,:,:] = I[:,:,0,:,:]
-            elif self.bclinearInterp:
-                rxm[:,:,0,:,:] = 2*I[:,:,0,:,:]-I[:,:,1,:,:]
-        elif ndim == 4+2:
-            rxm[:,:,:,1:,:,:] = I[:,:,:,0:-1,:,:]
-            if self.bcNeumannZero:
-                rxm[:,:,:,0,:,:] = I[:,:,:,0,:,:]
-            elif self.bclinearInterp:
-                rxm[:,:,:,0,:,:] = 2*I[:,:,:,0,:,:]-I[:,:,:,1,:,:]
+                rxm[:,:,0] = 2.*I[:,:,0]-I[:,:,1]
+            elif self.bcDirichletZero:
+                rxm[:, :, 0] = 0.
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rxm
 
-    def yp(self, I):
+    def yp(self, I, central=False):
         """
 
 
@@ -478,29 +370,21 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         """
         ryp = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
-        if ndim == 2+2:
+        if ndim in [2+2, 3+2]:
             ryp[:,:,:,0:-1] = I[:,:,:,1:]
             if self.bcNeumannZero:
                 ryp[:,:,:,-1] = I[:,:,:,-1]
+                if central:
+                    ryp[:,:,:,0] = I[:,:,:,0]
             elif self.bclinearInterp:
-                ryp[:,:,:,-1] = 2*I[:,:,:,-1]-I[:,:,:,-2]
-        elif ndim == 3+2:
-            ryp[:,:,:,0:-1,:] = I[:,:,:,1:,:]
-            if self.bcNeumannZero:
-                ryp[:,:,:,-1,:] = I[:,:,:,-1,:]
-            elif self.bclinearInterp:
-                ryp[:,:,:,-1,:] = 2*I[:,:,:,-1,:]-I[:,:,:,-2,:]
-        elif ndim == 4+2:
-            ryp[:,:,:,:,0:-1,:] = I[:,:,:,:,1:,:]
-            if self.bcNeumannZero:
-                ryp[:,:,:,:,-1,:] = I[:,:,:,:,-1,:]
-            elif self.bclinearInterp:
-                ryp[:,:,:,:,-1,:] = 2*I[:,:,:,:,-1,:]-I[:,:,:,:,-2,:]
+                ryp[:,:,:,-1] = 2.*I[:,:,:,-1]-I[:,:,:,-2]
+            elif self.bcDirichletZero:
+                ryp[:, :, :, -1] = 0.
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return ryp
 
-    def ym(self, I):
+    def ym(self, I, central=False):
         """
         Same as xm, but for the y direction
 
@@ -518,29 +402,21 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         """
         rym = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
-        if ndim == 2+2:
+        if ndim in [2+2, 3+2]:
             rym[:,:,:,1:] = I[:,:,:,0:-1]
             if self.bcNeumannZero:
                 rym[:,:,:,0] = I[:,:,:,0]
+                if central:
+                    rym[:,:,:,-1] = I[:,:,:,-1]
             elif self.bclinearInterp:
-                rym[:,:,:,0] = 2*I[:,:,:,0]-I[:,:,:,1]
-        elif ndim == 3+2:
-            rym[:,:,:,1:,:] = I[:,:,:,0:-1,:]
-            if self.bcNeumannZero:
-                rym[:,:,:,0,:] = I[:,:,:,0,:]
-            elif self.bclinearInterp:
-                rym[:,:,:,0,:] = 2*I[:,:,:,0,:]-I[:,:,:,1,:]
-        elif ndim == 4+2:
-            rym[:,:,:,:,1:,:] = I[:,:,:,:,0:-1,:]
-            if self.bcNeumannZero:
-                rym[:,:,:,:,0,:] = I[:,:,:,:,0,:]
-            elif self.bclinearInterp:
-                rym[:,:,:,:,0,:] = 2*I[:,:,:,:,0,:]-I[:,:,:,:,1,:]
+                rym[:,:,:,0] = 2.*I[:,:,:,0]-I[:,:,:,1]
+            elif self.bcDirichletZero:
+                rym[:, :, :, 0] = 0.
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rym
 
-    def zp(self, I):
+    def zp(self, I, central=False):
         """
         Same as xp, but for the z direction
         
@@ -556,23 +432,21 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         """
         rzp = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
-        if ndim == 3+2:
+        if ndim in [3+2]:
             rzp[:,:,:,:,0:-1] = I[:,:,:,:,1:]
             if self.bcNeumannZero:
                 rzp[:,:,:,:,-1] = I[:,:,:,:,-1]
+                if central:
+                    rzp[:,:,:,:,0] = I[:,:,:,:,0]
             elif self.bclinearInterp:
-                rzp[:,:,:,:,-1] = 2*I[:,:,:,:,-1]-I[:,:,:,:,-2]
-        elif ndim == 4+2:
-            rzp[:,:,:,:,:,0:-1] = I[:,:,:,:,:,1:]
-            if self.bcNeumannZero:
-                rzp[:,:,:,:,:,-1] = I[:,:,:,:,:,-1]
-            elif self.bclinearInterp:
-                rzp[:,:,:,:,:,-1] = 2*I[:,:,:,:,:,-1]-I[:,:,:,:,:,-2]
+                rzp[:,:,:,:,-1] = 2.*I[:,:,:,:,-1]-I[:,:,:,:,-2]
+            elif self.bcDirichletZero:
+                rzp[:,:,:,:,-1] = 0.
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rzp
 
-    def zm(self, I):
+    def zm(self, I, central=False):
         """
         Same as xm, but for the z direction
         
@@ -588,18 +462,16 @@ class FD_multi_channel(with_metaclass(ABCMeta, object)):
         """
         rzm = self.create_zero_array( self.get_size_of_array( I ) )
         ndim = self.getdimension(I)
-        if ndim == 3+2:
+        if ndim in [3+2]:
             rzm[:,:,:,:,1:] = I[:,:,:,:,0:-1]
             if self.bcNeumannZero:
                 rzm[:,:,:,:,0] = I[:,:,:,:,0]
+                if central:
+                    rzm[:,:,:,:,-1] = I[:,:,:,:,-1]
             elif self.bclinearInterp:
-                rzm[:,:,:,:,0] = 2*I[:,:,:,:,0]-I[:,:,:,:,1]
-        elif ndim == 4 + 2:
-            rzm[:, :, :, :,:, 1:] = I[:, :, :, :,:, 0:-1]
-            if self.bcNeumannZero:
-                rzm[:, :, :, :, :,0] = I[:, :, :, :,:, 0]
-            elif self.bclinearInterp:
-                rzm[:, :, :, :, :,0] = 2 * I[:, :, :, :,:, 0] - I[:, :, :, :,:, 1]
+                rzm[:,:,:,:,0] = 2.*I[:,:,:,:,0]-I[:,:,:,:,1]
+            elif self.bcDirichletZero:
+                rzm[:,:,:,:,0] = 0.
         else:
             raise ValueError('Finite differences are only supported in dimensions 1 to 3')
         return rzm
@@ -610,13 +482,13 @@ class FD_np_multi_channel(FD_multi_channel):
     Defnitions of the abstract methods for numpy
     """
 
-    def __init__(self,dim,bcNeumannZero=True):
+    def __init__(self,dim,mode='linear'):
         """
         Constructor for numpy finite differences
         :param spacing: spatial spacing (array with as many entries as there are spatial dimensions)
         :param bcNeumannZero: Specifies if zero Neumann conditions should be used (if not, uses linear extrapolation)
         """
-        super(FD_np_multi_channel, self).__init__(dim,bcNeumannZero)
+        super(FD_np_multi_channel, self).__init__(dim,mode)
 
     def getdimension(self,I):
         """
@@ -648,13 +520,13 @@ class FD_torch_multi_channel(FD_multi_channel):
     Defnitions of the abstract methods for torch
     """
 
-    def __init__(self,dim,bcNeumannZero=True):
+    def __init__(self,dim,mode='linear'):
         """
           Constructor for torch finite differences
           :param spacing: spatial spacing (array with as many entries as there are spatial dimensions)
           :param bcNeumannZero: Specifies if zero Neumann conditions should be used (if not, uses linear extrapolation)
           """
-        super(FD_torch_multi_channel, self).__init__(dim,bcNeumannZero)
+        super(FD_torch_multi_channel, self).__init__(dim,mode)
 
     def getdimension(self,I):
         """

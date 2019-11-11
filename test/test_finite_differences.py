@@ -25,7 +25,7 @@ except ImportError:
 
 # testing code starts here
 
-import mermaid.finite_differences as FD
+import mermaid.finite_differences_cp as FD
 
 #TODO: add tests for non-Neumann boundary conditions (linear extrapolation)
 #TODO: do experiments how the non-Neumann bounday conditions behave in practive
@@ -34,7 +34,7 @@ class Test_finite_difference_1d_neumann_numpy(unittest.TestCase):
 
     def setUp(self):
         self.spacing = np.array([0.1])
-        self.fd_np = FD.FD_np(self.spacing)
+        self.fd_np = FD.FD_np(self.spacing, mode='neumann_zero')
 
     def tearDown(self):
         pass
@@ -57,21 +57,21 @@ class Test_finite_difference_1d_neumann_numpy(unittest.TestCase):
 
     def test_dXc(self):
         dxc = self.fd_np.dXc(np.array([[1, 2, 3]]))
-        npt.assert_almost_equal(dxc, [[5, 10, 5]])
+        npt.assert_almost_equal(dxc, [[0, 10, 0]])
 
     def test_ddXc(self):
         ddxc = self.fd_np.ddXc(np.array([[1, 0, 3]]))
-        npt.assert_almost_equal(ddxc, [[-100, 400, -300]])
+        npt.assert_almost_equal(ddxc, [[-0, 400, -0]])
 
     def test_lap(self):
         lap = self.fd_np.lap(np.array([[1,0,3]]))
-        npt.assert_almost_equal(lap, [[-100,400,-300]])
+        npt.assert_almost_equal(lap, [[-0,400,-0]])
 
 
 class Test_finite_difference_2d_neumann_numpy(unittest.TestCase):
     def setUp(self):
         self.spacing = np.array([0.1,0.2])
-        self.fd_np = FD.FD_np(self.spacing)
+        self.fd_np = FD.FD_np(self.spacing, mode='neumann_zero')
 
     def tearDown(self):
         pass
@@ -102,7 +102,7 @@ class Test_finite_difference_2d_neumann_numpy(unittest.TestCase):
 
     def test_dXc(self):
         dxc = self.fd_np.dXc(np.array([[[1, 2, 3],[4,5,6],[7,8,9]]]))
-        npt.assert_almost_equal(dxc,[[[15,15, 15],[30,30,30],[15,15,15]]])
+        npt.assert_almost_equal(dxc,[[[0,0, 0],[30,30,30],[0,0,0]]])
 
     def test_dYb(self):
         dyb = self.fd_np.dYb(np.array([[[1, 2, 3],[4,5,6],[7,8,9]]]))
@@ -114,24 +114,24 @@ class Test_finite_difference_2d_neumann_numpy(unittest.TestCase):
 
     def test_dYc(self):
         dyc = self.fd_np.dYc(np.array([[[1, 2, 3],[4,5,6],[7,8,9]]]))
-        npt.assert_almost_equal(dyc,[[[2.5,5, 2.5],[2.5,5,2.5],[2.5,5,2.5]]])
+        npt.assert_almost_equal(dyc,[[[0.,5, 0.],[0.,5,0.],[0.,5,0.]]])
 
     def test_ddXc(self):
         ddxc = self.fd_np.ddXc(np.array([[[1, 2, 3],[4,5,6],[7,8,9]]]))
-        npt.assert_almost_equal(ddxc,[[[300, 300, 300],[0,0,0],[-300,-300,-300]]])
+        npt.assert_almost_equal(ddxc,[[[0., 0., 0.],[0,0,0],[-0.,-0.,-0.]]])
 
     def test_ddYc(self):
         ddyc = self.fd_np.ddYc(np.array([[[1, 2, 3],[4,5,6],[7,8,9]]]))
-        npt.assert_almost_equal(ddyc,[[[25, 0, -25],[25,0,-25],[25,0,-25]]])
+        npt.assert_almost_equal(ddyc,[[[0., 0, -0.],[0.,0,-0.],[0.,0,-0.]]])
 
     def test_lap(self):
         lap = self.fd_np.lap(np.array([[[1, 2, 3],[4,5,6],[7,8,9]]]))
-        npt.assert_almost_equal(lap,[[[325, 300, 275],[25,0,-25],[-275,-300,-325]]])
+        npt.assert_almost_equal(lap,[[[0, 0, -0],[0,0,-0],[0,0,-0]]])
 
 class Test_finite_difference_3d_neumann_numpy(unittest.TestCase):
     def setUp(self):
         self.spacing = np.array([0.1,0.2,0.5])
-        self.fd_np = FD.FD_np(self.spacing)
+        self.fd_np = FD.FD_np(self.spacing, mode='neumann_zero')
         self.inArray = np.array([[[[ 0.,  1.,  2.],
                                       [ 3.,  4.,  5.],
                                       [ 6.,  7.,  8.]],
@@ -245,15 +245,15 @@ class Test_finite_difference_3d_neumann_numpy(unittest.TestCase):
 
     def test_dXc(self):
         dxc = self.fd_np.dXc(self.inArray)
-        npt.assert_almost_equal(dxc,[[[[ 45.,  45.,  45.],
-                                    [ 45.,  45.,  45.],
-                                    [ 45.,  45.,  45.]],
+        npt.assert_almost_equal(dxc,[[[[ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.]],
                                    [[ 90.,  90.,  90.],
                                     [ 90.,  90.,  90.],
                                     [ 90.,  90.,  90.]],
-                                   [[ 45.,  45.,  45.],
-                                    [ 45.,  45.,  45.],
-                                    [ 45.,  45.,  45.]]]])
+                                   [[ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.]]]])
 
     def test_dYb(self):
         dyb = self.fd_np.dYb(self.inArray)
@@ -281,15 +281,15 @@ class Test_finite_difference_3d_neumann_numpy(unittest.TestCase):
 
     def test_dYc(self):
         dyc = self.fd_np.dYc(self.inArray)
-        npt.assert_almost_equal(dyc,[[[[  7.5,   7.5,   7.5],
+        npt.assert_almost_equal(dyc,[[[[  0.,   0.,   0.],
                                     [ 15. ,  15. ,  15. ],
-                                    [  7.5,   7.5,   7.5]],
-                                   [[  7.5,   7.5,   7.5],
+                                    [  0.,   0.,   0.]],
+                                   [[  0.,   0.,   0.],
                                     [ 15. ,  15. ,  15. ],
-                                    [  7.5,   7.5,   7.5]],
-                                   [[  7.5,   7.5,   7.5],
+                                    [  0.,   0.,   0.]],
+                                   [[  0.,   0.,   0.],
                                     [ 15. ,  15. ,  15. ],
-                                    [  7.5,   7.5,   7.5]]]])
+                                    [  0.,   0.,   0.]]]])
 
     def test_dZb(self):
         dzb = self.fd_np.dZb(self.inArray)
@@ -317,70 +317,70 @@ class Test_finite_difference_3d_neumann_numpy(unittest.TestCase):
 
     def test_dZc(self):
         dzc = self.fd_np.dZc(self.inArray)
-        npt.assert_almost_equal(dzc,[[[[ 1.,  2.,  1.],
-                                    [ 1.,  2.,  1.],
-                                    [ 1.,  2.,  1.]],
-                                   [[ 1.,  2.,  1.],
-                                    [ 1.,  2.,  1.],
-                                    [ 1.,  2.,  1.]],
-                                   [[ 1.,  2.,  1.],
-                                    [ 1.,  2.,  1.],
-                                    [ 1.,  2.,  1.]]]])
+        npt.assert_almost_equal(dzc,[[[[ 0.,  2.,  0.],
+                                    [ 0.,  2.,  0.],
+                                    [ 0.,  2.,  0.]],
+                                   [[ 0.,  2.,  0.],
+                                    [ 0.,  2.,  0.],
+                                    [ 0.,  2.,  0.]],
+                                   [[ 0.,  2.,  0.],
+                                    [ 0.,  2.,  0.],
+                                    [ 0.,  2.,  0.]]]])
 
     def test_ddXc(self):
         ddxc = self.fd_np.ddXc(self.inArray)
-        npt.assert_almost_equal(ddxc,[[[[ 900.,  900.,  900.],
-                                    [ 900.,  900.,  900.],
-                                    [ 900.,  900.,  900.]],
+        npt.assert_almost_equal(ddxc,[[[[ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.]],
                                    [[   0.,    0.,    0.],
                                     [   0.,    0.,    0.],
                                     [   0.,    0.,    0.]],
-                                   [[-900., -900., -900.],
-                                    [-900., -900., -900.],
-                                    [-900., -900., -900.]]]])
+                                   [[-0., -0., -0.],
+                                    [-0., -0., -0.],
+                                    [-0., -0., -0.]]]])
 
     def test_ddYc(self):
         ddyc = self.fd_np.ddYc(self.inArray)
-        npt.assert_almost_equal(ddyc,[[[[ 75.,  75.,  75.],
+        npt.assert_almost_equal(ddyc,[[[[ 0.,  0.,  0.],
                                     [  0.,   0.,   0.],
-                                    [-75., -75., -75.]],
-                                   [[ 75.,  75.,  75.],
+                                    [-0., -0., -0.]],
+                                   [[ 0.,  0.,  0.],
                                     [  0.,   0.,   0.],
-                                    [-75., -75., -75.]],
-                                   [[ 75.,  75.,  75.],
+                                    [-0., -0., -0.]],
+                                   [[ 0.,  0.,  0.],
                                     [  0.,   0.,   0.],
-                                    [-75., -75., -75.]]]])
+                                    [-0., -0., -0.]]]])
 
     def test_ddZc(self):
         ddzc = self.fd_np.ddZc(self.inArray)
-        npt.assert_almost_equal(ddzc,[[[[ 4.,  0., -4.],
-                                    [ 4.,  0., -4.],
-                                    [ 4.,  0., -4.]],
-                                   [[ 4.,  0., -4.],
-                                    [ 4.,  0., -4.],
-                                    [ 4.,  0., -4.]],
-                                   [[ 4.,  0., -4.],
-                                    [ 4.,  0., -4.],
-                                    [ 4.,  0., -4.]]]])
+        npt.assert_almost_equal(ddzc,[[[[ 0.,  0., -0.],
+                                    [ 0.,  0., -0.],
+                                    [ 0.,  0., -0.]],
+                                   [[ 0.,  0., -0.],
+                                    [ 0.,  0., -0.],
+                                    [ 0.,  0., -0.]],
+                                   [[ 0.,  0., -0.],
+                                    [ 0.,  0., -0.],
+                                    [ 0.,  0., -0.]]]])
 
     def test_lap(self):
         lap = self.fd_np.lap(self.inArray)
-        npt.assert_almost_equal(lap,[[[[ 979.,  975.,  971.],
-                                    [ 904.,  900.,  896.],
-                                    [ 829.,  825.,  821.]],
-                                   [[  79.,   75.,   71.],
-                                    [   4.,    0.,   -4.],
-                                    [ -71.,  -75.,  -79.]],
-                                   [[-821., -825., -829.],
-                                    [-896., -900., -904.],
-                                    [-971., -975., -979.]]]])
+        npt.assert_almost_equal(lap,[[[[ 0.,  0., -0.],
+                                    [ 0.,  0., -0.],
+                                    [ 0.,  0., -0.]],
+                                   [[ 0.,  0., -0.],
+                                    [ 0.,  0., -0.],
+                                    [ 0.,  0., -0.]],
+                                   [[ 0.,  0., -0.],
+                                    [ 0.,  0., -0.],
+                                    [ 0.,  0., -0.]]]])
 
 
 class Test_finite_difference_1d_neumann_torch(unittest.TestCase):
 
     def setUp(self):
         self.spacing = np.array([0.1])
-        self.fd_torch = FD.FD_torch(self.spacing)
+        self.fd_torch = FD.FD_torch(self.spacing, mode='neumann_zero')
 
     def tearDown(self):
         pass
@@ -403,21 +403,21 @@ class Test_finite_difference_1d_neumann_torch(unittest.TestCase):
 
     def test_dXc(self):
         dxc = self.fd_torch.dXc(torch.FloatTensor([[1, 2, 3]]) )
-        npt.assert_almost_equal(dxc.detach().cpu().numpy(), [[5, 10, 5]])
+        npt.assert_almost_equal(dxc.detach().cpu().numpy(), [[0, 10, 0]])
 
     def test_ddXc(self):
         ddxc = self.fd_torch.ddXc(torch.FloatTensor([[1, 0, 3]]) )
-        npt.assert_almost_equal(ddxc.detach().cpu().numpy(), [[-100, 400, -300]])
+        npt.assert_almost_equal(ddxc.detach().cpu().numpy(), [[-0, 400, -0]])
 
     def test_lap(self):
         lap = self.fd_torch.lap(torch.FloatTensor([[1,0,3]]) )
-        npt.assert_almost_equal(lap.detach().cpu().numpy(), [[-100,400,-300]])
+        npt.assert_almost_equal(lap.detach().cpu().numpy(), [[-0,400,-0]])
 
 
 class Test_finite_difference_2d_neumann_torch(unittest.TestCase):
     def setUp(self):
         self.spacing = np.array([0.1,0.2])
-        self.fd_torch = FD.FD_torch(self.spacing)
+        self.fd_torch = FD.FD_torch(self.spacing, mode='neumann_zero')
 
     def tearDown(self):
         pass
@@ -448,7 +448,7 @@ class Test_finite_difference_2d_neumann_torch(unittest.TestCase):
 
     def test_dXc(self):
         dxc = self.fd_torch.dXc(torch.FloatTensor([[[1, 2, 3],[4,5,6],[7,8,9]]]))
-        npt.assert_almost_equal(dxc.detach().cpu().numpy(),[[[15,15, 15],[30,30,30],[15,15,15]]])
+        npt.assert_almost_equal(dxc.detach().cpu().numpy(),[[[0,0, 0],[30,30,30],[0,0,0]]])
 
     def test_dYb(self):
         dyb = self.fd_torch.dYb(torch.FloatTensor([[[1, 2, 3],[4,5,6],[7,8,9]]]))
@@ -460,26 +460,26 @@ class Test_finite_difference_2d_neumann_torch(unittest.TestCase):
 
     def test_dYc(self):
         dyc = self.fd_torch.dYc(torch.FloatTensor([[[1, 2, 3],[4,5,6],[7,8,9]]]))
-        npt.assert_almost_equal(dyc.detach().cpu().numpy(),[[[2.5,5, 2.5],[2.5,5,2.5],[2.5,5,2.5]]])
+        npt.assert_almost_equal(dyc.detach().cpu().numpy(),[[[0,5, 0],[0,5,0],[0,5,0]]])
 
     def test_ddXc(self):
         ddxc = self.fd_torch.ddXc(torch.FloatTensor([[[1, 2, 3],[4,5,6],[7,8,9]]]))
-        npt.assert_almost_equal(ddxc.detach().cpu().numpy(),[[[300, 300, 300],[0,0,0],[-300,-300,-300]]])
+        npt.assert_almost_equal(ddxc.detach().cpu().numpy(),[[[0, 0, 0],[0,0,0],[-0,-0,-0]]])
 
     def test_ddYc(self):
         ddyc = self.fd_torch.ddYc(torch.FloatTensor([[[1, 2, 3],[4,5,6],[7,8,9]]]))
-        npt.assert_almost_equal(ddyc.detach().cpu().numpy(),[[[25, 0, -25],[25,0,-25],[25,0,-25]]])
+        npt.assert_almost_equal(ddyc.detach().cpu().numpy(),[[[0, 0, -0],[0,0,-0],[0,0,-0]]])
 
     def test_lap(self):
         lap = self.fd_torch.lap(torch.FloatTensor([[[1, 2, 3],[4,5,6],[7,8,9]]]))
-        npt.assert_almost_equal(lap.detach().cpu().numpy(),[[[325, 300, 275],[25,0,-25],[-275,-300,-325]]])
+        npt.assert_almost_equal(lap.detach().cpu().numpy(),[[[0, 0, -0],[0,0,-0],[0,0,-0]]])
 
 
 class Test_finite_difference_3d_neumann_torch(unittest.TestCase):
 
     def setUp(self):
         self.spacing = np.array([0.1,0.2,0.5])
-        self.fd_torch = FD.FD_torch(self.spacing)
+        self.fd_torch = FD.FD_torch(self.spacing, mode='neumann_zero')
         self.inArray = torch.FloatTensor([[[[ 0.,  1.,  2.],
                                       [ 3.,  4.,  5.],
                                       [ 6.,  7.,  8.]],
@@ -594,15 +594,15 @@ class Test_finite_difference_3d_neumann_torch(unittest.TestCase):
 
     def test_dXc(self):
         dxc = self.fd_torch.dXc(self.inArray)
-        npt.assert_almost_equal(dxc.detach().cpu().numpy(),[[[[ 45.,  45.,  45.],
-                                    [ 45.,  45.,  45.],
-                                    [ 45.,  45.,  45.]],
+        npt.assert_almost_equal(dxc.detach().cpu().numpy(),[[[[ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.]],
                                    [[ 90.,  90.,  90.],
                                     [ 90.,  90.,  90.],
                                     [ 90.,  90.,  90.]],
-                                   [[ 45.,  45.,  45.],
-                                    [ 45.,  45.,  45.],
-                                    [ 45.,  45.,  45.]]]])
+                                   [[ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.]]]])
 
     def test_dYb(self):
         dyb = self.fd_torch.dYb(self.inArray)
@@ -630,15 +630,15 @@ class Test_finite_difference_3d_neumann_torch(unittest.TestCase):
 
     def test_dYc(self):
         dyc = self.fd_torch.dYc(self.inArray)
-        npt.assert_almost_equal(dyc.detach().cpu().numpy(),[[[[  7.5,   7.5,   7.5],
+        npt.assert_almost_equal(dyc.detach().cpu().numpy(),[[[[  0.,   0.,   0.],
                                     [ 15. ,  15. ,  15. ],
-                                    [  7.5,   7.5,   7.5]],
-                                   [[  7.5,   7.5,   7.5],
+                                    [  0.,    0.,    0.]],
+                                   [[   0.,    0.,    0.],
                                     [ 15. ,  15. ,  15. ],
-                                    [  7.5,   7.5,   7.5]],
-                                   [[  7.5,   7.5,   7.5],
+                                    [  0.,    0.,    0.]],
+                                   [[  0.,    0.,    0.],
                                     [ 15. ,  15. ,  15. ],
-                                    [  7.5,   7.5,   7.5]]]])
+                                    [  0.,    0.,    0.]]]])
 
     def test_dZb(self):
         dzb = self.fd_torch.dZb(self.inArray)
@@ -666,63 +666,63 @@ class Test_finite_difference_3d_neumann_torch(unittest.TestCase):
 
     def test_dZc(self):
         dzc = self.fd_torch.dZc(self.inArray)
-        npt.assert_almost_equal(dzc.detach().cpu().numpy(),[[[[ 1.,  2.,  1.],
-                                    [ 1.,  2.,  1.],
-                                    [ 1.,  2.,  1.]],
-                                   [[ 1.,  2.,  1.],
-                                    [ 1.,  2.,  1.],
-                                    [ 1.,  2.,  1.]],
-                                   [[ 1.,  2.,  1.],
-                                    [ 1.,  2.,  1.],
-                                    [ 1.,  2.,  1.]]]])
+        npt.assert_almost_equal(dzc.detach().cpu().numpy(),[[[[ 0.,  2.,  0.],
+                                    [ 0.,  2.,  0.],
+                                    [ 0.,  2.,  0.]],
+                                   [[ 0.,  2.,  0.],
+                                    [ 0.,  2.,  0.],
+                                    [ 0.,  2.,  0.]],
+                                   [[ 0.,  2.,  0.],
+                                    [ 0.,  2.,  0.],
+                                    [ 0.,  2.,  0.]]]])
 
     def test_ddXc(self):
         ddxc = self.fd_torch.ddXc(self.inArray)
-        npt.assert_almost_equal(ddxc.detach().cpu().numpy(),[[[[ 900.,  900.,  900.],
-                                    [ 900.,  900.,  900.],
-                                    [ 900.,  900.,  900.]],
+        npt.assert_almost_equal(ddxc.detach().cpu().numpy(),[[[[ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.]],
                                    [[   0.,    0.,    0.],
                                     [   0.,    0.,    0.],
                                     [   0.,    0.,    0.]],
-                                   [[-900., -900., -900.],
-                                    [-900., -900., -900.],
-                                    [-900., -900., -900.]]]])
+                                   [[0., 0., 0.],
+                                    [0., 0., 0.],
+                                    [0., 0., 0.]]]])
 
     def test_ddYc(self):
         ddyc = self.fd_torch.ddYc(self.inArray)
-        npt.assert_almost_equal(ddyc.detach().cpu().numpy(),[[[[ 75.,  75.,  75.],
+        npt.assert_almost_equal(ddyc.detach().cpu().numpy(),[[[[ 0.,  0.,  0.],
                                     [  0.,   0.,   0.],
-                                    [-75., -75., -75.]],
-                                   [[ 75.,  75.,  75.],
+                                    [-0., -0., -0.]],
+                                   [[ 0.,  0.,  0.],
                                     [  0.,   0.,   0.],
-                                    [-75., -75., -75.]],
-                                   [[ 75.,  75.,  75.],
+                                    [-0., -0., -0.]],
+                                   [[ 0.,  0.,  0.],
                                     [  0.,   0.,   0.],
-                                    [-75., -75., -75.]]]])
+                                    [-0., -0., -0.]]]])
 
     def test_ddZc(self):
         ddzc = self.fd_torch.ddZc(self.inArray)
-        npt.assert_almost_equal(ddzc.detach().cpu().numpy(),[[[[ 4.,  0., -4.],
-                                    [ 4.,  0., -4.],
-                                    [ 4.,  0., -4.]],
-                                   [[ 4.,  0., -4.],
-                                    [ 4.,  0., -4.],
-                                    [ 4.,  0., -4.]],
-                                   [[ 4.,  0., -4.],
-                                    [ 4.,  0., -4.],
-                                    [ 4.,  0., -4.]]]])
+        npt.assert_almost_equal(ddzc.detach().cpu().numpy(),[[[[ 0.,  0., -0.],
+                                    [ 0.,  0., -0.],
+                                    [ 0.,  0., -0.]],
+                                   [[ 0.,  0., -0.],
+                                    [ 0.,  0., -0.],
+                                    [ 0.,  0., -0.]],
+                                   [[ 0.,  0., -0.],
+                                    [ 0.,  0., -0.],
+                                    [ 0.,  0., -0.]]]])
 
     def test_lap(self):
         lap = self.fd_torch.lap(self.inArray)
-        npt.assert_almost_equal(lap.detach().cpu().numpy(),[[[[ 979.,  975.,  971.],
-                                    [ 904.,  900.,  896.],
-                                    [ 829.,  825.,  821.]],
-                                   [[  79.,   75.,   71.],
-                                    [   4.,    0.,   -4.],
-                                    [ -71.,  -75.,  -79.]],
-                                   [[-821., -825., -829.],
-                                    [-896., -900., -904.],
-                                    [-971., -975., -979.]]]])
+        npt.assert_almost_equal(lap.detach().cpu().numpy(),[[[[ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.],
+                                    [ 0.,  0.,  0.]],
+                                   [[  0.,   0.,   0.],
+                                    [   0.,    0.,   -0.],
+                                    [ -0.,  -0.,  -0.]],
+                                   [[-0., -0., -0.],
+                                    [-0., -0., -0.],
+                                    [-0., -0., -0.]]]])
 
 
 if __name__ == '__main__':

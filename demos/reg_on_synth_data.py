@@ -117,7 +117,7 @@ def nonp_optimization(si, moving,target,spacing,fname,l_moving=None,l_target=Non
     output = si.get_warped_image()
     phi = si.opt.optimizer.ssOpt.get_map()
     model_param = si.get_model_parameters()
-    if init_weight is not None:
+    if len(model_param)==2:
         m, weight_map = model_param['m'], model_param['local_weights']
         return output.detach_(), phi.detach_(), m.detach(), weight_map.detach()
     else:
