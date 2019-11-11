@@ -1,4 +1,4 @@
-from attic.demos.rdmm_synth_data_generation.shape import *
+from demos.rdmm_synth_data_generation.shape import *
 
 
 class Ellipse(Shape):

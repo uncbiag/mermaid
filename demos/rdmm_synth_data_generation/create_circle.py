@@ -1,7 +1,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
-from attic.demos.rdmm_synth_data_generation.shape import *
-from attic.demos.rdmm_synth_data_generation.create_ellipse import Ellipse
+from demos.rdmm_synth_data_generation.shape import *
+from demos.rdmm_synth_data_generation.create_ellipse import Ellipse
 
 class Circle(Ellipse):
     def __init__(self, setting,scale=1.):

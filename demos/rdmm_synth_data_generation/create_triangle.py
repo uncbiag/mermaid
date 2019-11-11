@@ -1,4 +1,4 @@
-from attic.demos.rdmm_synth_data_generation.create_poly import Poly
+from demos.rdmm_synth_data_generation.create_poly import Poly
 import numpy as np
 
 class Triangle(Poly):
