@@ -4,13 +4,13 @@ Parameters
 Parameters are generally handled via a customized dicitionary-like class :class:`ParameterDict`.
 To use it simply import the package `module_parameters`
 
-.. code::
+.. code:: python
 
    import module_parameters as MP
 
 You can done create a new parameter instance via
 
-.. code::
+.. code:: python
    
     p = MP.ParameterDict()
 
@@ -18,25 +18,25 @@ It is possilbe to use this parameter dictionary similarly to a typical python di
 
 For example, we can create *categories* (these are hierarchical levels to group parameters). The following command creates a category *registration_model*. This is indicated by assigning it a tupe composed of an empty dictionary ({}) and a comment about the purpose of the category.
 
-.. code::
+.. code:: python
 
    p['registration_model'] = ({},'general settings for registration models')   
 
 This can of course be done hierarchically
 
-.. code::
+.. code:: python
    
     p['registration_model']['similarity_measure'] = ({},'settings for the similarity measures')
 
 And we can then assign actual values
 
-.. code::
+.. code:: python
    
     p['registration_model']['similarity_measure']['type']=('ssd','similarity measure type')
 
 Of course, this is only half the functionality, as we typically want to retrieve values and specify default values in case a given key does not exist. For example,
 
-.. code::
+.. code:: python
     
     p['registration_model'][('nrOfIterations',10,'number of iterations')]
 
@@ -44,20 +44,20 @@ asks for the parameter *nrOfIterations* of the category *registration_model*. It
 
 We can also create a new category with default values if it does not exist yet
 
-.. code::
+.. code:: python
 
    p[('new_category',{},'this is a new category')]
    p[('registration_model',{},'this category already existed')]
 
 And we can of course print everything if desired
 
-.. code::
+.. code:: python
    
     print(p)
 
 We can write everything out as JSON:
 
-.. code::
+.. code:: python
     
     p.write_JSON('test_pars.json')
     p.write_JSON_comments('test_pars_comments.json')
@@ -67,7 +67,7 @@ The former command just writes out the settings that were used (and hence are id
 
 Lastly, we can of course also read settings by
 
-.. code::
+.. code:: python
 
    p.load_JSON('test_pars.json)
 

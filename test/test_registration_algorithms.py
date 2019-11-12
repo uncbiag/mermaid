@@ -4,6 +4,11 @@
 import importlib.util
 import os
 import sys
+
+sys.path.insert(0,os.path.abspath('..'))
+sys.path.insert(0,os.path.abspath('../mermaid'))
+sys.path.insert(0,os.path.abspath('../mermaid/libraries'))
+
 import unittest
 import torch
 from mermaid.data_wrapper import AdaptVal
@@ -15,9 +20,6 @@ import mermaid.module_parameters as pars
 import mermaid.multiscale_optimizer as MO
 import mermaid.smoother_factory as SF
 
-sys.path.insert(0,os.path.abspath('..'))
-sys.path.insert(0,os.path.abspath('../mermaid'))
-sys.path.insert(0,os.path.abspath('../mermaid/libraries'))
 
 try:
     importlib.util.find_spec('HtmlTestRunner')

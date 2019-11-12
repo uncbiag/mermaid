@@ -29,7 +29,7 @@ def _find_settings_directory(first_choice, second_choice, settings_name):
 this_directory = os.path.dirname(__file__)
 # __file__ is the absolute path to the current python file.
 
-standard_settings_directory = os.path.join(this_directory, r'../settings')
+standard_settings_directory = os.path.join(this_directory, r'../mermaid_settings')
 
 home_directory = os.path.expanduser('~')
 putative_local_settings_directory = os.path.join(home_directory,r'.mermaid_settings')

@@ -82,7 +82,7 @@ def affine_optimization(moving,target,spacing,fname_list,l_moving=None,l_target=
                             rel_ftol=0,
                             similarity_measure_type='lncc',
                             similarity_measure_sigma=1.,
-                            params ='../mermaid/demos/rdmm_synth_data_generation/cur_settings_affine.json')
+                            params ='../mermaid/mermaid_demos/rdmm_synth_data_generation/cur_settings_affine.json')
     output = si.get_warped_image()
     phi = si.opt.optimizer.ssOpt.get_map()
     disp = si.opt.optimizer.ssOpt.model.Ab

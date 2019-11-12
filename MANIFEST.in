@@ -1,0 +1,13 @@
+include RELEASE_VERSION
+include version.py
+
+include README.md
+include LICENSE
+
+recursive-include mermaid_test_data *
+recursive-include mermaid_experiments *
+recursive-include mermaid_apps *
+recursive-include mermaid_settings *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+

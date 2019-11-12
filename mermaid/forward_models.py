@@ -87,6 +87,7 @@ class RHSLibrary(object):
         :param v: velocity field BxCxXxYxZ
         :return: Returns the RHS of the advection equation for one channel BxXxYxZ
         """
+
         if self.dim == 1:
             rhs_ret = -self.fdt_ne.dXc(I) * v[:,0:1]
         elif self.dim == 2:
@@ -111,7 +112,6 @@ class RHSLibrary(object):
         :return: Returns the RHS of the scalar conservation law equations involved BxCxXxYxZ
         """
 
-
         rhs_ret=self._rhs_scalar_conservation_multiN(I, v)
         return rhs_ret
 
@@ -123,6 +123,7 @@ class RHSLibrary(object):
         :param v: velocity field  BxCxXxYxZ
         :return: Returns the RHS of the scalar-conservation law equation for one channel BxXxYxZ
         """
+
         if self.dim==1:
             rhs_ret = -self.fdt_ne.dXc(I*v[:,0:1])
         elif self.dim==2:
@@ -157,6 +158,7 @@ class RHSLibrary(object):
         :param v:
         :return:
         """
+
         rhs_ret = utils.compute_warped_image_multiNC(v, phi, spacing=self.spacing, spline_order=1,zero_boundary=False)
         return rhs_ret
 
@@ -175,6 +177,7 @@ class RHSLibrary(object):
         :param v: Velocity fields (this will be one velocity field per map) BxCxXxYxZ
         :return: Returns the RHS of the advection equations involved BxCxXxYxZ
         '''
+
         sz = phi.size()
         rhs_ret = self._rhs_advect_map_call(phi, v)
         return rhs_ret
@@ -206,10 +209,6 @@ class RHSLibrary(object):
         return rhsphi
 
 
-
-
-
-
     def rhs_epdiff_multiNC(self, m, v):
         '''
         Computes the right hand side of the EPDiff equation for of N momenta (for N images). 
@@ -225,6 +224,7 @@ class RHSLibrary(object):
         :param v: Velocity fields (this will be one velocity field per momentum) BxCXxYxZ
         :return: Returns the RHS of the EPDiff equations involved BxCXxYxZ
         '''
+
         sz = m.size()
         rhs_ret = MyTensor(sz).zero_()
         rhs_ret = self._rhs_epdiff_call(m, v, rhs_ret)
@@ -236,6 +236,7 @@ class RHSLibrary(object):
         :param v: Velocity fields (this will be one velocity field per momentum)  BxCxXxYxZ
         :return rhsm: Returns the RHS of the EPDiff equations involved  BxCxXxYxZ
         """
+
         # if self.use_neumann_BC_for_map:
         #     fdc = self.fdt_ne # use zero Neumann boundary conditions
         # else:
@@ -306,6 +307,7 @@ class RHSLibrary(object):
         :param v: Velocity fields (this will be one velocity field per momentum) BxCXxYxZ
         :return: Returns the RHS of the EPDiff equations involved BxCXxYxZ
         '''
+
         sz = m.size()
         rhs_ret = MyTensor(sz).zero_()
         rhs_ret = self._rhs_adapt_epdiff_wkw_call(m, v,w,sm_wm,smoother, rhs_ret)
@@ -346,14 +348,6 @@ class RHSLibrary(object):
             ret_var[:, i] = rhs[:, i] + (sm_m_sm_wm* dc_w_list[i]).sum(1)
 
         return ret_var
-
-
-
-
-
-
-
-
 
 
 
@@ -400,6 +394,7 @@ class ForwardModel(with_metaclass(ABCMeta, object)):
         :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: the function value, should return a list (to support easy concatenations of states)
         """
+
         pass
 
     def u(self,t,pars,variables_from_optimizer=None):
@@ -411,6 +406,7 @@ class ForwardModel(with_metaclass(ABCMeta, object)):
         :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: the external input
         """
+
         return []
 
 
@@ -434,6 +430,7 @@ class AdvectMap(ForwardModel):
         :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: Simply returns this velocity field
         """
+
         return pars['v']
 
     def f(self,t, x, u, pars=None, variables_from_optimizer=None):
@@ -474,6 +471,7 @@ class AdvectImage(ForwardModel):
         :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: Simply returns this velocity field
         """
+
         return pars['v']
 
     def f(self,t, x, u, pars=None, variables_from_optimizer=None):
@@ -487,11 +485,8 @@ class AdvectImage(ForwardModel):
         :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: right hand side [I]
         """
+
         return [self.rhs.rhs_advect_image_multiNC(x[0],u)]
-
-
-
-
 
 
 
@@ -522,6 +517,7 @@ class EPDiffImage(ForwardModel):
         :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: right hand side [m,I]
         """
+
         # assume x[0] is m and x[1] is I for the state
         m = x[0]
         I = x[1]
@@ -534,6 +530,7 @@ class EPDiffMap(ForwardModel):
     """
     Forward model for the EPDiff equation. State is the momentum, m, and the transform, :math:`\\phi` 
     (mapping the source image to the target image).
+
     :math:`(m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
     
     :math:`v=Km`
@@ -602,12 +599,11 @@ class EPDiffMap(ForwardModel):
 
 
 
-
-
 class EPDiffAdaptMap(ForwardModel):
     """
     Forward model for the EPDiff equation. State is the momentum, m, and the transform, :math:`\\phi`
     (mapping the source image to the target image).
+
     :math:`(m_1,...,m_d)^T_t = -(div(m_1v),...,div(m_dv))^T-(Dv)^Tm`
 
     :math:`v=Km`
@@ -650,8 +646,6 @@ class EPDiffAdaptMap(ForwardModel):
 
     def init_velocity_mask(self,velocity_mask):
         self.velocity_mask = velocity_mask
-
-
 
 
     def debug_distrib(self,var,name):
@@ -813,6 +807,7 @@ class EPDiffScalarMomentumImage(EPDiffScalarMomentum):
         :param variables_from_optimizer: variables that can be passed from the optimizer
         :return: right hand side [lam,I]
         """
+
         # assume x[0] is \lambda and x[1] is I for the state
         lam = x[0]
         I = x[1]
