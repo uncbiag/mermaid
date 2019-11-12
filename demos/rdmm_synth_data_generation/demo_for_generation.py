@@ -194,7 +194,7 @@ def get_txt(folder_path=None,output_folder=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Creates a synthetic registration examples for RDMM related experiments')
-    parser.add_argument('-dp','--data_saving_path', required=True, type=str, default='./data_output',
+    parser.add_argument('-dp','--data_saving_path', required=False, type=str, default='./data_output',
                         help='path of the folder saving synthesis data')
     parser.add_argument('-di','--data_task_path', required=False, type=str, default='./data_task',
                         help='path of the folder recording data info for registration tasks')
