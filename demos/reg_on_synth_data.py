@@ -22,7 +22,6 @@ import numpy as np
 from multiprocessing import * 
 import progressbar as pb
 from functools import partial
-#model_name = 'lddmm_adapt_smoother_map'#'lddmm_adapt_smoother_map'#'lddmm_shooting_map' #svf_vector_momentum_map
 
 
 def get_pair_list(folder_path):
@@ -227,14 +226,14 @@ def save_color_image(image,pair_name,target):
 
 
 
-def warp_data(data_list):
+def wrap_data(data_list):
     return [AdaptVal(data) for data in data_list]
 
 
 
 def do_single_pair_registration(pair,pair_name, weight_pair, do_affine=True,expr_folder=None,mermaid_setting_path=None):
     moving, target, spacing, moving_init_weight, _ =get_input(pair,weight_pair)
-    moving, target, moving_init_weight = warp_data([moving, target, moving_init_weight])
+    moving, target, moving_init_weight = wrap_data([moving, target, moving_init_weight])
     si = None
     if do_affine:
         af_img, af_map, af_param, si =affine_optimization(moving,target,spacing,pair_name)
