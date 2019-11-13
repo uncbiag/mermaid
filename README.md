@@ -87,7 +87,7 @@ There are already initial OSX/Linux versions available which can be installed vi
 
 **Supported solvers**:
 * embedded RK4
-* torchdiffeq: explicit_adams, fixed_adams, tsit5, dopri5, euler, midpoint, rk4
+* [torchdiffeq](https://github.com/rtqichen/torchdiffeq): explicit_adams, fixed_adams, tsit5, dopri5, euler, midpoint, rk4
 
 **Optimizer**:
 * support single/multi-scale optimizer
