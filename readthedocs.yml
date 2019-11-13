@@ -7,10 +7,7 @@ python:
    version: 3.7
    system_packages: true
    install:
-      - requirements: docs/requirements_doc.txt
-      - method: pip
-        path: docs
+      - requirements: doc/requirements_doc.txt
 
 formats: []
-
 
