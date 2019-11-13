@@ -7,7 +7,7 @@ python:
    version: 3.7
    system_packages: true
    install:
-      - requirements: docs/requirements_doc.txt
+      - requirements: doc/requirements_doc.txt
 
 formats: []
 
