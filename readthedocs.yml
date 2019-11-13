@@ -8,6 +8,8 @@ python:
    system_packages: true
    install:
       - requirements: docs/requirements_doc.txt
+      - method: pip
+        path: docs
 
 formats: []
 
