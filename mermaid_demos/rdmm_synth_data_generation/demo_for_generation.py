@@ -14,10 +14,10 @@ import random
 from glob import glob
 import argparse
 
-from demos.rdmm_synth_data_generation.combine_shape import generate_shape_objects,get_image,randomize_pair
-from demos.rdmm_synth_data_generation.moving_shape import MovingShape, MovingShapes
-from demos.rdmm_synth_data_generation.utils_for_regularizer import get_single_gaussian_smoother
-from demos.rdmm_synth_data_generation.utils_for_general import add_texture_on_img,plot_2d_img, save_smoother_map,write_list_into_txt, get_file_name
+from mermaid_demos.rdmm_synth_data_generation.combine_shape import generate_shape_objects,get_image,randomize_pair
+from mermaid_demos.rdmm_synth_data_generation.moving_shape import MovingShape, MovingShapes
+from mermaid_demos.rdmm_synth_data_generation.utils_for_regularizer import get_single_gaussian_smoother
+from mermaid_demos.rdmm_synth_data_generation.utils_for_general import add_texture_on_img,plot_2d_img, save_smoother_map,write_list_into_txt, get_file_name
 from mermaid.data_wrapper import MyTensor
 from multiprocessing import *
 import progressbar as pb
@@ -122,6 +122,7 @@ def get_txt_from_generated_images(folder_path,output_folder):
     t_post = 't_img.pt'
     s_weight ='s_weight.pt'
     t_weight ='t_weight.pt'
+    folder_path = os.path.abspath(folder_path)
     s_post_path = os.path.join(folder_path, '**','*'+s_post )
     s_path_list = glob(s_post_path, recursive=True)
     t_path_list = [s_path.replace(s_post,t_post) for s_path in s_path_list]

@@ -390,11 +390,11 @@ if __name__ == '__main__':
     if mermaid_setting_path is None:
         print("the mermaid_setting_path is not provided, load the default settings instead")
         if model_name == 'rdmm':
-                mermaid_setting_path = os.path.join('./reg_on_synth_data_settings', 'rdmm_setting_predefined.json' if use_init_weight else 'rdmm_setting.json')
+                mermaid_setting_path = os.path.join('./2d_example_synth', 'rdmm_setting_predefined.json' if use_init_weight else 'rdmm_setting.json')
         elif model_name =='lddmm':
-            mermaid_setting_path = './reg_on_synth_data_settings/lddmm_setting.json'
+            mermaid_setting_path = './2d_example_synth/lddmm_setting.json'
         elif model_name == 'vsvf':
-            mermaid_setting_path='./reg_on_synth_data_settings/vsvf_setting.json'
+            mermaid_setting_path='./2d_example_synth/vsvf_setting.json'
         else:
             raise ValueError("the default setting of {} is not founded".format(model_name))
 

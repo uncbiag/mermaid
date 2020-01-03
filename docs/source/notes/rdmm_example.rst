@@ -39,9 +39,9 @@ The data generation may take minutes. Once the data are prepared, we can run RDM
 .. code:: shell
 
     cd ..
-    python example_reg_on_synth_data.py
+    python example_2d_synth.py
 
-The optional settings in *example_reg_on_synth_data.py* are as follows:
+The optional settings in *example_2d_synth.py* are as follows:
 
 .. code:: shell
 

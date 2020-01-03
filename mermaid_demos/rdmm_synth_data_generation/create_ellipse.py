@@ -1,4 +1,4 @@
-from demos.rdmm_synth_data_generation.shape import *
+from mermaid_demos.rdmm_synth_data_generation.shape import *
 
 
 class Ellipse(Shape):
