@@ -447,9 +447,11 @@ class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
         """
         super(RegistrationNetTimeIntegration, self).__init__(sz, spacing, params)
 
-        self.tFrom = 0.
+        self.tFrom =  self.params['forward'][
+            ('tFrom', 0.0, 'time to solve a model from')]
         """time to solve a model from"""
-        self.tTo = 1.
+        self.tTo =  self.params['forward'][
+            ('tTo', 1.0, 'time to solve a model to')]
         """time to solve a model to"""
 
         self.use_CFL_clamping = self.params[
