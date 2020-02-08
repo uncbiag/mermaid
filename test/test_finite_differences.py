@@ -25,7 +25,7 @@ except ImportError:
 
 # testing code starts here
 
-import mermaid.finite_differences_cp as FD
+import mermaid.finite_differences as FD
 
 #TODO: add tests for non-Neumann boundary conditions (linear extrapolation)
 #TODO: do experiments how the non-Neumann bounday conditions behave in practive
