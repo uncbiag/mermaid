@@ -47,6 +47,7 @@ REQUIRED = [
     "pandoc",
     "pypandoc",
     "statsmodels",
+    "progressbar2",
     # 'requests', 'maya', 'records',
 ]
 

@@ -19,3 +19,4 @@ nbsphinx
 pandoc
 pypandoc
 statsmodels
+progressbar2

@@ -66,6 +66,7 @@ requirements:
     - pypandoc
     - graphviz
     - statsmodels
+    - progressbar2
 
 test:
   imports:
