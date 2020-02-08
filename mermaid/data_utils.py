@@ -4,10 +4,7 @@ from os import listdir
 from os.path import isfile, join
 from glob import glob
 import os
-from scipy import misc
 import numpy as np
-#import h5py
-import skimage
 #
 import sys
 import torch
@@ -406,8 +403,14 @@ def read_h5py_file(path, type='h5py'):
         return {'data': data, 'info': info, 'label': label}
 
 
-def get_file_name(path):
-    return os.path.split(path)[1].split('.')[0]
+def get_file_name(file_path,last_ocur=True):
+    if not last_ocur:
+        name= os.path.split(file_path)[1].split('.')[0]
+    else:
+        name = os.path.split(file_path)[1].rsplit('.',1)[0]
+    name = name.replace('.nii','')
+    name = name.replace('.','d')
+    return name
 
 
 def sitk_read_img_to_std_tensor(path):

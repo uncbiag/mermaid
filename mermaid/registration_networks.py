@@ -447,10 +447,10 @@ class RegistrationNetTimeIntegration(with_metaclass(ABCMeta, RegistrationNet)):
         """
         super(RegistrationNetTimeIntegration, self).__init__(sz, spacing, params)
 
-        self.tFrom =  self.params['forward'][
+        self.tFrom =  self.params['forward_model'][
             ('tFrom', 0.0, 'time to solve a model from')]
         """time to solve a model from"""
-        self.tTo =  self.params['forward'][
+        self.tTo =  self.params['forward_modelF'][
             ('tTo', 1.0, 'time to solve a model to')]
         """time to solve a model to"""
 
