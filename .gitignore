@@ -11,3 +11,4 @@ RELEASE-VERSION
 !test_rddmm_shooting_map_multi_scale_config.json
 !test_rddmm_shooting_map_single_scale_config.json
 !test_rddmm_shooting_map_multi_scale_config_tobe.json
+docs/build
