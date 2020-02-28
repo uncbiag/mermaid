@@ -197,22 +197,25 @@ class OptimalMassTransportSimilarity(SimilarityMeasure):
         # todo: to an entire batch of images.
 
         # FX: put your OMT code here; this is just a placeholder for now which is simple SSD (but using the source image and the map)
-        if phi is None:
-            raise ValueError('OptimalMassTransportSimiliary can only be computed for map-based models.')
+        # if phi is None:
+        #     raise ValueError('OptimalMassTransportSimiliary can only be computed for map-based models.')
 
         # warp the source image (would be more efficient if we process a batch of images at once;
         # but okay for now and no overhead if you only use one image pair at a time)
-        I1_warped = utils.compute_warped_image(I0Source, phi, self.spacing,self.spline_order)
+        # I1_warped = utils.compute_warped_image(I0Source, phi, self.spacing,self.spline_order)
 
         # Encapsulate the data in tensor Variables
-        multiplier0 = torch.zeros(I0.size())
-        multiplier1 = torch.zeros(I1.size())
-        nr_iterations_sinkhorn = torch.Tensor([self.sinkhorn_iterations])
-        std_sink = torch.Tensor([self.std_sinkhorn])
+        multiplier0 = AdaptVal(torch.zeros(I0.size()))
+        multiplier1 = AdaptVal(torch.zeros(I1.size()))
+        nr_iterations_sinkhorn = AdaptVal(torch.Tensor([self.sinkhorn_iterations]))
+        std_sink = AdaptVal(torch.Tensor([self.std_sinkhorn]))
 
+        shape = numpy_shape(AdaptVal(I0).detach().cpu().numpy())
+        simil = OTSimilarityGradient(torch.Tensor(self.spacing),shape,sinkhorn_iterations = nr_iterations_sinkhorn[0],std_dev = std_sink[0])
+        result,other = simil.compute_similarity(I0,I1)
         # Compute the actual similarity
-        result = OTSimilarityHelper.apply(phi,I1_warped,I1,multiplier0,multiplier1,torch.Tensor(self.spacing),nr_iterations_sinkhorn,std_sink)
-        return result/(self.std_dev**2)
+        # result = OTSimilarityHelper.apply(phi,I0,I1,multiplier0,multiplier1,torch.Tensor(self.spacing),nr_iterations_sinkhorn,std_sink)
+        return -result/(self.std_dev**2)
 
 class NCCSimilarity(SimilarityMeasure):
     """
@@ -433,6 +436,10 @@ class LNCCSimilarity(SimilarityMeasure):
         else:
             raise ValueError(" Only 1-3d support")
 
+        # TODO: workaround. Remove later
+        # self.filter = [self.filter[i].double() for i in range(len(self.filter))]
+        # self.weight = [self.weight for i in range(len(self.weight))]
+
 
     def compute_similarity(self, I0, I1, I0Source=None, phi=None):
         """
@@ -487,6 +494,7 @@ class LNCCSimilarity(SimilarityMeasure):
 
             lncc = cross * cross / (input_local_var * target_local_var + 1e-5)
             lncc = 1 - lncc.mean()
+            lncc = torch.clamp(lncc, min=0.0, max=1.0)
             lncc = n_batch* lncc
             lncc_total += lncc * self.weight[scale_id]
 

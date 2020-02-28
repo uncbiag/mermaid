@@ -5,6 +5,7 @@ RELEASE-VERSION
 *.json
 .idea/
 *.ipynb_checkpoints
+docs/build
 !test/json/test_affine_settings.json
 !test/json/test_svf_settings.json
 !mermaid_demos/2d_example_synth/*

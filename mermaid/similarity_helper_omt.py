@@ -100,7 +100,7 @@ class OTSimilarityGradient(object):
         x_col = x.unsqueeze(1)
         y_lin = x.unsqueeze(0)
         c = torch.abs(x_col - y_lin) ** 2
-        return torch.exp(-torch.div(c, std ** 2))
+        return AdaptVal(torch.exp(-torch.div(c, std ** 2)))
 
     def build_kernel_matrix_gradient(self, length, std):
         """Computation of the gaussian first derivative kernel multiplied by :math:`1/2\\sigma^2`
@@ -113,7 +113,7 @@ class OTSimilarityGradient(object):
         x_col = x.unsqueeze(1)
         y_lin = x.unsqueeze(0)
         c = torch.abs(x_col - y_lin) ** 2
-        return torch.mul((y_lin - x_col), torch.exp(-torch.div(c, std ** 2)))
+        return AdaptVal(torch.mul((y_lin - x_col), torch.exp(-torch.div(c, std ** 2))))
 
     def kernel_multiplication(self, multiplier):
         """
@@ -208,8 +208,8 @@ class OTSimilarityGradient(object):
         I1rescaled = torch.div(temp2, self.my_sum(temp2))
 
         ### definition of the lagrange multiplier
-        multiplier0 = torch.ones(I0.size())
-        multiplier1 = torch.ones(I1.size())
+        multiplier0 = AdaptVal(torch.ones(I0.size()))
+        multiplier1 = AdaptVal(torch.ones(I1.size()))
         multiplier0.requires_grad= True
         multiplier1.requires_grad = True
         convergence = []
