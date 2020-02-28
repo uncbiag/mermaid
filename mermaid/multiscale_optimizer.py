@@ -749,7 +749,8 @@ class ImageRegistrationOptimizer(Optimizer):
         if self.mapLowResFactor is not None:
             self.lowResISource = self._compute_low_res_image(ISource,self.params,spacing)
             # todo: can be removed to save memory; is more experimental at this point
-            self.lowResITarget = self._compute_low_res_image(ITarget,self.params,spacing)
+            # TODO: Lin- comment out for the purpose of 3d 2d registration
+            # self.lowResITarget = self._compute_low_res_image(ITarget,self.params,spacing)
             if self.LSource is not None and self.LTarget is not None:
                 self.lowResLSource = self._compute_low_res_label_map(LSource,self.params,spacing)
                 self.lowResLTarget = self._compute_low_res_label_map(LTarget, self.params,spacing)
@@ -1688,16 +1689,31 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                                                                  phi_or_warped_image,
                                                                  self.spacing)
 
+                        #################################################
+                        ## Modify so that mermaid can show 3d 2d log
+                        if self.params["model"]["registration_model"]["similarity_measure"]["type"] == "projection":
+                            emi_pose = self.params["model"]['registration_model']['emitter_pos_list'][1]/self.spacing + 1
+                            sample_rate = self.params["model"]['registration_model']['sample_rate']
+                            resolution = [int(self.ITarget.shape[2]), int(self.ITarget.shape[3])]
+                            ISource = self.criterion.similarityMeasure.project(self.ISource, np.array(emi_pose), resolution, sample_rate)
+                            I1Warped = self.criterion.similarityMeasure.project(I1Warped, np.array(emi_pose), resolution, sample_rate)
+                            ITarget = self.ITarget[:, 1, :, :].unsqueeze(0)
+                            visual_param["prefix"] = self.params["model"]["registration_model"]["type"]
+                        else:
+                            ISource = self.ISource
+                            ITarget = self.ITarget
+                        ##################################################
+
                         vizReg.show_current_images(iter=iter_count,
-                                                   iS=self.ISource,
-                                                   iT=self.ITarget,
+                                                   iS=ISource,
+                                                   iT=ITarget,
                                                    iW=I1Warped,
                                                    iSL=self.LSource,
                                                    iTL=self.LTarget,
                                                    iWL=LWarped,
                                                    vizImages=vizImage,
                                                    vizName=vizName,
-                                                   phiWarped=phi_or_warped_image,
+                                                   phiWarped=None,
                                                    visual_param=visual_param)
                 else:
                     vizReg.show_current_images(iter=iter_count,
@@ -3636,7 +3652,14 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
             currentNrOfIteratons = reverseIterations[currentScaleNumber]
 
             ISourceC, spacingC = self.sampler.downsample_image_to_size(self.ISource, self.spacing, currentDesiredSz[2::],self.spline_order)
-            ITargetC, spacingC = self.sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz[2::],self.spline_order)
+
+            # TODO: A quick way to test sDCT CT registration, should write its own multiscale registration class later
+            # ISourceC, spacingC = self.sampler.downsample_image_by_factor(self.ISource, self.spacing, currentScaleFactor)
+            # ISourceC = ISourceC.to(torch.device("cuda"))
+            currentDesiredSzT = self._get_desired_size_from_scale(self.ITarget.size(), currentScaleFactor)
+            ITargetC, spacingT = self.sampler.downsample_image_to_size(self.ITarget.permute(1,0,2,3), self.spacing[0::2], currentDesiredSzT[2::],self.spline_order)
+            ITargetC = ITargetC.permute(1,0,2,3)
+            #ITargetC, spacingC = self.sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz[2::],self.spline_order)
             LSourceC = None
             LTargetC = None
             if self.LSource is not None and self.LTarget is not None:

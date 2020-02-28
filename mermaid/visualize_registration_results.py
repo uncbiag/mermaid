@@ -7,7 +7,7 @@ import matplotlib as matplt
 
 from .config_parser import MATPLOTLIB_AGG
 if MATPLOTLIB_AGG:
-    matplt.use('Agg')
+    matplt.use('QtAgg')
 
 
 """
@@ -163,7 +163,11 @@ def _show_current_images_2d_no_map(iS, iT, iW, iter, vizImage, vizName, visual_p
 
     if visual_param is not None:
         if i==0 and visual_param['visualize']:
-            plt.show()
+            # TODO: temporary for remote debugging
+            if not os.path.exists("./log"):
+                os.mkdir("./log")
+            plt.savefig("./log/"+visual_param['prefix']+str(iter)+".png")
+            # plt.show()
         if visual_param['save_fig']:
             file_name = visual_param['pair_name'][i]
             join_p = lambda pth1,pth2: os.path.join(pth1, pth2)

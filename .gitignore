@@ -5,6 +5,7 @@ RELEASE-VERSION
 *.json
 .idea/
 *.ipynb_checkpoints
+docs/build
 !test/json/test_affine_settings.json
 !test/json/test_svf_settings.json
 !attic/demos/rdmm_synth_settings/vsvf_setting.json
