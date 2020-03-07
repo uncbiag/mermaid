@@ -1693,7 +1693,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                         #################################################
                         ## Modify so that mermaid can show 3d 2d log
                         if self.params["model"]["registration_model"]["similarity_measure"]["type"] == "projection":
-                            emi_pose = self.params["model"]['registration_model']['emitter_pos_list'][1]/self.spacing + 1
+                            emi_pose = self.params["model"]['registration_model']['emitter_pos_scale_list'][1]
                             sample_rate = self.params["model"]['registration_model']['sample_rate']
                             resolution = [int(self.ITarget.shape[2]), int(self.ITarget.shape[3])]
                             ISource = self.criterion.similarityMeasure.project(self.ISource, np.array(emi_pose), resolution, sample_rate)
@@ -3659,6 +3659,7 @@ class MultiScaleRegistrationOptimizer(ImageRegistrationOptimizer):
                 currentDesiredSzT = self._get_desired_size_from_scale(self.ITarget.size(), currentScaleFactor)
                 ITargetC, spacingT = self.sampler.downsample_image_to_size(self.ITarget.permute(1,0,2,3), self.spacing[0::2], currentDesiredSzT[2::],self.spline_order)
                 ITargetC = ITargetC.permute(1,0,2,3)
+                self.params['model']['registration_model']["similarity_measure"]["projection"]["currentScaleFactor"] = currentScaleFactor
             else:
                 ITargetC, spacingC = self.sampler.downsample_image_to_size(self.ITarget, self.spacing, currentDesiredSz[2::],self.spline_order)
 
