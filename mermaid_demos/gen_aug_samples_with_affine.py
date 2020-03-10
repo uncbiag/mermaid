@@ -26,8 +26,6 @@ import numpy as np
 import SimpleITK as sitk
 import nibabel as nib
 import copy
-from functools import partial
-from multiprocessing import *
 
 
 
@@ -72,7 +70,7 @@ def get_file_name(file_path,last_ocur=True):
     return name
 
 
-def get_fluid_input(moving_momentum_path_list, init_weight_path_list):
+def get_fluid_input(moving_momentum_path_list, init_weight_path_list,use_affine=True):
 
     fr_sitk = lambda x: torch.Tensor(sitk.GetArrayFromImage(sitk.ReadImage(x)))
     spacing = np.flipud(sitk.ReadImage(moving_momentum_path_list[0]).GetSpacing())
@@ -81,7 +79,13 @@ def get_fluid_input(moving_momentum_path_list, init_weight_path_list):
     l_moving = fr_sitk(moving_momentum_path_list[1])[None][None]
     use_random_m = not len(moving_momentum_path_list)>2
     if not use_random_m:
-        momentum_list =[np.transpose(fr_sitk(path))[None] for path in moving_momentum_path_list[2:]]
+        if not use_affine:
+            momentum_list =[np.transpose(fr_sitk(path))[None] for path in moving_momentum_path_list[2:]]
+            affine_list = []
+        else:
+            num_m = int((len(moving_momentum_path_list)-2)/2)
+            momentum_list =[fr_sitk(path).permute(3,2,1,0)[None] for path in moving_momentum_path_list[2:num_m+2]]
+            affine_list =[fr_sitk(path).permute(3,2,1,0)[None] for path in moving_momentum_path_list[num_m+2:]]
     else:
         momentum_list = None
 
@@ -95,7 +99,7 @@ def get_fluid_input(moving_momentum_path_list, init_weight_path_list):
         fname_list = [fname.replace("_0000_Momentum",'') for fname in fname_list]
     else:
         fname_list = [get_file_name(moving_momentum_path_list[0])]
-    return moving, l_moving, momentum_list, init_weight_list, fname_list, spacing
+    return moving, l_moving, momentum_list, init_weight_list, affine_list, fname_list, spacing
 
 
 
@@ -161,18 +165,18 @@ class RandomBSplineTransform(object):
 
         return new_sample
 
-def generate_aug_data(moving_momentum_path_list,init_weight_path_list,output_path, mermaid_setting_path,compute_inverse,use_random_m,fluid_aug=True,num_of_workers=1):
+def generate_aug_data(moving_momentum_path_list,init_weight_path_list,output_path, mermaid_setting_path,compute_inverse,use_random_m,fluid_aug=True):
     if fluid_aug:
         generate_fluid_aug_data(moving_momentum_path_list, init_weight_path_list, output_path, mermaid_setting_path,
-                                compute_inverse, use_random_m,num_of_workers)
+                                compute_inverse, use_random_m)
     else:
         moving_path_list = moving_momentum_path_list
-        generate_bspline_aug_data(moving_path_list, output_path,num_of_workers)
+        generate_bspline_aug_data(moving_path_list, output_path)
 
 
-def generate_bspline_aug_data(moving_path_list,output_path,num_of_workers):
+def generate_bspline_aug_data(moving_path_list,output_path):
     num_pair = len(moving_path_list)
-    num_aug = round(1500. / num_pair/num_of_workers)
+    num_aug = int(1500. / num_pair)
     moving_list, l_moving_list,fname_list = get_bspline_input(moving_path_list)
     bspline_func1 = RandomBSplineTransform(mesh_size=(10,10,10), bspline_order=2, deform_scale=3.0, ratio=0.95)
     bspline_func2 = RandomBSplineTransform(mesh_size=(20,20,20), bspline_order=2, deform_scale=2.0, ratio=0.95)
@@ -193,36 +197,34 @@ def generate_bspline_aug_data(moving_path_list,output_path,num_of_workers):
 
 
 
-def generate_fluid_aug_data(moving_momentum_path_list,init_weight_path_list,output_path, mermaid_setting_path,compute_inverse,use_random_m,num_of_workers):
+def generate_fluid_aug_data(moving_momentum_path_list,init_weight_path_list,output_path, mermaid_setting_path,compute_inverse,use_random_m):
     num_pair = len(moving_momentum_path_list)
-    num_aug = round(1500./num_pair/num_of_workers)
-
+    num_aug = int(1500./num_pair)
     for i in range(num_pair):
         #num_aug=20
-        moving, l_moving, momentum_list, init_weight_list, fname_list, spacing = get_fluid_input(moving_momentum_path_list[i], init_weight_path_list[i] if init_weight_path_list else None)
+        moving, l_moving, momentum_list, init_weight_list,affine_list, fname_list, spacing = get_fluid_input(moving_momentum_path_list[i], init_weight_path_list[i] if init_weight_path_list else None)
         for _ in range(num_aug):
-            time_aug = random.random()*3-1#random.sample([-1,-0.75, -0.5, -0.25,0.25,0.5, 0.75, 1, 1.25,1.5,1.75, 2.0], 1)[0] # random.random()*3-1
+            time_aug = random.random()*2-0.5#random.sample([-1,-0.75, -0.5, -0.25,0.25,0.5, 0.75, 1, 1.25,1.5,1.75, 2.0], 1)[0] # random.random()*3-1
             if not use_random_m:
                 num_momentum = len(momentum_list)
-                selected_index = random.sample(list(range(num_momentum)), 2)
-                weight =random.random()#random.sample([0,1], 1)[0]# random.random()
-                rand_weight = [weight, 1.0 -weight]
-                momentum  = rand_weight[0]*momentum_list[selected_index[0]] + rand_weight[1]*momentum_list[selected_index[1]]
-                fname = fname_list[selected_index[0]] + '_' + fname_list[
-                    selected_index[1]] + '_{:.4f}_{:.4f}_t_{:.2f}'.format(rand_weight[0], rand_weight[1], time_aug)
+                selected_index = random.sample(list(range(num_momentum)), 1)
+                momentum  = momentum_list[0]
+                affine = affine_list[0] if len(affine_list) else None
+                fname = fname_list[selected_index[0]] +'_t_{:.2f}'.format(time_aug)
             else:
                 momentum = None
                 fname = fname_list[0]+'_{:.4f}_t_{:.2f}'.format(random.random(),time_aug)
+                affine = None
             fname = fname.replace('.', 'd')
             init_weight = None
             if init_weight_list is not None:
                 init_weight = random.sample(init_weight_list,1)
 
-            generate_fluid_single_res(moving,l_moving, momentum,init_weight, fname, time_aug, output_path, mermaid_setting_path, spacing,moving_momentum_path_list[i][0],compute_inverse)
+            generate_fluid_single_res(moving,l_moving, momentum,init_weight,affine, fname, time_aug, output_path, mermaid_setting_path, spacing,moving_momentum_path_list[i][0],compute_inverse)
 
 
 
-def generate_fluid_single_res(moving,l_moving, momentum, init_weight, fname, time_aug, output_path, mermaid_setting_path, spacing, moving_path, compute_inverse):
+def generate_fluid_single_res(moving,l_moving, momentum, init_weight, initial_map, fname, time_aug, output_path, mermaid_setting_path, spacing, moving_path, compute_inverse):
     params = pars.ParameterDict()
     params.load_JSON(mermaid_setting_path)
     params['model']['registration_model']['forward_model']['tTo'] = time_aug
@@ -242,6 +244,9 @@ def generate_fluid_single_res(moving,l_moving, momentum, init_weight, fname, tim
         input_img,_ = resample_image(moving,spacing,input_img_sz)
     else:
         input_img = moving
+    low_initial_map = None
+    if initial_map is not None:
+        low_initial_map, _ = resample_image(initial_map,input_spacing,[1,3]+ list(momentum.shape[2:]))
     individual_parameters = dict(m=momentum,local_weights=init_weight)
     sz = np.array(input_img.shape)
     extra_info = None
@@ -253,7 +258,8 @@ def generate_fluid_single_res(moving,l_moving, momentum, init_weight, fname, tim
                    compute_similarity_measure_at_low_res=False,
                    spline_order=1,
                    individual_parameters=individual_parameters,
-                   shared_parameters=None, params=params, extra_info=extra_info,visualize=False,visual_param=visual_param, given_weight=False)
+                   shared_parameters=None, params=params, extra_info=extra_info,visualize=False,visual_param=visual_param, given_weight=False,
+                        init_map=initial_map, lowres_init_map=low_initial_map)
     phi = res[1]
     phi_new = phi
     #phi_new,_ = resample_image(phi,spacing,[1,3]+list(moving.shape[2:]))
@@ -361,9 +367,6 @@ if __name__ == '__main__':
     compute_inverse = args.compute_inverse
     use_random_m = args.random_m
     use_bspline = args.bspline
-    if not use_bspline:
-        assert os.path.isfile(mermaid_setting_path), "{} the setting file does not exist".format(mermaid_setting_path)
-
     output_path = args.output_path
     do_affine = False
     os.makedirs(output_path,exist_ok=True)
@@ -373,22 +376,6 @@ if __name__ == '__main__':
     if use_init_weight:
         init_weight_path_list = get_init_weight_list(rdmm_preweight_txt_path)
 
-    num_of_workers = 1  # for unknown reason, multi-thread not work
-    num_files = len(moving_momentum_path_list)
-    if num_of_workers > 1:
-        sub_p = partial(generate_aug_data, moving_momentum_path_list=moving_momentum_path_list, init_weight_path_list=init_weight_path_list,
-                        output_path=output_path, mermaid_setting_path=mermaid_setting_path, compute_inverse=compute_inverse,
-                        use_random_m=use_random_m,fluid_aug= not use_bspline,num_of_workers=num_of_workers)
-        split_index = np.array_split(np.array(range(num_files)), num_of_workers)
-        procs = []
-        for i in range(num_of_workers):
-            p = Process(target=sub_p, args=())
-            p.start()
-            print("pid:{} start:".format(p.pid))
-            procs.append(p)
-        for p in procs:
-            p.join()
-    else:
-        generate_aug_data(moving_momentum_path_list,init_weight_path_list,output_path, mermaid_setting_path,compute_inverse,use_random_m, fluid_aug= not use_bspline,num_of_workers=1)
+    generate_aug_data(moving_momentum_path_list,init_weight_path_list,output_path, mermaid_setting_path,compute_inverse,use_random_m, fluid_aug= not use_bspline)
 
 

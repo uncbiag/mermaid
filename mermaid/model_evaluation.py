@@ -16,7 +16,7 @@ def evaluate_model(ISource_in, ITarget_in, sz, spacing,
                    map_low_res_factor=None,
                    compute_similarity_measure_at_low_res=None,
                    spline_order=None,
-                   individual_parameters=None,shared_parameters=None,params=None,extra_info=None,visualize=True,visual_param=None,given_weight=False):
+                   individual_parameters=None,shared_parameters=None,params=None,extra_info=None,visualize=True,visual_param=None,given_weight=False, init_map=None,lowres_init_map=None):
 
     """
 
@@ -137,7 +137,7 @@ def evaluate_model(ISource_in, ITarget_in, sz, spacing,
         I_source=ISource,
         opt_variables=opt_variables,
         use_map=use_map,
-        initial_map=identityMap,
+        initial_map=identityMap if init_map is None else init_map,
         compute_inverse_map=compute_inverse_map,
         initial_inverse_map=identityMap,
         map_low_res_factor=map_low_res_factor,
@@ -145,7 +145,7 @@ def evaluate_model(ISource_in, ITarget_in, sz, spacing,
         low_res_spacing=lowResSpacing,
         spline_order=spline_order,
         low_res_I_source=lowResISource,
-        low_res_initial_map=lowResIdentityMap,
+        low_res_initial_map=lowResIdentityMap if lowres_init_map is None else lowres_init_map,
         low_res_initial_inverse_map=lowResIdentityMap,
         compute_similarity_measure_at_low_res=compute_similarity_measure_at_low_res)
 

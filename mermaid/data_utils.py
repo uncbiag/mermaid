@@ -428,3 +428,27 @@ def sitk_read_img_to_std_numpy(path):
     img_np = sitk.GetArrayFromImage(img)
     img_np = np.expand_dims(np.expand_dims(img_np,0),0).astype(np.float32)
     return img_np
+
+
+def save_image_with_given_reference(img=None,reference_list=None,path=None,fname=None):
+    import SimpleITK as sitk
+
+    num_img = len(fname)
+    os.makedirs(path,exist_ok=True)
+    for i in range(num_img):
+        img_ref = sitk.ReadImage(reference_list[i])
+        if img is not None:
+            if type(img) == torch.Tensor:
+                img = img.detach().cpu().numpy()
+            spacing_ref = img_ref.GetSpacing()
+            direc_ref = img_ref.GetDirection()
+            orig_ref = img_ref.GetOrigin()
+            img_itk = sitk.GetImageFromArray(img[i,0])
+            img_itk.SetSpacing(spacing_ref)
+            img_itk.SetDirection(direc_ref)
+            img_itk.SetOrigin(orig_ref)
+        else:
+            img_itk=img_ref
+        fn =  '{}_batch_'.format(i)+fname if not type(fname)==list else fname[i]
+        fpath = os.path.join(path,fn+'.nii.gz')
+        sitk.WriteImage(img_itk,fpath)

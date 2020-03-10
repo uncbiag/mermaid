@@ -25,9 +25,8 @@ from mermaid.utils import *
 import numpy as np
 import SimpleITK as sitk
 import nibabel as nib
+from glob import glob
 import copy
-from functools import partial
-from multiprocessing import *
 
 
 
@@ -79,8 +78,8 @@ def get_fluid_input(moving_momentum_path_list, init_weight_path_list):
 
     moving = fr_sitk(moving_momentum_path_list[0])[None][None]
     l_moving = fr_sitk(moving_momentum_path_list[1])[None][None]
-    use_random_m = not len(moving_momentum_path_list)>2
-    if not use_random_m:
+    no_momentum = not len(moving_momentum_path_list)>2
+    if not no_momentum:
         momentum_list =[np.transpose(fr_sitk(path))[None] for path in moving_momentum_path_list[2:]]
     else:
         momentum_list = None
@@ -89,7 +88,7 @@ def get_fluid_input(moving_momentum_path_list, init_weight_path_list):
         init_weight_list=[[fr_sitk(path) for path in init_weight_path_list]]
     else:
         init_weight_list=None
-    if not use_random_m:
+    if not no_momentum:
         fname_list =[get_file_name(path) for path in moving_momentum_path_list[2:]]
         fname_list = [fname.replace("_0000Momentum",'') for fname in fname_list]
         fname_list = [fname.replace("_0000_Momentum",'') for fname in fname_list]
@@ -161,18 +160,30 @@ class RandomBSplineTransform(object):
 
         return new_sample
 
-def generate_aug_data(moving_momentum_path_list,init_weight_path_list,output_path, mermaid_setting_path,compute_inverse,use_random_m,fluid_aug=True,num_of_workers=1):
+def generate_aug_data(path_list,init_weight_path_list,output_path, mermaid_setting_path,compute_inverse,use_random_m,fluid_aug=True, via_atlas=False,atlas_folder=None ):
     if fluid_aug:
-        generate_fluid_aug_data(moving_momentum_path_list, init_weight_path_list, output_path, mermaid_setting_path,
-                                compute_inverse, use_random_m,num_of_workers)
+        generate_fluid_aug_data(path_list, init_weight_path_list, output_path, mermaid_setting_path,
+                                compute_inverse, use_random_m,via_atlas,atlas_folder)
     else:
-        moving_path_list = moving_momentum_path_list
-        generate_bspline_aug_data(moving_path_list, output_path,num_of_workers)
+        generate_bspline_aug_data(path_list, output_path)
 
 
-def generate_bspline_aug_data(moving_path_list,output_path,num_of_workers):
+def generate_fluid_aug_data(path_list, init_weight_path_list, output_path, mermaid_setting_path,
+                                compute_inverse, use_random_m,via_atlas,atlas_folder):
+    if not via_atlas:
+        generate_fluid_aug_data_with_given_momentum_series(path_list, init_weight_path_list,
+                                                           output_path, mermaid_setting_path, compute_inverse,
+                                                           use_random_m)
+    else:
+        generate_fluid_aug_data_with_given_atlas(path_list, init_weight_path_list,
+                                                           output_path, mermaid_setting_path, compute_inverse,atlas_folder)
+
+
+
+
+def generate_bspline_aug_data(moving_path_list,output_path):
     num_pair = len(moving_path_list)
-    num_aug = round(1500. / num_pair/num_of_workers)
+    num_aug = int(1500. / num_pair)
     moving_list, l_moving_list,fname_list = get_bspline_input(moving_path_list)
     bspline_func1 = RandomBSplineTransform(mesh_size=(10,10,10), bspline_order=2, deform_scale=3.0, ratio=0.95)
     bspline_func2 = RandomBSplineTransform(mesh_size=(20,20,20), bspline_order=2, deform_scale=2.0, ratio=0.95)
@@ -191,12 +202,116 @@ def generate_bspline_aug_data(moving_path_list,output_path,num_of_workers):
 
 
 
+def generate_fluid_aug_data_with_given_atlas(path_list, init_weight_path_list,
+                                                           output_path, mermaid_setting_path, compute_inverse,atlas_folder):
+    """
+    here we use the low-interface of mermaid to get efficient low-res- propagration (avoding precision loss during unnecessary upsampling and downsampling
+    ) which provide high precision in maps
+    """
 
 
-def generate_fluid_aug_data(moving_momentum_path_list,init_weight_path_list,output_path, mermaid_setting_path,compute_inverse,use_random_m,num_of_workers):
+    def create_mermaid_model(mermaid_json_pth, img_sz,compute_inverse):
+        import mermaid.model_factory as py_mf
+        spacing = 1. / (np.array(img_sz[2:]) - 1)
+        params = pars.ParameterDict()
+        params.load_JSON(mermaid_json_pth)  # ''../easyreg/cur_settings_svf.json')
+        model_name = params['model']['registration_model']['type']
+        params.print_settings_off()
+        mermaid_low_res_factor = 0.5
+        lowResSize = get_res_size_from_size(img_sz, mermaid_low_res_factor)
+        lowResSpacing = get_res_spacing_from_spacing(spacing, img_sz, lowResSize)
+        ##
+        mf = py_mf.ModelFactory(img_sz, spacing, lowResSize, lowResSpacing)
+        model, criterion = mf.create_registration_model(model_name, params['model'],
+                                                        compute_inverse_map=True)
+        lowres_id = identity_map_multiN(lowResSize, lowResSpacing)
+        lowResIdentityMap = torch.from_numpy(lowres_id)
+
+        _id = identity_map_multiN(img_sz, spacing)
+        identityMap = torch.from_numpy(_id)
+        mermaid_unit_st = model
+        mermaid_unit_st.associate_parameters_with_module()
+        return mermaid_unit_st, criterion, lowResIdentityMap, lowResSize,lowResSpacing,identityMap,spacing
+
+    def _set_mermaid_param(mermaid_unit,  m):
+        mermaid_unit.m.data = m
+
+
+    def _do_mermaid_reg(mermaid_unit, low_phi,m, low_s=None,low_inv_phi=None):
+        with torch.no_grad():
+            _set_mermaid_param(mermaid_unit,m)
+            low_phi = mermaid_unit(low_phi, low_s,phi_inv=low_inv_phi)
+        return low_phi
+    def get_momentum_name(momentum_path):
+        fname = get_file_name(momentum_path)
+        fname =fname.replace("_0000Momentum", '')
+        fname =fname.replace("_0000_Momentum",'')
+        return fname
+
+
+    num_pair = len(path_list)
+    num_aug = int(1500. / num_pair)
+    assert init_weight_path_list is None, "init weight has not supported yet"
+    # load all momentums for atlas to images
+    read_image  = lambda x: sitk.GetArrayFromImage(sitk.ReadImage(x))
+    atlas_to_momentum_path_list = list(filter(lambda x: "Momentum" in x and get_file_name(x).find("atlas")==0, glob(os.path.join(atlas_folder,"*nii.gz"))))
+    to_atlas_momentum_path_list = list(filter(lambda x: "Momentum" in x and get_file_name(x).find("atlas")!=0, glob(os.path.join(atlas_folder,"*nii.gz"))))
+    atlas_to_momentum_list = [torch.Tensor(read_image(atlas_momentum_pth).transpose()[None]) for atlas_momentum_pth in atlas_to_momentum_path_list]
+    to_atlas_momentum_list = [torch.Tensor(read_image(atlas_momentum_pth).transpose()[None]) for atlas_momentum_pth in to_atlas_momentum_path_list]
+    moving_example = read_image(path_list[0][0])
+    img_sz = list(moving_example.shape)
+    mermaid_unit_st, criterion, lowResIdentityMap, lowResSize, lowResSpacing,identityMap,spacing  = create_mermaid_model(
+        mermaid_setting_path, [1, 1] + img_sz,compute_inverse)
+
+    for i in range(num_pair):
+        moving, l_moving, _, _, fname_list, _=get_fluid_input(path_list[i], None)
+        fname = fname_list[0]
+        # get the transformation to atlas, which should simply load the transformation map
+        low_moving = get_resampled_image(moving, None, lowResSize, 1, zero_boundary=True, identity_map=lowResIdentityMap)
+        init_map = lowResIdentityMap.clone()
+        init_inverse_map = lowResIdentityMap.clone()
+        index = list(filter(lambda x: fname in x,to_atlas_momentum_path_list))[0]
+        index = to_atlas_momentum_path_list.index(index)
+        # here we only interested in forward the map, so the moving image doesn't affect
+        mermaid_unit_st.integrator.cparams['tTo'] = 1.0
+        low_phi_to_atlas, low_inverse_phi_to_atlas = _do_mermaid_reg(mermaid_unit_st,init_map, to_atlas_momentum_list[index], low_moving,low_inv_phi=init_inverse_map)
+        for _ in range(num_aug):
+            fname = fname_list[0]
+            time_aug = random.random() * 3 - 1  # random.sample([-1,-0.75, -0.5, -0.25,0.25,0.5, 0.75, 1, 1.25,1.5,1.75, 2.0], 1)[0] # random.random()*3-1
+            num_momentum = len(atlas_to_momentum_list)
+            selected_index = random.sample(list(range(num_momentum)), 2)
+            weight = random.random()
+            rand_weight = [weight, 1.0 - weight]
+            momentum = rand_weight[0] * atlas_to_momentum_list[selected_index[0]] + rand_weight[1] * atlas_to_momentum_list[
+                selected_index[1]]
+            pair_name = fname +'_'+ get_momentum_name(atlas_to_momentum_path_list[selected_index[0]]) +\
+            get_momentum_name(atlas_to_momentum_path_list[selected_index[1]])
+            fname = pair_name + '_{:.4f}_{:.4f}_t_{:.2f}'.format(rand_weight[0], rand_weight[1], time_aug)
+            fname = fname.replace('.', 'd')
+            mermaid_unit_st.integrator.cparams['tTo'] = time_aug
+            low_phi_atlas_to, low_inverse_phi_atlas_to = _do_mermaid_reg(mermaid_unit_st, low_phi_to_atlas.clone(),
+                                                                     momentum, low_moving,
+                                                                     low_inv_phi=low_inverse_phi_to_atlas.clone())
+            foward_map = get_resampled_image(low_phi_atlas_to, lowResSpacing, [1,3]+img_sz, 1, zero_boundary=False,
+                                                identity_map=identityMap)
+            inverse_map = get_resampled_image(low_inverse_phi_atlas_to, lowResSpacing, [1,3]+img_sz, 1, zero_boundary=False,
+                                                identity_map=identityMap)
+            warped = compute_warped_image_multiNC(moving, foward_map, spacing, spline_order=1,zero_boundary=True)
+            l_warped = compute_warped_image_multiNC(l_moving, foward_map, spacing, spline_order=0,zero_boundary=True)
+            save_image_with_given_reference(warped, [path_list[i][0]], output_path, [fname + '_image'])
+            save_image_with_given_reference(l_warped, [path_list[i][0]], output_path, [fname + '_label'])
+            if compute_inverse:
+                #save_deformation(foward_map, output_path, [fname + '_phi'])
+                save_deformation(inverse_map, output_path, [fname + '_inv_phi'])
+
+
+
+
+
+
+def generate_fluid_aug_data_with_given_momentum_series(moving_momentum_path_list,init_weight_path_list,output_path, mermaid_setting_path,compute_inverse,use_random_m):
     num_pair = len(moving_momentum_path_list)
-    num_aug = round(1500./num_pair/num_of_workers)
-
+    num_aug = int(1500./num_pair)
     for i in range(num_pair):
         #num_aug=20
         moving, l_moving, momentum_list, init_weight_list, fname_list, spacing = get_fluid_input(moving_momentum_path_list[i], init_weight_path_list[i] if init_weight_path_list else None)
@@ -205,7 +320,7 @@ def generate_fluid_aug_data(moving_momentum_path_list,init_weight_path_list,outp
             if not use_random_m:
                 num_momentum = len(momentum_list)
                 selected_index = random.sample(list(range(num_momentum)), 2)
-                weight =random.random()#random.sample([0,1], 1)[0]# random.random()
+                weight = random.random()
                 rand_weight = [weight, 1.0 -weight]
                 momentum  = rand_weight[0]*momentum_list[selected_index[0]] + rand_weight[1]*momentum_list[selected_index[1]]
                 fname = fname_list[selected_index[0]] + '_' + fname_list[
@@ -222,7 +337,7 @@ def generate_fluid_aug_data(moving_momentum_path_list,init_weight_path_list,outp
 
 
 
-def generate_fluid_single_res(moving,l_moving, momentum, init_weight, fname, time_aug, output_path, mermaid_setting_path, spacing, moving_path, compute_inverse):
+def generate_fluid_single_res(moving,l_moving, momentum, init_weight, fname, time_aug, output_path, mermaid_setting_path, spacing, moving_path, compute_inverse, init_map=None):
     params = pars.ParameterDict()
     params.load_JSON(mermaid_setting_path)
     params['model']['registration_model']['forward_model']['tTo'] = time_aug
@@ -255,17 +370,15 @@ def generate_fluid_single_res(moving,l_moving, momentum, init_weight, fname, tim
                    individual_parameters=individual_parameters,
                    shared_parameters=None, params=params, extra_info=extra_info,visualize=False,visual_param=visual_param, given_weight=False)
     phi = res[1]
-    phi_new = phi
-    #phi_new,_ = resample_image(phi,spacing,[1,3]+list(moving.shape[2:]))
+    phi_new,_ = resample_image(phi,spacing,[1,3]+list(moving.shape[2:]))
     warped = compute_warped_image_multiNC(moving,phi_new,org_spacing,spline_order=1,zero_boundary=True)
-    l_warped = compute_warped_image_multiNC(l_moving,phi_new,org_spacing,spline_order=0,zero_boundary=True)
+    l_warped = compute_warped_image_multiNC(l_moving,phi_new,org_spacing,spline_order=0)
     save_image_with_given_reference(warped,[moving_path],output_path,[fname+'_image'])
     save_image_with_given_reference(l_warped,[moving_path], output_path,[fname+'_label'])
-    save_deformation(phi, output_path, [fname + '_phi_map'])
     if compute_inverse:
         phi_inv = res[2]
-        #inv_phi_new,_ = resample_image(phi_inv,spacing,[1,3]+list(moving.shape[2:]))
-        save_deformation(phi_inv,output_path,[fname+'_inv_map'])
+        inv_phi_new,_ = resample_image(phi_inv,spacing,[1,3]+list(moving.shape[2:]))
+        save_deformation(inv_phi_new,output_path,[fname+'_inv_map'])
 
 def save_deformation(phi,output_path,fname_list):
     phi_np = phi.detach().cpu().numpy()
@@ -337,7 +450,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Registration demo for data augmentation')
     parser.add_argument('--txt_path', required=False, default=None,
-                        help='the file path of input txt, exclusive with random_m')
+                        help="the file path of input txt, in each line the image path and label path need to be provided,\
+                        for random_m , bspline and atlas method, that is all needed. If you want to do augumentation based on specific series of momentum,\
+                             addition paths of momentum should be put on the same line following the path of the label")
+    parser.add_argument('--via_atlas', required=False, action='store_true',
+                        help='if via_atlas, need  to set atlas_folder')
+    parser.add_argument('--atlas_folder', required=False, default=None,
+                        help='the folder including atlas registration results')
     parser.add_argument('--rdmm_preweight_txt_path', required=False, default=None,
                         help='the file path of rdmm preweight txt, only needed when use predefined rdmm model')
     parser.add_argument('--random_m',required=False,action='store_true',
@@ -361,34 +480,17 @@ if __name__ == '__main__':
     compute_inverse = args.compute_inverse
     use_random_m = args.random_m
     use_bspline = args.bspline
-    if not use_bspline:
-        assert os.path.isfile(mermaid_setting_path), "{} the setting file does not exist".format(mermaid_setting_path)
-
     output_path = args.output_path
+    via_atlas = args.via_atlas
+    atlas_folder = args.atlas_folder
     do_affine = False
     os.makedirs(output_path,exist_ok=True)
     # if the use_random_m is false or use_bspline, then the list only include moving and label info
-    moving_momentum_path_list = get_pair_list(txt_path)
+    path_list = get_pair_list(txt_path)
     init_weight_path_list = None
     if use_init_weight:
         init_weight_path_list = get_init_weight_list(rdmm_preweight_txt_path)
 
-    num_of_workers = 1  # for unknown reason, multi-thread not work
-    num_files = len(moving_momentum_path_list)
-    if num_of_workers > 1:
-        sub_p = partial(generate_aug_data, moving_momentum_path_list=moving_momentum_path_list, init_weight_path_list=init_weight_path_list,
-                        output_path=output_path, mermaid_setting_path=mermaid_setting_path, compute_inverse=compute_inverse,
-                        use_random_m=use_random_m,fluid_aug= not use_bspline,num_of_workers=num_of_workers)
-        split_index = np.array_split(np.array(range(num_files)), num_of_workers)
-        procs = []
-        for i in range(num_of_workers):
-            p = Process(target=sub_p, args=())
-            p.start()
-            print("pid:{} start:".format(p.pid))
-            procs.append(p)
-        for p in procs:
-            p.join()
-    else:
-        generate_aug_data(moving_momentum_path_list,init_weight_path_list,output_path, mermaid_setting_path,compute_inverse,use_random_m, fluid_aug= not use_bspline,num_of_workers=1)
+    generate_aug_data(path_list,init_weight_path_list,output_path, mermaid_setting_path,compute_inverse,use_random_m, fluid_aug= not use_bspline, via_atlas=via_atlas, atlas_folder=atlas_folder)
 
 
