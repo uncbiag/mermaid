@@ -1078,6 +1078,11 @@ def resample_image(I, spacing, desiredSize, spline_order=1, zero_boundary=False,
     :return: returns a tuple: the downsampled image, the new spacing after downsampling
     """
     desiredSize = desiredSize[2:]
+
+    is_numpy = False
+    if not isinstance(I, torch.Tensor):
+        I = torch.Tensor(I)
+        is_numpy = True
     sz = np.array(list(I.size()))
     # check that the batch size and the number of channels is the same
     nrOfI = sz[0]
@@ -1094,7 +1099,7 @@ def resample_image(I, spacing, desiredSize, spline_order=1, zero_boundary=False,
     # now use this map for resampling
     ID = compute_warped_image_multiNC(I, idDes, newspacing, spline_order, zero_boundary)
 
-    return ID, newspacing
+    return ID if not is_numpy else ID.numpy(), newspacing
 
 def get_res_size_from_size(sz, factor):
     """

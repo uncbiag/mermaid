@@ -208,7 +208,7 @@ def generate_fluid_aug_data(moving_momentum_path_list,init_weight_path_list,outp
             if not use_random_m:
                 num_momentum = len(momentum_list)
                 selected_index = random.sample(list(range(num_momentum)), 1)
-                momentum  = momentum_list[0]
+                momentum  = momentum_list[selected_index[0]]
                 affine = affine_list[0] if len(affine_list) else None
                 fname = fname_list[selected_index[0]] +'_t_{:.2f}'.format(time_aug)
             else:
