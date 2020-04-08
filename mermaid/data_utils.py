@@ -179,7 +179,7 @@ def divide_data_set(root_path, pair_name_list, ratio):
     return saving_path_list
 
 
-def generate_pair_name(pair_path_list,sched='mixed'):
+def generate_pair_name(pair_path_list,sched='default'):
     """
     rename the filename for different dataset,
     :param pair_path_list: path of generated file
@@ -190,6 +190,24 @@ def generate_pair_name(pair_path_list,sched='mixed'):
         return mixed_pair_name(pair_path_list)
     elif sched == 'custom':
         return custom_pair_name(pair_path_list)
+    elif sched =="default":
+        return default_pair_name
+
+
+def default_pair_name(pair_path):
+    source_path, target_path = pair_path
+    f = lambda x: os.path.split(x)
+    assert source_path != target_path,"the source image should be different to the target image"
+    while True:
+        s = get_file_name(f(source_path)[-1])
+        t = get_file_name(f(target_path)[-1])
+        if s !=t:
+            break
+        else:
+            source_path, target_path = f(source_path)[0],f(target_path)[0]
+    pair_name = s+"_"+t
+    return pair_name
+
 
 
 def mixed_pair_name(pair_path_list):
