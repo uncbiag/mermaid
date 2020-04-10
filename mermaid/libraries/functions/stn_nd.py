@@ -68,7 +68,7 @@ class STNFunction_ND_BCXYZ(Module):
             # keep dimension 1 at zero
             phi_rs_ordered[:, 1, ...] = phi_rs[:, 0, ...]
 
-            output_rs = torch.nn.functional.grid_sample(input1_rs, phi_rs_ordered.permute([0, 2, 3, 1]), mode=self.mode, padding_mode=self.zero_boundary)
+            output_rs = torch.nn.functional.grid_sample(input1_rs, phi_rs_ordered.permute([0, 2, 3, 1]), mode=self.mode, padding_mode=self.zero_boundary,align_corners=True)
             output = output_rs[:, :, :, 0]
 
         if ndim==2:
@@ -77,13 +77,13 @@ class STNFunction_ND_BCXYZ(Module):
             input2_ordered[:,0,...] = input2[:,1,...]
             input2_ordered[:,1,...] = input2[:,0,...]
             output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 1]), mode=self.mode,
-                                          padding_mode=self.zero_boundary)
+                                          padding_mode=self.zero_boundary,align_corners=True)
         if ndim==3:
             input2_ordered = torch.zeros_like(input2)
             input2_ordered[:, 0, ...] = input2[:, 2, ...]
             input2_ordered[:, 1, ...] = input2[:, 1, ...]
             input2_ordered[:, 2, ...] = input2[:, 0, ...]
-            output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 4, 1]), mode=self.mode, padding_mode=self.zero_boundary)
+            output = torch.nn.functional.grid_sample(input1, input2_ordered.permute([0, 2, 3, 4, 1]), mode=self.mode, padding_mode=self.zero_boundary,align_corners=True)
         return output
 
     def forward(self, input1, input2):

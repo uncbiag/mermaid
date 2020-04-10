@@ -16,7 +16,7 @@ def evaluate_model(ISource_in, ITarget_in, sz, spacing,
                    map_low_res_factor=None,
                    compute_similarity_measure_at_low_res=None,
                    spline_order=None,
-                   individual_parameters=None,shared_parameters=None,params=None,extra_info=None,visualize=True,visual_param=None,given_weight=False):
+                   individual_parameters=None,shared_parameters=None,params=None,extra_info=None,visualize=True,visual_param=None,given_weight=False, init_map=None,lowres_init_map=None, init_inverse_map=None,lowres_init_inverse_map=None,):
 
     """
 
@@ -123,11 +123,10 @@ def evaluate_model(ISource_in, ITarget_in, sz, spacing,
         model.load_shared_state_dict(shared_parameters)
     model_pars = utils.individual_parameters_to_model_parameters(individual_parameters)
     model.set_individual_registration_parameters(model_pars)
-
-    if given_weight:
+    if 'm'in individual_parameters and individual_parameters['m'] is not None:
         model.m.data = AdaptVal(individual_parameters['m'])
-        if 'local_weights'in individual_parameters and individual_parameters['local_weights'] is not None:
-            model.local_weights.data= AdaptVal(individual_parameters['local_weights'])
+    if 'local_weights'in individual_parameters and individual_parameters['local_weights'] is not None:
+        model.local_weights.data= AdaptVal(individual_parameters['local_weights'])
 
     opt_variables = {'iter': 0, 'epoch': 0,'extra_info':extra_info,'over_scale_iter_count':0}
 
@@ -138,16 +137,16 @@ def evaluate_model(ISource_in, ITarget_in, sz, spacing,
         I_source=ISource,
         opt_variables=opt_variables,
         use_map=use_map,
-        initial_map=identityMap,
+        initial_map=identityMap if init_map is None else init_map,
         compute_inverse_map=compute_inverse_map,
-        initial_inverse_map=identityMap,
+        initial_inverse_map=identityMap if init_inverse_map is None else init_inverse_map,
         map_low_res_factor=map_low_res_factor,
         sampler=sampler,
         low_res_spacing=lowResSpacing,
         spline_order=spline_order,
         low_res_I_source=lowResISource,
-        low_res_initial_map=lowResIdentityMap,
-        low_res_initial_inverse_map=lowResIdentityMap,
+        low_res_initial_map=lowResIdentityMap if lowres_init_map is None else lowres_init_map,
+        low_res_initial_inverse_map=lowResIdentityMap if lowres_init_inverse_map is None else lowres_init_inverse_map,
         compute_similarity_measure_at_low_res=compute_similarity_measure_at_low_res)
 
     if use_map:
@@ -205,7 +204,7 @@ def evaluate_model(ISource_in, ITarget_in, sz, spacing,
         smoother.set_debug_retain_computed_local_weights(True)
     except:
         pass
-    model_pars = model.get_registration_parameters()
+    #model_pars = model.get_registration_parameters()
     if 'lam' in model_pars:
         m = utils.compute_vector_momentum_from_scalar_momentum_multiNC(model_pars['lam'], lowResISource, lowResSize,lowResSpacing)
     elif 'm' in model_pars:
@@ -213,14 +212,14 @@ def evaluate_model(ISource_in, ITarget_in, sz, spacing,
     else:
         raise ValueError('Expected a scalar or a vector momentum in model (use SVF for example)')
 
-    if not given_weight:
-        v = smoother.smooth(m, None, dictionary_to_pass_to_smoother)
-        local_weights = smoother.get_debug_computed_local_weights()
-        local_pre_weights = smoother.get_debug_computed_local_pre_weights()
-    else:
-        v = None
-        local_weights=None
-        local_pre_weights=None
+    # if not given_weight:
+    #     v = smoother.smooth(m, None, dictionary_to_pass_to_smoother)
+    #     local_weights = smoother.get_debug_computed_local_weights()
+    #     local_pre_weights = smoother.get_debug_computed_local_pre_weights()
+    # else:
+    v = None
+    local_weights=None
+    local_pre_weights=None
 
     try:
         default_multi_gaussian_weights = smoother.get_default_multi_gaussian_weights()

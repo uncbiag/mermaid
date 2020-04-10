@@ -140,7 +140,7 @@ def get_txt_from_generated_images(folder_path,output_folder):
     write_list_into_txt(st_name_txt,st_name_list)
 
 
-# def get_pair(fpath,fname):
+# def get_reg_pair(fpath,fname):
 #     img_sz =np.array([200,200])
 #     index = [0,1,2]
 #     shape_setting_list = get_shapes_settings(img_sz, index)
