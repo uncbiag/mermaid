@@ -10,16 +10,18 @@ For simplicity we assume that the stationary velocity field registration (SVF) d
 Writing a similarity measure
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Similarity measures are derived from :class:`SimilarityMeasure`. To create a new similarity measure simply derive your own class from :class:`SimilarityMeasure` and implement the method :meth:`compute_similarity`. Assume you want to rewrite the sum of squared difference SSD similarity measure then this class will look as follows:
+Similarity measures are derived from :class:`SimilarityMeasureSingleImage`. To create a new similarity measure simply derive your own class from :class:`SimilarityMeasureSingleImage` and implement the method :meth:`compute_similarity`. Assume you want to rewrite the sum of squared difference SSD similarity measure then this class will look as follows:
 
 .. code:: python
 
-   class MySSD(SimilarityMeasure):
+   class MySSD(SimilarityMeasureSingleImage):
        def compute_similarity(self,I0,I1,I0Source=None,phi=None):
            sigma = 0.1
            return ((I0 - I1) ** 2).sum() / (sigma**2) * self.volumeElement
 
-Here, `self.volumeElement` is defined in the base class :class:`SimilarityMeasure` and indicates the volume occupied by a pixel or voxel.
+Here, `self.volumeElement` is defined in the base class :class:`SimilarityMeasureSingleImage` and indicates the volume occupied by a pixel or voxel.
+
+Note that the parameter I0 and I1 have the format of XxYxZ. Check out base class :class`SimilarityMeasure` if parameter format of BxCxXxYxZ is needed, where B means batch and C means Channel.
 
 As the machinery to include the similarity measure into all available registration methods is rather heavy, there is a convenience method which can be accessed through the optimizer interface.
 
