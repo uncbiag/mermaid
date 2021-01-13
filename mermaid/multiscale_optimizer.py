@@ -1529,7 +1529,7 @@ class SingleScaleRegistrationOptimizer(ImageRegistrationOptimizer):
 
         self._add_to_history('iter', self.iter_count)
         self._add_to_history('energy', cur_energy[0])
-        self._add_to_history('similarity_energy', utils.t2np(similarityEnergy.float())[0])
+        self._add_to_history('similarity_energy', utils.t2np(similarityEnergy.float()))
         self._add_to_history('regularization_energy', utils.t2np(regEnergy.float()))
         self._add_to_history('opt_par_energy', utils.t2np(opt_par_energy.float())[0])
 

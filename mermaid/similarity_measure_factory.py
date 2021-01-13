@@ -37,76 +37,10 @@ class SimilarityMeasure(with_metaclass(ABCMeta, object)):
         self.sigma = params['similarity_measure'][('sigma', 0.1, '1/sigma^2 is the weight in front of the similarity measure')]
         """1/sigma^2 is a balancing constant"""
 
+    @abstractmethod
     def compute_similarity_multiNC(self, I0, I1, I0Source=None, phi=None):
         """
-        Compute the multi-image multi-channel image similarity between two images of format BxCxXxYzZ
-
-        :param I0: first image (the warped source image)
-        :param I1: second image (target image)
-        :param I0Source: source image (will typically not be used)
-        :param phi: map in the target image to warp the source image (will typically not be used)
-        :return: returns similarity measure
-        """
-        sz = I0.size()
-        sim = torch.zeros(1).type_as(I0)
-
-        if I0Source is None and phi is None:
-            raise ValueError("no implemented in multi-batch-channel way1")
-            for nrI in range(sz[0]):  # loop over all the images
-                sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], None, None )
-
-        elif I0Source is not None and phi is None:
-            # for nrI in range(sz[0]):  # loop over all the images
-            #     sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], I0Source[nrI,...], None)
-            sim = sim+self.compute_similarity(I0, I1, I0Source, None)
-
-
-        elif I0Source is None and phi is not None:
-            raise ValueError("no implemented in multi-batch-channel way3")
-            for nrI in range(sz[0]):  # loop over all the images
-                sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], None, phi[nrI,...])
-
-        else:
-            # for nrI in range(sz[0]):  # loop over all the images
-            #     sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], I0Source[nrI,...], phi[nrI,...])
-            sim = sim+self.compute_similarity(I0, I1, I0Source, phi)
-
-        return sim
-
-
-    def compute_similarity_multiC(self, I0, I1, I0Source=None, phi=None):
-        """
-        Compute the multi-channel image similarity between two images of format CxXxYzZ
-
-        :param I0: first image (the warped source image)
-        :param I1: second image (target image)
-        :param I0Source: source image (will typically not be used)
-        :param phi: map in the target image to warp the source image (will typically not be used)
-        :return: returns similarity measure
-        """
-        sz = I0.size()
-        sim = torch.zeros(1).type_as(I0)
-
-        if I0Source is None:
-            for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same; if available map is the same for all channels
-                sim = sim + self.compute_similarity(I0[nrC, ...], I1[nrC, ...], None, phi)
-
-        else:
-            for nrC in range(sz[0]):  # loop over all the channels, just advect them all the same; if available map is the same for all channels
-                sim = sim + self.compute_similarity(I0[nrC, ...], I1[nrC, ...],I0Source[nrC, ...],phi)
-
-        return sim/sz[0] # needs to be normalized based on the number of channels
-
-    @abstractmethod
-    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
-        """
-        Abstract method to compute the *single*-channel image similarity between two images of format XxYzZ.
-        This is the only method that should be overwritten by a specific implemented similarity measure. 
-        The multi-channel variants then come for free.
-
-        For proper implementation it is important that the similarity measure is muliplied by
-        1./(self.sigma ** 2)  and also by self.volumeElement if it is a volume integral
-        (and not a correlation measure for example)
+        Abstract method to compute the image similarity between two images of format BxCxXxYxZ.
 
         :param I0: first image (the warped source image)
         :param I1: second image (target image)
@@ -133,8 +67,92 @@ class SimilarityMeasure(with_metaclass(ABCMeta, object)):
         """
         return self.sigma
 
+class SimilarityMeasureSingleImage(SimilarityMeasure):
+    """Abstract base class for a single image similarity measure.
+    """
 
-class SSDSimilarity(SimilarityMeasure):
+    def __init__(self, spacing, params):
+        self.spacing = spacing
+        """pixel/voxel spacing"""
+
+        self.volumeElement = self.spacing.prod()
+        """volume element"""
+        self.dim = len(spacing)
+        """image dimension"""
+        self.params = params
+        """external parameters"""
+
+        self.sigma = params['similarity_measure'][('sigma', 0.1, '1/sigma^2 is the weight in front of the similarity measure')]
+        """1/sigma^2 is a balancing constant"""
+
+    def compute_similarity_multiNC(self, I0, I1, I0Source=None, phi=None):
+        """
+        Compute the multi-image multi-channel image similarity between two images of format BxCxXxYzZ
+
+        :param I0: first image (the warped source image)
+        :param I1: second image (target image)
+        :param I0Source: source image (will typically not be used)
+        :param phi: map in the target image to warp the source image (will typically not be used)
+        :return: returns similarity measure
+        """
+        n_batch = I0.size()[0]
+        sim = torch.zeros(1).type_as(I0)
+
+        for nrI in range(n_batch):  # loop over all the images
+            sim = sim + self.compute_similarity_multiC(I0[nrI, ...], I1[nrI, ...], None, None )
+
+        return sim[0]
+
+
+    def compute_similarity_multiC(self, I0, I1, I0Source=None, phi=None):
+        """
+        Compute the multi-channel image similarity between two images of format CxXxYzZ
+
+        :param I0: first image (the warped source image)
+        :param I1: second image (target image)
+        :param I0Source: source image (will typically not be used)
+        :param phi: map in the target image to warp the source image (will typically not be used)
+        :return: returns similarity measure
+        """
+        n_channel = I0.size()[0]
+        sim = torch.zeros(1).type_as(I0)
+
+        if I0Source is None:
+            for nrC in range(n_channel):  
+                # loop over all the channels, just advect them all the same; 
+                # if available map is the same for all channels
+                sim = sim + self.compute_similarity(I0[nrC, ...], I1[nrC, ...], None, phi)
+
+        else:
+            for nrC in range(n_channel): 
+                # loop over all the channels, just advect them all the same; 
+                # if available map is the same for all channels
+                sim = sim + self.compute_similarity(I0[nrC, ...], I1[nrC, ...],I0Source[nrC, ...],phi)
+
+        return sim[0]/n_channel # needs to be normalized based on the number of channels
+
+
+    @abstractmethod
+    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
+        """
+        Abstract method to compute the *single*-channel image similarity between two images of format XxYzZ.
+        This is the only method that should be overwritten by a specific implemented similarity measure. 
+        The multi-channel variants then come for free.
+
+        For proper implementation it is important that the similarity measure is muliplied by
+        1./(self.sigma ** 2)  and also by self.volumeElement if it is a volume integral
+        (and not a correlation measure for example)
+
+        :param I0: first image (the warped source image)
+        :param I1: second image (target image)
+        :param I0Source: source image (will typically not be used)
+        :param phi: map in the target image to warp the source image (will typically not be used)
+        :return: returns similarity measure
+        """
+        pass
+
+
+class SSDSingleImageSimilarity(SimilarityMeasureSingleImage):
     """
     Sum of squared differences (SSD) similarity measure.
     
@@ -161,7 +179,34 @@ class SSDSimilarity(SimilarityMeasure):
         #return AdaptVal(((I0 - I1) ** 2).sum() / (self.sigma ** 2) * self.volumeElement)
 
 
-class OptimalMassTransportSimilarity(SimilarityMeasure):
+class SSDSimilarity(SimilarityMeasure):
+    """
+    Sum of squared differences (SSD) similarity measure. The result is normalized over channel dimension and sum up over batch dimension.
+    
+    :math:`1/sigma^2||I_0-I_1||^2`
+    """
+
+    def __init__(self, spacing, params):
+        super(SSDSimilarity,self).__init__(spacing,params)
+
+    def compute_similarity_multiNC(self, I0, I1, I0Source=None, phi=None):
+        """
+        Computes the SSD measure between two images
+        
+        :param I0: first image 
+        :param I1: second image
+        :param I0Source: not used
+        :param phi: not used
+        :return: SSD/sigma^2
+        """
+
+        # TODO: This is to avoid a current pytorch bug 0.3.0 which cannot properly deal with infinity or NaN
+        return AdaptVal(utils.remove_infs_from_variable((I0 - I1) ** 2).sum(dim=2).mean(dim=1).sum() / (self.sigma ** 2) * self.volumeElement)
+
+        #return AdaptVal(((I0 - I1) ** 2).sum() / (self.sigma ** 2) * self.volumeElement)
+
+
+class OptimalMassTransportSimilarity(SimilarityMeasureSingleImage):
     """
     Constructor
         :param spacing: spacing of the grid (as in parameters structure)
@@ -217,12 +262,13 @@ class OptimalMassTransportSimilarity(SimilarityMeasure):
 class NCCSimilarity(SimilarityMeasure):
     """
     Computes a normalized-cross correlation based similarity measure between two images.
+    The result of each pair of image is normalized over channel dimension and sum up over batch dimension.
     :math:`sim = (1-ncc^2)/(\\sigma^2)`
     """
     def __init__(self, spacing, params):
         super(NCCSimilarity,self).__init__(spacing,params)
 
-    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
+    def compute_similarity_multiNC(self, I0, I1, I0Source=None, phi=None):
         """
        Computes the NCC-based image similarity measure between two images
 
@@ -246,13 +292,13 @@ class NCCSimilarity(SimilarityMeasure):
         input_shape = [I0.shape[0], I0.shape[1], -1]+[1]*dim
         I0 = I0.view(*input_shape)
         I1 = I1.view(*input_shape)
-        I0mean = I0.mean(2)
-        I1mean = I1.mean(2)
+        I0mean = I0.mean(dim=2, keepdim=True)
+        I1mean = I1.mean(dim=2, keepdim=True)
         I0_m_mean = I0-I0mean
         I1_m_mean = I1-I1mean
-        nccSqr = (((I0_m_mean)*(I1_m_mean)).mean()**2)/\
-                 (((I0_m_mean)**2).mean()*((I1_m_mean)**2).mean())
-        nccSqr =nccSqr.sum()
+        nccSqr = (((I0_m_mean)*(I1_m_mean)).mean(dim=2)**2)/\
+                 (((I0_m_mean)**2).mean(dim=2)*((I1_m_mean)**2).mean(dim=2))
+        nccSqr =nccSqr.mean(dim=1).sum()
         return AdaptVal((n_batch*1.-nccSqr)/self.sigma**2)
 
         #ncc = ((I0-I0.mean().expand_as(I0))*(I1-I1.mean().expand_as(I1))).mean()/(I0.std()*I1.std())
@@ -262,12 +308,13 @@ class NCCSimilarity(SimilarityMeasure):
 class NCCPositiveSimilarity(SimilarityMeasure):
     """
     Computes a normalized-cross correlation based similarity measure between two images. Only allows positive correlations.
+    The result of each pair of image is normalized over channel dimension and sum up over batch dimension.
     :math:`sim = (1-ncc)/(\\sigma^2)`
     """
     def __init__(self, spacing, params):
         super(NCCPositiveSimilarity,self).__init__(spacing,params)
 
-    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
+    def compute_similarity_multiNC(self, I0, I1, I0Source=None, phi=None):
         """
        Computes the NCC-based image similarity measure between two images
 
@@ -285,25 +332,26 @@ class NCCPositiveSimilarity(SimilarityMeasure):
         input_shape = [I0.shape[0], I0.shape[1], -1]+[1]*dim
         I0 = I0.view(*input_shape)
         I1 = I1.view(*input_shape)
-        I0mean = I0.mean(2)
-        I1mean = I1.mean(2)
+        I0mean = I0.mean(dim=2, keepdim=True)
+        I1mean = I1.mean(dim=2, keepdim=True)
         I0_m_mean = I0 - I0mean
         I1_m_mean = I1 - I1mean
-        ncc = (((I0_m_mean)*(I1_m_mean)).mean())/\
-                 (torch.sqrt(((I0_m_mean)**2).mean())*torch.sqrt(((I1_m_mean)**2).mean()))
-        ncc = ncc.sum()
+        ncc = (((I0_m_mean)*(I1_m_mean)).mean(dim=2))/\
+                 (torch.sqrt(((I0_m_mean)**2).mean(dim=2))*torch.sqrt(((I1_m_mean)**2).mean(dim=2)))
+        ncc = ncc.mean(dim=1).sum()
 
         return AdaptVal((n_batch*1.-ncc)/self.sigma**2)
 
 class NCCNegativeSimilarity(SimilarityMeasure):
     """
     Computes a normalized-cross correlation based similarity measure between two images. Only allows negative correlations.
+    The result of each pair of image is normalized over channel dimension and sum up over batch dimension.
     :math:`sim = (ncc)/(\\sigma^2)`
     """
     def __init__(self, spacing, params):
         super(NCCNegativeSimilarity,self).__init__(spacing,params)
 
-    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
+    def compute_similarity_multiNC(self, I0, I1, I0Source=None, phi=None):
         """
        Computes the NCC-based image similarity measure between two images
 
@@ -320,19 +368,20 @@ class NCCNegativeSimilarity(SimilarityMeasure):
         input_shape = [I0.shape[0], I0.shape[1], -1] + [1] * dim
         I0 = I0.view(*input_shape)
         I1 = I1.view(*input_shape)
-        I0mean = I0.mean(2)
-        I1mean = I1.mean(2)
+        I0mean = I0.mean(dim=2, keepdim=True)
+        I1mean = I1.mean(dim=2, keepdim=True)
         I0_m_mean = I0 - I0mean
         I1_m_mean = I1 - I1mean
-        ncc = (((I0_m_mean) * (I1_m_mean)).mean()) / \
-              (torch.sqrt((I0_m_mean ** 2).mean()) * torch.sqrt((I1_m_mean ** 2).mean()))
-        ncc = ncc.sum()
+        ncc = (((I0_m_mean) * (I1_m_mean)).mean(dim=2)) / \
+              (torch.sqrt((I0_m_mean ** 2).mean(dim=2)) * torch.sqrt((I1_m_mean ** 2).mean(dim=2)))
+        ncc = ncc.mean(dim=1).sum()
 
         return AdaptVal((ncc)/self.sigma**2)
 
 class LNCCSimilarity(SimilarityMeasure):
     """This is an generalized LNCC; we implement multi-scale (means resolution)
-    multi kernel (means size of neighborhood) LNCC.
+    multi kernel (means size of neighborhood) LNCC. The result of each pair of image 
+    is normalized over channel dimension and sum up over batch dimension.
 
     :param: resol_bound : type list,  resol_bound[0]> resol_bound[1] >... resol_bound[end]
     :param: kernel_size_ratio: type list,  the ratio of the current input size
@@ -434,7 +483,7 @@ class LNCCSimilarity(SimilarityMeasure):
             raise ValueError(" Only 1-3d support")
 
 
-    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
+    def compute_similarity_multiNC(self, I0, I1, I0Source=None, phi=None):
         """
        Computes the NCC-based image similarity measure between two images
 
@@ -445,8 +494,9 @@ class LNCCSimilarity(SimilarityMeasure):
 
        """
         n_batch = I0.shape[0]
-        input = I0 #.view([1,1]+ list(I0.shape))
-        target =I1 #.view([1,1]+ list(I1.shape))
+        n_channel = I0.shape[1]
+        input = I0.view([n_batch*n_channel,1]+list(I0.shape[2:])) #.view([1,1]+ list(I0.shape))
+        target =I1.view([n_batch*n_channel,1]+list(I0.shape[2:])) #.view([1,1]+ list(I1.shape))
         self.__stepup(img_sz=list(I0.shape[2:]))
 
         input_2 = input ** 2
@@ -454,20 +504,21 @@ class LNCCSimilarity(SimilarityMeasure):
         input_target = input * target
         lncc_total = 0.
         for scale_id in range(self.num_scale):
-            input_local_sum = self.conv(input, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id],
-                                        stride=self.step[scale_id]).view(input.shape[0], -1)
-            target_local_sum = self.conv(target, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id],
-                                         stride=self.step[scale_id]).view(input.shape[0],
-                                                                          -1)
-            input_2_local_sum = self.conv(input_2, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id],
-                                          stride=self.step[scale_id]).view(input.shape[0],
-                                                                           -1)
-            target_2_local_sum = self.conv(target_2, self.filter[scale_id], padding=0, dilation=self.dilation[scale_id],
-                                           stride=self.step[scale_id]).view(
-                input.shape[0], -1)
+            input_local_sum = self.conv(input, self.filter[scale_id], padding=0, 
+                                        dilation=self.dilation[scale_id],
+                                        stride=self.step[scale_id]).view(n_batch, n_channel, -1)
+            target_local_sum = self.conv(target, self.filter[scale_id], padding=0, 
+                                         dilation=self.dilation[scale_id],
+                                         stride=self.step[scale_id]).view(n_batch, n_channel, -1)
+            input_2_local_sum = self.conv(input_2, self.filter[scale_id], padding=0, 
+                                          dilation=self.dilation[scale_id],
+                                          stride=self.step[scale_id]).view(n_batch, n_channel, -1)
+            target_2_local_sum = self.conv(target_2, self.filter[scale_id], padding=0, 
+                                           dilation=self.dilation[scale_id],
+                                           stride=self.step[scale_id]).view(n_batch, n_channel, -1)
             input_target_local_sum = self.conv(input_target, self.filter[scale_id], padding=0,
-                                               dilation=self.dilation[scale_id], stride=self.step[scale_id]).view(
-                input.shape[0], -1)
+                                               dilation=self.dilation[scale_id], 
+                                               stride=self.step[scale_id]).view(n_batch, n_channel, -1)
 
             input_local_sum = input_local_sum.contiguous()
             target_local_sum = target_local_sum.contiguous()
@@ -493,226 +544,6 @@ class LNCCSimilarity(SimilarityMeasure):
         return lncc_total / (self.sigma ** 2)
 
 
-
-
-class LocalizedNCCSimilarity(SimilarityMeasure):
-    """
-    Computes a normalized-cross correlation based similarity measure between two images.
-    :math:`sim = (1-ncc^2)/(\\sigma^2)`
-    """
-
-    def __init__(self, spacing, params):
-        super(LocalizedNCCSimilarity,self).__init__(spacing,params)
-        #todo: maybe add some form of Gaussian weighing and tie it to the real image dimensions
-        self.gaussian_std = params['similarity_measure'][('gaussian_std', 0.025, 'standard deviation of Gaussian that will be used for local NCC computations')]
-        """half the side length of the cube over which lNCC is computed"""
-
-        self.nr_of_elements_in_direction = None
-        self.weighting_coefficients = None
-        self.mask = None
-
-        self._create_gaussian_weighting(self.gaussian_std)
-
-
-    def _get_shifted_1d(self, I, x):
-        ret = torch.zeros_like(I)
-        sz = ret.size()
-
-        if x >= 0:
-            ret[0:sz[0] - x] = I[x:]
-        else: # x < 0
-            ret[-x:] = I[0:sz[0] + x]
-
-        return ret
-
-    def _get_shifted_2d(self,I,x,y):
-        ret = torch.zeros_like(I)
-        sz = ret.size()
-
-        if x>=0 and y>=0:
-            ret[0:sz[0]-x,0:sz[1]-y]=I[x:,y:]
-        elif x<0 and y>=0:
-            ret[-x:,0:sz[1]-y]=I[0:sz[0]+x,y:]
-        elif x>=0 and y<0:
-            ret[0:sz[0]-x,-y:] = I[x:, 0:sz[1]+y]
-        else: # x<0 and y<0
-            ret[-x:,-y:]= I[0:sz[0]+x,0:sz[1]+y]
-
-        return ret
-
-    def _get_shifted_3d(self, I, x, y, z):
-        ret = torch.zeros_like(I)
-        sz = ret.size()
-
-        if x >= 0 and y >= 0 and z>=0:
-            ret[0:sz[0] - x, 0:sz[1] - y,0:sz[2]-z] = I[x:, y:, z:]
-        elif x < 0 and y >= 0 and z>=0:
-            ret[-x:, 0:sz[1] - y,0:sz[2]-z] = I[0:sz[0] + x, y:, z:]
-        elif x >= 0 and y < 0 and z>=0:
-            ret[0:sz[0] - x, -y:,0:sz[2]-z] = I[x:, 0:sz[1] + y, z:]
-        elif x<0 and y<0 and z>=0:
-            ret[-x:, -y:,0:sz[2]-z] = I[0:sz[0] + x, 0:sz[1] + y, z:]
-        elif x >= 0 and y >= 0 and z<0:
-            ret[0:sz[0] - x, 0:sz[1] - y, -z:] = I[x:, y:, 0:sz[2]+z]
-        elif x < 0 and y >= 0 and z<0:
-            ret[-x:, 0:sz[1] - y, -z:] = I[0:sz[0] + x, y:, 0:sz[2]+z]
-        elif x >= 0 and y < 0 and z<0:
-            ret[0:sz[0] - x, -y:, -z:] = I[x:, 0:sz[1] + y, 0:sz[2]+z]
-        else: # x < 0 and y < 0 and z < 0:
-            ret[-x:, -y:, -z:] = I[0:sz[0] + x, 0:sz[1] + y, 0:sz[2]+z]
-
-        return ret
-
-    def _create_gaussian_weighting(self,sigma):
-
-        radiusSqr = (3.*sigma)**2
-        self.nr_of_elements_in_direction = MyTensor(self.dim).zero_()
-        for i in range(self.dim):
-            self.nr_of_elements_in_direction[i] = 3*sigma/self.spacing[i]
-        self.nr_of_elements_in_direction = torch.ceil(self.nr_of_elements_in_direction).int()
-
-        # now create the precomputed weights
-        self.weighting_coefficients = MyTensor(*list((2*self.nr_of_elements_in_direction+1).int())).zero_()
-        self.mask = torch.zeros_like(self.weighting_coefficients)
-
-        if self.dim==1:
-            for x in range(-self.nr_of_elements_in_direction[0],self.nr_of_elements_in_direction[0]+1):
-                currentRSqr = (x*self.spacing[0])**2
-                if currentRSqr<= radiusSqr:
-                    self.weighting_coefficients[x+self.nr_of_elements_in_direction[0]]=np.exp(-currentRSqr/(2*sigma**2))
-                    self.mask[x+self.nr_of_elements_in_direction[0]] = 1
-            # now normalize it
-            self.weighting_coefficients /= self.weighting_coefficients.sum()
-
-        elif self.dim==2:
-            for x in range(-self.nr_of_elements_in_direction[0],self.nr_of_elements_in_direction[0]+1):
-                for y in range(-self.nr_of_elements_in_direction[1],self.nr_of_elements_in_direction[1]+1):
-                    currentRSqr = (x*self.spacing[0])**2 + (y*self.spacing[1])**2
-                    if currentRSqr<= radiusSqr:
-                        self.weighting_coefficients[x+self.nr_of_elements_in_direction[0],y+self.nr_of_elements_in_direction[1]]=\
-                            np.exp(-currentRSqr/(2*sigma**2))
-                        self.mask[x+self.nr_of_elements_in_direction[0],y+self.nr_of_elements_in_direction[1]] = 1
-            # now normalize it
-            self.weighting_coefficients /= self.weighting_coefficients.sum()
-        elif self.dim==3:
-            for x in range(-self.nr_of_elements_in_direction[0],self.nr_of_elements_in_direction[0]+1):
-                for y in range(-self.nr_of_elements_in_direction[1],self.nr_of_elements_in_direction[1]+1):
-                    for z in range(-self.nr_of_elements_in_direction[2], self.nr_of_elements_in_direction[2] + 1):
-                        currentRSqr = (x*self.spacing[0])**2 + (y*self.spacing[1])**2 + (z*self.spacing[2])**2
-                        if currentRSqr<= radiusSqr:
-                            self.weighting_coefficients[x+self.nr_of_elements_in_direction[0],
-                                                        y+self.nr_of_elements_in_direction[1],
-                                                        z+self.nr_of_elements_in_direction[2]]= np.exp(-currentRSqr/(2*sigma**2))
-                            self.mask[x+self.nr_of_elements_in_direction[0],
-                                      y+self.nr_of_elements_in_direction[1],
-                                      z+self.nr_of_elements_in_direction[2]] = 1
-            # now normalize it
-            self.weighting_coefficients /= self.weighting_coefficients.sum()
-        else:
-            raise ValueError('Only dimensions 1,2, and 3 are supported.')
-
-
-    def _compute_local_squared_cross_correlation(self,I0,I1):
-
-        ones = torch.ones_like(I0)
-
-        sumOnes = torch.zeros_like(I0)
-        sumI0 = torch.zeros_like(I0)
-        sumI1 = torch.zeros_like(I0)
-        sumI0I1 = torch.zeros_like(I0)
-        sumI0I0 = torch.zeros_like(I0)
-        sumI1I1 = torch.zeros_like(I0)
-
-        I0I0 = I0*I0
-        I1I1 = I1*I1
-        I0I1 = I0*I1
-
-        if self.dim==1:
-            for x in range(-self.nr_of_elements_in_direction[0],self.nr_of_elements_in_direction[0]+1):
-                if self.mask[self.nr_of_elements_in_direction[0] + x] > 0:
-                    current_weight = self.weighting_coefficients[self.nr_of_elements_in_direction[0]+x]
-                    sumOnes += current_weight*self._get_shifted_1d(ones, x)
-                    sumI0 += current_weight*self._get_shifted_1d(I0, x)
-                    sumI1 += current_weight*self._get_shifted_1d(I1, x)
-                    sumI0I1 += current_weight*self._get_shifted_1d(I0I1, x)
-                    sumI0I0 += current_weight*self._get_shifted_1d(I0I0, x)
-                    sumI1I1 += current_weight*self._get_shifted_1d(I1I1, x)
-
-        elif self.dim==2:
-            for x in range(-self.nr_of_elements_in_direction[0],self.nr_of_elements_in_direction[0]+1):
-                for y in range(-self.nr_of_elements_in_direction[1],self.nr_of_elements_in_direction[1]+1):
-                    if self.mask[self.nr_of_elements_in_direction[0]+x,self.nr_of_elements_in_direction[1]+y]>0:
-                        current_weight = self.weighting_coefficients[self.nr_of_elements_in_direction[0]+x,self.nr_of_elements_in_direction[1]+y]
-                        sumOnes += current_weight*self._get_shifted_2d(ones,x,y)
-                        sumI0 += current_weight*self._get_shifted_2d(I0,x,y)
-                        sumI1 += current_weight*self._get_shifted_2d(I1,x,y)
-                        sumI0I1 += current_weight*self._get_shifted_2d(I0I1,x,y)
-                        sumI0I0 += current_weight*self._get_shifted_2d(I0I0,x,y)
-                        sumI1I1 += current_weight*self._get_shifted_2d(I1I1,x,y)
-
-        elif self.dim==3:
-            for x in range(-self.nr_of_elements_in_direction[0], self.nr_of_elements_in_direction[0] + 1):
-                for y in range(-self.nr_of_elements_in_direction[1], self.nr_of_elements_in_direction[1] + 1):
-                    for z in range(-self.nr_of_elements_in_direction[2], self.nr_of_elements_in_direction[2] + 1):
-                        if self.mask[
-                            self.nr_of_elements_in_direction[0] + x,
-                            self.nr_of_elements_in_direction[1] + y,
-                            self.nr_of_elements_in_direction[2] + z] > 0:
-
-                            current_weight = self.weighting_coefficients[
-                                self.nr_of_elements_in_direction[0] + x,
-                                self.nr_of_elements_in_direction[1] + y,
-                                self.nr_of_elements_in_direction[2] + z]
-
-                            sumOnes += current_weight*self._get_shifted_3d(ones, x, y, z)
-                            sumI0 += current_weight*self._get_shifted_3d(I0, x, y, z)
-                            sumI1 += current_weight*self._get_shifted_3d(I1, x, y, z)
-                            sumI0I1 += current_weight*self._get_shifted_3d(I0I1, x, y, z)
-                            sumI0I0 += current_weight*self._get_shifted_3d(I0I0, x, y, z)
-                            sumI1I1 += current_weight*self._get_shifted_3d(I1I1, x, y, z)
-
-        else:
-            raise ValueError('Only supported in dimensions 1, 2, and 3')
-
-        # 1/n\sum_i (I0-mean(I0))(I1-mean(I1)) = 1/n \sum_i (I0I1 -I0 mean(I1) - mean(I0)I1 + mean(I0)mean(I1) )
-        # ... = ( 1/n \sum_i I0 I1 ) -  mean(I0)mean(I1)
-
-        # \sigma_0 = 1/n \sum_i (I0-mean(I0))^2 = 1/n \sum_i I0^2 - 2I0 mean(I0) + mean(I0)^2
-        # ... = (1/n \sum_i I0^2 ) - mean(I0)^2
-
-        meanI0 = sumI0/sumOnes
-        meanI1 = sumI1/sumOnes
-        nom = sumI0I1/sumOnes - meanI0*meanI1
-        sig0Sqr = (sumI0I0/sumOnes - meanI0**2)
-        sig1Sqr = (sumI1I1/sumOnes - meanI1**2)
-
-        # todo: maybe find a little less hacky solution to deal with division by zero
-        # we are returning the square here, because it is squared later anyway
-        # and taking the sub-gradient for the square root at zero is not well defined
-        eps = 1e-6 # to avoid division by zero
-        lnccSqr = (nom*nom+eps)/(sig0Sqr*sig1Sqr+eps)
-
-        return lnccSqr
-
-    def compute_similarity(self, I0, I1, I0Source=None, phi=None):
-        """
-       Computes the NCC-based image similarity measure between two images
-
-       :param I0: first image
-       :param I1: second image
-       :param I0Source: not used
-       :param phi: not used
-       :return: (1-NCC^2)/sigma^2
-       """
-
-        # TODO: may require a safeguard against infinity
-        lnccSqr = self._compute_local_squared_cross_correlation(I0,I1)
-        # does not need to be multiplied by self.volumeElement (as we are dealing with a correlation measure)
-
-        sim_measure = AdaptVal((1.0-lnccSqr).sum() / (I0.numel()*self.sigma ** 2))
-        #print( 'sim_measure = ' + str( sim_measure.data.numpy()))
-        return sim_measure
-
 class SimilarityMeasureFactory(object):
     """
     Factory to quickly generate similarity measures that can then be used by the different registration algorithms.
@@ -732,7 +563,8 @@ class SimilarityMeasureFactory(object):
             'ncc_positive': NCCPositiveSimilarity,
             'ncc_negative': NCCNegativeSimilarity,
             'lncc': LNCCSimilarity,#LocalizedNCCSimilarity,
-            'omt': OptimalMassTransportSimilarity
+            'omt': OptimalMassTransportSimilarity,
+            'ssd_single': SSDSingleImageSimilarity
         }
         """currently implemented similiarity measures"""
 
