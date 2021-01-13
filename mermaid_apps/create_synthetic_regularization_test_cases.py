@@ -17,11 +17,11 @@ import scipy.ndimage as ndimage
 
 import mermaid.utils as utils
 import mermaid.finite_differences as fd
-import mermaid.custom_pytorch_extensions as ce
+import mermaid.custom_pytorch_extensions_module_version as ce
 import mermaid.smoother_factory as sf
 import mermaid.deep_smoothers as ds
 
-from mermaid.data_wrapper import AdaptVal
+from mermaid.data_wrapper import AdaptVal, MyTensor
 
 import mermaid.fileio as fio
 
@@ -363,7 +363,12 @@ def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,sp
 
     # now compute the localized_velocity
     # compute velocity based on localized weights
-    localized_v = np.zeros([1, 2] + sz[2:], dtype='float32')
+    sz_m = m.shape
+    # get the size of the multi-velocity field; multi_v x batch x channels x X x Y
+    sz_mv = [nr_of_gaussians] + list(sz_m)
+
+    # create the output tensor: will be of dimension: batch x channels x X x Y
+    localized_v = AdaptVal(MyTensor(*sz_m))
     dims = localized_v.shape[1]
 
     # now we apply this weight across all the channels; weight output is B x weights x X x Y
@@ -377,22 +382,25 @@ def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,sp
         # let's smooth this on the fly, as the smoothing will be of form
         # w_i*K_i*(w_i m)
 
-        if kernel_weighting_type=='sqrt_w_K_sqrt_w':
+        if kernel_weighting_type == 'sqrt_w_K_sqrt_w':
             # roc should be: batch x multi_v x X x Y
-            roc = torch.transpose(sqrt_weighted_multi_smooth_v[:, :, n, ...], 0, 1)
+            roc = sqrt_weighted_multi_smooth_v[:, :, n, ...]
+            # print(sqrt_weighted_multi_smooth_v.shape, sqrt_weights.shape,roc.shape)
             yc = torch.sum(roc * sqrt_weights, dim=1)
-        elif kernel_weighting_type=='w_K_w':
+        elif kernel_weighting_type == 'w_K_w':
             # roc should be: batch x multi_v x X x Y
-            roc = torch.transpose(weighted_multi_smooth_v[:, :, n, ...], 0, 1)
-            yc = torch.sum(roc * t_weights, dim=1)
-        elif kernel_weighting_type=='w_K':
+            roc = weighted_multi_smooth_v[:, :, n, ...]
+            yc = torch.sum(roc * weights, dim=1)
+        elif kernel_weighting_type == 'w_K':
             # roc should be: batch x multi_v x X x Y
             roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
-            yc = torch.sum(roc * t_weights, dim=1)
+            yc = torch.sum(roc * weights, dim=1)
         else:
-            raise ValueError('Unknown kernel type: {}'.format(kernel_weighting_type))
+            raise ValueError('Unknown weighting_type: {}'.format(kernel_weighting_type))
 
-        localized_v[:, n, ...] = yc.detach().cpu().numpy()  # ret is: batch x channels x X x Y
+        localized_v[:, n, ...] = yc  # localized_v is: batch x channels x X x Y
+
+    localized_v = localized_v.cpu().numpy()
 
     if visualize:
 

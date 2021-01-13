@@ -957,7 +957,7 @@ def get_single_gaussian_smoother(gaussian_std,sz,spacing):
 
 def get_warped_label_map(label_map, phi, spacing, sched='nn'):
     if sched == 'nn':
-        warped_label_map = get_nn_interpolation(label_map, phi, spacing)
+        warped_label_map = compute_warped_image_multiNC(label_map, phi, spacing,spline_order=0,zero_boundary=True)
         # check if here should be add assert
         assert abs(torch.sum(warped_label_map.data -warped_label_map.data.round()))< 0.1, "nn interpolation is not precise"
     else:
