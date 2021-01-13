@@ -390,11 +390,11 @@ def compute_localized_velocity_from_momentum(m,weights,multi_gaussian_stds,sz,sp
         elif kernel_weighting_type == 'w_K_w':
             # roc should be: batch x multi_v x X x Y
             roc = weighted_multi_smooth_v[:, :, n, ...]
-            yc = torch.sum(roc * weights, dim=1)
+            yc = torch.sum(roc * t_weights, dim=1)
         elif kernel_weighting_type == 'w_K':
             # roc should be: batch x multi_v x X x Y
             roc = torch.transpose(multi_smooth_v[:, :, n, ...], 0, 1)
-            yc = torch.sum(roc * weights, dim=1)
+            yc = torch.sum(roc * t_weights, dim=1)
         else:
             raise ValueError('Unknown weighting_type: {}'.format(kernel_weighting_type))
 
