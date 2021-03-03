@@ -19,7 +19,7 @@ def scale_map(map,spacing):
 
     for d in range(ndim):
         if sz[d+2] >1:
-            map_scaled[:, d, ...] = map[:, d, ...] * (2. / (sz[d + 2] - 1.) / spacing[d]) - 1.
+            map_scaled[:, d, ...] = map[:, d, ...] * 2. - 1.
         else:
             map_scaled[:, d, ...] = map[:,d,...]
 
