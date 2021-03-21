@@ -37,7 +37,8 @@ Simple registration interface example
 #
 
 from __future__ import print_function
-
+import torch
+torch.cuda.set_device("cuda:2")
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -103,7 +104,7 @@ si.print_available_models()
 # all the parameter settings. If ``params`` is not specified default settings will be used. By running for one
 # iteration for example, this allows writing out a fresh settings template which can then be edited.
 
-si.register_images(I0, I1, spacing, model_name='svf_scalar_momentum_map',
+si.register_images(I0, I1, spacing, model_name='lddmm_shooting_map',
                    nr_of_iterations=100,
                    use_multi_scale=False,
                    visualize_step=5,
