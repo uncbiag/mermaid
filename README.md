@@ -10,7 +10,7 @@
  </pre>                                       
 
 [![Documentation Status](https://readthedocs.org/projects/mermaid/badge/?version=latest)](https://mermaid.readthedocs.io/en/latest/?badge=latest)
-[![Build Status](https://travis-ci.com/uncbiag/mermaid.svg?branch=master)](https://travis-ci.com/uncbiag/mermaid)
+[![Build Status](https://travis-ci.com/uncbiag/mermaid.svg?branch=master)](https://travis-ci.com/github/uncbiag/mermaid)
 
 [![](https://anaconda.org/uncbiag/mermaid/badges/installer/conda.svg)](https://anaconda.org/uncbiag/mermaid)
 [![](https://anaconda.org/uncbiag/mermaid/badges/platforms.svg)](https://anaconda.org/uncbiag/mermaid)
