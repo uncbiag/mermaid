@@ -35,7 +35,7 @@ REQUIRED = [
     "termcolor",
     "cffi",
     "itk",
-    "torch==1.4",
+    "torch>=1.4,<1.9"
     "torchvision",
     "pandas",
     "matplotlib",
