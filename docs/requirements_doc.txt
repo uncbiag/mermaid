@@ -1,4 +1,3 @@
--f https://download.pytorch.org/whl/nightly/cpu/torch_nightly.html
 numpy>=1.17
 pynrrd
 future
@@ -8,7 +7,7 @@ tabulate
 termcolor
 cffi
 itk
-torch_nightly
+torch==1.4
 pandas
 matplotlib
 scipy
