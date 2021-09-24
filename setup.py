@@ -26,7 +26,7 @@ REQUIRED = [
     "ipython",
     "jupyter",
     "ipykernel",
-    "numpy",
+    "numpy>=1.17",
     "pynrrd",
     "future",
     "cython",
