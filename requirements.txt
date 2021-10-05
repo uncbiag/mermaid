@@ -7,7 +7,7 @@ tabulate
 termcolor
 cffi
 itk
-torch>=1.4,<1.8
+torch
 torchvision
 pandas
 matplotlib

@@ -146,7 +146,7 @@ def create_complex_fourier_filter(spatial_filter, sz, enforceMaxSymmetry=True, m
         # we assume this is symmetric and hence take the absolute value
         # as the FT of a symmetric kernel has to be real
         f_filter =  create_filter(spatial_filter_max_at_zero, sz)
-        ret_filter = f_filter[...,0] # only the real part
+        ret_filter = f_filter.real
 
         return ret_filter,maxIndex
     else:
@@ -162,11 +162,12 @@ def create_filter(spatial_filter, sz):
     :param sz: [N1,..., Nd]
     :return: filter, with size [1,N1,..Nd-1,⌊Nd/2⌋+1,2⌋
     """
-    fftn = torch.rfft
+    fftn = torch.fft.rfftn
     spatial_filter_th = torch.from_numpy(spatial_filter).float()
     spatial_filter_th = AdaptVal(spatial_filter_th)
     spatial_filter_th = spatial_filter_th[None, ...]
-    spatial_filter_th_fft = fftn(spatial_filter_th, len(sz))
+    dims = tuple(range(1,len(spatial_filter_th.shape)))
+    spatial_filter_th_fft = fftn(spatial_filter_th, dim=dims)
     return spatial_filter_th_fft
 
 
@@ -181,7 +182,7 @@ def sel_fftn(dim):
     :return: function pointer
     """
     if dim in[1,2,3]:
-        f= torch.rfft
+        f= torch.fft.rfftn
     else:
         print('Warning, fft more than 3d is supported but not tested')
     return f
@@ -195,7 +196,7 @@ def sel_ifftn(dim):
     """
 
     if dim in [1,2,3]:
-        f = torch.irfft
+        f = torch.fft.irfftn
     else:
         print('Warning, fft more than 3d is supported but not tested')
 
@@ -236,16 +237,16 @@ class FourierConvolution(nn.Module):
         """
 
         input = FFTVal(input,ini=1)
-        f_input = self.fftn(input,self.dim,onesided=True)
+        dims = tuple(range(2,len(input.shape)))
+        f_input = self.fftn(input,dim=dims)
         f_filter_real = self.complex_fourier_filter[0]
-        f_filter_real=f_filter_real.expand_as(f_input[...,0])
-        f_filter_real = torch.stack((f_filter_real,f_filter_real),-1)
+        f_filter_real=f_filter_real.expand_as(f_input)
+        #f_filter_real = torch.stack((f_filter_real,f_filter_real),-1)
         f_conv = f_input * f_filter_real
         dim_input = len(input.shape)
         dim_input_batch = dim_input-self.dim
-        conv_ouput_real = self.ifftn(f_conv, self.dim,onesided=True,signal_sizes=input.shape[dim_input_batch::])
+        conv_ouput_real = self.ifftn(f_conv, s=input.shape[dim_input_batch::], dim=dims)
         result = conv_ouput_real
-
         return FFTVal(result, ini=-1)
 
 
@@ -300,15 +301,15 @@ class InverseFourierConvolution(nn.Module):
         # (a+bi)/(c) = (a/c) + (b/c)i
 
         input = FFTVal(input, ini=1)
-        f_input =  self.fftn(input,self.dim,onesided=True)
+        dims = tuple(range(2,len(input.shape)))
+        f_input = self.fftn(input,dim=dims)
         f_filter_real = self.complex_fourier_filter[0]
+        f_filter_real = f_filter_real.expand_as(f_input)
         f_filter_real += self.alpha
-        f_filter_real = f_filter_real.expand_as(f_input[..., 0])
-        f_filter_real = torch.stack((f_filter_real, f_filter_real), -1)
         f_conv = f_input/f_filter_real
         dim_input = len(input.shape)
         dim_input_batch = dim_input - self.dim
-        conv_ouput_real = self.ifftn(f_conv,self.dim,onesided=True,signal_sizes=input.shape[dim_input_batch::])
+        conv_ouput_real = self.ifftn(f_conv, s=input.shape[dim_input_batch::], dim=dims)
         result = conv_ouput_real
         return FFTVal(result, ini=-1)
 
