@@ -52,7 +52,7 @@ requirements:
     - tabulate
     - cffi
     - itk
-    - pytorch
+    - pytorch >=1.7
     - pynrrd
     - torchvision
     - pandas
