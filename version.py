@@ -48,8 +48,10 @@ def call_git_describe(abbrev):
     except:
         return None
 
-
 def is_dirty():
+    return False
+    # I know, this looks bad. But try and fix it yourself, and you will learn
+    # that here be dragons.
     try:
         p = Popen(["git", "diff-index", "--name-only", "HEAD"],
                   stdout=PIPE, stderr=PIPE)
