@@ -18,6 +18,8 @@ import torch.nn.functional as F
 import numpy as np
 from future.utils import with_metaclass
 
+from .smoother_factory import SingleGaussianFourierSmoother
+
 
 class SimilarityMeasure(with_metaclass(ABCMeta, object)):
     """Abstract base class for a similarity measure.
@@ -544,6 +546,49 @@ class LNCCSimilarity(SimilarityMeasure):
         return lncc_total / (self.sigma ** 2)
 
 
+class SingleGaussianLNCCSimilarity(SimilarityMeasure):
+    def __init__(self, spacing, params):
+        super(SingleGaussianLNCCSimilarity, self).__init__(spacing, params)
+        self.spacing = spacing
+        self.sglncc_params =  params['similarity_measure'][('sglncc',{},"seetings for single gauss LNCC ")]
+        self.smoother = None
+
+    def compute_similarity_multiNC(self, I0, I1, I0Source=None, phi=None):
+        input, target = I0, I1
+        if self.smoother is None:
+            sz = I0.shape[2:]
+            self.smoother  = SingleGaussianFourierSmoother(sz, self.spacing, self.sglncc_params)
+        sm_input = self.smoother.smooth(input)
+        sm_inputsq = self.smoother.smooth(input**2)
+        sm_target =self.smoother.smooth(target)
+        sm_targetsq = self.smoother.smooth(target**2)
+        sm_inputtarget = self.smoother.smooth(input*target)
+        #lncc = ((sm_inputtarget - sm_input*sm_target)**2)/((sm_inputsq-sm_input**2)*(sm_targetsq-sm_target**2))
+        lncc = torch.exp(torch.log((sm_inputtarget - sm_input*sm_target).clamp(min=1e-3)) - 0.5*torch.log((sm_inputsq-sm_input**2).clamp(min=1e-3))-0.5*torch.log((sm_targetsq-sm_target**2).clamp(min=1e-3)))
+        lncc = 1- lncc.mean()
+        return lncc
+
+class MultiGaussianLNCCSimilarity(SimilarityMeasure):
+    def __init__(self, spacing, params):
+        super(MultiGaussianLNCCSimilarity, self).__init__(spacing, params)
+        std_list = params['similarity_measure']['mglncc']["multi_gaussian_stds"]
+        self.weight_list = params['similarity_measure']['mglncc']["multi_gaussian_weights"]
+        self.single_gauss_lncc_list = []
+        params['similarity_measure'][('sglncc',{},"settings for single gaussian LNCC")]
+        for std in std_list:
+            params['similarity_measure']['sglncc']["gaussian_std"] = std
+            single_gauss_lncc = SingleGaussianLNCCSimilarity(spacing, params)
+            self.single_gauss_lncc_list.append(single_gauss_lncc)
+
+
+    def compute_similarity_multiNC(self, I0, I1, I0Source=None, phi=None):
+        mglncc = 0.
+        for w, single_gauss_lncc in zip(self.weight_list, self.single_gauss_lncc_list):
+            mglncc += w * single_gauss_lncc.compute_similarity_multiNC(I0, I1, I0Source, phi)
+        return mglncc
+
+
+
 class SimilarityMeasureFactory(object):
     """
     Factory to quickly generate similarity measures that can then be used by the different registration algorithms.
@@ -563,6 +608,8 @@ class SimilarityMeasureFactory(object):
             'ncc_positive': NCCPositiveSimilarity,
             'ncc_negative': NCCNegativeSimilarity,
             'lncc': LNCCSimilarity,#LocalizedNCCSimilarity,
+            'sglncc':SingleGaussianLNCCSimilarity,
+            'mglncc':MultiGaussianLNCCSimilarity,
             'omt': OptimalMassTransportSimilarity,
             'ssd_single': SSDSingleImageSimilarity
         }

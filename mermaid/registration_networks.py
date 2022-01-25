@@ -1314,7 +1314,7 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
         self.m = self.create_registration_parameters()
         cparams = params[('forward_model', {}, 'settings for the forward model')]
 
-        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+        #self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
 
         """smoother"""
         # mn: added this check

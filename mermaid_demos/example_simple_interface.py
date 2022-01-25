@@ -38,7 +38,7 @@ Simple registration interface example
 
 from __future__ import print_function
 import torch
-torch.cuda.set_device("cuda:2")
+# torch.cuda.set_device("cuda:2")
 import numpy as np
 import matplotlib.pyplot as plt
 

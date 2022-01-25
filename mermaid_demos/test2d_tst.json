@@ -34,7 +34,12 @@
                     ],
                     "type": "multiGaussian"
                 },
-                "solver": "rk4"
+                "solver": "rk4",
+                "tFrom": 0.0,
+                "tTo": 1.0
+            },
+            "forward_modelF": {
+                "tTo": 1.0
             },
             "loss": {
                 "display_max_displacement": false,
