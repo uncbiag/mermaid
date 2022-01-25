@@ -35,7 +35,7 @@ REQUIRED = [
     "termcolor",
     "cffi",
     "itk",
-    "torch"
+    "torch>=1.7"
     "torchvision",
     "pandas",
     "matplotlib",
@@ -112,7 +112,7 @@ class UploadCommand(Command):
         os.system('twine upload dist/*')
 
         self.status('Pushing git tags…')
-        os.system('git tag v{0}'.format(about['__version__']))
+        os.system('git tag {0}'.format(about['__version__']))
         os.system('git push --tags')
 
         sys.exit()
@@ -130,7 +130,7 @@ setup(
     python_requires=REQUIRES_PYTHON,
     url=URL,
     packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*"]),
-    package_data={'mermaid_apps': ['*.sh']},
+    package_data={'mermaid_apps': ['*.sh'], "mermaid_settings": ['*.json']},
                   
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
@@ -145,7 +145,7 @@ setup(
     classifiers=[
         # Trove classifiers
         # Full list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
-        'License :: OSI Approved :: Apache 2.0 License',
+        'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',

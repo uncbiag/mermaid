@@ -108,3 +108,16 @@ See https://github.com/uncbiag/registration for an overview of other registratio
 
 
 
+# Publishing a release
+To publish to conda, just tag a version in the format "major.minor.subminor". do not add a leading v. Travis will automatically push to the conda repository at uncbiag/mermaid.
+After this is done, to publish to pip, first locally run 
+
+    pip wheel . -w dist
+
+to build the wheel, then run 
+
+    twine upload --repository pypi dist/mermaid-<version_number>--py3-none-any.whl
+
+to publish to pypi.
+
+
