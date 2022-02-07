@@ -1318,8 +1318,8 @@ class ShootingVectorMomentumNet(RegistrationNetTimeIntegration):
 
         """smoother"""
         # mn: added this check
-        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams,
-                                                                                       cparams['smoother']['type'])
+        self.smoother = SF.SmootherFactory(self.sz[2::], self.spacing).create_smoother(cparams)
+
         print("the param of smoother is {}".format(self.smoother))
         if not self.get_momentum_from_external_network:
             self._shared_states = self._shared_states.union(self.smoother.associate_parameters_with_module(self))
