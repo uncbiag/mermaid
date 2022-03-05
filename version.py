@@ -100,9 +100,10 @@ def get_git_version(abbrev=7):
         version = release_version
 
     # If we still don't have anything, that's an error.
-
+    
     if version is None:
-        raise ValueError("Cannot find the version number!")
+        version = "invalid_version"
+        #raise ValueError("Cannot find the version number!")
 
     # If the current version is different from what's in the
     # RELEASE-VERSION file, update the file to be current.
