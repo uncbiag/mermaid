@@ -12,6 +12,8 @@
 [![Documentation Status](https://readthedocs.org/projects/mermaid/badge/?version=latest)](https://mermaid.readthedocs.io/en/latest/?badge=latest)
 [![Build Status](https://travis-ci.com/uncbiag/mermaid.svg?branch=master)](https://travis-ci.com/github/uncbiag/mermaid)
 
+[<img src="https://github.com/uncbiag/mermaid/actions/workflows/cpu-test-action.yml/badge.svg">](https://github.com/uncbiag/mermaid/actions)
+
 [![](https://anaconda.org/uncbiag/mermaid/badges/installer/conda.svg)](https://anaconda.org/uncbiag/mermaid)
 [![](https://anaconda.org/uncbiag/mermaid/badges/platforms.svg)](https://anaconda.org/uncbiag/mermaid)
 [![](https://img.shields.io/conda/v/uncbiag/mermaid.svg)](https://anaconda.org/uncbiag/mermaid)
