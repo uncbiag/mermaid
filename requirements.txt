@@ -1,9 +1,6 @@
 numpy>=1.17
-pynrrd
 future
 cython
-scikit-image
-tabulate
 termcolor
 cffi
 itk
@@ -13,10 +10,5 @@ pandas
 matplotlib
 scipy
 openpyxl
-sphinx-gallery==0.3.1
-sphinx
-nbsphinx
-pandoc
-pypandoc
 statsmodels
 progressbar2
